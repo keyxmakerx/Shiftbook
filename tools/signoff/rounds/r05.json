@@ -6,61 +6,231 @@
   },
   "cards": {
     "r5-nav": {
-      "round": 5, "order": 10, "area": "Layout", "version": 1,
+      "round": 5,
+      "order": 10,
+      "area": "Layout",
+      "version": 1,
       "title": "Three ways to get around Shiftbook",
       "body": [
         "All three keep what you liked: the **notes strip** is always on the right (jot, meeting or daily), the **canvas** is a mode you can switch any view into, and the **planner** folds open by week, month and year. What changes is the main way you move around. There's no menu list in any of them.",
         "They're in the coloured-paper style from your canvas note: real colour per project, a light paper grain and soft edges, without tape, torn edges or tilted cards. Every one is clickable."
       ],
       "figures": [
-        { "html_file": "mocks/r05-nav-zoom.html", "caption": "**1 · Zoom through time.** The calendar is the menu. Year → month → week → day, each one zooming in from what you clicked, and a day folds open in place. Calendar/Canvas switches how the same days are shown." },
-        { "html_file": "mocks/r05-nav-ribbon.html", "caption": "**2 · Time ribbon.** A strip of days along the top, each a little bar of coloured hours. Pick a day or drag across a range, and it folds open below as a plan, a canvas or its notes." },
-        { "html_file": "mocks/r05-nav-desk.html", "caption": "**3 · The desk.** Home is a desk with four things on it: this week, the Inbox, Notes and the Map. Click one and it opens to fill the desk; Back puts it down. You find things by where they sit, not by a list." }
+        {
+          "html_file": "mocks/r05-nav-zoom.html",
+          "caption": "**1 · Zoom through time.** The calendar is the menu. Year → month → week → day, each one zooming in from what you clicked, and a day folds open in place. Calendar/Canvas switches how the same days are shown."
+        },
+        {
+          "html_file": "mocks/r05-nav-ribbon.html",
+          "caption": "**2 · Time ribbon.** A strip of days along the top, each a little bar of coloured hours. Pick a day or drag across a range, and it folds open below as a plan, a canvas or its notes."
+        },
+        {
+          "html_file": "mocks/r05-nav-desk.html",
+          "caption": "**3 · The desk.** Home is a desk with four things on it: this week, the Inbox, Notes and the Map. Click one and it opens to fill the desk; Back puts it down. You find things by where they sit, not by a list."
+        }
       ],
       "questions": [
-        { "id": "nav", "legend": "Which one should be THE way around?", "options": [
-          { "value": "1 · Zoom", "rec": true, "why": "Time is what Shiftbook is about, so time is the menu. One control (Year · Month · Week · Day) and you always know where you are." },
-          { "value": "2 · Ribbon", "why": "Always shows the last few weeks at a glance; good for spotting empty days before a timesheet." },
-          { "value": "3 · Desk", "why": "Most unusual; good if you remember things by place." },
-          { "value": "Mix", "why": "Say which parts in the box, e.g. Zoom with the ribbon as its week bar." }
-        ]},
-        { "id": "why", "type": "text", "legend": "What made you pick it, or what's still missing? (optional)", "placeholder": "e.g. 1, but I want the ribbon always visible at the top" }
+        {
+          "id": "nav",
+          "legend": "Which one should be THE way around?",
+          "options": [
+            {
+              "value": "1 · Zoom",
+              "rec": true,
+              "why": "Time is what Shiftbook is about, so time is the menu. One control (Year · Month · Week · Day) and you always know where you are."
+            },
+            {
+              "value": "2 · Ribbon",
+              "why": "Always shows the last few weeks at a glance; good for spotting empty days before a timesheet."
+            },
+            {
+              "value": "3 · Desk",
+              "why": "Most unusual; good if you remember things by place."
+            },
+            {
+              "value": "Mix",
+              "why": "Say which parts in the box, e.g. Zoom with the ribbon as its week bar."
+            }
+          ]
+        },
+        {
+          "id": "why",
+          "type": "text",
+          "legend": "What made you pick it, or what's still missing? (optional)",
+          "placeholder": "e.g. 1, but I want the ribbon always visible at the top"
+        }
       ],
       "pick": "1 · Zoom. If you like the ribbon's at-a-glance bars, they could sit above the week view."
     },
     "r5-canvas": {
-      "round": 5, "order": 20, "area": "Look", "version": 1,
+      "round": 5,
+      "order": 20,
+      "area": "Look",
+      "version": 1,
       "title": "The canvas in coloured paper",
       "body": [
         "More colour, a paper feel, and no clichés. Each card has a soft grain and a coloured top edge for its project; project areas are tinted in the same colour; the project card itself is solid colour so it reads as the anchor. A dashed coral outline marks a scrap still waiting in the Inbox."
       ],
       "figures": [
-        { "html_file": "mocks/r05-canvas.html", "caption": "Drag cards and try **Arrange as timeline** again." }
+        {
+          "html_file": "mocks/r05-canvas.html",
+          "caption": "Drag cards and try **Arrange as timeline** again."
+        }
       ],
       "questions": [
-        { "id": "ok", "legend": "Closer?", "options": [
-          { "value": "Yes", "rec": true },
-          { "value": "More colour", "why": "e.g. tint whole cards, not just the edge." },
-          { "value": "Less", "why": "Keep colour to the edges only." }
-        ]}
+        {
+          "id": "ok",
+          "legend": "Closer?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "More colour",
+              "why": "e.g. tint whole cards, not just the edge."
+            },
+            {
+              "value": "Less",
+              "why": "Keep colour to the edges only."
+            }
+          ]
+        }
       ],
       "pick": "Yes. This becomes the starting style for the real screens."
     },
     "r5-privacy": {
-      "round": 5, "order": 30, "area": "Security", "version": 1,
+      "round": 5,
+      "order": 30,
+      "area": "Security",
+      "version": 1,
       "title": "\"Include the text as well\": which did you mean?",
       "body": [
         "On the screenshot card you wrote that protection should include the text as well. I want to get this right, because the two readings pull in opposite directions."
       ],
       "questions": [
-        { "id": "meaning", "legend": "You meant…", "options": [
-          { "value": "Block copying text out too", "why": "While protected, copy and drag-out are blocked as well; the timed allow button unlocks both. Note this also blocks copying hours or notes into your timesheet until you press it." },
-          { "value": "Show the status as text", "why": "A visible line such as 'Screenshots allowed · 8:42 left', so you always know the state." },
-          { "value": "Both" },
-          { "value": "Something else", "why": "Tell me in the note." }
-        ]}
+        {
+          "id": "meaning",
+          "legend": "You meant…",
+          "options": [
+            {
+              "value": "Block copying text out too",
+              "why": "While protected, copy and drag-out are blocked as well; the timed allow button unlocks both. Note this also blocks copying hours or notes into your timesheet until you press it."
+            },
+            {
+              "value": "Show the status as text",
+              "why": "A visible line such as 'Screenshots allowed · 8:42 left', so you always know the state."
+            },
+            {
+              "value": "Both"
+            },
+            {
+              "value": "Something else",
+              "why": "Tell me in the note."
+            }
+          ]
+        }
       ],
       "pick": "Your call. If it's copying, I'd keep the timesheet's Copy button working even while protected, since copying is the whole point there."
+    },
+    "r5-rules": {
+      "round": 5,
+      "order": 40,
+      "area": "M1 · core rules",
+      "version": 1,
+      "title": "How Shiftbook reads what you type: choices to check",
+      "body": [
+        "The first half of M1 is done: the rules for hours, weeks, projects, recurring work, tickets and timesheet totals, with 88 tests. Where the spec didn't say, I made a choice. These are the ones you'd notice."
+      ],
+      "tables": [
+        {
+          "head": [
+            "If you…",
+            "Shiftbook does"
+          ],
+          "rows": [
+            [
+              "type a plain number like `8` or `45`",
+              "Up to 24 means hours (`8` = 8 h). Above 24 means minutes (`45` = 45 min)."
+            ],
+            [
+              "type `1.5`, `1:30`, `90m` or `1h 30m`",
+              "All mean 90 minutes. Odd decimals round to the nearest minute."
+            ],
+            [
+              "type `1:75` or `1h 75m`",
+              "Says it doesn't understand, rather than guessing."
+            ],
+            [
+              "log 0 hours",
+              "Allowed, e.g. for \"Mark done\" on a recurring item with no time spent. Max 24 h per entry."
+            ],
+            [
+              "set \"Warn days before\" to blank or 0",
+              "Blank means 30 days. 0 means warn only on the due day."
+            ],
+            [
+              "add 1 month to 31 January",
+              "You get the last day of February (28 or 29)."
+            ],
+            [
+              "give a project an estimate of 0",
+              "Treated as no estimate: no % used, never \"Over budget\"."
+            ],
+            [
+              "paste `INC1, inc1, INC2`",
+              "Two tickets, since duplicates are ignored regardless of capitals. Up to 100 per entry."
+            ],
+            [
+              "delete an entry",
+              "It stops counting everywhere (totals, last done), but can be restored."
+            ],
+            [
+              "rename the Done or Blocked status",
+              "Not allowed, because the alerts depend on those two words. Every other list value can be renamed or hidden."
+            ]
+          ]
+        }
+      ],
+      "bullets": [
+        "**Default lists** (all editable): categories Troubleshooting, Maintenance, Support / Tickets, Meetings, Project work, Documentation, Training, Admin, Travel. Statuses Not started, In progress, Waiting, Blocked, Done. Priorities Low, Medium, High, Urgent. Ten repeat frequencies from Daily to Every 3 years. No timesheet codes; you add your own."
+      ],
+      "questions": [
+        {
+          "id": "plain",
+          "legend": "A plain number with no unit",
+          "options": [
+            {
+              "value": "Up to 24 = hours, above = minutes",
+              "rec": true,
+              "why": "`8` is a workday, `45` is a meeting. Both read as you'd mean them."
+            },
+            {
+              "value": "Always hours",
+              "why": "`45` would be refused as too many hours."
+            },
+            {
+              "value": "Always minutes",
+              "why": "`8` would be 8 minutes."
+            }
+          ]
+        },
+        {
+          "id": "rest",
+          "legend": "The rest of the table",
+          "options": [
+            {
+              "value": "All fine",
+              "rec": true
+            },
+            {
+              "value": "Change something",
+              "why": "Say which row in the note."
+            }
+          ]
+        }
+      ],
+      "pick": "Keep them all. The hours rule is the one most worth a second look."
     }
   }
 }
