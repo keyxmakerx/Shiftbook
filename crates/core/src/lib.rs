@@ -12,6 +12,8 @@ pub mod hours;
 pub mod ids;
 pub mod minutes;
 pub mod model;
+pub mod project;
+pub mod task;
 pub mod validate;
 pub mod week;
 
