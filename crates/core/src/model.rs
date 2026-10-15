@@ -10,9 +10,11 @@ use time::{Date, OffsetDateTime};
 
 use crate::dates::{iso_date, rfc3339};
 use crate::ids::{
-    CategoryCodeDefaultId, ChecklistItemId, FrequencyId, ListOptionId, OwnerId, ProjectId,
-    RecurringTaskId, TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetWeekId,
+    CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId,
+    InboxItemId, ListOptionId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId,
+    TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
 };
+use crate::fields::{AppliesTo, FieldKind};
 use crate::minutes::Minutes;
 
 /// The status value that means "finished" in every rule.
@@ -469,6 +471,144 @@ pub struct ChecklistItem {
     pub done: bool,
     /// Position in the checklist.
     pub sort_order: i32,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A ticket in the "Done tickets" tray for one day (see [`crate::tray`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TrayItem {
+    /// Id.
+    pub id: TrayItemId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// The day it was finished.
+    #[serde(with = "iso_date")]
+    pub date: Date,
+    /// The ticket number, upper-cased.
+    pub ticket_number: String,
+    /// Minutes it adds to the day's roll-up entry.
+    pub minutes: Minutes,
+    /// Optional note.
+    pub note: Option<String>,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A custom field definition (see [`crate::fields`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomField {
+    /// Id.
+    pub id: CustomFieldId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// Which records it appears on.
+    pub applies_to: AppliesTo,
+    /// Name shown as its label.
+    pub name: String,
+    /// What kind of value it holds.
+    pub kind: FieldKind,
+    /// Choices (choice fields only).
+    pub options: Vec<String>,
+    /// Link template with `{ticket}`, e.g. for Jira.
+    pub link_template: Option<String>,
+    /// Tickets starting with this get a "copy link" option, e.g. `PROJ-`.
+    pub ticket_prefix: Option<String>,
+    /// Position in forms.
+    pub sort_order: i32,
+    /// Hidden from forms but kept.
+    pub hidden: bool,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A custom field's value on one record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomValue {
+    /// Id.
+    pub id: CustomValueId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// The field.
+    pub field_id: CustomFieldId,
+    /// The entry, ticket or project id it belongs to.
+    pub record_id: uuid::Uuid,
+    /// The value as text.
+    pub value: String,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A crib sheet line ticked off as entered.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TimesheetTick {
+    /// Id.
+    pub id: TimesheetTickId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// First day of the week.
+    #[serde(with = "iso_date")]
+    pub week_start: Date,
+    /// The day of the line.
+    #[serde(with = "iso_date")]
+    pub day: Date,
+    /// The line's key (see [`crate::sheet::SheetLine::key`]).
+    pub line_key: String,
+    /// Ticked.
+    pub done: bool,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A scrap saved to the Inbox from capture.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InboxItem {
+    /// Id.
+    pub id: InboxItemId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// What was typed.
+    pub text: String,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

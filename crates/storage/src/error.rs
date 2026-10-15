@@ -30,6 +30,9 @@ pub enum StorageError {
     /// The value is already in the list (ignoring case).
     #[error("\"{0}\" is already in this list.")]
     Duplicate(String),
+    /// The tray's roll-up entry gets its time and tickets from the tray.
+    #[error("This entry's time and tickets come from the Done tickets tray.")]
+    TrayManaged,
     /// The record doesn't exist (or belongs to someone else).
     #[error("That item no longer exists.")]
     NotFound,

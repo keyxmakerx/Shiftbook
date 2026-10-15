@@ -26,7 +26,7 @@ use uuid::Uuid;
 
 use crate::error::StorageError;
 
-type Result<T> = std::result::Result<T, StorageError>;
+pub(crate) type Result<T> = std::result::Result<T, StorageError>;
 
 /// Settings key recording which version of the default lists was seeded.
 pub const SEED_VERSION_KEY: &str = "seed.version";
@@ -146,22 +146,22 @@ pub trait FrequencyRepository {
 /// The SQLite (SQLCipher) implementation of every repository.
 #[derive(Debug, Clone)]
 pub struct SqliteStore {
-    pool: SqlitePool,
+    pub(crate) pool: SqlitePool,
 }
 
-fn now_text() -> String {
+pub(crate) fn now_text() -> String {
     format_timestamp(OffsetDateTime::now_utc())
 }
 
-fn parse_ts(text: &str) -> Result<OffsetDateTime> {
+pub(crate) fn parse_ts(text: &str) -> Result<OffsetDateTime> {
     OffsetDateTime::parse(text, &Rfc3339).map_err(|_| StorageError::Corrupt("timestamp"))
 }
 
-fn parse_opt_ts(text: Option<String>) -> Result<Option<OffsetDateTime>> {
+pub(crate) fn parse_opt_ts(text: Option<String>) -> Result<Option<OffsetDateTime>> {
     text.as_deref().map(parse_ts).transpose()
 }
 
-fn parse_uuid(text: &str) -> Result<Uuid> {
+pub(crate) fn parse_uuid(text: &str) -> Result<Uuid> {
     Uuid::parse_str(text).map_err(|_| StorageError::Corrupt("id"))
 }
 
@@ -175,11 +175,11 @@ fn parse_list_name(text: &str) -> Result<ListName> {
     }
 }
 
-fn u32_from(value: i64, what: &'static str) -> Result<u32> {
+pub(crate) fn u32_from(value: i64, what: &'static str) -> Result<u32> {
     u32::try_from(value).map_err(|_| StorageError::Corrupt(what))
 }
 
-fn i32_from(value: i64) -> Result<i32> {
+pub(crate) fn i32_from(value: i64) -> Result<i32> {
     i32::try_from(value).map_err(|_| StorageError::Corrupt("sort order"))
 }
 

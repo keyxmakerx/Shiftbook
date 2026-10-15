@@ -14,11 +14,13 @@
 
 pub mod db;
 pub mod error;
+pub mod extras;
 mod fsutil;
 pub mod hex;
 pub mod recovery;
 pub mod repo;
 pub mod vault;
+pub mod work;
 
 pub use error::StorageError;
 pub use fsutil::create_private_dir;
@@ -48,6 +50,8 @@ pub(crate) mod test_rt {
 
 #[cfg(test)]
 mod repo_tests;
+#[cfg(test)]
+mod work_tests;
 
 #[cfg(test)]
 mod tests {
