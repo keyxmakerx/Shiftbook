@@ -23,6 +23,10 @@ pub const MAX_FREQUENCY_MONTHS: u32 = 1_200;
 pub const MAX_FREQUENCY_DAYS: u32 = 3_660;
 /// Largest project estimate: 100,000 hours.
 pub const MAX_ESTIMATE_MINUTES: u32 = 100_000 * 60;
+/// Shortest master password, in characters (SPEC §2.9).
+pub const MIN_PASSWORD_CHARS: usize = 12;
+/// Longest master password, in characters (keeps key derivation input bounded).
+pub const MAX_PASSWORD_CHARS: usize = 1_024;
 
 fn check_len(field: &'static str, value: &str, max: usize) -> Result<(), CoreError> {
     if value.chars().count() > max {
@@ -49,6 +53,23 @@ pub fn validate_required(
 /// An optional value: at most `max` characters (blank is fine).
 pub fn validate_optional(field: &'static str, value: &str, max: usize) -> Result<(), CoreError> {
     check_len(field, value.trim(), max)
+}
+
+/// A new master password: 12 to 1,024 characters. Spaces count and nothing is
+/// trimmed, so the password is used exactly as typed. The error never contains it.
+pub fn validate_new_password(password: &str) -> Result<(), CoreError> {
+    let count = password.chars().count();
+    if count < MIN_PASSWORD_CHARS {
+        return Err(CoreError::PasswordTooShort {
+            min: MIN_PASSWORD_CHARS,
+        });
+    }
+    if count > MAX_PASSWORD_CHARS {
+        return Err(CoreError::PasswordTooLong {
+            max: MAX_PASSWORD_CHARS,
+        });
+    }
+    Ok(())
 }
 
 /// A dropdown value (category, status, priority, recurring type).
@@ -183,6 +204,31 @@ mod tests {
     use crate::ids::{OwnerId, ProjectId, TaskId, TimeEntryId, TimesheetCodeId};
     use crate::model::EntryTarget;
     use time::macros::{date, datetime};
+
+    #[test]
+    fn new_password_length() {
+        assert_eq!(
+            validate_new_password("short"),
+            Err(CoreError::PasswordTooShort { min: 12 })
+        );
+        assert_eq!(
+            validate_new_password("elevenchars"),
+            Err(CoreError::PasswordTooShort { min: 12 })
+        );
+        assert_eq!(validate_new_password("twelve chars"), Ok(()));
+        // Characters, not bytes: 12 accented letters are enough, 11 are not.
+        assert_eq!(validate_new_password(&"é".repeat(12)), Ok(()));
+        assert!(validate_new_password(&"é".repeat(11)).is_err());
+        // Nothing is trimmed: spaces count.
+        assert_eq!(validate_new_password("            "), Ok(()));
+        assert_eq!(validate_new_password(&"x".repeat(1_024)), Ok(()));
+        assert_eq!(
+            validate_new_password(&"x".repeat(1_025)),
+            Err(CoreError::PasswordTooLong { max: 1_024 })
+        );
+        let message = validate_new_password("secret-pw").unwrap_err().to_string();
+        assert!(!message.contains("secret-pw"));
+    }
 
     #[test]
     fn required_fields() {

@@ -104,6 +104,20 @@ pub enum CoreError {
         max: usize,
     },
 
+    /// A new master password was too short.
+    #[error("Use at least {min} characters for your password.")]
+    PasswordTooShort {
+        /// The minimum number of characters.
+        min: usize,
+    },
+
+    /// A new master password was too long.
+    #[error("That password is too long (at most {max} characters).")]
+    PasswordTooLong {
+        /// The maximum number of characters.
+        max: usize,
+    },
+
     /// A text value was not a valid id.
     #[error("\"{input}\" isn't a valid id.")]
     IdInvalid {
