@@ -1,12 +1,15 @@
 name: Release
 
 # Builds installers and no-install builds for Windows, macOS and Linux and attaches them to a
-# GitHub pre-release. Run it from the Actions tab ("Run workflow"), or push a tag like
-# v0.1.0-alpha.1. Builds are unsigned until code signing is set up (see docs/SECURITY.md).
+# GitHub release. Start it any of three ways: publish a release on GitHub's Releases page, push a
+# version tag (v0.1.0-alpha.1 or 0.1.0), or use "Run workflow" on the Actions tab.
+# Builds are unsigned until code signing is set up (see docs/SECURITY.md).
 
 on:
   push:
-    tags: ['v*']
+    tags: ['v*', '[0-9]*']
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       tag:
@@ -23,7 +26,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+  TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event_name == 'push' && github.ref_name || inputs.tag }}
 
 jobs:
   build:

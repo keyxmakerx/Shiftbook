@@ -9,6 +9,10 @@ updates:
     directory: /web
     schedule:
       interval: weekly
+    ignore:
+      # svelte-check 4.x supports TypeScript 5 and 6 only; lift this once it supports 7.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /
