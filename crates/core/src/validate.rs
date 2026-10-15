@@ -306,6 +306,8 @@ mod tests {
             priority: None,
             estimated_minutes: Some(Minutes(600)),
             default_timesheet_code_id: None,
+            color: None,
+            archived: false,
             created_at: now,
             updated_at: now,
             deleted_at: None,

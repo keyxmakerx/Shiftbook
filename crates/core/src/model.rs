@@ -202,6 +202,10 @@ pub struct Project {
     pub estimated_minutes: Option<Minutes>,
     /// Timesheet code its entries get unless overridden.
     pub default_timesheet_code_id: Option<TimesheetCodeId>,
+    /// Colour shown everywhere for this project, `#rrggbb` (`None` = neutral).
+    pub color: Option<String>,
+    /// Archived projects keep their history but leave the pickers.
+    pub archived: bool,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,
