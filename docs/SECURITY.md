@@ -131,3 +131,30 @@ autofill, clearing the clipboard on lock.
 **Known limits (tell the user plainly):** the password briefly exists in the WebView's memory and
 IPC buffers; swap, hibernation files and crash dumps may hold memory; screenshot protection works on
 Windows, is partial on macOS and does nothing on Linux; nothing stops a phone camera.
+
+## M1 limits
+What the M1 build does not protect against, or doesn't do yet:
+- **sqlx keeps a copy of the key.** The `PRAGMA key` text (with the DEK in hex) lives in sqlx's
+  connect options as an ordinary `String` for as long as the database is open, and is not wiped
+  on lock (only dropped). Our own copies are wiped.
+- **The password passes through the WebView.** It is typed in the page, sent over Tauri IPC as a
+  string and only then moved into a wiped buffer. JavaScript strings can't be wiped; the form
+  fields are cleared on submit and the page is reloaded on lock. The recovery key is sent back to
+  the page once at setup.
+- **OS sleep and screen lock aren't detected directly.** The page locks when its timer notices a
+  gap of a minute or more (the computer slept or hibernated). Locking the screen without sleeping
+  only triggers the 15-minute idle lock.
+- **Old copies of `vault.json`** (for example in a user's own file backup) still open the database
+  with the password that was current then, because the DEK never changes. `vault.json.prev` is
+  kept equal to the current vault for this reason.
+- **The unlock back-off is in memory only** and resets when the app restarts. Argon2's cost is the
+  real defence against guessing.
+- **After a recovery-key unlock** the password can only be changed by someone who knows it; a
+  "set a new password with the recovery key" step is not built yet.
+- **Recovery key confirmation:** if the app is closed on the recovery key screen, the key is gone;
+  regenerating it (needs the password) has no screen yet.
+- **WebView cache files** (WebKitGTK on Linux) sit in the app data folder with default
+  permissions. Shiftbook puts no data in WebView storage.
+- **SQLCipher errors are printed to the terminal** (for example "hmac check failed" on a wrong
+  key). They contain page numbers, never keys.
+- The general known limits above (swap, hibernation, crash dumps, screenshots) still apply.
