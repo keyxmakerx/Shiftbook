@@ -1,0 +1,303 @@
+{
+  "meta": {
+    "round": 6,
+    "heading": "Round 6: the next-gen prototype and the timesheet",
+    "intro": "Everything so far, put together as one working app you can click through: the time ribbon, the Desk, Planner, Canvas, Timesheet, and capture that understands plain sentences. All data is made up. Round 5 is in the Archive with my replies."
+  },
+  "cards": {
+    "r6-proto": {
+      "round": 6,
+      "order": 10,
+      "area": "Look and feel",
+      "version": 1,
+      "title": "Open the prototype full screen and use it for five minutes",
+      "body": [
+        "**[Open the Shiftbook prototype](https://claude.ai/artifact/74U1B2bff8opXBKdorjgLM)** in its own tab, full screen. It works with mouse and keyboard and keeps what you do until you reload.",
+        "Things to try:"
+      ],
+      "bullets": [
+        "Press **Ctrl+Space** and type `2h rack cleanup INC0045701 #data yesterday`. Watch it pick out the hours, project, ticket and day as you type, then press Enter and the entry flies into place.",
+        "On the Desk, hover an entry and press **+15m** (no more `=1.5+2`). Click a ticket chip to copy it. Every change has **Undo**; there are no \"Are you sure?\" boxes.",
+        "Click any day in the **ribbon** at the top to jump to it. The coloured bars are your hours by project.",
+        "**Planner**: drag the bottom edge of a block to stretch or shrink its hours. The ribbon and timesheet follow.",
+        "**Canvas**: drag a card out of Data centre into Patching and it changes project (with Undo). Right-click a card for the fold-out menu.",
+        "Keys **1–4** switch views. The **◐** button flips light and dark. The **Protected** pill starts the 10-minute screenshot allowance."
+      ],
+      "figures": [
+        {
+          "html_file": "prototype/index.html",
+          "start": "desk",
+          "height": 640,
+          "caption": "The same prototype, small, right here. The full-screen tab is much better."
+        }
+      ],
+      "questions": [
+        {
+          "id": "feel",
+          "legend": "Is this the direction for next gen?",
+          "options": [
+            {
+              "value": "Yes, build it like this",
+              "rec": true
+            },
+            {
+              "value": "Close, keep pushing",
+              "why": "Tick what to push on below."
+            },
+            {
+              "value": "Not yet",
+              "why": "Tell me what feels old."
+            }
+          ]
+        },
+        {
+          "id": "push",
+          "type": "many",
+          "legend": "What should feel even better?",
+          "options": [
+            {
+              "value": "More motion"
+            },
+            {
+              "value": "Calmer, less motion"
+            },
+            {
+              "value": "Bolder colour"
+            },
+            {
+              "value": "Bigger, roomier layout"
+            },
+            {
+              "value": "Denser, more on screen"
+            },
+            {
+              "value": "More keyboard shortcuts"
+            },
+            {
+              "value": "Different fonts"
+            },
+            {
+              "value": "Dark mode as default"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "The one thing you'd change first (optional)",
+          "placeholder": "e.g. the Desk feels empty below the entries"
+        }
+      ],
+      "pick": "Yes. The fonts and colours ship inside the app (no internet), and the motion turns itself off if Windows is set to reduce motion."
+    },
+    "r6-timesheet": {
+      "round": 6,
+      "order": 20,
+      "area": "Timesheet",
+      "version": 1,
+      "title": "What the timesheet looks like, and the quick way to fill it",
+      "body": [
+        "Your Excel had no timesheet view at all, just \"filter by Week Of\". In Shiftbook the timesheet is a view of the week: **codes down the side, days across**, in the order you type them into your timesheet system. Hours fill in from what you logged; you never re-type them.",
+        "**Quick ways to add timesheet time when you don't want details:**"
+      ],
+      "bullets": [
+        "**Type straight into a cell.** Click under Wednesday on a code and type `2`. That's it: two hours of quick time on that code, no project or description needed.",
+        "**+ Holiday** books a day off at 8 h on your holiday code in one click.",
+        "From anywhere, **Ctrl+Space** then `8 holiday fri` does the same.",
+        "**Copy for timesheet** copies the grid as columns that paste straight into a timesheet form or Excel.",
+        "Amber warnings catch mistakes before you submit: hours with no code, weekdays with nothing logged, days over 12 h. **Mark submitted** stamps the week."
+      ],
+      "figures": [
+        {
+          "html_file": "prototype/index.html",
+          "start": "timesheet",
+          "height": 640,
+          "caption": "Click a code name to see the entries behind its hours. Click the amber **Unassigned** row, then the button, to give Admin a code."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Does this cover your timesheet?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Mostly",
+              "why": "Say what's missing, e.g. comments per day, a second code level."
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "codes",
+          "legend": "Your timesheet codes",
+          "options": [
+            {
+              "value": "I'll type them into Shiftbook",
+              "rec": true,
+              "why": "They live only in your encrypted data, never in the repo or on this sheet."
+            },
+            {
+              "value": "Import them from a file",
+              "why": "A simple CSV you make yourself."
+            }
+          ]
+        }
+      ],
+      "pick": "Yes. Your real codes go into the app itself, so nothing about your workplace ends up in the code."
+    },
+    "r6-excel": {
+      "round": 6,
+      "order": 30,
+      "area": "From your Excel",
+      "version": 1,
+      "title": "What your spreadsheet taught me",
+      "body": [
+        "I studied how your workbook is built: its sheets, formulas and limits. I did not copy any of your entries into the repo or onto this sheet. Here's how each pain point is handled:"
+      ],
+      "tables": [
+        {
+          "head": [
+            "In Excel",
+            "In Shiftbook"
+          ],
+          "rows": [
+            [
+              "One ticket per cell, so you wrote \"Multiple\" or \"NA\"",
+              "Any number of ticket chips per entry; paste a list and they split. A Tickets page searches them all."
+            ],
+            [
+              "Worked on it again? Add a row or type `=1.5+2`",
+              "**+15m / +30m / +1h** on the entry, or stretch it in the Planner."
+            ],
+            [
+              "A script moves last week to an Archive sheet every Monday",
+              "Nothing to archive. Older days just fade back; everything stays searchable."
+            ],
+            [
+              "Dashboard of formula tiles; change a yellow week box",
+              "The ribbon shows every day's hours at a glance; click any day or week."
+            ],
+            [
+              "Daily routine items show OVERDUE forever",
+              "Routine items have alerts off and just collect hours."
+            ],
+            [
+              "No timesheet view",
+              "Codes × days grid, quick-fill, warnings, copy."
+            ],
+            [
+              "Formulas break if a name is retyped differently",
+              "Projects are picked, not typed; renames update everywhere."
+            ]
+          ]
+        }
+      ],
+      "bullets": [
+        "Your file can be imported at milestone M9: it currently holds 2 projects, 3 recurring items and a handful of entries. The import will keep your multi-ticket cells as a note to split, as planned."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Anything from the spreadsheet I've missed?",
+          "options": [
+            {
+              "value": "No, that's it",
+              "rec": true
+            },
+            {
+              "value": "Yes",
+              "why": "Tell me in the note."
+            }
+          ]
+        }
+      ],
+      "pick": "That's it."
+    },
+    "r6-m1": {
+      "round": 6,
+      "order": 40,
+      "area": "Milestone summary",
+      "version": 1,
+      "title": "M1 is done: your data is locked with your password",
+      "body": [
+        "The real app now creates an encrypted vault on first run, shows a one-time recovery key, and asks for your password every time it opens. These screens are deliberately plain; they get the prototype's look once you approve it.",
+        "I checked the result the way an attacker would: the database file on disk is random-looking bytes, and an ordinary SQLite tool reports \"file is not a database\". The password takes about half a second to check, so guessing it is very slow."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/7bbe2010cb3e1c57100b31f1c81b6382",
+          "caption": "The one-time recovery key (a throwaway test key). You must retype two groups before continuing."
+        },
+        {
+          "src": "/_blob/761b9ccfad50446340f7978d74697b2a",
+          "caption": "The unlock screen after a wrong password: one plain message, with no hint about what was wrong."
+        }
+      ],
+      "bullets": [
+        "**Done:** encrypted database, vault, recovery key, unlock, Lock now (Ctrl+L), lock after 15 min idle or after the computer sleeps, change password, and screenshot protection on by default. 154 tests pass.",
+        "**Security checklist:** every must-have item from the research is in, apart from noticing when you lock Windows without sleeping (Tauri can't detect it yet), which is written down as a known limit.",
+        "**One version note:** the database library bundles SQLCipher 4.10. Newer versions fix two low-risk issues in features Shiftbook doesn't use (full-text search, database export). I'll move up as soon as the database toolkit allows it.",
+        "**Not yet:** choosing where data is stored at first run, and saving the recovery key as a file. Both need the file-picker add-on, which comes with backups in M9."
+      ],
+      "questions": [
+        {
+          "id": "reset",
+          "legend": "After you unlock with the recovery key (forgot password), what next?",
+          "options": [
+            {
+              "value": "Ask for a new password straight away",
+              "rec": true,
+              "why": "Otherwise you'd need the long key every time."
+            },
+            {
+              "value": "Leave it to me",
+              "why": "Change it later in Settings."
+            }
+          ]
+        },
+        {
+          "id": "newkey",
+          "legend": "A \"Make a new recovery key\" button (asks for your password)",
+          "options": [
+            {
+              "value": "Soon, in the next milestone",
+              "rec": true,
+              "why": "If the app closes while the key is on screen, this is how you get a new one."
+            },
+            {
+              "value": "With Settings, later"
+            }
+          ]
+        },
+        {
+          "id": "copy",
+          "legend": "The Copy key button on the recovery screen",
+          "options": [
+            {
+              "value": "Keep it",
+              "rec": true,
+              "why": "It warns, and empties the clipboard after 60 seconds. Some people store keys in a password manager."
+            },
+            {
+              "value": "Remove it",
+              "why": "Forces writing it down."
+            }
+          ]
+        },
+        {
+          "id": "name",
+          "type": "text",
+          "legend": "What should Shiftbook call you? (optional)",
+          "placeholder": "Shown in a greeting. Default is \"Me\". Stays on your computer only."
+        }
+      ],
+      "pick": "New password straight away, the new-key button soon, and keep Copy with its warning."
+    }
+  }
+}

@@ -2,6 +2,17 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 5 — 15 Oct 2026
+- **Navigation:** a time ribbon across the top (days as bars of coloured hours), the Desk as home,
+  and switchable views: Planner (week/month/year, formerly "Zoom"), Canvas and Timesheet.
+- **Canvas:** coloured paper; dragging a card into or out of a project area changes its project
+  (with Undo); right-click opens a fold-out menu.
+- **Protection:** while protected the window is hidden from screenshots and screen shares (text
+  included) and copying text out is blocked; the timed allow button lifts both. The timesheet's
+  Copy button keeps working.
+- **Core rules:** all choices on the rules card approved (a plain number up to 24 is hours, above
+  is minutes).
+
 ## Round 4 — 15 Oct 2026
 - **Layout direction:** keep the free canvas with a timeline mode (switching must not disturb the
   user's own arrangement), a calendar planner (week, month, year) that folds open, and

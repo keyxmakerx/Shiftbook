@@ -22,9 +22,13 @@ def main(src, out):
     for cid, card in rnd["cards"].items():
         for fig in card.get("figures", []):
             path = fig.pop("html_file", None)
+            start = fig.pop("start", None)
             if path:
                 with open(os.path.join(HERE, path), encoding="utf-8") as m:
                     fig["html"] = m.read()
+                if start:
+                    # Lets one prototype open on a chosen view inside a card.
+                    fig["html"] = "<script>window.SB_START=%s</script>" % json.dumps(start) + fig["html"]
         card.setdefault("archived", False)
         card.setdefault("created_at", now)
         dest = os.path.join(out, "cards", cid + ".json")

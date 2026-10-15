@@ -158,3 +158,8 @@ What the M1 build does not protect against, or doesn't do yet:
 - **SQLCipher errors are printed to the terminal** (for example "hmac check failed" on a wrong
   key). They contain page numbers, never keys.
 - The general known limits above (swap, hibernation, crash dumps, screenshots) still apply.
+
+**Bundled database versions (M1):** sqlx 0.9 caps `libsqlite3-sys` below 0.38, which bundles
+SQLCipher 4.10.0 on SQLite 3.50.4 and OpenSSL 3.6.3. SQLCipher 4.15/4.17 fix CVE-2026-51936
+(`sqlcipher_export` in defensive mode) and FTS5 issues (CVE-2026-11822/-11824); Shiftbook uses
+neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.

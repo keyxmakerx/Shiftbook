@@ -32,6 +32,7 @@ p { margin: 0; }
 [hidden] { display: none !important; }
 code { font-family: var(--mono); font-size: 0.8em; background: var(--wash); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
 :focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+.prose a, .pick a, .figure a { color: var(--stamp); font-weight: 600; }
 button, input, textarea { font: inherit; color: inherit; }
 .label { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 
@@ -200,10 +201,12 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   function setLive(state, text) { document.body.dataset.live = state; $('live-text').textContent = text; }
   function h(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
-  // Inline text: `code` and **bold** only. Everything is set as text, never as HTML.
+  // Inline text: `code`, **bold** and [links](https://claude.ai/...). Everything is set as text, never as HTML.
   function rich(parent, s) {
-    String(s).split(/(`[^`]+`|\*\*[^*]+\*\*)/).forEach(function (part) {
+    String(s).split(/(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\(https:\/\/[^)\s]+\))/).forEach(function (part) {
       if (!part) return;
+      var lk = part.match(/^\[([^\]]+)\]\((https:\/\/[^)\s]+)\)$/);
+      if (lk) { var a = h('a', null, lk[1]); a.href = lk[2]; a.target = '_blank'; a.rel = 'noopener'; parent.appendChild(a); return; }
       if (part[0] === '`') parent.appendChild(h('code', null, part.slice(1, -1)));
       else if (part.slice(0, 2) === '**') parent.appendChild(h('b', null, part.slice(2, -2)));
       else parent.appendChild(document.createTextNode(part));
