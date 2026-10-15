@@ -1,0 +1,63 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#22262B;background:#E6E9EC}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+:root{--teal:#178F7C;--coral:#E0573A;--indigo:#3E5BA9;--amber:#E9A23B;--plum:#8C4F7A;--moss:#5E9447;--ink:#22262B;--mut:#6B737B;--desk:#E6E9EC}
+.frame{position:relative;height:440px;overflow:hidden;background:var(--desk);
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.paper{background:#FFFEFB;border-radius:3px;box-shadow:0 0 0 1px rgba(34,38,43,.07),0 1px 2px rgba(34,38,43,.08),0 8px 18px -12px rgba(34,38,43,.35);position:relative;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E")}
+.edge{border-top:3px solid var(--c,#9AA3AB)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;font-weight:600}
+.mut{color:var(--mut)}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9AA1A8}
+.strip{position:absolute;right:10px;top:10px;bottom:10px;width:200px;display:flex;flex-direction:column;gap:8px;padding:10px 12px}
+.strip textarea{flex:1;border:0;outline:0;resize:none;background:transparent;font:12.5px/1.6 "Segoe UI",system-ui,sans-serif;color:var(--ink);
+ background-image:repeating-linear-gradient(transparent 0 19px,rgba(62,91,169,.12) 19px 20px)}
+.strip .tabs{display:flex;gap:4px}.strip .tabs span{font-size:11px;padding:2px 8px;border-radius:10px;background:#EEF0F2;color:var(--mut)}.strip .tabs span.on{background:var(--ink);color:#fff}
+@media (max-width:640px){.strip{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+.frame{height:540px}
+.c{position:absolute;width:150px;padding:7px 9px;cursor:grab;user-select:none;touch-action:none;transition:left .55s cubic-bezier(.2,.8,.2,1),top .55s cubic-bezier(.2,.8,.2,1),box-shadow .2s}
+.c.drag{transition:none;cursor:grabbing;box-shadow:0 8px 18px -6px rgba(0,0,0,.3);z-index:5}
+.c small{display:block;color:#80878E;font-size:11px}.c i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.c{border-top:3px solid var(--c)}.c.scrap{outline:1.5px dashed var(--coral);outline-offset:-1.5px}.c.proj{font-weight:600;color:#fff;background:var(--c)}.c.proj small{color:rgba(255,255,255,.8)}
+.kind{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);display:block}
+svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.axis{position:absolute;left:20px;right:20px;top:200px;border-top:2px solid #C3C8CD;opacity:0;transition:opacity .4s}.tl .axis{opacity:1}
+.ax{position:absolute;top:206px;font:10.5px "Cascadia Mono",Consolas,monospace;color:#80878E;opacity:0;transition:opacity .4s;transform:translateX(-50%)}.tl .ax{opacity:1}
+.tl .c{width:132px;font-size:12px;padding:5px 8px}.tl .c small{display:none}
+.region{position:absolute;border-radius:12px;transition:opacity .4s;background:color-mix(in srgb,var(--rc) 9%,transparent);border:1.5px solid color-mix(in srgb,var(--rc) 30%,transparent)}.region .lbl{color:var(--rc);font-weight:700}.region span{position:absolute;left:10px;top:6px}.tl .region{opacity:0}
+</style>
+<div class="try"><b>Try it:</b><button id="tl">Arrange as timeline</button><button id="mine" disabled>Back to my layout</button><span>drag any card; the lines follow</span></div>
+<div class="frame" id="fr"><svg id="sv"></svg><div class="axis"></div>
+ <div class="region" style="--rc:var(--indigo);left:14px;top:12px;width:350px;height:300px"><span class="lbl">Network refresh</span></div>
+ <div class="region" style="--rc:var(--amber);left:384px;top:300px;width:340px;height:230px"><span class="lbl">Data centre</span></div>
+ <span class="wf">Free canvas · coloured paper · sample data</span></div>
+<script>
+var D=[['n1','note','Weekly ops sync','meeting · 15 Oct',15,'#E0A84A',30,36,'var(--indigo)'],['n3','scrap','guest wifi drops again??','scrap · 14 Oct',14,'#D9605A',30,140,'var(--coral)'],
+ ['t1','task','Draft VLAN split change','task · due 20 Oct',20,'#D9605A',200,36,'var(--indigo)'],['t2','task','Retire any-any rule','task · due 16 Oct',16,'#D9605A',200,140,'var(--indigo)'],
+ ['p1','proj','Network refresh','project',0,'#9AA3AB',115,240,'var(--indigo)'],['n2','note','Vendor call: UPS','meeting · 13 Oct',13,'#9AA3AB',400,330,'var(--amber)'],
+ ['t3','task','Order UPS batteries','task · due 16 Oct',16,'#E0A84A',560,330,'var(--amber)'],['t4','task','Update backup runbook','task · today',15,'#9AA3AB',560,440,'var(--amber)'],['n4','note','Idea: auto-renew certs','note · 9 Oct',9,'#9AA3AB',400,440,'var(--amber)']];
+var L=[['n1','t1'],['n1','t2'],['n3','t1'],['t1','p1'],['t2','p1'],['n2','t3'],['n4','t4'],['n1','t4']];
+var fr=document.getElementById('fr'),sv=document.getElementById('sv'),el={},mine={};
+D.forEach(function(d){var c=document.createElement('div');c.className='paper c '+d[1];c.style.setProperty('--c',d[8]);c.innerHTML='<span class="kind">'+({note:'Note',scrap:'Scrap',task:'Task',proj:'Project'})[d[1]]+'</span><i style="background:'+d[5]+'"></i>';c.appendChild(document.createTextNode(d[2]));
+ var s=document.createElement('small');s.textContent=d[3];c.appendChild(s);c.style.left=d[6]+'px';c.style.top=d[7]+'px';fr.appendChild(c);el[d[0]]=c;c.dataset.id=d[0]});
+[9,11,13,15,17,19].forEach(function(day){var a=document.createElement('span');a.className='ax';a.style.left=X(day)+75+'px';a.textContent=day+' Oct';fr.appendChild(a)});
+function X(day){return 20+(day-9)/11*(fr.clientWidth-200)}
+function lines(){var r=fr.getBoundingClientRect(),h='';L.forEach(function(l){var a=el[l[0]].getBoundingClientRect(),b=el[l[1]].getBoundingClientRect();
+ var x1=a.left+a.width/2-r.left,y1=a.top+a.height/2-r.top,x2=b.left+b.width/2-r.left,y2=b.top+b.height/2-r.top;h+='<path d="M'+x1+' '+y1+'C'+(x1+x2)/2+' '+y1+' '+(x1+x2)/2+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="#8E969E" stroke-width="1.6" stroke-dasharray="0"/>'});sv.innerHTML=h}
+function tick(t){lines();if(t&&performance.now()<t)requestAnimationFrame(function(){tick(t)})}
+var drag=null,ox,oy;
+fr.addEventListener('pointerdown',function(e){var c=e.target.closest('.c');if(!c)return;drag=c;c.classList.add('drag');c.setPointerCapture(e.pointerId);ox=e.clientX-c.offsetLeft;oy=e.clientY-c.offsetTop});
+fr.addEventListener('pointermove',function(e){if(!drag)return;drag.style.left=Math.max(0,Math.min(fr.clientWidth-150,e.clientX-ox))+'px';drag.style.top=Math.max(0,Math.min(fr.clientHeight-50,e.clientY-oy))+'px';lines()});
+fr.addEventListener('pointerup',function(){if(drag)drag.classList.remove('drag');drag=null});
+document.getElementById('tl').onclick=function(){if(fr.classList.contains('tl'))return;D.forEach(function(d){var c=el[d[0]];mine[d[0]]=[c.style.left,c.style.top]});fr.classList.add('tl');
+ var lv={up:0,dn:0};D.forEach(function(d){var c=el[d[0]];if(d[1]==='proj'){c.style.left=(fr.clientWidth-170)+'px';c.style.top='24px';return}
+  var k=d[1]==='task'?'dn':'up',l=lv[k]++%3;c.style.left=X(d[4])+'px';c.style.top=(k==='up'?150-l*46:224+l*46)+'px'});
+ this.disabled=true;document.getElementById('mine').disabled=false;tick(performance.now()+700)};
+document.getElementById('mine').onclick=function(){fr.classList.remove('tl');D.forEach(function(d){el[d[0]].style.left=mine[d[0]][0];el[d[0]].style.top=mine[d[0]][1]});
+ this.disabled=true;document.getElementById('tl').disabled=false;tick(performance.now()+700)};
+lines();addEventListener('resize',lines);
+</script>

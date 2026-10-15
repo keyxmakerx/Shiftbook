@@ -2,6 +2,18 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 4 — 15 Oct 2026
+- **Layout direction:** keep the free canvas with a timeline mode (switching must not disturb the
+  user's own arrangement), a calendar planner (week, month, year) that folds open, and
+  daily/jot/meeting notes in an always-available side strip. Main navigation decided in round 5.
+- **Look:** coloured paper without clichés (no tape, torn edges or tilted cards), more colour.
+- **Picture editor tools:** box, arrow, highlight, hide (flattened, unrecoverable), crop, text
+  labels, numbered steps.
+- **Capture protection:** on by default, with a timed "allow screenshots" button (default 10 min).
+  Uses Tauri's content protection; reliable on Windows, partial on macOS, unavailable on Linux.
+- **M1:** approved to start, with sqlx + SQLCipher, argon2, chacha20poly1305, rand, zeroize,
+  secrecy, uuid, time and thiserror. Research current security guidance and CVEs first.
+
 ## Round 3 — 15 Oct 2026
 - **Look:** the technical skins were also rejected; the shared sidebar-plus-list layout is the
   problem. Round 4 compares layouts as unstyled wireframes before any styling.

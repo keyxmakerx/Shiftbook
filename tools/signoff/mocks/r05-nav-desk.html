@@ -1,0 +1,54 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#22262B;background:#E6E9EC}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+:root{--teal:#178F7C;--coral:#E0573A;--indigo:#3E5BA9;--amber:#E9A23B;--plum:#8C4F7A;--moss:#5E9447;--ink:#22262B;--mut:#6B737B;--desk:#E6E9EC}
+.frame{position:relative;height:440px;overflow:hidden;background:var(--desk);
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.paper{background:#FFFEFB;border-radius:3px;box-shadow:0 0 0 1px rgba(34,38,43,.07),0 1px 2px rgba(34,38,43,.08),0 8px 18px -12px rgba(34,38,43,.35);position:relative;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E")}
+.edge{border-top:3px solid var(--c,#9AA3AB)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;font-weight:600}
+.mut{color:var(--mut)}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9AA1A8}
+.strip{position:absolute;right:10px;top:10px;bottom:10px;width:200px;display:flex;flex-direction:column;gap:8px;padding:10px 12px}
+.strip textarea{flex:1;border:0;outline:0;resize:none;background:transparent;font:12.5px/1.6 "Segoe UI",system-ui,sans-serif;color:var(--ink);
+ background-image:repeating-linear-gradient(transparent 0 19px,rgba(62,91,169,.12) 19px 20px)}
+.strip .tabs{display:flex;gap:4px}.strip .tabs span{font-size:11px;padding:2px 8px;border-radius:10px;background:#EEF0F2;color:var(--mut)}.strip .tabs span.on{background:var(--ink);color:#fff}
+@media (max-width:640px){.strip{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.desk{position:absolute;left:10px;top:10px;bottom:10px;right:220px}
+.obj{position:absolute;cursor:pointer;padding:10px 12px;transition:left .5s cubic-bezier(.2,.8,.2,1),top .5s cubic-bezier(.2,.8,.2,1),width .5s cubic-bezier(.2,.8,.2,1),height .5s cubic-bezier(.2,.8,.2,1),opacity .3s,transform .2s}
+.obj:hover{transform:translateY(-2px)}.obj h3{margin:0 0 6px;font-size:13px;display:flex;justify-content:space-between;align-items:baseline}
+.obj .body{overflow:hidden}.obj.big{cursor:default;transform:none;z-index:4}.obj.dim{opacity:0;pointer-events:none}
+.cal .w{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}.cal .w div{text-align:center;font-size:10.5px;padding:3px 0;border-radius:3px;background:#F2F3F5}.cal .w div.t{background:var(--ink);color:#fff}
+.cal .w b{display:block;font-family:Consolas,monospace;font-size:11px}
+.inbox .s{padding:5px 7px;margin-top:5px;font-size:12px}.notes .ln{font-size:12px;border-bottom:1px solid #ECEEF0;padding:4px 0}
+.mapmini svg{width:100%;height:90px}
+.back{position:absolute;right:10px;top:8px;font:inherit;font-size:12px;border:1px solid #C9CDD1;background:#fff;border-radius:6px;padding:2px 9px;cursor:pointer;display:none}.obj.big .back{display:block}
+.xl{display:none;margin-top:8px}.obj.big .xl{display:block}
+</style>
+<div class="try"><b>Try it:</b><span>click any object on the desk to open it; Back puts it down again</span></div>
+<div class="frame"><div class="desk" id="desk">
+ <div class="paper obj cal edge" style="--c:var(--indigo);left:0;top:0;width:58%;height:46%" data-home="0,0,58,46"><button class="back">Back</button><h3>This week <span class="h">27.0 h</span></h3>
+  <div class="body"><div class="w"><div>Mon<b>7.5</b></div><div>Tue<b>6.0</b></div><div>Wed<b>6.0</b></div><div class="t">Thu<b>3.5</b></div><div>Fri<b>–</b></div><div>Sat<b></b></div><div>Sun<b></b></div></div>
+  <div class="xl"><p class="mut">Opens into the planner: week, month and year, with each day folding open.</p></div></div></div>
+ <div class="paper obj inbox edge" style="--c:var(--coral);left:61%;top:0;width:39%;height:46%" data-home="61,0,39,46"><button class="back">Back</button><h3>Inbox <span class="h">2</span></h3>
+  <div class="body"><div class="paper s">guest wifi drops again??</div><div class="paper s">Idea: auto-renew certs</div><div class="xl"><p class="mut">Sort scraps into projects, tasks or time.</p></div></div></div>
+ <div class="paper obj notes edge" style="--c:var(--plum);left:0;top:50%;width:38%;height:50%" data-home="0,50,38,50"><button class="back">Back</button><h3>Notes <span class="mut">3 this week</span></h3>
+  <div class="body"><div class="ln">Weekly ops sync · 15 Oct</div><div class="ln">Vendor call: UPS · 13 Oct</div><div class="ln">Patching plan · 12 Oct</div><div class="xl"><p class="mut">Meeting, daily and jot notes, with pictures.</p></div></div></div>
+ <div class="paper obj mapmini edge" style="--c:var(--teal);left:41%;top:50%;width:59%;height:50%" data-home="41,50,59,50"><button class="back">Back</button><h3>Map <span class="mut">free canvas</span></h3>
+  <div class="body"><svg viewBox="0 0 300 90"><g fill="none" stroke="#B8BEC4" stroke-width="1.4"><path d="M60 22C110 22 110 45 160 45"/><path d="M60 68C110 68 110 45 160 45"/><path d="M200 45C230 45 230 25 250 25"/></g>
+  <g fill="#FFFEFB" stroke="#CDD2D7"><rect x="10" y="10" width="60" height="24" rx="3"/><rect x="10" y="56" width="60" height="24" rx="3"/><rect x="150" y="33" width="60" height="24" rx="3"/><rect x="240" y="13" width="55" height="24" rx="3"/></g>
+  <g fill="var(--indigo)"><rect x="10" y="10" width="60" height="3"/><rect x="150" y="33" width="60" height="3"/></g><g fill="var(--coral)"><rect x="10" y="56" width="60" height="3"/></g><g fill="var(--amber)"><rect x="240" y="13" width="55" height="3"/></g></svg>
+  <div class="xl"><p class="mut">Drag cards anywhere; one button lines them up on a timeline.</p></div></div></div>
+</div>
+ <aside class="paper strip"><div class="tabs"><span class="on">Jot</span><span>Meeting</span><span>Daily</span></div><textarea>ops sync: split guest VLAN next wk
+- [ ] retire any-any rule Fri</textarea><span class="lbl">Always here · Ctrl+Shift+Space</span></aside>
+ <span class="wf">Concept 3 · The desk</span></div>
+<script>var desk=document.getElementById('desk');
+function place(o,l,t,w,h){o.style.left=l+'%';o.style.top=t+'%';o.style.width=w+'%';o.style.height=h+'%'}
+desk.addEventListener('click',function(e){var o=e.target.closest('.obj');if(!o)return;
+ if(e.target.closest('.back')){desk.querySelectorAll('.obj').forEach(function(x){var h=x.dataset.home.split(',');place(x,h[0],h[1],h[2],h[3]);x.classList.remove('big','dim')});return}
+ if(o.classList.contains('big'))return;desk.querySelectorAll('.obj').forEach(function(x){if(x!==o)x.classList.add('dim')});o.classList.add('big');place(o,0,0,100,100)});
+</script>

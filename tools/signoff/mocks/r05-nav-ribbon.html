@@ -1,0 +1,68 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#22262B;background:#E6E9EC}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+:root{--teal:#178F7C;--coral:#E0573A;--indigo:#3E5BA9;--amber:#E9A23B;--plum:#8C4F7A;--moss:#5E9447;--ink:#22262B;--mut:#6B737B;--desk:#E6E9EC}
+.frame{position:relative;height:440px;overflow:hidden;background:var(--desk);
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+.paper{background:#FFFEFB;border-radius:3px;box-shadow:0 0 0 1px rgba(34,38,43,.07),0 1px 2px rgba(34,38,43,.08),0 8px 18px -12px rgba(34,38,43,.35);position:relative;
+ background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E")}
+.edge{border-top:3px solid var(--c,#9AA3AB)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;font-weight:600}
+.mut{color:var(--mut)}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9AA1A8}
+.strip{position:absolute;right:10px;top:10px;bottom:10px;width:200px;display:flex;flex-direction:column;gap:8px;padding:10px 12px}
+.strip textarea{flex:1;border:0;outline:0;resize:none;background:transparent;font:12.5px/1.6 "Segoe UI",system-ui,sans-serif;color:var(--ink);
+ background-image:repeating-linear-gradient(transparent 0 19px,rgba(62,91,169,.12) 19px 20px)}
+.strip .tabs{display:flex;gap:4px}.strip .tabs span{font-size:11px;padding:2px 8px;border-radius:10px;background:#EEF0F2;color:var(--mut)}.strip .tabs span.on{background:var(--ink);color:#fff}
+@media (max-width:640px){.strip{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.main{position:absolute;left:10px;top:10px;bottom:10px;right:220px;display:flex;flex-direction:column;gap:8px}
+.ribbon{padding:8px 10px 6px;user-select:none}
+.days{display:flex;align-items:flex-end;gap:3px;height:74px;overflow-x:auto}
+.d{flex:1 0 18px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding-top:2px;border-radius:4px}
+.d .bar{width:100%;max-width:22px;border-radius:2px 2px 0 0;display:flex;flex-direction:column-reverse;overflow:hidden;background:#EEF0F2}
+.d .bar i{display:block}.d small{font-size:9.5px;color:var(--mut);font-family:Consolas,monospace}
+.d.we small{opacity:.5}.d.today small{color:#fff;background:var(--ink);border-radius:3px;padding:0 2px}
+.d.sel{background:rgba(62,91,169,.13)}
+.mrow{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);margin-bottom:4px}
+.tabs2{display:flex;gap:4px;align-items:center}.tabs2 button{font:inherit;font-size:12px;border:1px solid transparent;background:none;border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--mut)}
+.tabs2 button[aria-pressed=true]{background:#FFFEFB;border-color:#D2D6DA;color:var(--ink);font-weight:600}
+.fold{flex:1;min-height:0;overflow:auto;padding:10px;transform-origin:top;animation:fold .4s cubic-bezier(.2,.8,.2,1)}
+@keyframes fold{from{transform:scaleY(.6);opacity:0}}
+.dayblk{margin-bottom:10px}.dayblk h4{margin:0 0 5px;font-size:12px;display:flex;justify-content:space-between}
+.cards{display:flex;flex-wrap:wrap;gap:6px}.ent{padding:6px 8px;font-size:12px;min-width:150px;animation:pop .35s both}.ent .h{margin-right:5px}
+@keyframes pop{from{opacity:0;transform:translateY(-6px)}}
+</style>
+<div class="try"><b>Try it:</b><span>click a day on the ribbon; Shift+click another day to select a range. The tabs show the selection as a plan, a canvas or its notes</span></div>
+<div class="frame">
+ <div class="main"><div class="paper ribbon"><div class="mrow"><span>September · October 2026</span><span id="sum" class="h"></span></div><div class="days" id="days"></div></div>
+  <div class="tabs2" id="tabs"><button data-t="plan" aria-pressed="true">Plan</button><button data-t="canvas">Canvas</button><button data-t="notes">Notes</button><span style="flex:1"></span><span class="mut" id="rng"></span></div>
+  <div class="paper fold" id="fold"></div></div>
+ <aside class="paper strip"><div class="tabs"><span class="on">Jot</span><span>Meeting</span><span>Daily</span></div><textarea>ops sync: split guest VLAN next wk
+- [ ] retire any-any rule Fri</textarea><span class="lbl">Always here · Ctrl+Shift+Space</span></aside>
+ <span class="wf">Concept 2 · Time ribbon</span>
+</div>
+<script>var P={net:['Network refresh','var(--indigo)'],rout:['Routine','var(--teal)'],dc:['Data centre','var(--amber)'],pat:['Patching','var(--coral)'],meet:['Meetings','var(--plum)']};
+var WEEK={12:[['Core switch planning',3,'net'],['Ticket queue',4.5,'rout']],13:[['Switch config backup',2,'net'],['Vendor call: UPS',1,'dc'],['Ticket queue',3,'rout']],
+ 14:[['Patching window',6,'pat']],15:[['Firewall rule cleanup',1.5,'net'],['Ticket queue',1,'rout'],['Weekly ops sync',1,'meet']],16:[],17:[],18:[]};
+function hoursFor(d){if(WEEK[d])return WEEK[d].reduce(function(s,e){return s+e[1]},0);var dow=(d+2)%7;if(d>15||dow>4)return 0;return [7.5,8,6.5,7,8,5.5,7.5][d%7]}
+function mixFor(d){if(WEEK[d])return WEEK[d].map(function(e){return [e[2],e[1]]});var h=hoursFor(d);return h?[['rout',h*.4],['net',h*.35],['meet',h*.25]]:[]}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+var days=document.getElementById('days'),a=15,b=15,tab='plan',MAX=9;
+for(var k=-2;k<=25;k++){var d=k<1?30+k:k,real=k,dow=(k+2+7*5)%7;var el=document.createElement('div');el.className='d'+(dow>4?' we':'')+(k===15?' today':'');el.dataset.k=k;
+ var h=k<1?[7.5,6][-k]||0:hoursFor(k),mix=k<1?(h?[['rout',h]]:[]):mixFor(k);var bar=document.createElement('div');bar.className='bar';bar.style.height=(6+h/MAX*48)+'px';
+ mix.forEach(function(x){var i=document.createElement('i');i.style.height=(x[1]/MAX*48)+'px';i.style.background=P[x[0]][1];bar.appendChild(i)});
+ el.appendChild(bar);el.insertAdjacentHTML('beforeend','<small>'+d+'</small>');days.appendChild(el)}
+days.addEventListener('click',function(e){var el=e.target.closest('.d');if(!el)return;var k=+el.dataset.k;if(e.shiftKey){b=k}else{a=b=k}render()});
+document.getElementById('tabs').addEventListener('click',function(e){var t=e.target.closest('button');if(!t)return;tab=t.dataset.t;document.querySelectorAll('#tabs button').forEach(function(x){x.setAttribute('aria-pressed',x===t)});render()});
+function render(){var lo=Math.min(a,b),hi=Math.max(a,b),tot=0;days.querySelectorAll('.d').forEach(function(el){var k=+el.dataset.k;el.classList.toggle('sel',k>=lo&&k<=hi);if(k>=lo&&k<=hi&&k>0)tot+=hoursFor(k)});
+ document.getElementById('rng').textContent=(lo===hi?lo+' Oct':lo+' – '+hi+' Oct')+' · '+tot.toFixed(1)+' h';document.getElementById('sum').textContent='Week 27.0 h';
+ var f=document.getElementById('fold'),html='';
+ if(tab==='plan'){for(var k=lo;k<=hi;k++){if(k<1)continue;var es=WEEK[k]||(hoursFor(k)?[['Ticket queue',hoursFor(k)*.4,'rout'],['Project work',hoursFor(k)*.6,'net']]:[]);
+  html+='<div class="dayblk"><h4><span>'+k+' October</span><span class="h">'+(hoursFor(k)?hoursFor(k).toFixed(1)+' h':'')+'</span></h4><div class="cards">'+(es.length?es.map(function(e,i){return '<div class="paper ent edge" style="--c:'+P[e[2]][1]+';animation-delay:'+(i*60)+'ms"><span class="h">'+e[1].toFixed(1)+'</span>'+esc(e[0])+'</div>'}).join(''):'<span class="mut">Nothing logged</span>')+'</div></div>'}}
+ else if(tab==='canvas')html='<p class="mut">The same cards, free to arrange on a canvas, with the timeline button. (See the canvas card.)</p>';
+ else html='<p><b>Weekly ops sync</b> · meeting note, 15 Oct</p><p class="mut">Split guest VLAN next week. Retire the any-any rule Friday.</p>';
+ f.innerHTML=html;f.style.animation='none';f.offsetWidth;f.style.animation=''}
+render();
+</script>
