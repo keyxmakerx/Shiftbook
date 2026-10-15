@@ -9,44 +9,42 @@
       "round": 6,
       "order": 10,
       "area": "Look and feel",
-      "version": 1,
-      "title": "Open the prototype full screen and use it for five minutes",
+      "version": 2,
+      "title": "Prototype v2: right-click everywhere, your own colours, more motion",
       "body": [
-        "**[Open the Shiftbook prototype](https://claude.ai/artifact/74U1B2bff8opXBKdorjgLM)** in its own tab, full screen. It works with mouse and keyboard and keeps what you do until you reload.",
-        "Things to try:"
+        "**[Open the prototype](https://claude.ai/artifact/74U1B2bff8opXBKdorjgLM)** full screen. Same link, now version 2. Here's what changed from your notes:"
       ],
       "bullets": [
-        "Press **Ctrl+Space** and type `2h rack cleanup INC0045701 #data yesterday`. Watch it pick out the hours, project, ticket and day as you type, then press Enter and the entry flies into place.",
-        "On the Desk, hover an entry and press **+15m** (no more `=1.5+2`). Click a ticket chip to copy it. Every change has **Undo**; there are no \"Are you sure?\" boxes.",
-        "Click any day in the **ribbon** at the top to jump to it. The coloured bars are your hours by project.",
-        "**Planner**: drag the bottom edge of a block to stretch or shrink its hours. The ribbon and timesheet follow.",
-        "**Canvas**: drag a card out of Data centre into Patching and it changes project (with Undo). Right-click a card for the fold-out menu.",
-        "Keys **1–4** switch views. The **◐** button flips light and dark. The **Protected** pill starts the 10-minute screenshot allowance."
+        "**Colours you can change:** press **Look & colours** at the top, or right-click any entry, project area or card and pick a colour. It changes everywhere at once, with Undo. Theme (Follow Windows / Light / Dark) and Motion (Still / Calm / Lively) are there too.",
+        "**Right-click everything:** entries, days on the ribbon, planner columns, ticket chips, canvas cards and areas, Inbox items. Each opens a paper menu that folds out over the page; click anywhere else to close it.",
+        "**Slide-out panel:** click an entry and its details slide in from the right over everything. Change hours, project, tickets and notes; click off it or press Esc to close.",
+        "**More motion:** views slide in the direction you move (Desk → Timesheet slides left), cards cascade in, numbers count up, the ribbon grows in on open, logged entries fly into place. Try **Lively** in Look & colours for more.",
+        "**Logging a ticket is now one box on the Desk:** paste the ticket, press **15m / 30m / 1h**. Done. If you've used that ticket before it goes straight onto the same piece of work."
       ],
       "figures": [
         {
           "html_file": "prototype/index.html",
           "start": "desk",
-          "height": 640,
-          "caption": "The same prototype, small, right here. The full-screen tab is much better."
+          "height": 660,
+          "caption": "Right-click an entry, or paste `INC0045678` into the Log work box and press 30m."
         }
       ],
       "questions": [
         {
           "id": "feel",
-          "legend": "Is this the direction for next gen?",
+          "legend": "Closer to next gen?",
           "options": [
             {
               "value": "Yes, build it like this",
               "rec": true
             },
             {
-              "value": "Close, keep pushing",
+              "value": "Closer, keep pushing",
               "why": "Tick what to push on below."
             },
             {
               "value": "Not yet",
-              "why": "Tell me what feels old."
+              "why": "Tell me what still feels old."
             }
           ]
         },
@@ -59,19 +57,16 @@
               "value": "More motion"
             },
             {
-              "value": "Calmer, less motion"
+              "value": "Calmer"
             },
             {
               "value": "Bolder colour"
             },
             {
-              "value": "Bigger, roomier layout"
+              "value": "Roomier layout"
             },
             {
-              "value": "Denser, more on screen"
-            },
-            {
-              "value": "More keyboard shortcuts"
+              "value": "Denser"
             },
             {
               "value": "Different fonts"
@@ -85,48 +80,46 @@
           "id": "notes",
           "type": "text",
           "legend": "The one thing you'd change first (optional)",
-          "placeholder": "e.g. the Desk feels empty below the entries"
+          "placeholder": "e.g. the menus should open faster"
         }
       ],
-      "pick": "Yes. The fonts and colours ship inside the app (no internet), and the motion turns itself off if Windows is set to reduce motion."
+      "pick": "Yes. Every animation also respects Windows' reduce-motion setting and the Still option."
     },
     "r6-timesheet": {
       "round": 6,
       "order": 20,
       "area": "Timesheet",
-      "version": 1,
-      "title": "What the timesheet looks like, and the quick way to fill it",
+      "version": 2,
+      "title": "The timesheet, the way you described it",
       "body": [
-        "Your Excel had no timesheet view at all, just \"filter by Week Of\". In Shiftbook the timesheet is a view of the week: **codes down the side, days across**, in the order you type them into your timesheet system. Hours fill in from what you logged; you never re-type them.",
-        "**Quick ways to add timesheet time when you don't want details:**"
+        "You're right, I had it backwards. The **logging** happens on the Desk (paste a ticket, pick 15m / 30m / 1h) or with Ctrl+Space from anywhere. Shiftbook keeps it all and adds it up. The **Timesheet** view is your crib sheet for when you sit down to type into your timesheet system:"
       ],
       "bullets": [
-        "**Type straight into a cell.** Click under Wednesday on a code and type `2`. That's it: two hours of quick time on that code, no project or description needed.",
-        "**+ Holiday** books a day off at 8 h on your holiday code in one click.",
-        "From anywhere, **Ctrl+Space** then `8 holiday fri` does the same.",
-        "**Copy for timesheet** copies the grid as columns that paste straight into a timesheet form or Excel.",
-        "Amber warnings catch mistakes before you submit: hours with no code, weekdays with nothing logged, days over 12 h. **Mark submitted** stamps the week."
+        "**Day by day, line by line, what to type:** the code, the hours, and a ready-made comment listing what you did and the ticket numbers. **Copy comment** puts it on the clipboard.",
+        "**Tick each line off** as you enter it. A day turns into a green ENTERED stamp when every line is done, so you can stop halfway and see where you were.",
+        "**Your effort this week** sits on top: hours by project, ticket count and entries. A bigger dashboard can come later.",
+        "Switch between **By timesheet code** and **By project**. Amber warnings catch hours with no code and empty days before you submit."
       ],
       "figures": [
         {
           "html_file": "prototype/index.html",
           "start": "timesheet",
-          "height": 640,
-          "caption": "Click a code name to see the entries behind its hours. Click the amber **Unassigned** row, then the button, to give Admin a code."
+          "height": 680,
+          "caption": "Tick the boxes on Monday to see it stamp. Right-click a ticket chip to see every entry that used it."
         }
       ],
       "questions": [
         {
           "id": "ok",
-          "legend": "Does this cover your timesheet?",
+          "legend": "Is this what you meant?",
           "options": [
             {
               "value": "Yes",
               "rec": true
             },
             {
-              "value": "Mostly",
-              "why": "Say what's missing, e.g. comments per day, a second code level."
+              "value": "Close",
+              "why": "Say what's missing in the note."
             },
             {
               "value": "No"
@@ -149,13 +142,13 @@
           ]
         }
       ],
-      "pick": "Yes. Your real codes go into the app itself, so nothing about your workplace ends up in the code."
+      "pick": "Yes. It's the screen to keep open next to your timesheet system on a Friday."
     },
     "r6-excel": {
       "round": 6,
       "order": 30,
       "area": "From your Excel",
-      "version": 1,
+      "version": 2,
       "title": "What your spreadsheet taught me",
       "body": [
         "I studied how your workbook is built: its sheets, formulas and limits. I did not copy any of your entries into the repo or onto this sheet. Here's how each pain point is handled:"
@@ -189,7 +182,7 @@
             ],
             [
               "No timesheet view",
-              "Codes × days grid, quick-fill, warnings, copy."
+              "A **What to enter** list per day, with ready-made comments and tick-offs."
             ],
             [
               "Formulas break if a name is retyped differently",
