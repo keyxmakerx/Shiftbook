@@ -16,11 +16,11 @@ Each milestone should end with passing tests and a working build on all three OS
 - **M3 Projects + recurring:** CRUD screens, calculated fields, alert badges, "Mark done",
   alerts_enabled toggle for routine items.
 - **M4 Tasks:** list + board views, link to project/recurring, log time from task, checklists.
-- **M5 Dashboard + timesheet:** cards, SVG charts; timesheet codes (seeded Workday codes,
+- **M5 Dashboard + timesheet:** cards, SVG charts; timesheet codes (user-defined,
   category defaults, project/recurring defaults, per-entry override, Unassigned warnings),
   Holiday quick entry, code × day timesheet grid with copy / .xlsx / .csv export.
 - **M6 Data management:** Settings lists, data location, **encrypted backups** (automatic +
-  Backup now + Restore, `.patchbak` format with round-trip tests across password and recovery key),
+  Backup now + Restore, `.shiftbak` format with round-trip tests across password and recovery key),
   **exports to Excel (.xlsx), CSV (+zip) and JSON** with the unprotected-file warning,
   import of `tracker-import.json` (see IMPORT_FORMAT.md).
 - **M7 Hardening:** security review of crypto/unlock code, accessibility pass, keyboard shortcuts,

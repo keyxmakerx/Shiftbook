@@ -1,14 +1,14 @@
 # Import / Export format (schema_version 1)
 
-The same JSON format is used for **Export JSON**, **Import JSON** and the one-time import from the
-Excel tracker (`tracker-import.json`, kept OUTSIDE the repo).
+The same JSON format is used for **Export JSON**, **Import JSON** and the one-time import from a
+spreadsheet tracker (`tracker-import.json`, kept OUTSIDE the repo).
 
 ```jsonc
 {
-  "format": "work-tracker-export",
+  "format": "shiftbook-export",
   "schema_version": 1,
   "exported_at": "2026-10-15T15:00:00+00:00",
-  "source": "Engineering Time Tracker.xlsx",
+  "source": "My tracker.xlsx",
   "owner": { "id": "uuid", "display_name": "..." },
   "lists": {                       // ordered values for dropdowns
     "category": ["..."], "status": ["..."], "priority": ["..."], "recurring_type": ["..."]

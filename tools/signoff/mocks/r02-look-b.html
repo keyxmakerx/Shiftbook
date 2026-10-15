@@ -1,0 +1,58 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#26303A}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;font-weight:600;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.stage{padding:18px 18px 22px;background:#3B4A57;min-height:480px;display:flex;justify-content:center;perspective:1600px}
+.book{position:relative;width:100%;max-width:660px;display:flex}
+.spine{width:16px;flex:none;background:repeating-linear-gradient(#2A353F 0 10px,#55626E 10px 14px);border-radius:4px 0 0 4px}
+.pages{position:relative;flex:1;min-height:440px;transform-style:preserve-3d}
+.page{position:absolute;inset:0;background:#FBFAF6;border-radius:0 6px 6px 0;box-shadow:0 10px 24px -10px rgba(0,0,0,.6);padding:18px 22px 18px 74px;
+ background-image:linear-gradient(90deg,transparent 58px,#E8A49A 58px 59px,transparent 59px 62px,#E8A49A 62px 63px,transparent 63px),repeating-linear-gradient(transparent 0 25px,#D6E1EA 25px 26px);background-position:0 0,0 6px;
+ overflow:hidden;transform-origin:left center;backface-visibility:hidden;transition:transform .7s cubic-bezier(.45,.05,.2,1)}
+.page.turned{transform:rotateY(-170deg)}
+.page h1{font:600 21px Georgia,"Iowan Old Style",serif;margin:0 0 4px;height:26px}.page .sub{color:#5B6875;height:26px}
+.line{position:relative;height:26px;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.line .m{position:absolute;left:-66px;width:46px;text-align:right;font:600 14px Georgia,serif;color:#B2483D}
+.line small{color:#5B6875}.chip{background:#ECF1F6;border-radius:9px;padding:0 7px;font-size:11px}
+.line.ink{clip-path:inset(0 100% 0 -80px);animation:ink 1.1s steps(28) forwards}@keyframes ink{to{clip-path:inset(0 0 0 -80px)}}
+.head{color:#B2483D;font:600 11px "Segoe UI",sans-serif;letter-spacing:.08em}
+.due{display:flex;gap:8px}.od{color:#B2483D;font-weight:600}.ds{color:#9A5B0E;font-weight:600}
+.dividers{position:absolute;right:-30px;top:20px;display:flex;flex-direction:column;gap:5px;z-index:3}
+.dv{width:34px;height:52px;border-radius:0 6px 6px 0;writing-mode:vertical-rl;font-size:10.5px;font-weight:600;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#26303A;box-shadow:2px 2px 4px rgba(0,0,0,.25)}
+.dv.on{width:40px}
+.sample{position:absolute;right:12px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#C9D3DC}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="log">Write an entry</button><button id="turn">Turn to Tasks</button><span>or click a divider tab</span></div>
+<div style="position:relative"><div class="stage"><div class="book"><div class="spine"></div>
+ <div class="pages" id="pages">
+  <div class="page" data-p="Tasks" style="z-index:1"><h1>Tasks</h1><div class="sub">This week</div>
+   <div class="line"><span class="m">!</span>Update the backup runbook <small>· due today</small></div>
+   <div class="line"><span class="m"></span>Order replacement UPS batteries <small>· Fri</small></div>
+   <div class="line"><span class="m"></span>Draft change request for VLAN split <small>· next week</small></div>
+   <div class="line"><span class="head">NO DATE</span></div>
+   <div class="line"><span class="m"></span>Tidy the monitoring dashboards</div></div>
+  <div class="page" data-p="Today" style="z-index:2" id="today"><h1>Thursday 15 October</h1><div class="sub">3.5 h today · 27.0 h this week</div>
+   <div class="line"><span class="m">1.5</span><b>Firewall rule cleanup</b><small>Network refresh</small><span class="chip">CHG0012345</span></div>
+   <div class="line"><span class="m">1.0</span><b>Ticket queue</b><small>Routine</small><span class="chip">INC0045678</span><span class="chip">INC0045690</span></div>
+   <div class="line"><span class="m">1.0</span><b>Weekly ops sync</b><small>Meeting notes →</small></div>
+   <div id="slot"></div>
+   <div class="line" style="color:#9AA5B1"><span class="m">+</span>Write what you did… (press N)</div>
+   <div class="line"></div>
+   <div class="line"><span class="head">COMING UP</span></div>
+   <div class="line due"><span class="od">Overdue</span>SSL certificate renewal</div>
+   <div class="line due"><span class="ds">9 days</span>Monthly patching</div></div>
+ </div>
+ <div class="dividers" id="dv"></div>
+</div></div><span class="sample">Direction B · sample data</span></div>
+<script>
+var cols={Today:'#F2C14E',Log:'#9CC5A1',Tasks:'#8FB8DE',Projects:'#E6A57E',Recurring:'#C7A6D9',Notes:'#E8D27A',Map:'#A9CFC8'};
+var dv=document.getElementById('dv'),cur='Today';
+Object.keys(cols).forEach(function(k){var b=document.createElement('div');b.className='dv'+(k==='Today'?' on':'');b.textContent=k;b.style.background=cols[k];b.onclick=function(){go(k)};dv.appendChild(b)});
+function go(k){var t=document.getElementById('today');
+ if(k==='Tasks'&&cur!=='Tasks'){t.classList.add('turned');cur='Tasks'}else if(k==='Today'&&cur!=='Today'){t.classList.remove('turned');cur='Today'}else if(k!=='Tasks'&&k!=='Today'){t.classList.toggle('turned');cur=t.classList.contains('turned')?'Tasks':'Today'}
+ [].forEach.call(dv.children,function(c){c.classList.toggle('on',c.textContent===cur)})}
+document.getElementById('turn').onclick=function(){go(cur==='Today'?'Tasks':'Today');this.textContent=cur==='Today'?'Turn to Tasks':'Back to Today'};
+document.getElementById('log').onclick=function(){if(cur!=='Today')go('Today');var s=document.getElementById('slot'),d=document.createElement('div');d.className='line ink';
+ d.innerHTML='<span class="m">0.5</span><b>Replaced UPS battery in rack 3</b><small>Data centre</small>';s.appendChild(d)};
+</script>

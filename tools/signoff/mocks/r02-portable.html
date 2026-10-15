@@ -1,0 +1,27 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1F2A33;background:#fff}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:16px}
+.c{border:1px solid #D0D7DE;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.c h3{margin:0;font-size:14px}.c p{margin:0;color:#57606A}
+pre{margin:0;font:12px/1.6 Consolas,Menlo,monospace;background:#F6F8FA;border-radius:5px;padding:8px 10px;overflow-x:auto}
+.hl{color:#2F7A55;font-weight:700}
+@media (max-width:560px){.g{grid-template-columns:1fr}}
+</style>
+<div class="g">
+<div class="c"><h3>Data in your profile</h3><p>Copy the app anywhere and run it. Your data lives in your Windows profile, so it survives replacing the app with a newer one.</p>
+<pre>Downloads\
+  <span class="hl">Shiftbook.exe</span>
+C:\Users\you\AppData\Roaming\
+  Shiftbook\
+    <span class="hl">shiftbook.db</span>     (encrypted)
+    vault.json
+    backups\</pre></div>
+<div class="c"><h3>Data next to the app</h3><p>Everything in one folder, so it can live on a USB stick or a synced folder. Turned on by a file named <code>portable</code> beside the app.</p>
+<pre>E:\Shiftbook\
+  <span class="hl">Shiftbook.exe</span>
+  portable
+  data\
+    <span class="hl">shiftbook.db</span>     (encrypted)
+    vault.json
+    backups\</pre></div>
+</div>

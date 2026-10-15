@@ -1,0 +1,59 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#1F2A33;background:#F1EFE8}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;font-weight:600;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.try button[aria-pressed=true]{background:#1F2A33;color:#fff;border-color:#1F2A33}
+.wrap{padding:12px;overflow-x:auto}svg{display:block;min-width:700px;width:100%;height:auto}
+.colh{font:600 11px "Segoe UI",sans-serif;letter-spacing:.08em;fill:#6A7680}
+.node rect{fill:#FFFEFA;stroke:#D8D3C4;stroke-width:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+.node.scrap rect{stroke-dasharray:4 3;fill:#FFFBEA}
+.node text{font-size:12px;fill:#1F2A33}.node .s{font-size:10.5px;fill:#6A7680}
+.node{cursor:pointer;transition:opacity .25s}.edge{fill:none;stroke:#9AA6AF;stroke-width:1.5;transition:opacity .25s,stroke .25s}
+.edge.sug{stroke-dasharray:5 4;stroke:#C08A2E}
+svg.focus .node:not(.hit),svg.focus .edge:not(.hit){opacity:.18}svg.focus .edge.hit{stroke:#1F2A33;stroke-width:2}
+.list{display:none;padding:12px 16px;gap:14px;flex-direction:column}.list h3{margin:0;font:600 11px "Segoe UI",sans-serif;letter-spacing:.08em;color:#6A7680}
+.li{background:#FFFEFA;border:1px solid #D8D3C4;border-radius:4px;padding:8px 10px;display:flex;gap:8px;align-items:center}.li small{color:#6A7680;margin-left:auto}
+.dot{width:9px;height:9px;border-radius:50%;flex:none}
+body.listv .wrap{display:none}body.listv .list{display:flex}
+.legend{display:flex;gap:14px;padding:0 14px 12px;font-size:12px;color:#6A7680;flex-wrap:wrap}.legend span{display:flex;gap:5px;align-items:center}.legend svg{width:26px;min-width:0}
+</style>
+<div class="try"><b>Try it:</b><button id="bm" aria-pressed="true">Map</button><button id="bl" aria-pressed="false">List</button><span>Click a card to trace what it connects to; click empty space to clear.</span></div>
+<div class="wrap"><svg id="svg" viewBox="0 0 720 330"></svg></div>
+<div class="list" id="list"></div>
+<div class="legend"><span><i class="dot" style="background:#C2453B"></i>High</span><span><i class="dot" style="background:#D69A2D"></i>Medium</span><span><i class="dot" style="background:#9AA6AF"></i>Low</span><span><svg width="26" height="8" style="min-width:0"><path d="M0 4h26" stroke="#C08A2E" stroke-dasharray="5 4" stroke-width="1.5"/></svg>Suggested link (you confirm)</span><span>Dashed card = quick scrap from the inbox</span></div>
+<script>
+var P={h:'#C2453B',m:'#D69A2D',l:'#9AA6AF'};
+var cols=['NOTES & SCRAPS','TASKS','PROJECTS'];
+var N=[
+ {id:'n1',c:0,t:'Weekly ops sync',s:'Meeting · 15 Oct',p:'m'},
+ {id:'n2',c:0,t:'Vendor call: UPS',s:'Meeting · 13 Oct',p:'l'},
+ {id:'n3',c:0,t:'"guest wifi drops again??"',s:'Scrap · 14 Oct',p:'h',scrap:1},
+ {id:'n4',c:0,t:'Idea: auto-renew certs',s:'Note · 9 Oct',p:'l'},
+ {id:'t1',c:1,t:'Draft VLAN split change',s:'Task · due Tue',p:'h'},
+ {id:'t2',c:1,t:'Retire any-any rule',s:'Task · due Fri',p:'h'},
+ {id:'t3',c:1,t:'Order UPS batteries',s:'Task · this week',p:'m'},
+ {id:'t4',c:1,t:'Update backup runbook',s:'Task · today',p:'l'},
+ {id:'p1',c:2,t:'Network refresh',s:'Project · 62% of estimate',p:'m'},
+ {id:'p2',c:2,t:'Data centre upkeep',s:'Project · ongoing',p:'l'}];
+var E=[['n1','t1'],['n1','t2'],['n2','t3'],['n3','t1',1],['n4','p2',1],['t1','p1'],['t2','p1'],['t3','p2'],['t4','p2']];
+var W=180,H=50,X=[16,272,528],svg=document.getElementById('svg'),ns='http://www.w3.org/2000/svg',pos={};
+function el(n,a,p){var e=document.createElementNS(ns,n);for(var k in a)e.setAttribute(k,a[k]);(p||svg).appendChild(e);return e}
+cols.forEach(function(c,i){var t=el('text',{x:X[i]+2,y:18,'class':'colh'});t.textContent=c});
+var cnt=[0,0,0];N.forEach(function(n){var col=N.filter(function(m){return m.c===n.c}).length,gap=(300-col*H)/(col+1);var y=28+gap+cnt[n.c]*(H+gap);cnt[n.c]++;pos[n.id]={x:X[n.c],y:y}});
+var eg=el('g',{});
+E.forEach(function(e){var a=pos[e[0]],b=pos[e[1]],x1=a.x+W,y1=a.y+H/2,x2=b.x,y2=b.y+H/2,mx=(x1+x2)/2;
+ var p=el('path',{d:'M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2,'class':'edge'+(e[2]?' sug':'')},eg);p.dataset.a=e[0];p.dataset.b=e[1]});
+N.forEach(function(n){var g=el('g',{'class':'node'+(n.scrap?' scrap':''),transform:'translate('+pos[n.id].x+' '+pos[n.id].y+')'});g.dataset.id=n.id;
+ el('rect',{width:W,height:H,rx:4},g);el('circle',{cx:14,cy:18,r:4.5,fill:P[n.p]},g);
+ var t=el('text',{x:26,y:22},g);t.textContent=n.t;var s=el('text',{x:26,y:38,'class':'s'},g);s.textContent=n.s});
+function trace(id){var hit={},edges={};hit[id]=1;
+ [true,false].forEach(function(fwd){var st=[id],seen={};while(st.length){var c=st.pop();E.forEach(function(e,i){var f=fwd?e[0]:e[1],t=fwd?e[1]:e[0];if(f===c){edges[i]=1;if(!seen[t]){seen[t]=1;hit[t]=1;st.push(t)}}})}});
+ svg.classList.add('focus');[].forEach.call(svg.querySelectorAll('.node'),function(g){g.classList.toggle('hit',!!hit[g.dataset.id])});
+ [].forEach.call(svg.querySelectorAll('.edge'),function(p,i){p.classList.toggle('hit',!!edges[i])})}
+svg.addEventListener('click',function(e){var g=e.target.closest('.node');if(g)trace(g.dataset.id);else svg.classList.remove('focus')});
+var list=document.getElementById('list');['NOTES & SCRAPS','TASKS','PROJECTS'].forEach(function(c,i){var h=document.createElement('h3');h.textContent=c;list.appendChild(h);
+ N.filter(function(n){return n.c===i}).forEach(function(n){var d=document.createElement('div');d.className='li';d.innerHTML='<i class="dot" style="background:'+P[n.p]+'"></i><span></span><small></small>';
+  d.children[1].textContent=n.t;var links=E.filter(function(e){return e[0]===n.id||e[1]===n.id}).length;d.children[2].textContent=n.s+' · '+links+' link'+(links===1?'':'s');list.appendChild(d)})});
+function mode(l){document.body.classList.toggle('listv',l);document.getElementById('bl').setAttribute('aria-pressed',l);document.getElementById('bm').setAttribute('aria-pressed',!l)}
+document.getElementById('bl').onclick=function(){mode(true)};document.getElementById('bm').onclick=function(){mode(false)};
+</script>

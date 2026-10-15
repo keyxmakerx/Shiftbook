@@ -1,0 +1,25 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1F2A33;background:#fff}
+ol{list-style:none;margin:0;padding:16px 18px;display:flex;flex-direction:column;gap:0}
+li{display:grid;grid-template-columns:44px 16px 1fr;gap:10px;min-height:46px}
+.n{font:600 13px Georgia,serif;color:#57606A;padding-top:2px;text-align:right}
+.rail{position:relative}.rail:before{content:"";position:absolute;left:7px;top:0;bottom:0;width:2px;background:#D0D7DE}
+.rail i{position:absolute;left:2px;top:5px;width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #9AA6AF}
+li.new .rail i{background:#2F7A55;border-color:#2F7A55}li.chg .rail i{background:#D69A2D;border-color:#D69A2D}
+li:last-child .rail:before{bottom:auto;height:8px}
+.t b{display:block}.t small{color:#57606A}.tag{font-size:10px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;margin-left:6px}
+li.new .tag{color:#2F7A55}li.chg .tag{color:#A5650E}
+</style>
+<ol>
+<li><span class="n">M0</span><span class="rail"><i></i></span><span class="t"><b>Scaffold</b><small>Empty app opens, CI on Windows/macOS/Linux</small></span></li>
+<li><span class="n">M1</span><span class="rail"><i></i></span><span class="t"><b>Core rules + encrypted storage</b><small>Password, recovery key, lock screen</small></span></li>
+<li class="chg"><span class="n">M2</span><span class="rail"><i></i></span><span class="t"><b>Today, time log, tickets <span class="tag">+ quick capture</span></b><small>The capture box (in-app first; Ctrl+Shift+Space from anywhere if approved) and the Inbox</small></span></li>
+<li class="chg"><span class="n">M3</span><span class="rail"><i></i></span><span class="t"><b>Look and motion <span class="tag">new</span></b><small>The chosen paper look applied to the real screens, with the motion rules below</small></span></li>
+<li><span class="n">M4</span><span class="rail"><i></i></span><span class="t"><b>Projects + recurring work</b><small>Alerts, Mark done, routine items</small></span></li>
+<li><span class="n">M5</span><span class="rail"><i></i></span><span class="t"><b>Tasks</b><small>List and board, checklists, log time from a task</small></span></li>
+<li class="new"><span class="n">M6</span><span class="rail"><i></i></span><span class="t"><b>Notes <span class="tag">new</span></b><small>Meeting notes, scraps from the Inbox, links between notes, tasks, projects and tickets</small></span></li>
+<li class="new"><span class="n">M7</span><span class="rail"><i></i></span><span class="t"><b>Notes map <span class="tag">new</span></b><small>The process-diagram view, priority, suggested links</small></span></li>
+<li><span class="n">M8</span><span class="rail"><i></i></span><span class="t"><b>Dashboard + timesheet</b><small>Charts, your own timesheet codes, copy/export</small></span></li>
+<li><span class="n">M9</span><span class="rail"><i></i></span><span class="t"><b>Backups, export, import</b><small>Encrypted .shiftbak, Excel/CSV/JSON, import your tracker</small></span></li>
+<li class="chg"><span class="n">M10</span><span class="rail"><i></i></span><span class="t"><b>Hardening + portable builds <span class="tag">changed</span></b><small>Security review, accessibility, no-install builds for all three systems</small></span></li>
+</ol>

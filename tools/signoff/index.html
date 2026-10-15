@@ -103,6 +103,8 @@ fieldset.q legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 .opt .why { display: block; color: var(--muted); font-size: 0.88rem; }
 .rec { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stamp); margin-left: 6px; }
 .q-text { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.reply-box { padding: 10px 12px; border-left: 3px solid var(--stamp); background: var(--stamp-wash); border-radius: 0 6px 6px 0; display: flex; flex-direction: column; gap: 4px; }
+.reply-box p { white-space: pre-wrap; }
 .pick { padding: 10px 12px; background: var(--wash); border-radius: 6px; display: flex; flex-direction: column; gap: 2px; }
 
 .decide { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--rule); padding-top: 14px; }
@@ -287,6 +289,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     (c.questions || []).forEach(function (q) { body.appendChild(buildQuestion(key, q)); });
     if (c.pick) { var pk = h('div', 'pick'); pk.appendChild(h('span', 'label', 'My pick')); pk.appendChild(rich(h('p'), c.pick)); body.appendChild(pk); }
 
+    var rb = h('div', 'reply-box'); rb.hidden = true; rb.appendChild(h('span', 'label', 'Claude replied')); rb.appendChild(h('p'));
     var dec = h('footer', 'decide');
     var nl = h('label', 'label', 'Note (needed for Needs changes)'); nl.htmlFor = 'note-' + key;
     var ta = h('textarea', 'note'); ta.id = 'note-' + key; ta.rows = 2; ta.placeholder = c.note_hint || 'Anything you want changed, or a question for Claude';
@@ -296,7 +299,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     });
     var und = h('button', 'link', 'Undo my decision'); und.type = 'button'; und.dataset.act = 'undo'; und.hidden = true; acts.appendChild(und);
     var saved = h('p', 'saved'); saved.setAttribute('role', 'status');
-    dec.appendChild(nl); dec.appendChild(ta); dec.appendChild(acts); dec.appendChild(saved);
+    dec.appendChild(rb); dec.appendChild(nl); dec.appendChild(ta); dec.appendChild(acts); dec.appendChild(saved);
     body.appendChild(dec);
     el.appendChild(body);
     if (c.archived) el.dataset.folded = '1';
@@ -339,6 +342,8 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     var el = els[key], c = cards[key], d = decisions[key];
     if (!el || !c) return;
     var s = stateOf(key); el.dataset.state = s;
+    // Claude's answer to your note can change without bumping the card version.
+    var rb = el.querySelector('.reply-box'); rb.hidden = !c.reply; rb.querySelector('p').textContent = c.reply || '';
     var stamp = el.querySelector('.stamp'), saved = el.querySelector('.saved');
     var when = d ? fmt(d.at) : '';
     stamp.textContent = s === 'approve' ? 'Approved' : s === 'change' ? 'Changes asked' : s === 'stale' ? 'Re-check' : 'Waiting';
@@ -413,7 +418,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   function matches(k, q) {
     if (!q) return true;
     var c = cards[k], d = decisions[k] || {};
-    var hay = [c.title, c.area, (c.body || []).join(' '), d.note, JSON.stringify(d.answers || {})].join(' ').toLowerCase();
+    var hay = [c.title, c.area, (c.body || []).join(' '), c.reply, d.note, JSON.stringify(d.answers || {})].join(' ').toLowerCase();
     return q.split(/\s+/).every(function (w) { return hay.indexOf(w) !== -1; });
   }
   function filter() {

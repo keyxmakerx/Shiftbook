@@ -1,0 +1,26 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1F2A33;background:#FFFFFF}
+.d{display:grid;grid-template-columns:1fr 70px 1fr;gap:0;padding:18px;align-items:stretch}
+.box{border:1.5px solid #9AA6AF;border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.box h3{margin:0;font:600 12px "Segoe UI",sans-serif;letter-spacing:.07em;text-transform:uppercase;color:#57606A}
+.build{background:#F4F6F8;border-style:dashed}.ship{background:#EEF6F1;border-color:#2F7A55}
+.it{background:#fff;border:1px solid #D0D7DE;border-radius:5px;padding:6px 9px}.it b{display:block}.it small{color:#57606A}
+.ship .it{border-color:#B9DCC8}
+.arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#57606A;font-size:11px;text-align:center;gap:4px}
+.arrow svg{width:60px;height:20px}
+.no{color:#A33232;font-weight:600}
+@media (max-width:560px){.d{grid-template-columns:1fr}.arrow svg{transform:rotate(90deg)}}
+</style>
+<div class="d">
+ <div class="box build"><h3>Only on the build computer</h3>
+  <div class="it"><b>Node + npm</b><small>Downloads and runs the build tools</small></div>
+  <div class="it"><b>Vite, Svelte compiler, TypeScript</b><small>Turn the screens into plain HTML, CSS and JS files</small></div>
+  <div class="it"><b>svelte-check, Vitest</b><small>Checks and tests; never shipped</small></div>
+  <div class="it"><b>Rust compiler</b><small>Builds the app itself</small></div></div>
+ <div class="arrow"><svg viewBox="0 0 60 20"><path d="M2 10h50" stroke="#57606A" stroke-width="2"/><path d="M48 4l8 6-8 6" fill="none" stroke="#57606A" stroke-width="2"/></svg>build</div>
+ <div class="box ship"><h3>What you run: Shiftbook.exe</h3>
+  <div class="it"><b>The Shiftbook program</b><small>Rust: storage, encryption, rules</small></div>
+  <div class="it"><b>Static screen files</b><small>HTML, CSS, JS baked inside the program</small></div>
+  <div class="it"><b>Windows' own web view</b><small>WebView2, part of Windows 10/11, draws the screens</small></div>
+  <div class="it"><span class="no">No</span> Node, no npm, no network, no listening ports</div></div>
+</div>

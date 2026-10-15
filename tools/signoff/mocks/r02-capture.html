@@ -1,0 +1,52 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1F2A33}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;font-weight:600;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.screen{position:relative;height:400px;background:linear-gradient(135deg,#5D7286,#34465A);overflow:hidden}
+.win{position:absolute;left:30px;top:30px;width:58%;height:220px;background:#EEF1F4;border-radius:6px;opacity:.55}
+.win2{position:absolute;right:26px;top:90px;width:40%;height:250px;background:#EEF1F4;border-radius:6px;opacity:.45}
+.hint{position:absolute;left:16px;bottom:12px;color:#DCE4EC;font-size:12px}
+.box{position:absolute;left:50%;top:44px;width:min(520px,92%);transform:translateX(-50%);background:#FFFEFA;border-radius:8px;box-shadow:0 24px 48px -16px rgba(0,0,0,.55);overflow:hidden;
+ transition:transform .3s cubic-bezier(.2,.9,.3,1.1),opacity .25s}
+.box.hide{transform:translate(-50%,-14px) scale(.97);opacity:0}
+.inp{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #ECEAE2}
+.inp input{flex:1;border:0;outline:0;font:15px "Segoe UI",system-ui,sans-serif;background:transparent;color:#1F2A33}
+.inp .k{font:11px Consolas,monospace;color:#8A949C}
+.res{list-style:none;margin:0;padding:6px}.res li{display:flex;gap:10px;align-items:center;padding:7px 10px;border-radius:5px}
+.res li.sel{background:#E9F0EC}.res .kind{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#6A7680;width:66px;flex:none}
+.res mark{background:#FFE58A;color:inherit;border-radius:2px}.res small{color:#6A7680;margin-left:auto;white-space:nowrap}
+.foot{display:flex;gap:14px;padding:8px 14px;border-top:1px solid #ECEAE2;font-size:11.5px;color:#6A7680;flex-wrap:wrap}.foot kbd{font:11px Consolas,monospace;border:1px solid #CCD2D6;border-radius:3px;padding:0 4px}
+.toast{position:absolute;left:50%;bottom:44px;transform:translate(-50%,20px);opacity:0;background:#1F2A33;color:#fff;padding:7px 14px;border-radius:16px;transition:.3s;font-size:12.5px}
+.toast.on{transform:translate(-50%,0);opacity:1}
+</style>
+<div class="try"><b>Try it:</b><button id="play">Play the example</button><span>or type in the box yourself: try "fire", "chg", "ups" or anything new</span></div>
+<div class="screen"><div class="win"></div><div class="win2"></div>
+ <div class="box" id="box"><div class="inp"><input id="q" placeholder="Log time, add a note, or find anything…" autocomplete="off"><span class="k">Esc</span></div>
+  <ul class="res" id="res"></ul>
+  <div class="foot"><span><kbd>↑</kbd><kbd>↓</kbd> pick</span><span><kbd>Enter</kbd> open or log</span><span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> save to Inbox as is</span></div></div>
+ <div class="toast" id="toast">Saved to Inbox · sort it later</div>
+ <span class="hint">Any app in front. Press Ctrl+Shift+Space and this box appears over it.</span>
+</div>
+<script>
+var items=[['Project','Firewall rule cleanup','Network refresh'],['Ticket','CHG0012345','on Firewall rule cleanup, 15 Oct'],['Project','Network refresh','24.5 h logged'],
+ ['Task','Order UPS batteries','this week'],['Note','Vendor call: UPS','13 Oct'],['Recurring','SSL certificate renewal','overdue'],['Ticket','INC0045678','Ticket queue, 15 Oct'],['Note','Weekly ops sync','15 Oct']];
+var q=document.getElementById('q'),res=document.getElementById('res');
+// Letters in order, gaps allowed, starting at the start of a word: "frwl" finds "Firewall".
+function fuzzy(text,pat){pat=pat.toLowerCase().replace(/\s+/g,'');if(!pat)return null;var t=text.toLowerCase(),best=null;
+ for(var s=0;s<t.length;s++){if(t[s]!==pat[0]||(s>0&&/[a-z0-9]/.test(t[s-1])))continue;
+  var hit=[],j=0;for(var i=s;i<t.length&&j<pat.length;i++)if(t[i]===pat[j]){hit.push(i);j++}
+  if(j<pat.length||hit[hit.length-1]-s>pat.length*2+2)continue;
+  var score=0;hit.forEach(function(h,k){score+=k&&h===hit[k-1]+1?3:1});
+  if(!best||score>best.score){var out='';for(var i=0;i<text.length;i++)out+=hit.indexOf(i)>=0?'<mark>'+esc(text[i])+'</mark>':esc(text[i]);best={html:out,score:score}}}
+ return best}
+function esc(c){return c.replace(/[&<>"]/g,function(x){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[x]})}
+function render(){var v=q.value.trim();res.innerHTML='';if(!v){res.innerHTML='<li><span class="kind">Recent</span>Ticket queue<small>1.0 h today</small></li><li><span class="kind">Recent</span>Firewall rule cleanup<small>1.5 h today</small></li>';return}
+ var words=v.split(/\s+/),hits=[];items.forEach(function(it){var best=null;words.forEach(function(w){var m=fuzzy(it[1],w);if(m&&(!best||m.score>best.score))best=m});if(best)hits.push([best.score,it,best.html])});
+ hits.sort(function(a,b){return b[0]-a[0]});hits.slice(0,4).forEach(function(h,i){var li=document.createElement('li');if(i===0)li.className='sel';li.innerHTML='<span class="kind">'+h[1][0]+'</span><span>'+h[2]+'</span><small>'+esc(h[1][2])+'</small>';res.appendChild(li)});
+ var li=document.createElement('li');if(!hits.length)li.className='sel';li.innerHTML='<span class="kind">New</span><span>Log or note: “'+esc(v)+'”</span><small>Ctrl+Enter → Inbox</small>';res.appendChild(li)}
+q.addEventListener('input',render);
+q.addEventListener('keydown',function(e){if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){q.value='';render();var t=document.getElementById('toast');t.classList.add('on');setTimeout(function(){t.classList.remove('on')},1600)}});
+document.getElementById('play').onclick=function(){var box=document.getElementById('box');box.classList.add('hide');q.value='';render();
+ setTimeout(function(){box.classList.remove('hide');var s='firewal chg',i=0,t=setInterval(function(){q.value=s.slice(0,++i);render();if(i>=s.length)clearInterval(t)},120)},450)};
+render();
+</script>

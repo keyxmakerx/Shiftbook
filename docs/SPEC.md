@@ -1,14 +1,16 @@
-# Work Tracker — Product Spec (v1)
+# Shiftbook — Product Spec (v1)
 
 ## 1. Goal
-Replace the "Engineering Time Tracker" Excel workbook with a fast, simple desktop app that:
+Replace a spreadsheet time tracker with a fast, simple desktop app that:
 - logs **rough hours** per piece of work (no start/end times),
 - lets you paste **any number of tickets** onto an entry,
 - includes a lightweight **task manager**,
 - tracks **projects** and **recurring work** (SSL certs, patching, audits) with due-date alerts,
-- shows a **dashboard** and exports a weekly summary/CSV for the salary timesheet.
+- shows a **dashboard** and exports a weekly summary/CSV for a timesheet system.
 
-Primary user: one infrastructure engineer, not an Excel power user. Speed of logging matters most.
+Primary user: anyone who logs their own work (first user: an infrastructure engineer with ADHD),
+not a spreadsheet power user. Speed of logging matters most. The app ships with no employer-specific
+data: codes, categories and lists are the user's own.
 
 ## 2. Screens
 
@@ -55,8 +57,8 @@ Primary user: one infrastructure engineer, not an Excel power user. Speed of log
 - Calculated: last done, next due, days left, total hours, alert state (see §4).
 - "Mark done" button creates/updates a time entry with status Done for today.
 - Items like "General - Tickets" or "Daily meeting" are **routine**: alerts disabled, they only
-  collect hours (state = Ongoing). The imported data has two of these currently showing OVERDUE in
-  Excel — import them with `alerts_enabled = false`.
+  collect hours (state = Ongoing). Spreadsheet trackers often show these as OVERDUE — import them with
+  `alerts_enabled = false`.
 
 ### 2.7 Dashboard
 - Week selector (defaults to current week).
@@ -65,20 +67,13 @@ Primary user: one infrastructure engineer, not an Excel power user. Speed of log
 - Hours by project (selected week + all time), hours by category, hours by recurring type,
   last 8 weeks trend, status counts. Charts use inline SVG (no chart CDN).
 
-### 2.8 Timesheet codes (Workday) and timesheet export
-The salary timesheet (currently Workday) needs hours per **timesheet code** per day. Codes are
-hierarchical: `Area > Phase > Code`, e.g. `IT Regular Operations > Phase > 0 - Incident Response
-and Production Support`. Keep the feature generic ("timesheet codes") in case the system changes.
+### 2.8 Timesheet codes and timesheet export
+Many timesheet systems need hours per **timesheet code** per day. Codes are hierarchical:
+`Area > Phase > Code`, e.g. `Operations > Phase > 1 - Support`. The feature stays generic
+("timesheet codes") and works with any system.
 
-**Known codes (seed data; user can add more in Settings):**
-| Area | Code |
-|---|---|
-| IT Regular Operations | 0 - Incident Response and Production Support |
-| IT Regular Operations | 2 - Maintenance - Software/Hardware/Data |
-| IT Regular Operations | 3 - Operational Support |
-| IT Regular Operations | 5 - Process Improvements |
-| Administrative | 2 - Training |
-| Administrative | 5 - Holiday |
+**Codes:** none are shipped. The user adds their own in Settings (area, phase label, code, order),
+or imports them. The first-run tour shows a generic example.
 
 **How an entry gets its code** (first match wins; shown on the entry and changeable there):
 1. Code chosen on the entry itself (override).
@@ -87,22 +82,15 @@ and Production Support`. Keep the feature generic ("timesheet codes") in case th
 4. Otherwise **Unassigned** — highlighted in amber in the Time Log and listed at the top of the
    timesheet view so nothing is missed.
 
-**Suggested category → code defaults** (seeded, editable; user should review on first run):
-| Category | Default code |
-|---|---|
-| Troubleshooting, On-Call / After Hours | IT Ops › 0 - Incident Response and Production Support |
-| Maintenance, Installation / Deployment, Decommission, Inventory / Asset Mgmt | IT Ops › 2 - Maintenance - Software/Hardware/Data |
-| Support / Tickets, Meetings, Vendor Coordination, Change Management (CHG), Admin, Documentation | IT Ops › 3 - Operational Support |
-| Design / Engineering, Testing / Validation, Project Planning | IT Ops › 5 - Process Improvements |
-| Training | Administrative › 2 - Training |
-| Travel / Site Visit | Unassigned (decide per entry) |
+**Category → code defaults:** none are shipped. The user maps categories to codes in Settings;
+unmapped categories fall through to Unassigned.
 
 **Holiday / time off:** a one-click "Holiday" entry (default 8 h, editable) that uses
-`Administrative › 5 - Holiday` and needs no project.
+the code the user picked as their holiday code in Settings, and needs no project.
 
 **Timesheet view / export:**
 - Pick a week → grid of **code × day** (Mon–Sun) with daily and weekly totals — laid out in the
-  same order you enter it in Workday. Click a cell to see the entries behind it.
+  same order you enter it in your timesheet system. Click a cell to see the entries behind it.
 - Second section: per day, the entries with descriptions and ticket numbers (for comments).
 - Warnings: unassigned hours, days with 0 h on weekdays, days over 12 h.
 - **Copy** (tab-separated, pastes cleanly), **Export .xlsx**, **Export .csv**.
@@ -127,7 +115,7 @@ and Production Support`. Keep the feature generic ("timesheet codes") in case th
 
 - **Automatic backups:** daily + on app close, keep the last 14 (configurable), stored in
   `backups/` next to the data file. Encrypted with the same master key.
-- **Backup now / Restore:** creates a single `.patchbak` file (name follows the final app name) —
+- **Backup now / Restore:** creates a single `.shiftbak` file —
   see SECURITY.md "Backup file format". Restore verifies integrity before replacing anything and
   makes a safety backup of the current data first.
 - Backup files can be restored on any OS and on a new computer using the password or recovery key.

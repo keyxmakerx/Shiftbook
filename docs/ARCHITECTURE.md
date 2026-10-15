@@ -32,7 +32,7 @@
 - **Time:** minutes (INT). Dates as `TEXT` `YYYY-MM-DD` in SQLite / `DATE` in Postgres via sqlx types.
 
 ## Desktop specifics (Phase 1)
-- Data path: Tauri `app_data_dir()` + `work-tracker.db`; user can relocate via Settings
+- Data path: Tauri `app_data_dir()` + `shiftbook.db`; user can relocate via Settings
   (stored in a small config file in app config dir).
 - Backups: copy DB with SQLite online backup API (`VACUUM INTO`) to `backups/YYYY-MM-DD.db`.
 - Plugins allowed: `dialog` (pick backup/import file), `fs` scoped to app data + user-picked paths.
@@ -40,7 +40,7 @@
 
 ## Server specifics (Phase 2 — plan only)
 - Axum + tower; same `core`/`storage` crates; Postgres (or SQLite for tiny installs).
-- Auth: OIDC (Authorization Code + PKCE) against the company IdP; session cookie
+- Auth: OIDC (Authorization Code + PKCE) against the organisation's IdP; session cookie
   (`HttpOnly; Secure; SameSite=Lax`). Optional local accounts with Argon2id for small installs.
 - RBAC: `user`, `admin`. Admin panel: users, roles, shared list options, audit log, team reports.
 - Reverse proxy: `BASE_PATH` env, honour `X-Forwarded-Proto/Host/For` only from `TRUSTED_PROXIES`,

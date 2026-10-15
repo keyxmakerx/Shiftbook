@@ -1,0 +1,62 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#24292F}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;font-weight:600;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.desk{display:flex;gap:16px;padding:16px;min-height:470px;background:#D9DEE3;background-image:radial-gradient(#cfd5db 1px,transparent 1px);background-size:6px 6px}
+.tabs{display:flex;flex-direction:column;gap:4px;width:118px;flex:none}
+.tab{background:#F3F1EC;border-radius:0 8px 8px 0;padding:7px 10px;border-left:4px solid transparent;color:#57606A;box-shadow:0 1px 0 #b9c0c7}
+.tab.on{background:#FFFDF8;color:#24292F;font-weight:600;border-left-color:#C2453B;transform:translateX(6px)}
+.col{flex:1;display:flex;flex-direction:column;gap:12px;min-width:0}
+.head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}.head h1{font:600 22px Georgia,"Iowan Old Style",serif;margin:0}.head span{color:#57606A}.head b{color:#24292F}
+.card{background:#FFFDF8;border-radius:3px;box-shadow:0 1px 2px rgba(0,0,0,.18),0 6px 14px -8px rgba(0,0,0,.25);padding:10px 14px 10px;position:relative;
+ background-image:linear-gradient(#FFFDF8 30px,transparent 30px),repeating-linear-gradient(#FFFDF8 0 21px,#DCE6F0 21px 22px);}
+.card:before{content:"";position:absolute;left:0;right:0;top:30px;border-top:1.5px solid #E7A7A0}
+.capture{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:8px}
+.capture .lbl{width:100%;font:600 12px Georgia,serif;color:#C2453B;letter-spacing:.04em;margin-bottom:8px}
+.f{border-bottom:1px dashed #9AA5B1;padding:3px 4px;color:#8C959F;min-width:60px}.f.w{flex:1 1 180px}.f.typed{color:#24292F}
+.save{background:#C2453B;color:#fff;border-radius:4px;padding:4px 12px;font-weight:600}
+.entries{display:flex;flex-direction:column;gap:8px}
+.entry{display:grid;grid-template-columns:52px 1fr auto;gap:10px;align-items:start;cursor:pointer;transition:transform .35s cubic-bezier(.2,.8,.2,1)}
+.entry:nth-child(2n){transform:rotate(-.35deg)}.entry:nth-child(2n+1){transform:rotate(.25deg)}
+.hrs{font:600 16px Georgia,serif;color:#C2453B}.t b{display:block}.t small{color:#57606A}
+.chip{display:inline-block;background:#EEF2F7;border-radius:10px;padding:0 7px;font-size:11px;margin:2px 3px 0 0}
+.more{grid-column:1/-1;overflow:hidden;max-height:0;transition:max-height .45s ease}
+.more>div{transform-origin:top;transform:rotateX(-90deg);transition:transform .45s cubic-bezier(.2,.8,.2,1) .05s;padding:6px 0 2px;border-top:1px dashed #D0D7DE;color:#3D444D}
+.entry.open .more{max-height:90px}.entry.open .more>div{transform:none}
+.entry.new{animation:drop .6s cubic-bezier(.2,.9,.25,1.15)}
+@keyframes drop{from{opacity:0;transform:translateY(-48px) rotate(-3deg) scale(.96)}to{opacity:1}}
+.side{width:178px;flex:none;display:flex;flex-direction:column;gap:12px;padding-top:44px}
+.sticky{background:#FFF1A8;padding:10px 12px;box-shadow:0 6px 12px -8px rgba(0,0,0,.4);transform:rotate(1.4deg);font-size:12.5px}
+.sticky.b{background:#FFD9C7;transform:rotate(-1.2deg)}.sticky b{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;opacity:.7}
+.sample{position:absolute;right:12px;bottom:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6E7781}
+@media (max-width:640px){.tabs,.side{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="log">Log an entry</button><button id="open">Open an entry</button><span>or click any card</span></div>
+<div style="position:relative"><div class="desk">
+ <nav class="tabs"><span class="tab on">Today</span><span class="tab">Time log</span><span class="tab">Tasks</span><span class="tab">Projects</span><span class="tab">Recurring</span><span class="tab">Notes</span><span class="tab">Map</span><span class="tab" style="margin-top:auto">Settings</span></nav>
+ <section class="col">
+  <div class="head"><h1>Thursday 15 October</h1><span>Today <b id="today">3.5 h</b></span><span>This week <b>27.0 h</b></span></div>
+  <div class="card capture"><span class="lbl">NEW ENTRY</span><span class="f w" id="what">What did you work on?</span><span class="f" id="hrs">Hours</span><span class="f">Project ▾</span><span class="chip">+ Ticket</span><span class="save">Save</span></div>
+  <div class="entries" id="list">
+   <div class="card entry"><span class="hrs">1.5</span><span class="t"><b>Firewall rule cleanup</b><small>Network refresh · Maintenance</small></span><span class="chip">CHG0012345</span><div class="more"><div>Next step: remove the old any-any rule after Friday's change window.</div></div></div>
+   <div class="card entry"><span class="hrs">1.0</span><span class="t"><b>Ticket queue</b><small>Routine · Support</small></span><span><span class="chip">INC0045678</span><span class="chip">INC0045690</span></span><div class="more"><div>Two password resets and a printer mapping.</div></div></div>
+   <div class="card entry"><span class="hrs">1.0</span><span class="t"><b>Weekly ops sync</b><small>Routine · Meetings</small></span><span></span><div class="more"><div>Meeting notes attached · 3 action items</div></div></div>
+  </div>
+ </section>
+ <aside class="side"><div class="sticky"><b>Overdue</b>SSL certificate renewal for the intranet</div><div class="sticky b"><b>Due in 9 days</b>Monthly patching</div><div class="sticky"><b>Task · today</b>Update the backup runbook</div></aside>
+</div><span class="sample">Direction A · sample data</span></div>
+<script>
+var list=document.getElementById('list');
+list.addEventListener('click',function(e){var c=e.target.closest('.entry');if(c)c.classList.toggle('open')});
+document.getElementById('open').onclick=function(){list.querySelector('.entry').classList.toggle('open')};
+document.getElementById('log').onclick=function(){
+ var w=document.getElementById('what'),h=document.getElementById('hrs'),txt='Replaced UPS battery in rack 3',i=0;
+ w.classList.add('typed');w.textContent='';h.textContent='Hours';
+ var t=setInterval(function(){w.textContent=txt.slice(0,++i);if(i>=txt.length){clearInterval(t);h.textContent='0.5';h.classList.add('typed');
+  setTimeout(function(){var d=document.createElement('div');d.className='card entry new';
+   d.innerHTML='<span class="hrs">0.5</span><span class="t"><b>'+txt+'</b><small>Data centre · Maintenance</small></span><span></span><div class="more"><div>Logged just now.</div></div>';
+   list.insertBefore(d,list.firstChild);document.getElementById('today').textContent='4.0 h';
+   w.textContent='What did you work on?';w.classList.remove('typed');h.textContent='Hours';h.classList.remove('typed');},500)}},28);
+};
+</script>

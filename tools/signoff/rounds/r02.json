@@ -1,0 +1,165 @@
+{
+  "meta": {
+    "round": 2,
+    "heading": "Round 2: the look, quick capture and the notes map",
+    "intro": "Round 1 changed the picture: Shiftbook is a general tool for anyone, built to be quick and calm, with notes and a paper feel. Round 2 is mostly pictures you can click. Round 1 is in the Archive with my replies to your notes."
+  },
+  "cards": {
+    "r2-look": {
+      "round": 2, "order": 10, "area": "Look and motion", "version": 1,
+      "title": "Three paper looks. Click through each one",
+      "body": [
+        "You asked for paper, with sliding and folding that means something. Each direction below is clickable. Use the buttons above each one to see its motion.",
+        "My rule for motion in every direction: **an animation shows where something came from or where it went**. A new entry drops into the list from the box you typed it in. Details unfold out of the card they belong to. A project slides in from the link you clicked. Nothing moves just to look busy. Everything finishes in under half a second, and all of it switches off if Windows is set to reduce motion.",
+        "These use plain system fonts. The real app can carry its own fonts inside it (no network needed), which I'd pick once you've chosen a direction."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-look-a.html", "caption": "**A · Index cards on a desk.** Each entry, note and task is a card. Tabs on the left like folder tabs; reminders as sticky notes. Click a card to unfold it." },
+        { "html_file": "mocks/r02-look-b.html", "caption": "**B · Logbook with divider tabs.** One page at a time, hours written in the margin, coloured dividers on the edge. Changing section turns the page." },
+        { "html_file": "mocks/r02-look-c.html", "caption": "**C · Sliding sheets.** Sheets stack on a desk. Opening a project slides its sheet over Today; the sheet behind peeks out so you can always get back. A capture strip sits at the bottom." }
+      ],
+      "bullets": [
+        "Things others do well: **Things 3** keeps one calm list and a quick-entry box. **Obsidian** links notes and draws a graph. **Toggl** puts the timer first. **Trello** uses boards. Jira does everything, which is why it feels like a mess.",
+        "Shiftbook borrows the quick entry and the calm list, and the linking from Obsidian. The graph becomes the process-style map on its own card."
+      ],
+      "questions": [
+        { "id": "dir", "legend": "Direction", "options": [
+          { "value": "A", "label": "A · Index cards" },
+          { "value": "B", "label": "B · Logbook" },
+          { "value": "C", "label": "C · Sliding sheets" },
+          { "value": "A + C", "label": "A, with C's sliding sheets for opening things", "rec": true, "why": "Cards suit entries, notes and the map nodes alike. Sliding sheets keep your place when you open a project or note, so you never lose Today." }
+        ]},
+        { "id": "motion", "legend": "How much motion", "options": [
+          { "value": "Calm", "rec": true, "why": "Short and soft, as in the examples." },
+          { "value": "More playful", "why": "A little bounce and tilt, cards settle with a wobble." }
+        ]},
+        { "id": "likes", "type": "text", "legend": "Anything you liked or disliked in any of them? (optional)", "placeholder": "e.g. love the sticky notes from A, the logbook margin from B" }
+      ],
+      "pick": "A + C, calm. Mixing details across directions is fine; tell me which bits in the box above."
+    },
+    "r2-capture": {
+      "round": 2, "order": 20, "area": "Quick capture", "version": 1,
+      "title": "Get a thought in within seconds, even if you can't remember the name",
+      "body": [
+        "One box does everything: log time, jot a note, or find something. It matches letters in order with gaps allowed, so `frwl` finds **Firewall**, and it searches projects, tickets, tasks and notes at once.",
+        "If nothing matches, **Ctrl+Enter** drops what you typed into an **Inbox** as a scrap. Later the app helps you sort it: attach to a project, turn into a task, log time against it. Nothing gets lost because you didn't know where to put it."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-capture.html", "caption": "The capture box over whatever you are doing. Press **Play the example**, or type into it yourself." }
+      ],
+      "questions": [
+        { "id": "global", "legend": "Where the shortcut works", "options": [
+          { "value": "From anywhere", "rec": true, "why": "The box appears even when Shiftbook is in the background. Needs one extra official Tauri package, `tauri-plugin-global-shortcut`, which isn't on the pre-approved list." },
+          { "value": "Only inside Shiftbook", "why": "No extra package. You switch to Shiftbook first, then press the shortcut." }
+        ]},
+        { "id": "keys", "legend": "Shortcut", "options": [
+          { "value": "Ctrl+Shift+Space", "rec": true, "why": "Rarely used by anything else." },
+          { "value": "Ctrl+Space", "why": "Shorter, but on some Windows setups it switches keyboard language, and code editors use it." },
+          { "value": "Let me set it in Settings", "why": "Defaults to Ctrl+Shift+Space." }
+        ]}
+      ],
+      "pick": "From anywhere, Ctrl+Shift+Space, changeable in Settings. Approving this card approves the global-shortcut package."
+    },
+    "r2-map": {
+      "round": 2, "order": 30, "area": "Notes", "version": 1,
+      "title": "The notes map: a process diagram, not a 3D cloud",
+      "body": [
+        "Notes, scraps, tasks and projects as cards in columns, flowing left to right like a process diagram. Lines show what led to what: a meeting produced two tasks, both belong to a project. Each card carries a priority dot. Click a card to trace everything connected to it.",
+        "The same data has a **List** view, for when a list is easier. Both read from the same links."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-map.html", "caption": "Click **Weekly ops sync** to see what came out of it, or the dashed scrap to see a suggested link." }
+      ],
+      "questions": [
+        { "id": "links", "legend": "How links get made", "options": [
+          { "value": "You draw them", "why": "Only links you made yourself." },
+          { "value": "Suggested, you confirm", "rec": true, "why": "Shiftbook suggests a link when two things share a ticket number, a project or several words. Suggestions show dashed until you accept them." },
+          { "value": "Automatic", "why": "Shared tickets and projects link on their own. Can get noisy." }
+        ]},
+        { "id": "layout", "legend": "Layout", "options": [
+          { "value": "Columns, arranged for you", "rec": true, "why": "Always tidy; no dragging to keep it readable." },
+          { "value": "Free canvas", "why": "Drag cards anywhere, like a whiteboard. More freedom, more upkeep." }
+        ]}
+      ],
+      "pick": "Suggested links you confirm, in tidy columns. Priority shows as the dot; the List view can sort by it."
+    },
+    "r2-portable": {
+      "round": 2, "order": 40, "area": "No install", "version": 1,
+      "title": "Running without installing anything",
+      "body": [
+        "This is possible on all three systems. On Windows it's a single `Shiftbook.exe` you can run from anywhere; Windows 10 and 11 already include the web view it needs. On a Mac it's an app you drag anywhere, and on Linux an `.AppImage` file.",
+        "One catch until the app is code-signed (a yearly paid certificate): the first time you run it, Windows shows **\"Windows protected your PC\"** (click More info, then Run anyway) and a Mac asks you to right-click and choose Open. After that it opens normally."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-portable.html", "caption": "The two places your data can live. Either way it is encrypted." }
+      ],
+      "questions": [
+        { "id": "where", "legend": "Where data lives by default", "options": [
+          { "value": "In your profile", "rec": true, "why": "Safest default: replacing or deleting the app never touches your data. USB-stick mode stays available with the `portable` file." },
+          { "value": "Next to the app", "why": "Everything in one folder from the start." }
+        ]},
+        { "id": "share", "legend": "How other people would get it", "options": [
+          { "value": "Decide later", "rec": true, "why": "Nothing to set up until it's ready for others." },
+          { "value": "Download page on GitHub", "why": "Needs the repo or its releases to be public." },
+          { "value": "I hand them the file", "why": "Works today; no setup." }
+        ]}
+      ],
+      "pick": "Profile by default with the USB-stick switch, and decide on sharing later."
+    },
+    "r2-ship": {
+      "round": 2, "order": 50, "area": "M0 scaffold", "version": 1,
+      "title": "Node only builds. It never runs on anyone's machine",
+      "body": [
+        "Your note on the dependency card was exactly right. Node and npm only run on the computer that builds Shiftbook (mine, and GitHub's test machines). The build turns the screens into plain files and bakes them into the program. The program you run has no Node in it at all. I've also written this into `CLAUDE.md` and `SECURITY.md` as a rule."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-ship.html", "caption": "Left: tools that only exist while building. Right: everything that is in the app you run." }
+      ],
+      "questions": [
+        { "id": "ok", "legend": "With that, the M0 list", "options": [
+          { "value": "Approved", "rec": true, "why": "I start M0 with the list from round 1." },
+          { "value": "Still unsure", "why": "Say what worries you in the note and I'll show more." }
+        ]}
+      ],
+      "pick": "Approved."
+    },
+    "r2-roadmap": {
+      "round": 2, "order": 60, "area": "Plan", "version": 1,
+      "title": "The roadmap with your new ideas in it",
+      "body": [
+        "Meeting notes, the Inbox, the notes map, the look and portable builds weren't in the original plan. Here's where they fit. Each milestone still ends with a working app and a summary card here."
+      ],
+      "figures": [
+        { "html_file": "mocks/r02-roadmap.html", "caption": "Green: new milestones. Amber: changed. Grey: as before." }
+      ],
+      "questions": [
+        { "id": "ok", "legend": "Order", "options": [
+          { "value": "Looks right", "rec": true },
+          { "value": "Notes sooner", "why": "Move Notes and the map ahead of Projects and Tasks." }
+        ]}
+      ],
+      "pick": "As shown. Quick capture lands early because it's the thing you'd use most."
+    },
+    "r2-docs": {
+      "round": 2, "order": 70, "area": "Repo", "version": 1,
+      "title": "What I changed in the docs, and one clean-up to approve",
+      "bullets": [
+        "Renamed to **Shiftbook** everywhere; backups are `.shiftbak`; data file `shiftbook.db`.",
+        "Described it as a general tool for anyone, designed with ADHD in mind. Added a rule that the repo never holds any employer's names, codes or data.",
+        "Removed the six timesheet codes and the category-to-code table: they came from your workplace. Now nobody gets codes out of the box; you add your own in Settings.",
+        "Removed \"check with IT\" and \"put the repo in a company GitHub organisation\". SECURITY now just says the app keeps everything local.",
+        "Added the Node-is-build-only rule, and that questions and mockups come to this sheet."
+      ],
+      "body": [
+        "**The clean-up:** the very first commit still contains those workplace codes in its history, even though the current files no longer do. Nothing has been merged anywhere, so I can rewrite this branch's history so they never appear at all."
+      ],
+      "questions": [
+        { "id": "scrub", "legend": "Remove them from the history too?", "options": [
+          { "value": "Yes, rewrite the history", "rec": true, "why": "Safe now: the branch is only mine and nothing depends on it." },
+          { "value": "No, leave it", "why": "They stay visible in the first commit to anyone with repo access." }
+        ]}
+      ],
+      "pick": "Yes. Better now than once there are many commits on top."
+    }
+  }
+}

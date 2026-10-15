@@ -1,11 +1,13 @@
-# CLAUDE.md — Work Tracker
+# CLAUDE.md — Shiftbook
 
 Instructions for Claude Code working in this repository. Read this file first, then `docs/SPEC.md`,
 `docs/ARCHITECTURE.md`, `docs/SECURITY.md` and `docs/ROADMAP.md` before writing code.
 
 ## What this is
-A personal work tracker for an infrastructure engineer: time log (hours, not start/end times),
-tickets per entry, task manager, projects, recurring tasks with due-date alerts, and a dashboard.
+A personal work tracker for anyone who wants help keeping on top of their day (designed with ADHD
+in mind): time log (hours, not start/end times), tickets per entry, task manager, projects,
+recurring tasks with due-date alerts, notes, and a dashboard. It is a general-purpose side project:
+the repo must never contain any employer's names, codes, data or internal details.
 **Phase 1** is a cross-platform desktop app (Windows, macOS, Linux) built with **Tauri 2**.
 **Phase 2** (later) is a self-hosted multi-user web app in Docker that reuses the same core and UI.
 Every design decision must keep Phase 2 cheap — see "Non-negotiable rules".
@@ -54,9 +56,11 @@ docs/               SPEC, ARCHITECTURE, SECURITY, ROADMAP, IMPORT_FORMAT
    Use Tauri's path APIs for app-data locations; never hard-code OS paths.
 10. **Password protection is mandatory.** The database is always encrypted (SQLCipher) with a key
     from the user's master password (Argon2id) plus a one-time recovery key — see SECURITY.md
-    "Encryption design". Backups are always encrypted (`.patchbak`). Only explicit user exports
+    "Encryption design". Backups are always encrypted (`.shiftbak`). Only explicit user exports
     (xlsx/csv/json) are readable, and they show a warning. Never log passwords or keys.
-11. **Accessible, simple UI:** the primary user is not a spreadsheet power user. Big obvious buttons,
+11. **Node is build-time only.** npm packages compile the UI into static files; the shipped app
+    contains no Node runtime and no npm code runs on the user's machine except that compiled bundle.
+12. **Accessible, simple UI:** the primary user is not a spreadsheet power user. Big obvious buttons,
     keyboard-friendly, clear empty states, no jargon.
 
 ## Working style
@@ -64,6 +68,8 @@ docs/               SPEC, ARCHITECTURE, SECURITY, ROADMAP, IMPORT_FORMAT
 - Write/extend unit tests in `crates/core` for every rule before wiring UI.
 - Run `cargo fmt`, `cargo clippy -- -D warnings`, `cargo test`, `npm run check`, `npm test`
   before saying a step is done.
-- When a requirement is ambiguous, ask instead of guessing. Record decisions in `docs/DECISIONS.md`.
+- When a requirement is ambiguous, ask instead of guessing. Questions, mockups and diagrams go on
+  the sign-off sheet (`tools/signoff/README.md`); the owner reviews visually and is not a programmer.
+  Record approved decisions in `docs/DECISIONS.md`.
 - Do not run commands that send data off the machine except `git push` to the configured remote
   and package installs the user approved.

@@ -1,7 +1,7 @@
 # Security
 
 ## Threat model (Phase 1, desktop)
-Single user on a company laptop. Protect against: data leaking off the machine, malicious or
+Single user on their own or a work laptop. Protect against: data leaking off the machine, malicious or
 compromised dependencies, the app being reachable from the network, accidental data loss, and
 work data ending up in Git.
 
@@ -19,8 +19,8 @@ work data ending up in Git.
    Render user text as text (Svelte default escaping); no `{@html}` with user content.
 6. **Dependencies:** minimal; ask before adding. Commit lockfiles. Enable Dependabot (cargo + npm +
    GitHub Actions). CI runs `cargo audit` and `npm audit --omit=dev` (fail on high/critical).
-7. **Git hygiene:** `.gitignore` blocks databases, exports, backups and `.env`. Private repo,
-   preferably in a company-owned GitHub organisation. Branch protection on `main`.
+7. **Git hygiene:** `.gitignore` blocks databases, exports, backups and `.env`. Branch protection on `main`.
+   The repo holds code and docs only, never anyone's work data or employer details.
 8. **Backups:** automatic daily local backups + manual Export. Restores are tested in CI with a
    fixture database.
 9. **Encryption at rest is mandatory (from milestone M1)** — see "Encryption design" below.
@@ -50,7 +50,7 @@ work data ending up in Git.
 - **Crypto rules:** use audited RustCrypto crates only (`argon2`, `chacha20poly1305`, `rand`/`getrandom`,
   `zeroize`). No home-made crypto, no custom ciphers, unique random nonce per encryption.
 
-## Backup file format (`.patchbak`, name follows final app name)
+## Backup file format (`.shiftbak`)
 ```
 magic "PBAK" | u16 format_version | u32 header_len | header (JSON) | encrypted payload
 header: { app_version, created_at, kdf, kdf_params, salt_password, salt_recovery,
@@ -75,6 +75,11 @@ state-changing requests, per-owner authorization checks on every query, rate lim
 headers (HSTS, CSP, X-Content-Type-Options, Referrer-Policy), audit log for admin actions,
 encrypted database at rest, secrets from env/secret store only, non-root container, image scanning.
 
-## Company policy
-Before using the app for real work data, confirm with IT/security that a self-built local app
-storing work notes is acceptable, and whether code must live in a company GitHub organisation.
+## Using it at work
+Shiftbook keeps everything on the user's machine. Whether work notes may be stored in a local
+app is the user's employer's rule to set; the app does nothing that needs a network or a server.
+
+## Build-time code
+Node and npm run only on the developer's machine and in CI, to compile `web/` into static files.
+The shipped app has no Node runtime. `npm audit` still runs in CI because the compiled bundle
+contains code from those packages.

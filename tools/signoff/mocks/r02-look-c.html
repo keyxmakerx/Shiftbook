@@ -1,0 +1,52 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#1F2A33}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;font-weight:600;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.desk{position:relative;height:480px;background:#E4E7E1;overflow:hidden}
+.top{position:absolute;left:0;right:0;top:0;height:40px;display:flex;align-items:center;gap:18px;padding:0 18px;color:#58646E;font-size:12.5px}
+.top b{color:#1F2A33;font:600 15px Georgia,serif;margin-right:8px}.top .on{color:#1F2A33;font-weight:600;border-bottom:2px solid #2F6F62;padding-bottom:2px}
+.sheet{position:absolute;top:48px;bottom:58px;background:#FFFEFA;border-radius:4px;box-shadow:0 1px 2px rgba(0,0,0,.12),0 14px 30px -14px rgba(0,0,0,.35);padding:16px 20px;overflow:hidden;
+ transition:transform .55s cubic-bezier(.2,.8,.2,1),filter .55s,left .55s cubic-bezier(.2,.8,.2,1)}
+.s1{left:18px;right:18px}
+.s2{left:96px;right:18px;transform:translateX(110%)}
+.desk.deep .s1{transform:scale(.97);filter:brightness(.93);cursor:pointer}
+.desk.deep .s2{transform:none}
+.sheet h1{font:600 20px Georgia,"Iowan Old Style",serif;margin:0 0 2px}.sub{color:#58646E;margin-bottom:12px}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:10px;padding:9px 0;border-top:1px solid #ECEAE2;align-items:center}
+.row b{display:block}.row small{color:#58646E}.h{font:600 15px Georgia,serif;color:#2F6F62}
+.lnk{color:#2F6F62;text-decoration:underline;cursor:pointer}
+.chip{background:#E8F0EC;border-radius:9px;padding:0 7px;font-size:11px;margin-left:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}.stat{background:#F4F3EC;border-radius:4px;padding:8px 10px}.stat b{font:600 18px Georgia,serif;display:block}
+.bar{height:6px;background:#E6E3D8;border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;width:62%;background:#2F6F62}
+.tape{position:absolute;left:18px;right:18px;bottom:12px;height:36px;background:#FFFEFA;border-radius:18px;box-shadow:0 4px 14px -6px rgba(0,0,0,.35);display:flex;align-items:center;gap:10px;padding:0 16px;color:#8A949C}
+.tape kbd{font:11px Consolas,monospace;border:1px solid #CCD2D6;border-radius:4px;padding:0 5px;color:#58646E}
+.peek{position:absolute;left:18px;top:48px;bottom:58px;width:78px;z-index:2;display:none;cursor:pointer}
+.desk.deep .peek{display:block}
+.sample{position:absolute;right:26px;bottom:62px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8A949C}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="go">Open the project</button><button id="back">Back to Today</button><span>or click the underlined project, then the sheet behind</span></div>
+<div class="desk" id="desk">
+ <div class="top"><b>Shiftbook</b><span class="on">Today</span><span>Log</span><span>Tasks</span><span>Projects</span><span>Recurring</span><span>Notes</span><span>Map</span></div>
+ <div class="sheet s1"><h1>Thursday 15 October</h1><div class="sub">3.5 h today · 27.0 h this week · 1 thing overdue</div>
+  <div class="row"><span class="h">1.5</span><span><b>Firewall rule cleanup</b><small><span class="lnk" id="proj">Network refresh</span> · Maintenance</small></span><span class="chip">CHG0012345</span></div>
+  <div class="row"><span class="h">1.0</span><span><b>Ticket queue</b><small>Routine · Support</small></span><span><span class="chip">INC0045678</span><span class="chip">INC0045690</span></span></div>
+  <div class="row"><span class="h">1.0</span><span><b>Weekly ops sync</b><small>Routine · Meetings · notes</small></span><span></span></div>
+  <div class="row"><span class="h" style="color:#B2483D">!</span><span><b>SSL certificate renewal</b><small>Recurring · overdue by 2 days</small></span><span></span></div></div>
+ <div class="peek" id="peek" title="Back to Today"></div>
+ <div class="sheet s2"><h1>Network refresh</h1><div class="sub">Project · requested by the ops lead · due 30 Nov</div>
+  <div class="grid2"><div class="stat"><b>24.5 h</b>logged of 40 h<div class="bar"><i></i></div></div><div class="stat"><b>3 open tasks</b>next: VLAN split change</div></div>
+  <div class="row"><span class="h">1.5</span><span><b>Firewall rule cleanup</b><small>Today</small></span><span class="chip">CHG0012345</span></div>
+  <div class="row"><span class="h">2.0</span><span><b>Switch config backup</b><small>Tue 13 Oct</small></span><span></span></div>
+  <div class="row"><span class="h">3.0</span><span><b>Core switch planning</b><small>Mon 12 Oct</small></span><span></span></div></div>
+ <div class="tape">Type to log or find anything… <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Space</kbd></div>
+ <span class="sample">Direction C · sample data</span>
+</div>
+<script>
+var d=document.getElementById('desk');
+function deep(on){d.classList.toggle('deep',on)}
+document.getElementById('proj').onclick=function(e){e.stopPropagation();deep(true)};
+document.getElementById('go').onclick=function(){deep(true)};
+document.getElementById('back').onclick=function(){deep(false)};
+document.getElementById('peek').onclick=function(){deep(false)};
+</script>
