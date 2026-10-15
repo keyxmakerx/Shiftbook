@@ -14,6 +14,7 @@ pub mod minutes;
 pub mod model;
 pub mod project;
 pub mod recurring;
+pub mod seed;
 pub mod task;
 pub mod tickets;
 pub mod timesheet;
