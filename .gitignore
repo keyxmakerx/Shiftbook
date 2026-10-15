@@ -34,3 +34,6 @@ apps/desktop/src-tauri/gen/
 .DS_Store
 Thumbs.db
 *.log
+
+# --- Claude Code local worktrees ---
+.claude/worktrees/
