@@ -10,3 +10,7 @@ publish = false
 [workspace.dependencies]
 shiftbook-core = { path = "crates/core" }
 shiftbook-storage = { path = "crates/storage" }
+serde = { version = "1.0.229", features = ["derive"] }
+uuid = { version = "1.28.0", features = ["v7", "serde"] }
+time = { version = "0.3.55", features = ["serde", "macros", "formatting", "parsing"] }
+thiserror = "2.0.21"
