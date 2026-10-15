@@ -15,6 +15,7 @@ pub mod model;
 pub mod project;
 pub mod recurring;
 pub mod task;
+pub mod timesheet;
 pub mod validate;
 pub mod week;
 
