@@ -10,6 +10,12 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   locked: 'Shiftbook is locked. Unlock it first.',
   storage_error:
     "Something went wrong reading or saving your data. Try again, and restart Shiftbook if it keeps happening.",
+  invalid_input: "That can't be saved as it is. Check what you typed and try again.",
+  not_found: 'That item no longer exists. It may have been removed.',
+  duplicate: 'That name is already used. Pick a different one.',
+  tray_managed:
+    "This entry's time and tickets come from the Done tickets tray. Change them in the tray.",
+  not_allowed: "That isn't allowed right now.",
   unknown: 'Something went wrong. Please try again.',
 };
 

@@ -1,0 +1,59 @@
+// Inline SVG icons (no icon package): 24×24, stroked with the current text colour.
+
+const ICONS = {
+  open: ['M14 4h6v6', 'M20 4l-9 9', 'M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'],
+  clock: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 7v5l3 2'],
+  plus: ['M12 5v14', 'M5 12h14'],
+  minus: ['M5 12h14'],
+  copy: [
+    'M8 8h11a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1z',
+    'M16 8V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h4',
+  ],
+  link: [
+    'M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1',
+    'M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1',
+  ],
+  trash: ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13h10l1-13', 'M10 11v6', 'M14 11v6'],
+  folder: ['M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z'],
+  palette: [
+    'M12 3a9 9 0 1 0 0 18c1 0 1.5-.8 1.5-1.6 0-1.2-1-1.4-1-2.4 0-.8.6-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4-4-7.5-9-7.5z',
+    'M7.5 12h.01',
+    'M10 7.5h.01',
+    'M15 8h.01',
+  ],
+  calendar: ['M4 6h16v14H4z', 'M4 10h16', 'M8 3v4', 'M16 3v4'],
+  sheet: ['M6 3h9l4 4v14H6z', 'M15 3v4h4', 'M9 12h7', 'M9 16h7'],
+  ticket: ['M4 6h16v4a2 2 0 0 0 0 4v4H4v-4a2 2 0 0 0 0-4z', 'M10 6v2', 'M10 11v2', 'M10 16v2'],
+  tray: ['M3 13l3-8h12l3 8', 'M3 13v6h18v-6', 'M3 13h5l1 2h6l1-2h5'],
+  edit: ['M4 20h4L19 9l-4-4L4 16z', 'M13 7l4 4'],
+  archive: ['M3 5h18v4H3z', 'M5 9v10h14V9', 'M10 13h4'],
+  check: ['M5 12l5 5 9-10'],
+  x: ['M6 6l12 12', 'M18 6L6 18'],
+  lock: ['M6 11h12v9H6z', 'M9 11V8a3 3 0 0 1 6 0v3'],
+  shield: ['M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z'],
+  log: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 8v8', 'M8 12h8'],
+  left: ['M15 6l-6 6 6 6'],
+  right: ['M9 6l6 6-6 6'],
+  note: ['M5 4h14v16H5z', 'M8 8h8', 'M8 12h8', 'M8 16h5'],
+  undo: ['M9 7L4 12l5 5', 'M4 12h10a6 6 0 0 1 0 12h-1'],
+  desk: ['M4 5h16v11H4z', 'M8 20h8', 'M12 16v4'],
+  sliders: ['M4 6h9', 'M17 6h3', 'M4 12h3', 'M11 12h9', 'M4 18h12', 'M15 4v4', 'M9 10v4', 'M18 16v4'],
+  hour: ['M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18', 'M12 7v5h4', 'M17 3l2 2'],
+  sun: [
+    'M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8',
+    'M12 2v2',
+    'M12 20v2',
+    'M4.9 4.9l1.4 1.4',
+    'M17.7 17.7l1.4 1.4',
+    'M2 12h2',
+    'M20 12h2',
+    'M4.9 19.1l1.4-1.4',
+    'M17.7 6.3l1.4-1.4',
+  ],
+} as const;
+
+export type IconName = keyof typeof ICONS;
+
+export function iconPaths(name: IconName): readonly string[] {
+  return ICONS[name];
+}

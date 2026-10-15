@@ -1,8 +1,35 @@
 // Phase 1 implementation of DataApi. This is the ONLY file in web/ allowed to import
-// from @tauri-apps/* (CLAUDE.md rule 1).
+// from @tauri-apps/* (CLAUDE.md rule 1). Argument names are camelCase here; Tauri maps
+// them to the commands' snake_case parameters.
 import { invoke } from '@tauri-apps/api/core';
 import { toApiError } from './DataApi';
-import type { AppInfo, DataApi, SecretKind, VaultStatus } from './DataApi';
+import type {
+  AppInfo,
+  Capture,
+  CategoryCode,
+  CodeInput,
+  CustomField,
+  CustomValue,
+  DataApi,
+  Entry,
+  EntryInput,
+  FieldInput,
+  GroupBy,
+  InboxItem,
+  IsoDate,
+  PrefKey,
+  Prefs,
+  Project,
+  ProjectInput,
+  RibbonWeek,
+  SecretKind,
+  Tick,
+  TimesheetCode,
+  TrayDay,
+  UnlockOutcome,
+  VaultStatus,
+  WeekSheet,
+} from './DataApi';
 
 /** Call a command; any rejection becomes an ApiError with a short code. */
 async function call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
@@ -15,30 +42,157 @@ async function call<T>(command: string, args?: Record<string, unknown>): Promise
 
 export class TauriApi implements DataApi {
   appInfo(): Promise<AppInfo> {
-    return call<AppInfo>('app_info');
+    return call('app_info');
   }
-
   vaultStatus(): Promise<VaultStatus> {
-    return call<VaultStatus>('vault_status');
+    return call('vault_status');
   }
-
   vaultSetup(password: string): Promise<string> {
-    return call<string>('vault_setup', { password });
+    return call('vault_setup', { password });
   }
-
   vaultConfirmRecoverySaved(): Promise<void> {
-    return call<void>('vault_confirm_recovery_saved');
+    return call('vault_confirm_recovery_saved');
   }
-
-  unlock(secret: string, kind: SecretKind): Promise<void> {
-    return call<void>('unlock', { secret, kind });
+  unlock(secret: string, kind: SecretKind): Promise<UnlockOutcome> {
+    return call('unlock', { secret, kind });
   }
-
   lock(): Promise<void> {
-    return call<void>('lock');
+    return call('lock');
+  }
+  changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    return call('change_password', { currentPassword, newPassword });
+  }
+  setNewPassword(newPassword: string): Promise<void> {
+    return call('set_new_password', { newPassword });
+  }
+  regenerateRecoveryKey(password: string): Promise<string> {
+    return call('regenerate_recovery_key', { password });
   }
 
-  changePassword(currentPassword: string, newPassword: string): Promise<void> {
-    return call<void>('change_password', { currentPassword, newPassword });
+  allowCapture(): Promise<number> {
+    return call('allow_capture');
+  }
+  protectCapture(): Promise<void> {
+    return call('protect_capture');
+  }
+
+  loadPrefs(): Promise<Prefs> {
+    return call('load_prefs');
+  }
+  savePref(key: PrefKey, value: string): Promise<Prefs> {
+    return call('save_pref', { key, value });
+  }
+
+  listProjects(): Promise<Project[]> {
+    return call('list_projects');
+  }
+  createProject(name: string, color: string | null): Promise<Project> {
+    return call('create_project', { name, color });
+  }
+  updateProject(id: string, input: ProjectInput): Promise<Project> {
+    return call('update_project', { id, input });
+  }
+
+  listEntries(from: IsoDate, to: IsoDate): Promise<Entry[]> {
+    return call('list_entries', { from, to });
+  }
+  createEntry(input: EntryInput, tickets: string): Promise<Entry> {
+    return call('create_entry', { input, tickets });
+  }
+  updateEntry(id: string, input: EntryInput): Promise<Entry> {
+    return call('update_entry', { id, input });
+  }
+  addEntryMinutes(id: string, delta: number): Promise<Entry> {
+    return call('add_entry_minutes', { id, delta });
+  }
+  deleteEntry(id: string): Promise<void> {
+    return call('delete_entry', { id });
+  }
+  restoreEntry(id: string): Promise<Entry> {
+    return call('restore_entry', { id });
+  }
+  addEntryTickets(id: string, text: string): Promise<Entry> {
+    return call('add_entry_tickets', { id, text });
+  }
+  removeTicket(ticketId: string): Promise<Entry> {
+    return call('remove_ticket', { id: ticketId });
+  }
+  quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry> {
+    return call('quick_log', { date, text, minutes });
+  }
+
+  parseCapture(text: string, today: IsoDate): Promise<Capture> {
+    return call('parse_capture_line', { text, today });
+  }
+  captureLog(text: string, today: IsoDate): Promise<Entry> {
+    return call('capture_log', { text, today });
+  }
+
+  trayDay(date: IsoDate): Promise<TrayDay> {
+    return call('tray_day', { date });
+  }
+  trayAdd(date: IsoDate, text: string): Promise<TrayDay> {
+    return call('tray_add', { date, text });
+  }
+  traySetMinutes(id: string, minutes: number): Promise<TrayDay> {
+    return call('tray_set_minutes', { id, minutes });
+  }
+  trayRemove(id: string): Promise<TrayDay> {
+    return call('tray_remove', { id });
+  }
+  trayRestore(id: string): Promise<TrayDay> {
+    return call('tray_restore', { id });
+  }
+
+  ribbon(today: IsoDate): Promise<RibbonWeek[]> {
+    return call('ribbon', { today });
+  }
+  weekSheet(date: IsoDate, today: IsoDate, groupBy: GroupBy | null): Promise<WeekSheet> {
+    return call('week_sheet', { date, today, groupBy });
+  }
+  listTicks(weekStart: IsoDate): Promise<Tick[]> {
+    return call('list_ticks', { weekStart });
+  }
+  setTick(weekStart: IsoDate, day: IsoDate, lineKey: string, done: boolean): Promise<void> {
+    return call('set_tick', { weekStart, day, lineKey, done });
+  }
+
+  listTimesheetCodes(): Promise<TimesheetCode[]> {
+    return call('list_timesheet_codes');
+  }
+  saveTimesheetCode(id: string | null, input: CodeInput): Promise<TimesheetCode> {
+    return call('save_timesheet_code', { id, input });
+  }
+  categoryCodes(): Promise<CategoryCode[]> {
+    return call('category_codes');
+  }
+  setCategoryCode(category: string, codeId: string | null): Promise<void> {
+    return call('set_category_code', { category, codeId });
+  }
+
+  listCustomFields(): Promise<CustomField[]> {
+    return call('list_custom_fields');
+  }
+  saveCustomField(id: string | null, input: FieldInput): Promise<CustomField> {
+    return call('save_custom_field', { id, input });
+  }
+  deleteCustomField(id: string): Promise<void> {
+    return call('delete_custom_field', { id });
+  }
+  listCustomValues(recordId: string): Promise<CustomValue[]> {
+    return call('list_custom_values', { recordId });
+  }
+  setCustomValue(fieldId: string, recordId: string, value: string): Promise<string> {
+    return call('set_custom_value', { fieldId, recordId, value });
+  }
+
+  listInbox(): Promise<InboxItem[]> {
+    return call('list_inbox');
+  }
+  addInbox(text: string): Promise<InboxItem> {
+    return call('add_inbox', { text });
+  }
+  setInboxDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('set_inbox_deleted', { id, deleted });
   }
 }

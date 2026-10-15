@@ -3,19 +3,19 @@
   import { errorMessage } from './lib/messages';
   import { checkIdle, recordActivity, startIdle, TICK_MS } from './lib/idle';
   import { lockAndReload } from './lib/lock';
+  import { app } from './lib/store.svelte';
   import Setup from './pages/Setup.svelte';
   import RecoveryKey from './pages/RecoveryKey.svelte';
   import Unlock from './pages/Unlock.svelte';
-  import Today from './pages/Today.svelte';
-  import ChangePassword from './components/ChangePassword.svelte';
+  import NewPassword from './pages/NewPassword.svelte';
+  import Shell from './pages/Shell.svelte';
 
-  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'app';
+  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
 
   let screen = $state<Screen>('loading');
   let problem = $state('');
   // Held only between setup and "Continue" on the recovery key page.
   let recoveryKey = $state<string | null>(null);
-  let showChangePassword = $state(false);
   let locking = $state(false);
 
   $effect(() => {
@@ -30,7 +30,7 @@
       });
   });
 
-  const unlocked = $derived(screen === 'app' || screen === 'recovery');
+  const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'new-password');
 
   async function lockNow() {
     if (locking) return;
@@ -39,9 +39,11 @@
     await lockAndReload();
   }
 
-  // Idle auto-lock (15 minutes) and lock after the computer sleeps, while unlocked.
+  // Idle auto-lock (15 minutes unless changed in Customize → Security) and lock after the
+  // computer sleeps, while unlocked.
   $effect(() => {
     if (!unlocked) return;
+    const idleMs = (app.prefs?.autoLockMinutes ?? 15) * 60 * 1000;
     let idle = startIdle(Date.now());
     const onActivity = () => {
       idle = recordActivity(idle, Date.now());
@@ -49,7 +51,7 @@
     const events = ['keydown', 'pointerdown', 'pointermove', 'wheel', 'touchstart'] as const;
     for (const name of events) window.addEventListener(name, onActivity, { passive: true });
     const timer = setInterval(() => {
-      const result = checkIdle(idle, Date.now());
+      const result = checkIdle(idle, Date.now(), idleMs);
       idle = result.state;
       if (result.lock) void lockNow();
     }, TICK_MS);
@@ -60,7 +62,8 @@
   });
 
   function onKeydown(event: KeyboardEvent) {
-    if (screen !== 'app') return;
+    // In the app the Shell handles Ctrl+L; elsewhere while unlocked, lock here.
+    if (screen === 'app' || !unlocked) return;
     if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === 'l') {
       event.preventDefault();
       void lockNow();
@@ -93,23 +96,9 @@
     }}
   />
 {:else if screen === 'unlock'}
-  <Unlock onUnlocked={() => (screen = 'app')} />
+  <Unlock onUnlocked={(mustSetPassword) => (screen = mustSetPassword ? 'new-password' : 'app')} />
+{:else if screen === 'new-password'}
+  <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
-  <header class="topbar">
-    <span class="brand">Shiftbook</span>
-    <nav aria-label="Security">
-      <button type="button" onclick={() => (showChangePassword = !showChangePassword)}>
-        Change password
-      </button>
-      <button type="button" class="primary" onclick={lockNow} disabled={locking}>
-        Lock now <kbd>Ctrl+L</kbd>
-      </button>
-    </nav>
-  </header>
-  {#if showChangePassword}
-    <div class="narrow">
-      <ChangePassword onClose={() => (showChangePassword = false)} />
-    </div>
-  {/if}
-  <Today />
+  <Shell onLock={lockNow} />
 {/if}
