@@ -1,0 +1,36 @@
+# --- User data: NEVER commit ---
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+data/
+local-data/
+backups/
+exports/
+*-export*.json
+tracker-import.json
+*.xlsx
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Build output ---
+target/
+node_modules/
+dist/
+web/dist/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# --- Editors / OS ---
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.log
