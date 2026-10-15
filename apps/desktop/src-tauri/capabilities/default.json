@@ -1,7 +1,15 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "M0: the main window may only call the app's own app_info command. No plugins, no shell, fs, http or opener.",
+  "description": "The main window may only call the app's own commands: app info and the vault (status, setup, confirm recovery key saved, unlock, lock, change password). No plugins, no shell, fs, http or opener.",
   "windows": ["main"],
-  "permissions": ["allow-app-info"]
+  "permissions": [
+    "allow-app-info",
+    "allow-vault-status",
+    "allow-vault-setup",
+    "allow-vault-confirm-recovery-saved",
+    "allow-unlock",
+    "allow-lock",
+    "allow-change-password"
+  ]
 }
