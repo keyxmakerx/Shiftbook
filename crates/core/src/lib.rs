@@ -13,6 +13,7 @@ pub mod ids;
 pub mod minutes;
 pub mod model;
 pub mod project;
+pub mod recurring;
 pub mod task;
 pub mod validate;
 pub mod week;
