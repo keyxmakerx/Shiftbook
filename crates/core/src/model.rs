@@ -9,12 +9,12 @@ use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime};
 
 use crate::dates::{iso_date, rfc3339};
-use crate::ids::{
-    CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId,
-    InboxItemId, ListOptionId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId,
-    TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
-};
 use crate::fields::{AppliesTo, FieldKind};
+use crate::ids::{
+    CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId, InboxItemId,
+    ListOptionId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId, TimeEntryId,
+    TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
+};
 use crate::minutes::Minutes;
 
 /// The status value that means "finished" in every rule.

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-category-codes"
+description = "Enables the category_codes command without any pre-configured scope."
+commands.allow = ["category_codes"]
+
+[[permission]]
+identifier = "deny-category-codes"
+description = "Denies the category_codes command without any pre-configured scope."
+commands.deny = ["category_codes"]

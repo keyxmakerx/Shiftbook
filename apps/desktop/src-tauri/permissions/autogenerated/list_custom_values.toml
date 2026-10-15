@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-custom-values"
+description = "Enables the list_custom_values command without any pre-configured scope."
+commands.allow = ["list_custom_values"]
+
+[[permission]]
+identifier = "deny-list-custom-values"
+description = "Denies the list_custom_values command without any pre-configured scope."
+commands.deny = ["list_custom_values"]

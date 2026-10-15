@@ -7,6 +7,7 @@
 //! WebView is the recovery key, once, right after setup.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
 use serde::Serialize;
@@ -43,6 +44,17 @@ pub enum VaultStatus {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CommandError {
+    /// The input broke a rule (empty name, bad colour, too long...).
+    InvalidInput,
+    /// The record doesn't exist (or belongs to someone else).
+    NotFound,
+    /// The name is already used.
+    Duplicate,
+    /// The tray's roll-up entry gets its time and tickets from the tray.
+    TrayManaged,
+    /// Setting a new password without the old one is only allowed straight
+    /// after a recovery-key unlock.
+    NotAllowed,
     /// Wrong password or recovery key, or the key file was damaged.
     UnlockFailed,
     /// The new password breaks the rules (too short or too long).
@@ -72,8 +84,14 @@ impl From<VaultError> for CommandError {
 }
 
 impl From<StorageError> for CommandError {
-    fn from(_: StorageError) -> Self {
-        CommandError::StorageError
+    fn from(e: StorageError) -> Self {
+        match e {
+            StorageError::Invalid(_) | StorageError::Protected(_) => CommandError::InvalidInput,
+            StorageError::Duplicate(_) => CommandError::Duplicate,
+            StorageError::NotFound => CommandError::NotFound,
+            StorageError::TrayManaged => CommandError::TrayManaged,
+            _ => CommandError::StorageError,
+        }
     }
 }
 
@@ -102,7 +120,9 @@ impl SecretKind {
 struct Session {
     store: SqliteStore,
     owner: OwnerId,
-    _vault: Vault,
+    vault: Arc<Vault>,
+    /// Unlocked with the recovery key and no new password set yet.
+    needs_new_password: bool,
 }
 
 #[derive(Default)]
@@ -175,8 +195,17 @@ impl VaultSession {
         Ok(Session {
             store,
             owner: user.id,
-            _vault: vault,
+            vault: Arc::new(vault),
+            needs_new_password: false,
         })
+    }
+
+    /// The open database and its owner, for data commands. Waits for a running
+    /// vault command instead of answering `busy`.
+    pub async fn data(&self) -> Result<(SqliteStore, OwnerId), CommandError> {
+        let inner = self.inner.lock().await;
+        let session = inner.session.as_ref().ok_or(CommandError::Locked)?;
+        Ok((session.store.clone(), session.owner))
     }
 
     /// First-run setup. Returns the recovery key text, to be shown once.
@@ -209,10 +238,15 @@ impl VaultSession {
 
     /// Unlock with the password or the recovery key. After five failures each
     /// further failure waits longer before answering (1 s doubling to 60 s).
-    pub async fn unlock(&self, secret: SecretString, kind: SecretKind) -> Result<(), CommandError> {
+    /// Returns true when the user must now choose a new password (recovery key).
+    pub async fn unlock(
+        &self,
+        secret: SecretString,
+        kind: SecretKind,
+    ) -> Result<bool, CommandError> {
         let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
-        if inner.session.is_some() {
-            return Ok(());
+        if let Some(session) = inner.session.as_ref() {
+            return Ok(session.needs_new_password);
         }
         let vault_dir = self.vault_dir()?;
         let result = blocking(move || match kind {
@@ -223,8 +257,11 @@ impl VaultSession {
         match result {
             Ok(vault) => {
                 inner.backoff.record_success();
-                inner.session = Some(self.open(vault).await?);
-                Ok(())
+                let mut session = self.open(vault).await?;
+                session.needs_new_password = kind == SecretKind::RecoveryKey;
+                let needs = session.needs_new_password;
+                inner.session = Some(session);
+                Ok(needs)
             }
             Err(VaultError::UnlockFailed) => {
                 let delay = inner.backoff.record_failure();
@@ -266,6 +303,48 @@ impl VaultSession {
             Ok(()) => {
                 inner.backoff.record_success();
                 Ok(())
+            }
+            Err(VaultError::UnlockFailed) => {
+                let delay = inner.backoff.record_failure();
+                Self::wait(delay).await;
+                Err(CommandError::UnlockFailed)
+            }
+            Err(other) => Err(other.into()),
+        }
+    }
+}
+
+impl VaultSession {
+    /// Set a new password without the old one. Only straight after a
+    /// recovery-key unlock (the owner decided to ask for one at once).
+    pub async fn set_new_password(&self, new: SecretString) -> Result<(), CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        let session = inner.session.as_mut().ok_or(CommandError::Locked)?;
+        if !session.needs_new_password {
+            return Err(CommandError::NotAllowed);
+        }
+        let vault_dir = self.vault_dir()?;
+        let vault = Arc::clone(&session.vault);
+        blocking(move || vault_dir.reset_password(&vault, &new)).await??;
+        session.needs_new_password = false;
+        Ok(())
+    }
+
+    /// Make a new recovery key (needs the password); the old key stops working.
+    /// Returns the new key text, shown once.
+    pub async fn regenerate_recovery_key(
+        &self,
+        password: SecretString,
+    ) -> Result<SecretString, CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        if inner.session.is_none() {
+            return Err(CommandError::Locked);
+        }
+        let vault_dir = self.vault_dir()?;
+        match blocking(move || vault_dir.regenerate_recovery_key(&password)).await? {
+            Ok(key) => {
+                inner.backoff.record_success();
+                Ok(key.display())
             }
             Err(VaultError::UnlockFailed) => {
                 let delay = inner.backoff.record_failure();
@@ -429,15 +508,68 @@ mod tests {
                     .await,
                 Err(CommandError::UnlockFailed)
             );
+            assert_eq!(
+                session
+                    .unlock(s(&key.to_lowercase()), SecretKind::RecoveryKey)
+                    .await,
+                Ok(true),
+                "a recovery-key unlock asks for a new password"
+            );
+            assert!(session.data().await.is_ok());
+            assert_eq!(
+                session.set_new_password(s("short")).await,
+                Err(CommandError::WeakPassword)
+            );
             session
-                .unlock(s(&key.to_lowercase()), SecretKind::RecoveryKey)
+                .set_new_password(s("third password 3"))
                 .await
                 .unwrap();
+            assert_eq!(
+                session.set_new_password(s("fourth password 4")).await,
+                Err(CommandError::NotAllowed),
+                "only once, straight after the recovery unlock"
+            );
             session.lock().await.unwrap();
-            session
-                .unlock(s("second password 2"), SecretKind::Password)
-                .await
-                .unwrap();
+            assert_eq!(session.data().await.err(), Some(CommandError::Locked));
+            assert_eq!(
+                session
+                    .unlock(s("second password 2"), SecretKind::Password)
+                    .await,
+                Err(CommandError::UnlockFailed)
+            );
+            assert_eq!(
+                session
+                    .unlock(s("third password 3"), SecretKind::Password)
+                    .await,
+                Ok(false)
+            );
+            assert_eq!(
+                session.set_new_password(s("fourth password 4")).await,
+                Err(CommandError::NotAllowed)
+            );
+            assert_eq!(
+                session
+                    .regenerate_recovery_key(s("wrong password!!"))
+                    .await
+                    .err(),
+                Some(CommandError::UnlockFailed)
+            );
+            let new_key = reveal_once(
+                session
+                    .regenerate_recovery_key(s("third password 3"))
+                    .await
+                    .unwrap(),
+            );
+            assert_ne!(new_key, key);
+            session.lock().await.unwrap();
+            assert_eq!(
+                session.unlock(s(&key), SecretKind::RecoveryKey).await,
+                Err(CommandError::UnlockFailed)
+            );
+            assert_eq!(
+                session.unlock(s(&new_key), SecretKind::RecoveryKey).await,
+                Ok(true)
+            );
             session.lock().await.unwrap();
             session.lock().await.unwrap();
         });

@@ -5,7 +5,9 @@
 //! `unlock`, `lock`, `change_password`) go through [`session::VaultSession`]. Errors
 //! reach the WebView only as short codes such as `"unlock_failed"`.
 
+mod api;
 mod backoff;
+mod protect;
 mod session;
 
 use serde::Serialize;
@@ -57,22 +59,50 @@ async fn vault_confirm_recovery_saved(state: State<'_, VaultSession>) -> Result<
     state.confirm_recovery_saved().await
 }
 
-/// Unlock with `kind` = `"password"` or `"recovery_key"`. Nothing is returned.
+/// Unlock with `kind` = `"password"` or `"recovery_key"`. Tells the UI whether
+/// to ask for a new password now (after a recovery-key unlock).
 #[tauri::command]
 async fn unlock(
     state: State<'_, VaultSession>,
     secret: String,
     kind: String,
-) -> Result<(), CommandError> {
+) -> Result<api::UnlockOutcome, CommandError> {
     let secret = take_secret(secret);
     let kind = SecretKind::parse(&kind).ok_or(CommandError::UnlockFailed)?;
-    state.unlock(secret, kind).await
+    let must_set_password = state.unlock(secret, kind).await?;
+    Ok(api::UnlockOutcome { must_set_password })
 }
 
-/// Close the database and wipe the key. The frontend reloads the WebView next.
+/// Close the database and wipe the key, and turn screenshot protection back on.
+/// The frontend reloads the WebView next.
 #[tauri::command]
-async fn lock(state: State<'_, VaultSession>) -> Result<(), CommandError> {
+async fn lock(
+    state: State<'_, VaultSession>,
+    window: tauri::WebviewWindow,
+    guard: State<'_, protect::CaptureGuard>,
+) -> Result<(), CommandError> {
+    guard.end_allow();
+    let _ = window.set_content_protected(true);
     state.lock().await
+}
+
+/// Set a new password straight after a recovery-key unlock (no old password).
+#[tauri::command]
+async fn set_new_password(
+    state: State<'_, VaultSession>,
+    new_password: String,
+) -> Result<(), CommandError> {
+    state.set_new_password(take_secret(new_password)).await
+}
+
+/// Make a new recovery key (needs the password). Returns it once.
+#[tauri::command]
+async fn regenerate_recovery_key(
+    state: State<'_, VaultSession>,
+    password: String,
+) -> Result<String, CommandError> {
+    let key = state.regenerate_recovery_key(take_secret(password)).await?;
+    Ok(reveal_once(key))
 }
 
 /// Change the master password (re-wraps the key; the data isn't re-encrypted).
@@ -99,6 +129,7 @@ pub fn run() {
                 .ok()
                 .filter(|dir| shiftbook_storage::create_private_dir(dir).is_ok());
             app.manage(VaultSession::new(data_dir));
+            app.manage(protect::CaptureGuard::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -108,7 +139,48 @@ pub fn run() {
             vault_confirm_recovery_saved,
             unlock,
             lock,
-            change_password
+            change_password,
+            set_new_password,
+            regenerate_recovery_key,
+            protect::allow_capture,
+            protect::protect_capture,
+            api::load_prefs,
+            api::save_pref,
+            api::list_projects,
+            api::create_project,
+            api::update_project,
+            api::list_entries,
+            api::create_entry,
+            api::update_entry,
+            api::add_entry_minutes,
+            api::delete_entry,
+            api::restore_entry,
+            api::add_entry_tickets,
+            api::remove_ticket,
+            api::quick_log,
+            api::parse_capture_line,
+            api::capture_log,
+            api::tray_day,
+            api::tray_add,
+            api::tray_set_minutes,
+            api::tray_remove,
+            api::tray_restore,
+            api::ribbon,
+            api::week_sheet,
+            api::list_ticks,
+            api::set_tick,
+            api::list_timesheet_codes,
+            api::save_timesheet_code,
+            api::category_codes,
+            api::set_category_code,
+            api::list_custom_fields,
+            api::save_custom_field,
+            api::delete_custom_field,
+            api::list_custom_values,
+            api::set_custom_value,
+            api::list_inbox,
+            api::add_inbox,
+            api::set_inbox_deleted,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Shiftbook");

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-timesheet-codes"
+description = "Enables the list_timesheet_codes command without any pre-configured scope."
+commands.allow = ["list_timesheet_codes"]
+
+[[permission]]
+identifier = "deny-list-timesheet-codes"
+description = "Denies the list_timesheet_codes command without any pre-configured scope."
+commands.deny = ["list_timesheet_codes"]

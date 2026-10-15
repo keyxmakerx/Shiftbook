@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-ticks"
+description = "Enables the list_ticks command without any pre-configured scope."
+commands.allow = ["list_ticks"]
+
+[[permission]]
+identifier = "deny-list-ticks"
+description = "Denies the list_ticks command without any pre-configured scope."
+commands.deny = ["list_ticks"]
