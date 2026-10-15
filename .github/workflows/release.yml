@@ -1,0 +1,120 @@
+name: Release
+
+# Builds installers and no-install builds for Windows, macOS and Linux and attaches them to a
+# GitHub pre-release. Run it from the Actions tab ("Run workflow"), or push a tag like
+# v0.1.0-alpha.1. Builds are unsigned until code signing is set up (see docs/SECURITY.md).
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to create, e.g. v0.1.0-alpha.1'
+        required: true
+        default: 'v0.1.0-alpha.1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            args: ''
+          - name: macOS (Apple silicon)
+            os: macos-latest
+            args: '--target aarch64-apple-darwin'
+            rust_target: aarch64-apple-darwin
+          - name: macOS (Intel)
+            os: macos-latest
+            args: '--target x86_64-apple-darwin'
+            rust_target: x86_64-apple-darwin
+          - name: Linux
+            os: ubuntu-22.04
+            args: ''
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.rust_target }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Tauri 2 prerequisites for Linux: https://v2.tauri.app/start/prerequisites/#linux
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libjavascriptcoregtk-4.1-dev \
+            libsoup-3.0-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            build-essential \
+            pkg-config
+
+      - name: npm ci
+        working-directory: web
+        run: npm ci
+
+      - name: Build and publish
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop/src-tauri
+          tauriScript: npm --prefix ../../../web run tauri --
+          args: ${{ matrix.args }}
+          tagName: ${{ env.TAG }}
+          releaseName: 'Shiftbook ${{ env.TAG }}'
+          releaseBody: |
+            Alpha build for testing. Not code-signed yet, so Windows shows "Windows protected your PC"
+            (choose More info, then Run anyway) and macOS asks you to right-click the app and choose Open
+            the first time.
+
+            - **Windows, no install:** `Shiftbook-portable.exe` runs from anywhere.
+            - **Windows installer:** the `.msi` or `-setup.exe`.
+            - **macOS:** the `.dmg` for your Mac (Apple silicon = aarch64, Intel = x64).
+            - **Linux, no install:** the `.AppImage`. Debian/Ubuntu: the `.deb`.
+          releaseDraft: false
+          prerelease: true
+
+      # The plain .exe runs without installing anything; publish it alongside the installers.
+      - name: Upload Windows portable exe
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          exe=$(ls target/release/*.exe | head -n 1)
+          cp "$exe" Shiftbook-portable.exe
+          gh release upload "$TAG" Shiftbook-portable.exe --clobber --repo "$GITHUB_REPOSITORY"
