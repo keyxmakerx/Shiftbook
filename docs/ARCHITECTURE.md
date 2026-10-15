@@ -32,8 +32,10 @@
 - **Time:** minutes (INT). Dates as `TEXT` `YYYY-MM-DD` in SQLite / `DATE` in Postgres via sqlx types.
 
 ## Desktop specifics (Phase 1)
-- Data path: Tauri `app_data_dir()` + `shiftbook.db`; user can relocate via Settings
-  (stored in a small config file in app config dir).
+- Data path: Tauri `app_data_dir()` (created `0700` on Unix), holding `vault.json`,
+  `vault.json.prev` and `shiftbook.db` (files `0600` on Unix). Relocating via Settings (stored in
+  a small config file in the app config dir) comes later. On Linux the WebView (WebKitGTK) also
+  keeps its own cache folders there; Shiftbook stores nothing in WebView storage.
 - Backups: copy DB with SQLite online backup API (`VACUUM INTO`) to `backups/YYYY-MM-DD.db`.
 - Plugins allowed: `dialog` (pick backup/import file), `fs` scoped to app data + user-picked paths.
   Not allowed: `shell`, `http`, `opener` for remote URLs, updater (until signing is set up).
@@ -89,3 +91,60 @@ Interpretations made where the spec is silent:
 - **Tickets:** repeats are matched ignoring case (`INC1` = `inc1`); at most 64 characters per
   ticket and 100 tickets per entry; control characters are rejected.
 - **Category → code lookup** ignores case and surrounding spaces.
+
+## Storage, vault and unlock (M1)
+`crates/storage` modules:
+
+| Module | What it holds |
+|---|---|
+| `vault` | `VaultDir` (create, unlock with password or recovery key, change password, regenerate recovery key), `Vault`/`Dek` (the unlocked key, wiped on drop), `VaultError` |
+| `recovery` | `RecoveryKey`: 256 random bits shown as 13 groups of 4 Crockford base32 characters; forgiving parser |
+| `db` | `open_encrypted(path, dek)`: SQLCipher pool with the key pragma first, then migrations |
+| `repo` | Repository traits + `SqliteStore` (local user, settings, list options, frequencies) |
+| `fsutil` | Private folders/files and atomic replace (temp file → fsync → rename → fsync folder) |
+| `hex` | Tiny hex helpers |
+
+- **Vault file** (`vault.json`): `{version, kdf, kdf_params, salts, nonces, wrapped_dek_password,
+  wrapped_dek_recovery}`, bytes as lowercase hex. Argon2id parameters are calibrated at setup to
+  about 0.5 s (floor 64 MiB / t=3 / p=1, cap 1 GiB / t=10 / p=4) and anything outside that range
+  in the file is refused. Each wrap is XChaCha20-Poly1305 with a fresh nonce; the AAD binds the
+  version, KDF name and parameters, salt and purpose (`pw` / `recovery`). Any unlock problem is
+  the same `UnlockFailed`.
+- **Saving the vault:** the current file is copied to `vault.json.prev`, the new file replaces
+  `vault.json` atomically and is read back, then `.prev` is updated to match, so `.prev` is a
+  safety copy of the current vault and never keeps an old password working. There is no automatic
+  fallback to `.prev`; it is for manual repair.
+- **Database:** sqlx 0.9 with `libsqlite3-sys` 0.37 built as SQLCipher 4 (vendored OpenSSL).
+  Every connection runs `PRAGMA key = "x'…'"` (the raw DEK) first, then
+  `cipher_compatibility = 4`, `foreign_keys = ON`, `cipher_memory_security = ON`; journal mode
+  DELETE; statement logging off. Migrations are embedded from `crates/storage/migrations/`
+  (portable SQL: TEXT ids/dates/timestamps, INTEGER minutes, BOOLEAN flags, partial unique
+  indexes, no AUTOINCREMENT or JSON). The `users` table has no `owner_id`: a user is its own owner.
+- **Seeding:** on every unlock `initialize_local_owner` creates the single local user if needed
+  and, once, the default lists and frequencies from `shiftbook_core::seed`, all in one
+  transaction (`settings.seed.version` marks it done).
+- **List rules in storage:** "Done" and "Blocked" statuses can't be renamed or hidden (the alert
+  rules match on them). Duplicates are refused ignoring case. Renaming a list value updates the
+  records that store that text in the same transaction.
+- **Tests** use tiny Argon2 parameters through a `cfg(test)`-only path (`VaultDir::new_for_tests`),
+  which doesn't exist in release builds; one test runs the real calibration. Argon2 is compiled
+  with `opt-level = 3` even in debug builds so `tauri dev` unlocks at release speed.
+
+Unlock flow (desktop):
+```
+WebView                          src-tauri (VaultSession, one lock)          crates/storage
+vault_status ─────────────────▶  needs_setup | locked | unlocked
+vault_setup(password) ────────▶  VaultDir::create (blocking thread) ──────▶ vault.json
+                                 open_encrypted + initialize_local_owner ─▶ shiftbook.db
+          ◀── recovery key (once)
+vault_confirm_recovery_saved ─▶  settings.security.recovery_key_saved_at
+unlock(secret, kind) ─────────▶  unlock_with_password / _recovery_key ─────▶ open_encrypted
+          ◀── ok | "unlock_failed" (after 5 failures: wait 1 s, 2 s … 60 s)
+lock ─────────────────────────▶  close pool, drop Vault (key wiped) ── WebView reloads
+change_password(cur, new) ────▶  VaultDir::change_password (re-wrap only)
+```
+Errors reach the WebView only as codes (`unlock_failed`, `weak_password`, `busy`,
+`already_set_up`, `not_set_up`, `locked`, `storage_error`). While a vault command runs (including
+the back-off wait) the others answer `busy`. The frontend locks on `Lock now`, `Ctrl+L`, 15 minutes
+without keyboard/mouse activity, and when its timer notices a gap of a minute or more (the
+computer slept); after locking it reloads the page.

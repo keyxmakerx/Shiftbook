@@ -6,3 +6,20 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+shiftbook-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+time.workspace = true
+thiserror.workspace = true
+sqlx.workspace = true
+# Not used in code: turning it on makes sqlx's SQLite the bundled SQLCipher build.
+libsqlite3-sys.workspace = true
+argon2.workspace = true
+chacha20poly1305.workspace = true
+getrandom.workspace = true
+zeroize.workspace = true
+secrecy.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
