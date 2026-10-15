@@ -10,6 +10,7 @@ pub mod error;
 pub mod hours;
 pub mod ids;
 pub mod minutes;
+pub mod week;
 
 pub use error::CoreError;
 pub use minutes::Minutes;
