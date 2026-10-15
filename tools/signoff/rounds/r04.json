@@ -1,0 +1,283 @@
+{
+  "meta": {
+    "round": 4,
+    "heading": "Round 4: layout first, colours later",
+    "intro": "Three rounds of looks all used the same skeleton: a menu down the side and a list in the middle. That skeleton is the problem, so this round shows six genuinely different layouts as plain grey wireframes. Judge only how each one works, not how it looks."
+  },
+  "cards": {
+    "r4-layout": {
+      "round": 4,
+      "order": 10,
+      "area": "Layout",
+      "version": 1,
+      "title": "Six different ways the app could be shaped",
+      "body": [
+        "Every look so far was a sidebar plus a list, dressed differently. These six change what you actually see and do when you open Shiftbook. They are deliberately plain grey: once a layout feels right, styling it is the easy part.",
+        "Each one works. Try typing, dragging or pressing the buttons."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r04-lay-1.html",
+          "caption": "**1 · Stream.** One running feed of your day, like a chat with yourself. Type at the bottom; start with hours to log time. No menus to navigate."
+        },
+        {
+          "html_file": "mocks/r04-lay-2.html",
+          "caption": "**2 · Week planner.** Days as columns, like a paper planner or Sunsama. Each day totals its hours, which is exactly what a timesheet needs. Drag things from the Inbox or Later onto a day."
+        },
+        {
+          "html_file": "mocks/r04-canvas.html",
+          "caption": "**3 · Canvas.** Your work as cards on a board you arrange yourself, grouped however makes sense to you (like Milanote or Heptabase). One button lines them up on a timeline."
+        },
+        {
+          "html_file": "mocks/r04-lay-4.html",
+          "caption": "**4 · Focus.** One big card: what you're doing now. Next up on the left, done today on the right. Built for keeping on one thing at a time."
+        },
+        {
+          "html_file": "mocks/r04-lay-5.html",
+          "caption": "**5 · Daily note.** Just write your day as text. Shiftbook reads it as you type: hours become time entries, ticket numbers and #projects are picked up, `[ ]` makes a task, and anything else is a scrap."
+        },
+        {
+          "html_file": "mocks/r04-lay-6.html",
+          "caption": "**6 · Side strip.** Shiftbook stays out of the way as a small strip at the edge of the screen, with the capture box on a shortcut. The full app opens only when you need it."
+        }
+      ],
+      "bullets": [
+        "These can combine. For example, the **Daily note** as the place you write, with the **Week planner** as the overview, or the **Side strip** as the always-on part of any of them."
+      ],
+      "questions": [
+        {
+          "id": "like",
+          "type": "many",
+          "legend": "Which feel promising? Tick as many as you like",
+          "options": [
+            {
+              "value": "1 · Stream"
+            },
+            {
+              "value": "2 · Week planner"
+            },
+            {
+              "value": "3 · Canvas"
+            },
+            {
+              "value": "4 · Focus"
+            },
+            {
+              "value": "5 · Daily note"
+            },
+            {
+              "value": "6 · Side strip"
+            }
+          ]
+        },
+        {
+          "id": "open",
+          "type": "text",
+          "legend": "When you open Shiftbook in the middle of a busy day, what's the one thing you want to see first?",
+          "placeholder": "e.g. what I said I'd do today, and how many hours I've logged"
+        }
+      ],
+      "pick": "I'd try **5 · Daily note** as the main place you work, **2 · Week planner** as the overview, and **6 · Side strip** for capture. Writing is the fastest way to get a thought down, and the planner is what the timesheet needs. But this one is about how your brain works, so your ticks matter more than my pick."
+    },
+    "r4-canvas": {
+      "round": 4,
+      "order": 20,
+      "area": "Notes",
+      "version": 1,
+      "title": "The map as a free canvas, with a timeline button",
+      "body": [
+        "Your description: a free canvas where you move things around, and the option of a timeline. Drag any card and its lines follow. Press **Arrange as timeline** and everything slides onto a date line; **Back to my layout** puts each card back exactly where you left it. Shiftbook remembers your layout.",
+        "The dashed areas are groups you draw yourself (here, one per project). Links are made automatically, as you picked in round 2."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r04-canvas.html",
+          "caption": "The same canvas as layout 3 above. Here it's the notes map, one view inside whichever layout you pick."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Is this the idea?",
+          "options": [
+            {
+              "value": "Yes, this",
+              "rec": true
+            },
+            {
+              "value": "Close",
+              "why": "Say what's missing in the note, e.g. zoom, colours, drawing your own arrows."
+            },
+            {
+              "value": "No",
+              "why": "A sketch in Notes to Claude would help."
+            }
+          ]
+        }
+      ],
+      "pick": "Yes, with zoom and drawing your own links added in the real thing."
+    },
+    "r4-picture": {
+      "round": 4,
+      "order": 30,
+      "area": "Notes",
+      "version": 1,
+      "title": "Pictures in your notes, with a simple editor",
+      "body": [
+        "Your idea from the last round, now in the plan: paste or drop a screenshot into any note, then mark it up. It covers the Greenshot basics without the extras: box, arrow, highlight, **Hide** (a solid block over passwords, names or keys before you save), crop and undo.",
+        "Hidden areas are flattened into the saved picture, so the original text can't be recovered from it. Pictures are stored inside the encrypted database like everything else."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r04-picture.html",
+          "caption": "Draw on the sample screenshot. Try **Hide** over the licence key, then **Crop to marks**."
+        }
+      ],
+      "questions": [
+        {
+          "id": "tools",
+          "type": "many",
+          "legend": "Tools to include",
+          "options": [
+            {
+              "value": "Box",
+              "on": true
+            },
+            {
+              "value": "Arrow",
+              "on": true
+            },
+            {
+              "value": "Highlight",
+              "on": true
+            },
+            {
+              "value": "Hide",
+              "on": true
+            },
+            {
+              "value": "Crop",
+              "on": true
+            },
+            {
+              "value": "Text labels",
+              "why": "Type a short label onto the picture."
+            },
+            {
+              "value": "Numbered steps",
+              "why": "Click to drop 1, 2, 3… markers, handy for how-to notes."
+            }
+          ]
+        }
+      ],
+      "pick": "The five shown, plus numbered steps. They're cheap to add and great for runbooks."
+    },
+    "r4-privacy": {
+      "round": 4,
+      "order": 40,
+      "area": "Security",
+      "version": 1,
+      "title": "Hide Shiftbook from screenshots and screen sharing",
+      "body": [
+        "This is possible. Windows 10 (2004 and later) and 11 let an app mark its window as excluded from capture: screenshots, recordings and Teams or Zoom sharing show it blacked out or missing, while you still see it normally. Tauri supports this directly. While protected, it also stays hidden when you share your whole screen in a meeting.",
+        "**Limits, honestly:** on a Mac it blocks most screenshot tools, but some newer capture methods ignore it. On Linux there is no reliable way to do it. Nothing stops someone photographing the screen with a phone."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r04-privacy.html",
+          "caption": "Your idea of a toggle with a timer: protected by default, with a button to allow screenshots for a while that switches itself back on."
+        }
+      ],
+      "questions": [
+        {
+          "id": "mode",
+          "legend": "Default",
+          "options": [
+            {
+              "value": "Protected, with a timed allow button",
+              "rec": true,
+              "why": "As shown. The allow time is set in Settings (default 10 minutes)."
+            },
+            {
+              "value": "Off, with a timed protect button",
+              "why": "For when you're about to share your screen."
+            },
+            {
+              "value": "Always protected",
+              "why": "No way to screenshot your own notes."
+            }
+          ]
+        }
+      ],
+      "pick": "Protected by default, with the timed allow button."
+    },
+    "r4-m0": {
+      "round": 4,
+      "order": 5,
+      "area": "Milestone summary",
+      "version": 1,
+      "title": "M0 is done: the empty app runs",
+      "body": [
+        "The skeleton of Shiftbook now exists and builds. This is the real app running, not a mockup. It's deliberately plain until we settle the layout.",
+        "Under the hood it follows the security rules from the start: no network access, a strict content policy, and the screen may call exactly one thing in the app (\"what version am I\"). Every later feature has to be allowed explicitly."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/845b6be9dda847a578e71b273a5c72bb",
+          "caption": "The real Shiftbook 0.1.0 window on Linux, showing today's date and an empty state."
+        }
+      ],
+      "bullets": [
+        "**Built:** the Rust workspace (core, storage, desktop app), the screen code, the link between them, and a Linux installer as a test.",
+        "**Checks:** every format, lint and test check passes, and the security audits found no vulnerabilities. GitHub runs the same checks on Windows, Mac and Linux for every change.",
+        "**Packages:** exactly the approved list, nothing extra. One version note: TypeScript is held at 6.0 because the checker tool doesn't support 7 yet.",
+        "**Next, M1:** the core rules (hours, weeks, due dates, alerts) with tests, plus the encrypted database, master password, recovery key and lock screen. None of that depends on the layout, so it can start now."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Start M1 while we settle the layout?",
+          "options": [
+            {
+              "value": "Yes, start M1",
+              "rec": true,
+              "why": "M1 has no screens beyond setup and unlock, which I'll keep plain."
+            },
+            {
+              "value": "Wait",
+              "why": "Hold until the layout is chosen."
+            }
+          ]
+        },
+        {
+          "id": "ask",
+          "legend": "M1 needs these pre-approved packages; I'm listing them as CLAUDE.md asks",
+          "type": "many",
+          "options": [
+            {
+              "value": "sqlx + SQLCipher (encrypted database)",
+              "on": true
+            },
+            {
+              "value": "argon2 (turns your password into a key)",
+              "on": true
+            },
+            {
+              "value": "chacha20poly1305 (encryption)",
+              "on": true
+            },
+            {
+              "value": "rand, zeroize, secrecy (random keys, wiping keys from memory)",
+              "on": true
+            },
+            {
+              "value": "uuid, time, thiserror (IDs, dates, error messages)",
+              "on": true
+            }
+          ]
+        }
+      ],
+      "pick": "Yes, start M1 with these packages. All of them are on the pre-approved list in CLAUDE.md."
+    }
+  }
+}

@@ -2,6 +2,20 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 3 — 15 Oct 2026
+- **Look:** the technical skins were also rejected; the shared sidebar-plus-list layout is the
+  problem. Round 4 compares layouts as unstyled wireframes before any styling.
+- **Notes map:** a free canvas the user arranges, with an option to lay it out as a timeline.
+- **New features from feedback:** pictures in notes with a small markup editor (box, arrow,
+  highlight, hide, crop), and protection against screenshots and screen sharing with a timed allow
+  toggle.
+- **Sign-off sheet:** notes to Claude accept pictures.
+
+## M0 — 15 Oct 2026
+- TypeScript held at 6.0.x because `svelte-check` 4.7 does not support TypeScript 7 yet.
+- The desktop capability grants only `allow-app-info` (not even `core:default`); every later
+  command or plugin permission is added explicitly.
+
 ## Round 2 — 15 Oct 2026
 - **Quick capture:** one box for logging, notes and search, with letters-in-order matching and an
   Inbox for scraps. Works from anywhere via `tauri-plugin-global-shortcut` (approved; needs no admin

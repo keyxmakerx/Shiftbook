@@ -1,0 +1,32 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#2B2F33;background:#F3F4F5}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.frame{position:relative;height:400px;overflow:hidden;background:#F3F4F5}
+.box{background:#fff;border:1px solid #D2D6DA;border-radius:6px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#80878E}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;color:#2B2F33;font-weight:600}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;background:#E9ECEF;border-radius:3px;padding:0 5px}
+.mut{color:#80878E}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A0A6AC}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.board{position:absolute;inset:0;display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;padding:10px;overflow-x:auto}
+.col{display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:6px;padding:6px}.col.today{background:#E6E9EC}
+.col header{display:flex;justify-content:space-between;align-items:baseline;padding:2px 4px 4px}
+.card{padding:6px 8px;cursor:grab;font-size:12px}.card .h{font-size:11.5px;margin-right:4px}.card.dragging{opacity:.4}
+.col.over{outline:2px dashed #9AA3AB}
+</style>
+<div class="try"><b>Try it:</b><span>drag a card from the Inbox or Later onto a day. Each day adds up its hours at the top</span></div>
+<div class="frame"><div class="board" id="b"></div><span class="wf">Layout 2 · Week planner</span></div>
+<script>
+var cols=[['Inbox',[['','guest wifi drops again??'],['','Idea: auto-renew certs']]],['Mon 12',[['3.0','Core switch planning'],['4.5','Ticket queue']]],['Tue 13',[['2.0','Switch config backup'],['1.0','Vendor call: UPS']]],['Wed 14',[['6.0','Patching window']]],['Thu 15',[['1.5','Firewall rule cleanup'],['1.0','Ticket queue'],['1.0','Weekly ops sync']]],['Later',[['','Retire any-any rule'],['','Order UPS batteries']]]];
+var b=document.getElementById('b'),drag=null;
+function sum(c){var s=0;c.querySelectorAll('.card').forEach(function(k){s+=parseFloat(k.dataset.h||0)});var t=c.querySelector('.t');if(t)t.textContent=s?s.toFixed(1)+' h':''}
+cols.forEach(function(c,i){var col=document.createElement('section');col.className='col'+(c[0]==='Thu 15'?' today':'');col.innerHTML='<header><span class="lbl">'+c[0]+'</span><span class="h t" style="font-size:12px"></span></header>';
+ c[1].forEach(function(x){var k=document.createElement('div');k.className='box card';k.draggable=true;k.dataset.h=x[0];k.innerHTML=(x[0]?'<span class="h">'+x[0]+'</span>':'')+x[1];col.appendChild(k)});
+ if(i===0||i===5)col.querySelector('.t').remove();b.appendChild(col);sum(col)});
+b.addEventListener('dragstart',function(e){drag=e.target.closest('.card');drag.classList.add('dragging');e.dataTransfer.setData('text/plain','x')});
+b.addEventListener('dragend',function(){if(drag)drag.classList.remove('dragging');b.querySelectorAll('.col').forEach(function(c){c.classList.remove('over');sum(c)})});
+b.addEventListener('dragover',function(e){var c=e.target.closest('.col');if(!c)return;e.preventDefault();b.querySelectorAll('.col').forEach(function(x){x.classList.toggle('over',x===c)})});
+b.addEventListener('drop',function(e){var c=e.target.closest('.col');if(!c||!drag)return;e.preventDefault();var isDay=/\d/.test(c.querySelector('.lbl').textContent);
+ if(isDay&&!drag.dataset.h){drag.dataset.h='0.5';drag.insertAdjacentHTML('afterbegin','<span class="h">0.5</span>')}c.appendChild(drag)});
+</script>

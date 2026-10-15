@@ -1,0 +1,38 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#2B2F33;background:#F3F4F5}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.frame{position:relative;height:400px;overflow:hidden;background:#F3F4F5}
+.box{background:#fff;border:1px solid #D2D6DA;border-radius:6px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#80878E}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;color:#2B2F33;font-weight:600}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;background:#E9ECEF;border-radius:3px;padding:0 5px}
+.mut{color:#80878E}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A0A6AC}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.feed{position:absolute;inset:0 0 56px 0;overflow:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.day{text-align:center}.it{display:flex;gap:10px;align-items:flex-start;padding:8px 12px;max-width:560px}
+.it .h{width:42px;text-align:right}.note{border-left:3px solid #9AA3AB}.task{border-style:dashed}
+.side{position:absolute;right:12px;top:12px;width:120px;padding:8px 10px}
+.cap{position:absolute;left:12px;right:12px;bottom:10px;height:38px;display:flex;align-items:center;padding:0 12px;gap:10px}
+.cap input{flex:1;border:0;outline:0;font:inherit;background:transparent}
+.new{animation:up .35s ease-out}@keyframes up{from{opacity:0;transform:translateY(16px)}}
+@media (max-width:620px){.side{display:none}}
+</style>
+<div class="try"><b>Try it:</b><span>type something in the box at the bottom and press Enter. Start with a number for hours, e.g. "1.5 patched the web servers"</span></div>
+<div class="frame">
+ <div class="feed" id="feed">
+  <div class="day lbl">Thursday 15 October</div>
+  <div class="box it"><span class="h">1.5</span><span>Firewall rule cleanup <span class="mut">· Network refresh</span> <span class="tk">CHG0012345</span></span></div>
+  <div class="box it note"><span class="h"></span><span><b>Weekly ops sync</b><br><span class="mut">Split guest VLAN next week. Retire the any-any rule Friday.</span></span></div>
+  <div class="box it task"><span class="h">☐</span><span>Retire any-any rule <span class="mut">· from the meeting · Fri</span></span></div>
+  <div class="box it"><span class="h">1.0</span><span>Ticket queue <span class="tk">INC0045678</span> <span class="tk">INC0045690</span></span></div>
+ </div>
+ <div class="box side"><div class="lbl">Today</div><div class="h" style="font-size:18px" id="tot">2.5 h</div><div class="lbl" style="margin-top:6px">Week</div><div class="h">26.0 h</div><div class="lbl" style="margin-top:6px">Due</div><div style="font-size:12px">SSL cert · overdue</div></div>
+ <div class="box cap" id="f"><span class="mut">›</span><input id="q" placeholder="What are you doing? Start with hours to log time…" autocomplete="off"></div>
+ <span class="wf">Layout 1 · Stream</span>
+</div>
+<script>var f=document.getElementById('f'),q=document.getElementById('q'),feed=document.getElementById('feed'),tot=2.5;
+q.onkeydown=function(e){if(e.key!=='Enter')return;e.preventDefault();var v=q.value.trim();if(!v)return;var m=v.match(/^(\d+(?:[.:]\d+)?)\s*h?\s+(.*)$/),d=document.createElement('div');
+ d.className='box it new'+(m?'':' note');var a=document.createElement('span');a.className='h';var b=document.createElement('span');
+ if(m){a.textContent=m[1];b.textContent=m[2];tot+=parseFloat(m[1].replace(':','.'))||0;document.getElementById('tot').textContent=tot.toFixed(1)+' h'}else{b.textContent=v}
+ d.appendChild(a);d.appendChild(b);feed.appendChild(d);feed.scrollTop=feed.scrollHeight;q.value=''};</script>

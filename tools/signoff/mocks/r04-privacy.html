@@ -1,0 +1,27 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#2B2F33;background:#F3F4F5}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.frame{position:relative;height:400px;overflow:hidden;background:#F3F4F5}
+.box{background:#fff;border:1px solid #D2D6DA;border-radius:6px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#80878E}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;color:#2B2F33;font-weight:600}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;background:#E9ECEF;border-radius:3px;padding:0 5px}
+.mut{color:#80878E}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A0A6AC}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.g{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+.pane{display:flex;flex-direction:column;gap:6px}.scr{height:200px;border-radius:6px;position:relative;overflow:hidden;border:1px solid #D2D6DA}
+.app{position:absolute;inset:0;background:#fff;padding:12px}.app div{height:12px;background:#E9ECEF;border-radius:3px;margin-bottom:9px}
+.blk{position:absolute;inset:0;background:#111;color:#9AA3AB;display:flex;align-items:center;justify-content:center;font-size:12px;transition:opacity .3s}
+.ctl{display:flex;gap:10px;align-items:center;padding:0 14px 14px;flex-wrap:wrap}.ctl button{font:inherit;border:1px solid #C9CDD1;background:#fff;border-radius:6px;padding:5px 12px;cursor:pointer}
+.pill{font-size:12px;padding:3px 10px;border-radius:12px;background:#E3F1E8;color:#24663F}.pill.off{background:#FBEBD8;color:#8A4B0B}
+@media (max-width:560px){.g{grid-template-columns:1fr}}
+</style>
+<div class="try"><b>Try it:</b><span>press the button to allow screenshots for a while (sped up here: 10 minutes takes 10 seconds)</span></div>
+<div class="g"><div class="pane"><span class="lbl">On your screen</span><div class="scr"><div class="app"><div style="width:40%;height:16px"></div><div></div><div style="width:80%"></div><div style="width:65%"></div><div></div><div style="width:50%"></div></div></div></div>
+<div class="pane"><span class="lbl">In a screenshot, recording or Teams share</span><div class="scr"><div class="app"><div style="width:40%;height:16px"></div><div></div><div style="width:80%"></div><div style="width:65%"></div><div></div><div style="width:50%"></div></div><div class="blk" id="blk">Shiftbook is hidden from capture</div></div></div></div>
+<div class="ctl"><span class="pill" id="st">Protected</span><button id="b">Allow screenshots for 10 minutes</button><span class="mut" id="cd"></span></div>
+<script>var t=null;document.getElementById('b').onclick=function(){var b=this,blk=document.getElementById('blk'),st=document.getElementById('st'),cd=document.getElementById('cd');
+ if(t){clearInterval(t);t=null;blk.style.opacity=1;st.textContent='Protected';st.className='pill';b.textContent='Allow screenshots for 10 minutes';cd.textContent='';return}
+ var left=10;blk.style.opacity=0;st.textContent='Screenshots allowed';st.className='pill off';b.textContent='Protect again now';cd.textContent='Protects again in 10:00';
+ t=setInterval(function(){left--;cd.textContent='Protects again in '+left+':00';if(left<=0){b.click()}},1000)};</script>

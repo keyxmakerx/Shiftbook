@@ -1,0 +1,32 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#2B2F33;background:#F3F4F5}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.frame{position:relative;height:400px;overflow:hidden;background:#F3F4F5}
+.box{background:#fff;border:1px solid #D2D6DA;border-radius:6px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#80878E}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;color:#2B2F33;font-weight:600}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;background:#E9ECEF;border-radius:3px;padding:0 5px}
+.mut{color:#80878E}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A0A6AC}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.now{position:absolute;left:50%;top:50%;width:min(360px,60%);transform:translate(-50%,-50%);padding:18px 20px;text-align:center;transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .5s}
+.now h2{margin:6px 0 4px;font-size:20px}.now .row{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.now button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:4px 10px;cursor:pointer}.now .big{background:#2B2F33;color:#fff;border-color:#2B2F33}
+.stack{position:absolute;top:16px;bottom:16px;width:150px;display:flex;flex-direction:column;gap:6px}.stack .box{padding:6px 8px;font-size:12px}
+.l{left:14px}.r{right:14px}.out{transform:translate(120%,-50%) scale(.6);opacity:0}.in{transform:translate(-160%,-50%) scale(.6);opacity:0}
+@media (max-width:620px){.stack{display:none}.now{width:80%}}
+</style>
+<div class="try"><b>Try it:</b><span>press "Done, next" on the big card</span></div>
+<div class="frame" id="fr">
+ <div class="stack l"><span class="lbl">Next up</span><div id="next"></div></div>
+ <div class="stack r"><span class="lbl">Done today · <span class="h" id="tot">2.5 h</span></span><div id="done"><div class="box"><span class="h">1.0</span> Ticket queue</div><div class="box"><span class="h">1.5</span> Firewall rule cleanup</div></div></div>
+ <div class="box now" id="now"><span class="lbl">Working on</span><h2 id="t">Weekly ops sync</h2><div class="mut" id="s">Routine · meeting notes open</div>
+  <div class="row"><button>+15m</button><button>+30m</button><button>+1h</button><button>Add note</button></div>
+  <div class="row"><button class="big" id="go">Done, next →</button></div></div>
+ <span class="wf">Layout 4 · Focus</span>
+</div>
+<script>var q=[['Retire any-any rule','Network refresh · due Fri'],['Order UPS batteries','Data centre · this week'],['Update backup runbook','Data centre · today']],cur=['Weekly ops sync',1.0],tot=2.5;
+var nx=document.getElementById('next');function paint(){nx.innerHTML='';q.forEach(function(x){var d=document.createElement('div');d.className='box';d.style.marginBottom='6px';d.textContent=x[0];nx.appendChild(d)})}paint();
+document.getElementById('go').onclick=function(){var n=document.getElementById('now');if(!q.length)return;n.classList.add('out');
+ setTimeout(function(){var d=document.createElement('div');d.className='box';d.style.marginBottom='6px';d.innerHTML='<span class="h">'+cur[1].toFixed(1)+'</span> ';d.appendChild(document.createTextNode(cur[0]));document.getElementById('done').prepend(d);tot+=cur[1];document.getElementById('tot').textContent=tot.toFixed(1)+' h';
+  var x=q.shift();cur=[x[0],0.5];document.getElementById('t').textContent=x[0];document.getElementById('s').textContent=x[1];paint();n.classList.remove('out');n.classList.add('in');n.offsetWidth;n.classList.remove('in')},450)};</script>

@@ -1,0 +1,37 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.4 "Segoe UI",system-ui,sans-serif;color:#2B2F33;background:#F3F4F5}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #D7DADD;font-size:12px;flex-wrap:wrap}.try b{color:#5E656C}
+.try button{font:inherit;border:1px solid #C9CDD1;background:#F6F7F8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.frame{position:relative;height:400px;overflow:hidden;background:#F3F4F5}
+.box{background:#fff;border:1px solid #D2D6DA;border-radius:6px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#80878E}
+.h{font-family:"Cascadia Mono",Consolas,Menlo,monospace;color:#2B2F33;font-weight:600}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;background:#E9ECEF;border-radius:3px;padding:0 5px}
+.mut{color:#80878E}
+.wf{position:absolute;right:10px;bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#A0A6AC}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.wrap{position:absolute;inset:0;display:grid;grid-template-columns:170px 1fr}
+.days{border-right:1px solid #D7DADD;padding:10px 8px;display:flex;flex-direction:column;gap:2px;background:#ECEEF0}.days div{padding:5px 8px;border-radius:5px;font-size:12.5px;display:flex;justify-content:space-between}.days .on{background:#fff}
+.page{padding:16px 22px;display:flex;flex-direction:column;gap:8px;overflow:auto;background:#fff}
+.page h2{margin:0;font-size:19px}
+textarea{width:100%;min-height:150px;border:0;outline:0;resize:none;font:14px/1.7 "Segoe UI",system-ui,sans-serif;color:#2B2F33}
+.parsed{display:flex;flex-direction:column;gap:4px;border-top:1px solid #E3E6E9;padding-top:8px}.p{display:flex;gap:8px;align-items:center;font-size:12.5px}.p .h{width:36px;text-align:right}
+@media (max-width:620px){.wrap{grid-template-columns:1fr}.days{display:none}}
+</style>
+<div class="try"><b>Try it:</b><span>edit the text. Lines that start with hours become time entries; ticket numbers and #projects are picked up as you type</span></div>
+<div class="frame"><div class="wrap"><nav class="days"><span class="lbl" style="padding:4px 8px">October</span><div class="on">Thu 15 <span class="h" id="dt">3.5</span></div><div>Wed 14 <span class="h">6.0</span></div><div>Tue 13 <span class="h">3.0</span></div><div>Mon 12 <span class="h">7.5</span></div></nav>
+ <section class="page"><h2>Thursday 15 October</h2>
+<textarea id="ta">1.5h firewall rule cleanup #network-refresh CHG0012345
+1h ticket queue INC0045678 INC0045690
+1h weekly ops sync
+  - split guest VLAN next week
+  - [ ] retire the any-any rule by Friday
+ask vendor about UPS battery lead times</textarea>
+ <div class="parsed" id="pa"><span class="lbl">Shiftbook understood</span></div></section></div><span class="wf">Layout 5 · Daily note</span></div>
+<script>var ta=document.getElementById('ta'),pa=document.getElementById('pa');
+function parse(){pa.innerHTML='<span class="lbl">Shiftbook understood</span>';var t=0;ta.value.split('\n').forEach(function(line){var s=line.trim();if(!s)return;
+ var m=s.match(/^(\d+(?:\.\d+)?)\s*h\s+(.*)/),task=s.match(/^-\s*\[ \]\s*(.*)/),r=document.createElement('div');r.className='p';
+ var a=document.createElement('span');a.className='h';var b=document.createElement('span');var tks=(s.match(/\b[A-Z]{3}\d{5,}\b/g)||[]),pr=(s.match(/#[\w-]+/)||[''])[0];
+ if(m){a.textContent=m[1];t+=parseFloat(m[1]);b.textContent='Time · '+m[2].replace(/#[\w-]+/,'').replace(/\b[A-Z]{3}\d{5,}\b/g,'').trim()+(pr?' → '+pr.slice(1).replace(/-/g,' '):'')+(tks.length?' · '+tks.length+' ticket'+(tks.length>1?'s':''):'')}
+ else if(task){a.textContent='☐';b.textContent='Task · '+task[1]}else if(/^-/.test(s)){a.textContent='·';b.textContent='Note line · '+s.slice(1).trim()}else{a.textContent='?';b.textContent='Scrap → Inbox · '+s}
+ r.appendChild(a);r.appendChild(b);pa.appendChild(r)});document.getElementById('dt').textContent=t.toFixed(1)}
+ta.addEventListener('input',parse);parse();</script>
