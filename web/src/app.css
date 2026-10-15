@@ -293,6 +293,16 @@ button {
   box-shadow: 0 0 0 2px var(--accent);
 }
 
+select.text-in {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23737c86' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
+}
+
 .dot {
   width: 10px;
   height: 10px;
@@ -548,6 +558,10 @@ button {
   gap: 12px;
 }
 
+.cz-card > .seg {
+  align-self: flex-start;
+}
+
 .cz-card h3 {
   margin: 0;
   font: 650 18px var(--display);
@@ -595,7 +609,7 @@ button {
   font-size: 13.5px;
 }
 
-.check-row input {
+.check-row input[type='checkbox'] {
   width: 17px;
   height: 17px;
   accent-color: var(--accent);

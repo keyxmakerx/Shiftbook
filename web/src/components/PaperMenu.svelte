@@ -191,7 +191,7 @@
         style:left="{pos.sheetX}px"
         style:top="{pos.sheetY}px"
       >
-        <div class="paper sheet" role="menu" tabindex="-1" bind:this={sheetEl}>
+        <div class="paper sheet" role="menu" tabindex="-1" bind:this={sheetEl} style:max-height="{pos.sheetHeight}px">
           {@render sheetBody()}
         </div>
       </div>
@@ -287,6 +287,24 @@
         {#if item.hint}<span class="kbd">{item.hint}</span>{/if}
       </button>
     {/each}
+    {#if section.choices}
+      <div class="choices" role="group" aria-label={section.head ?? 'Choices'}>
+        {#each section.choices as choice (choice.label)}
+          <button
+            type="button"
+            class="choice"
+            style:--c={choice.color ?? 'var(--none)'}
+            aria-pressed={choice.checked}
+            onclick={() => {
+              close(false);
+              choice.act();
+            }}
+          >
+            {choice.label}
+          </button>
+        {/each}
+      </div>
+    {/if}
     {#if section.swatches}
       {@const sw = section.swatches}
       <div class="swatches" role="group" aria-label="Colours">
@@ -354,6 +372,8 @@
   .sheet {
     width: 252px;
     padding: 5px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     box-shadow: var(--lift);
     transform-origin: top center;
     animation: pull-out calc(0.5s * var(--m)) var(--spring) both;
@@ -582,12 +602,12 @@
     border: 0;
     background: none;
     text-align: left;
-    padding: 7px 10px;
+    padding: 5px 10px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 13.5px;
     color: var(--ink);
-    min-height: 34px;
+    min-height: 31px;
   }
 
   .item .label {
@@ -610,9 +630,44 @@
 
   .swatches {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    padding: 6px 10px 8px;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 3px;
+    padding: 2px 8px 8px;
     justify-items: center;
+  }
+
+  .swatches .sw {
+    width: 19px;
+    height: 19px;
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 2px 8px 8px;
+  }
+
+  .choice {
+    border: 1.5px solid color-mix(in srgb, var(--c) 45%, transparent);
+    background: none;
+    border-radius: 99px;
+    padding: 2px 9px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--ink);
+    min-height: 26px;
+  }
+
+  .choice:hover,
+  .choice:focus-visible {
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+    outline: 0;
+  }
+
+  .choice[aria-pressed='true'] {
+    background: var(--c);
+    border-color: var(--c);
+    color: #fff;
   }
 </style>

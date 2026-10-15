@@ -136,21 +136,15 @@
       { label: 'Copy tickets', icon: 'copy', top: true, act: () => void copyTickets() },
       { label: 'Log again today (30 min)', icon: 'log', top: true, act: () => void logAgainToday() },
     );
-    const projects: MenuItem[] = [
+    const choices = [
       ...app.projects
         .filter((p) => !p.archived)
-        .map((p) => ({
-          label: p.name,
-          icon: 'folder' as const,
-          dot: p.color,
-          checked: p.id === entry.projectId,
-          act: () => void moveTo(p.id),
-        })),
-      { label: 'No project', icon: 'folder', dot: null, checked: entry.projectId === null, act: () => void moveTo(null) },
+        .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveTo(p.id) })),
+      { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveTo(null) },
     ];
     const sections: MenuSpec['sections'] = [
       { head: entry.description || 'Untitled', items: main },
-      { head: 'Project', items: projects },
+      { head: 'Project', choices },
     ];
     if (project) {
       sections.push({ head: `Colour for ${project.name}`, swatches: { current: project.color, pick: (c) => void setColor(c) } });
@@ -191,7 +185,7 @@
   <span class="t">
     <b>{entry.description || 'Untitled'}</b>
     <small>
-      {project?.name ?? 'No project'}{#if entry.isTray} · from the Done tickets tray{/if}{#if entry.notes} · {entry.notes}{/if}
+      {project?.name ?? 'No project'}{#if entry.isTray}{' · from the Done tickets tray'}{/if}{#if entry.notes}{` · ${entry.notes}`}{/if}
     </small>
   </span>
   <span class="chips">

@@ -37,6 +37,18 @@
     draft = fromField(field);
   });
 
+  const KIND_LABEL: Record<FieldInput['kind'], string> = {
+    text: 'text',
+    number: 'number',
+    choice: 'choice',
+    link: 'link',
+  };
+  const APPLIES_LABEL: Record<FieldInput['appliesTo'], string> = {
+    entry: 'entries',
+    ticket: 'tickets',
+    project: 'projects',
+  };
+
   const isNew = $derived(field === null);
   const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(fromField(field)));
   const sample = $derived(
@@ -79,7 +91,11 @@
     void save();
   }}
 >
-  {#if isNew}<h3>Add a field</h3>{/if}
+  {#if isNew}
+    <h3>Add a field</h3>
+  {:else if field}
+    <h3>{field.name} <span class="lbl kind">{KIND_LABEL[field.kind]} · on {APPLIES_LABEL[field.appliesTo]}</span></h3>
+  {/if}
   <div class="cols">
     <label class="field">
       <span class="lbl">Name</span>
@@ -141,6 +157,11 @@
 </form>
 
 <style>
+  .kind {
+    margin-left: 8px;
+    font-family: var(--ui);
+  }
+
   .editor.new {
     border-top: 3px solid var(--accent);
   }

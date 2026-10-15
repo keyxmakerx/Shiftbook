@@ -69,6 +69,22 @@ describe('paper menu placement', () => {
     expect(p.topY).toBe(p.sheetY + SHEET.height + GAP);
   });
 
+  it('shortens a sheet that does not fit so it still starts at the object', () => {
+    const tall = { width: 252, height: 640 };
+    const row = box(100, 520, 600, 44);
+    const p = placeMenu(row, VIEW, tall, SIDE, TOP);
+    expect(p.sheetFrom).toBe('above');
+    expect(p.sheetHeight).toBe(520 + TUCK - MARGIN);
+    expect(p.sheetY).toBe(MARGIN);
+    // Enough room below: it still comes out below, shorter.
+    const high = placeMenu(box(100, 300, 600, 44), VIEW, tall, SIDE, TOP);
+    expect(high.sheetFrom).toBe('below');
+    expect(high.sheetY).toBe(344 - TUCK);
+    expect(high.sheetHeight).toBe(VIEW.height - MARGIN - (344 - TUCK));
+    const short = placeMenu(box(100, 200, 600, 44), VIEW, SHEET, SIDE, TOP);
+    expect(short.sheetHeight).toBe(SHEET.height);
+  });
+
   it('keeps everything inside the window', () => {
     const p = placeMenu(box(0, 0, 1200, 800), VIEW, SHEET, SIDE, TOP);
     for (const [x, w] of [
@@ -80,6 +96,6 @@ describe('paper menu placement', () => {
       expect(x + w).toBeLessThanOrEqual(VIEW.width - MARGIN);
     }
     expect(p.sheetY).toBeGreaterThanOrEqual(MARGIN);
-    expect(p.sheetY + SHEET.height).toBeLessThanOrEqual(VIEW.height - MARGIN);
+    expect(p.sheetY + p.sheetHeight).toBeLessThanOrEqual(VIEW.height - MARGIN);
   });
 });

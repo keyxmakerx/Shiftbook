@@ -5,7 +5,8 @@
 // - The top rail sits along the object's top; when there's no room above it goes below
 //   (under the sheet when the sheet is below).
 // - The sheet with the full options pulls out from under the object's bottom edge, or its
-//   top edge when there's more room above. It lines up with the object's edge next to the
+//   top edge when below is cramped and there's more room above; a sheet that doesn't fit
+//   gets shorter and scrolls. It lines up with the object's edge next to the
 //   side rail so the two never overlap; if clamping into the window would make them
 //   overlap anyway, the side rail moves to the other side.
 
@@ -32,7 +33,14 @@ export interface Placement {
   sheetY: number;
   /** The sheet comes out from under the object's bottom ('below') or top ('above') edge. */
   sheetFrom: 'below' | 'above';
+  /** The sheet's height; less than asked when it has to scroll to fit. */
+  sheetHeight: number;
 }
+
+/** A sheet never gets shorter than this; below it, it may cover the object instead. */
+export const MIN_SHEET = 160;
+/** With this much room below the object, the sheet comes out below (scrolling if needed). */
+export const ENOUGH_BELOW = 280;
 
 export const GAP = 8;
 export const MARGIN = 8;
@@ -69,12 +77,18 @@ export function placeMenu(
 
   const roomBelow = viewport.height - MARGIN - (bottom - TUCK);
   const roomAbove = anchor.top + TUCK - MARGIN;
+  // Below is the natural way out; go above only when below is cramped and above has more.
   const sheetFrom: 'below' | 'above' =
-    roomBelow >= sheet.height || roomBelow >= roomAbove ? 'below' : 'above';
+    roomBelow >= sheet.height || roomBelow >= ENOUGH_BELOW || roomBelow >= roomAbove
+      ? 'below'
+      : 'above';
+  // Shorten (and scroll) a sheet that doesn't fit, so it still starts at the object's edge.
+  const room = sheetFrom === 'below' ? roomBelow : roomAbove;
+  const sheetHeight = Math.min(sheet.height, Math.max(room, MIN_SHEET));
   const sheetY = clamp(
-    sheetFrom === 'below' ? bottom - TUCK : anchor.top + TUCK - sheet.height,
+    sheetFrom === 'below' ? bottom - TUCK : anchor.top + TUCK - sheetHeight,
     MARGIN,
-    viewport.height - MARGIN - sheet.height,
+    viewport.height - MARGIN - sheetHeight,
   );
 
   const sideY = clamp(anchor.top, MARGIN, viewport.height - MARGIN - sideRail.height);
@@ -86,7 +100,7 @@ export function placeMenu(
   };
   let { sideX, sheetX } = place(side);
   const railBox = (x: number): Box => ({ left: x, top: sideY, ...wh(sideRail) });
-  const sheetBox = (x: number): Box => ({ left: x, top: sheetY, ...wh(sheet) });
+  const sheetBox = (x: number): Box => ({ left: x, top: sheetY, width: sheet.width, height: sheetHeight });
   if (overlaps(railBox(sideX), sheetBox(sheetX))) {
     const other = side === 'right' ? 'left' : 'right';
     const alt = place(other);
@@ -108,10 +122,10 @@ export function placeMenu(
   const sheetAbove = sheetFrom === 'above';
   if (aboveY < MARGIN || sheetAbove) {
     topWhere = 'below';
-    topY = sheetAbove ? bottom + GAP : sheetY + sheet.height + GAP;
+    topY = sheetAbove ? bottom + GAP : sheetY + sheetHeight + GAP;
     topY = clamp(topY, MARGIN, viewport.height - MARGIN - topRail.height);
   }
-  return { side, sideX, sideY, topX, topY, topWhere, sheetX, sheetY, sheetFrom };
+  return { side, sideX, sideY, topX, topY, topWhere, sheetX, sheetY, sheetFrom, sheetHeight };
 }
 
 function wh(s: Size): { width: number; height: number } {

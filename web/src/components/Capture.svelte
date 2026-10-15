@@ -63,8 +63,8 @@
     await selectDay(entry.date);
     await refresh();
     flashEntry(entry.id);
-    const when = entry.date === app.today ? 'today' : `${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
-    toast(`Logged ${fmtMinutes(parsed.minutes)} on ${when}`, 'Undo', () => {
+    const when = entry.date === app.today ? 'today' : `on ${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
+    toast(`Logged ${fmtMinutes(parsed.minutes)} ${when}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
     });
   }

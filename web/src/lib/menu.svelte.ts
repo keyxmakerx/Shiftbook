@@ -22,9 +22,18 @@ export interface MenuItem {
   hint?: string;
 }
 
+export interface MenuChoice {
+  label: string;
+  color: string | null;
+  checked: boolean;
+  act: () => void;
+}
+
 export interface MenuSection {
   head?: string;
   items?: MenuItem[];
+  /** Compact pills, e.g. which project an entry belongs to. */
+  choices?: MenuChoice[];
   /** Colour swatches (project colours). */
   swatches?: { current: string | null; pick: (color: string) => void };
 }
