@@ -7,6 +7,7 @@
 
 pub mod dates;
 pub mod error;
+pub mod hours;
 pub mod ids;
 pub mod minutes;
 
