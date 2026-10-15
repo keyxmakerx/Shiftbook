@@ -1,0 +1,79 @@
+{
+  "meta": {
+    "round": 3,
+    "heading": "Round 3: technical looks and four kinds of map",
+    "intro": "Paper is out; technical is in. C's sliding sheets stay in every direction. Round 2 is in the Archive with my replies. Notes to Claude can now take pictures: paste screenshots of apps you like and I'll work from them."
+  },
+  "cards": {
+    "r3-look": {
+      "round": 3, "order": 10, "area": "Look and motion", "version": 1,
+      "title": "Four technical looks. Every one keeps C's sliding sheets",
+      "body": [
+        "Each one is built from tools people who work with computers already know. Click **Open the project** on each one to see the sheet slide in, then go back.",
+        "They're shown dark because that's how these tools usually look. Every direction gets a matching light version, and your manual light/dark switch is already decided."
+      ],
+      "figures": [
+        { "html_file": "mocks/r03-look-d.html", "caption": "**D · Workbench.** Like VS Code: icon bar, a section list, tabs, and a status bar at the bottom that always shows today's hours, the week and anything overdue." },
+        { "html_file": "mocks/r03-look-e.html", "caption": "**E · Blueprint.** An engineering drawing: grid paper, hours drawn as dimension lines, and a title block in the corner with the date and totals." },
+        { "html_file": "mocks/r03-look-f.html", "caption": "**F · Ops console.** Like a monitoring dashboard: number tiles, today as a bar against an 8-hour day, and recurring work shown as health checks with status lights." },
+        { "html_file": "mocks/r03-look-g.html", "caption": "**G · Keyboard-first.** Like Linear or Raycast: calm rows, \"Needs attention\" at the top, ticket numbers in monospace, and a keyboard shortcut for every section." }
+      ],
+      "bullets": [
+        "Where these come from: **VS Code** (D), CAD and technical drawings (E), **Grafana** and network monitoring tools (F), and **Linear**, **Raycast** and **Superhuman** (G). People with ADHD often like the last group because one screen shows what needs you, and the keyboard gets you anywhere without hunting.",
+        "Mixing is fine. For example, G's rows with D's status bar, or F's health lights for recurring work inside any of them."
+      ],
+      "questions": [
+        { "id": "dir", "legend": "Direction", "options": [
+          { "value": "D", "label": "D · Workbench" },
+          { "value": "E", "label": "E · Blueprint" },
+          { "value": "F", "label": "F · Ops console" },
+          { "value": "G", "label": "G · Keyboard-first" },
+          { "value": "G + D + F", "label": "G, with D's status bar and F's health lights for recurring work", "rec": true, "why": "Calm, scannable rows; totals always in view at the bottom; recurring work you can read at a glance." },
+          { "value": "None yet", "why": "Send me screenshots of apps you like in Notes to Claude." }
+        ]},
+        { "id": "likes", "type": "text", "legend": "What do you like or dislike in any of them? (optional)", "placeholder": "e.g. E's title block is fun, F feels too busy" }
+      ],
+      "pick": "G, with D's status bar and F's health lights."
+    },
+    "r3-map": {
+      "round": 3, "order": 20, "area": "Notes", "version": 1,
+      "title": "Four ways to draw the notes map",
+      "body": [
+        "Same sample notes, tasks and projects, drawn four ways. Click any item to trace what it connects to. These are drawn dark to sit with the technical looks.",
+        "Understood about the list: it's just the main pages, so the map doesn't need a list mode of its own. Links are made automatically from shared tickets, projects and words, as you picked; you can delete a wrong one."
+      ],
+      "figures": [
+        { "html_file": "mocks/r03-map-nodes.html", "caption": "**1 · Node editor.** Like Node-RED or Blender's node view: typed boxes with a coloured header, wires between ports, P1–P3 priority on each box." },
+        { "html_file": "mocks/r03-map-lanes.html", "caption": "**2 · Swimlanes.** A process diagram: one lane per project, time runs left to right, arrows show what led to what." },
+        { "html_file": "mocks/r03-map-metro.html", "caption": "**3 · Metro map.** Each project is a line; notes and tasks are stops in date order. Dotted lines are links between projects." },
+        { "html_file": "mocks/r03-map-timeline.html", "caption": "**4 · Timeline.** Dates along the middle; notes above, tasks below, coloured by project." }
+      ],
+      "questions": [
+        { "id": "style", "legend": "Which is closest to what you pictured?", "options": [
+          { "value": "1 · Node editor", "rec": true, "why": "Reads as a process diagram, fits the technical looks, and stays readable as it grows." },
+          { "value": "2 · Swimlanes" },
+          { "value": "3 · Metro map" },
+          { "value": "4 · Timeline" },
+          { "value": "None of these", "why": "Describe it below or send a sketch or screenshot in Notes to Claude." }
+        ]},
+        { "id": "pictured", "type": "text", "legend": "Anything about what you pictured that none of these show? (optional)", "placeholder": "e.g. I want to drag notes onto each other to link them" }
+      ],
+      "pick": "1, the node editor. It could also switch to 2 for a single project, since lanes read well for one stream of work."
+    },
+    "r3-attach": {
+      "round": 3, "order": 30, "area": "This sheet", "version": 1,
+      "title": "Notes to Claude can now carry pictures",
+      "body": [
+        "In **Notes to Claude**, paste a screenshot straight into the text box, or use **Attach pictures**. Up to 8 per note. They're stored with this page, so I can open them in any session.",
+        "Good uses: an app whose look you like, a photo of a sketch on paper, or a screenshot of a muddle you want Shiftbook to fix."
+      ],
+      "questions": [
+        { "id": "ok", "legend": "Works for you?", "options": [
+          { "value": "Yes", "rec": true },
+          { "value": "Something's off", "why": "Tell me in the note." }
+        ]}
+      ],
+      "pick": "Yes."
+    }
+  }
+}

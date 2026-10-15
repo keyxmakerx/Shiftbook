@@ -1,0 +1,50 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#C9D1D9;background:#0D1117}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;color:#24292F;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.app{display:grid;grid-template-columns:44px 170px 1fr;grid-template-rows:1fr 24px;height:460px;position:relative;overflow:hidden}
+.act{background:#010409;display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:12px;grid-row:1}
+.act i{width:20px;height:20px;border:1.6px solid #6E7681;border-radius:4px;display:block}.act i.on{border-color:#E6EDF3;box-shadow:-12px 0 0 -9px #3FB9A6}
+.side{background:#0D1117;border-right:1px solid #21262D;padding:10px 0;grid-row:1}
+.side h4{margin:0 12px 6px;font:600 10.5px "Segoe UI",sans-serif;letter-spacing:.08em;color:#7D8590}
+.side div{padding:3px 14px;color:#9198A1;cursor:default}.side div.on{background:#1F2A37;color:#E6EDF3}
+.side .n{float:right;font:11px "Cascadia Mono",Consolas,Menlo,monospace;color:#7D8590}
+.main{position:relative;grid-row:1;overflow:hidden}
+.tabs{display:flex;background:#010409;border-bottom:1px solid #21262D;height:32px}
+.tabs span{padding:7px 14px;border-right:1px solid #21262D;color:#7D8590;font-size:12.5px}.tabs span.on{background:#0D1117;color:#E6EDF3;border-top:2px solid #3FB9A6;padding-top:5px}
+.pane{position:absolute;top:32px;left:0;right:0;bottom:0;padding:14px 18px;background:#0D1117;transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .45s}
+.p2{transform:translateX(100%);border-left:1px solid #30363D;box-shadow:-20px 0 30px -20px #000}
+.app.deep .p1{transform:translateX(-12%);opacity:.35}.app.deep .p2{transform:none}
+h1{margin:0 0 2px;font:600 18px "Segoe UI",sans-serif;color:#E6EDF3}.sub{color:#7D8590;margin-bottom:12px;font-size:12.5px}
+.mono{font-family:"Cascadia Mono",Consolas,Menlo,monospace}
+table{width:100%;border-collapse:collapse;font-size:12.5px}th{text-align:left;font:600 10.5px "Segoe UI",sans-serif;letter-spacing:.07em;color:#7D8590;padding:4px 6px;border-bottom:1px solid #21262D}
+td{padding:6px;border-bottom:1px solid #161B22;vertical-align:top}td.h{color:#3FB9A6;font-family:"Cascadia Mono",Consolas,monospace;text-align:right;width:46px}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;color:#79C0FF;background:#0C2D48;border-radius:3px;padding:0 5px;margin-right:3px}
+.lnk{color:#E6EDF3;text-decoration:underline dotted;cursor:pointer}
+.status{grid-column:1/-1;background:#0B5D52;color:#E6EDF3;display:flex;gap:16px;align-items:center;padding:0 10px;font:11.5px "Cascadia Mono",Consolas,monospace}
+.status .r{margin-left:auto;opacity:.85}.warn{color:#FFD58A}
+.cmd{display:flex;gap:8px;align-items:center;border:1px solid #30363D;border-radius:6px;padding:6px 10px;color:#7D8590;margin-bottom:12px;font-size:12.5px}.cmd kbd{font:11px Consolas,monospace;border:1px solid #30363D;border-radius:3px;padding:0 4px;margin-left:auto}
+.bar{height:6px;background:#21262D;border-radius:3px;margin:6px 0 12px}.bar i{display:block;height:100%;width:62%;background:#3FB9A6;border-radius:3px}
+.tag{position:absolute;right:12px;bottom:30px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6E7681}
+@media (max-width:640px){.app{grid-template-columns:44px 1fr}.side{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="go">Open the project</button><button id="back">Back to Today</button><span>or click the dotted project name</span></div>
+<div class="app" id="app">
+ <nav class="act"><i class="on"></i><i></i><i></i><i></i><i></i><i style="margin-top:auto;margin-bottom:12px"></i></nav>
+ <aside class="side"><h4>SHIFTBOOK</h4><div class="on">Today <span class="n">3.5h</span></div><div>Time log</div><div>Inbox <span class="n">2</span></div><div>Tasks <span class="n">5</span></div><div>Projects</div><div>Recurring <span class="n warn">1</span></div><div>Notes</div><div>Map</div></aside>
+ <main class="main"><div class="tabs"><span class="on">Today</span><span id="t2" style="display:none" class="on">Network refresh</span></div>
+  <section class="pane p1"><h1>Thursday 15 October</h1><div class="sub">3.5 h today · 27.0 h this week</div>
+   <div class="cmd">Log time, add a note, or find anything… <kbd>Ctrl Shift Space</kbd></div>
+   <table><tr><th style="text-align:right">HRS</th><th>WHAT</th><th>PROJECT</th><th>TICKETS</th></tr>
+   <tr><td class="h">1.50</td><td>Firewall rule cleanup</td><td><span class="lnk" id="proj">Network refresh</span></td><td><span class="tk">CHG0012345</span></td></tr>
+   <tr><td class="h">1.00</td><td>Ticket queue</td><td>Routine</td><td><span class="tk">INC0045678</span><span class="tk">INC0045690</span></td></tr>
+   <tr><td class="h">1.00</td><td>Weekly ops sync</td><td>Routine</td><td></td></tr></table></section>
+  <section class="pane p2"><h1>Network refresh</h1><div class="sub">Project · due 30 Nov · 24.5 of 40 h</div><div class="bar"><i></i></div>
+   <table><tr><th style="text-align:right">HRS</th><th>WHAT</th><th>DATE</th></tr><tr><td class="h">1.50</td><td>Firewall rule cleanup</td><td class="mono">2026-10-15</td></tr><tr><td class="h">2.00</td><td>Switch config backup</td><td class="mono">2026-10-13</td></tr><tr><td class="h">3.00</td><td>Core switch planning</td><td class="mono">2026-10-12</td></tr></table></section>
+ </main>
+ <footer class="status"><span>● unlocked</span><span>today 3.5h</span><span>week 27.0h</span><span class="warn">▲ 1 overdue</span><span class="r">Ctrl+Shift+Space capture</span></footer>
+ <span class="tag">D · Workbench · sample data</span>
+</div>
+<script>var a=document.getElementById('app'),t2=document.getElementById('t2');function deep(o){a.classList.toggle('deep',o);t2.style.display=o?'':'none'}
+document.getElementById('go').onclick=function(){deep(true)};document.getElementById('back').onclick=function(){deep(false)};document.getElementById('proj').onclick=function(){deep(true)};</script>

@@ -24,7 +24,7 @@
         ]},
         { "id": "ident", "legend": "App identifier", "options": [
           { "value": "io.github.keyxmakerx.shiftbook", "rec": true, "why": "Ties it to this GitHub repo. Safe while it is a personal tool." },
-          { "value": "com.wowinc.shiftbook", "why": "Pick this if IT wants it treated as a company app." }
+          { "value": "com.yourcompany.shiftbook", "why": "Pick this if IT wants it treated as a company app." }
         ]}
       ],
       "pick": "Shiftbook, `.shiftbak`, and the GitHub-based identifier unless IT says it should be a company app."

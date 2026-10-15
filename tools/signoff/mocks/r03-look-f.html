@@ -1,0 +1,45 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#D5DCE3;background:#14181D}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;color:#24292F;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.app{position:relative;height:480px;overflow:hidden;background:#14181D}
+.top{display:flex;align-items:center;gap:16px;height:38px;padding:0 14px;border-bottom:1px solid #262C34;font-size:12.5px;color:#8B96A3}.top b{color:#E9EEF3}.top .on{color:#E9EEF3}
+.mono{font-family:"Cascadia Mono",Consolas,Menlo,monospace}
+.view{position:absolute;top:38px;left:0;right:0;bottom:0;padding:12px 14px;display:flex;flex-direction:column;gap:10px;transition:transform .45s cubic-bezier(.2,.8,.2,1),opacity .45s;background:#14181D}
+.v2{transform:translateY(100%)}.app.deep .v1{opacity:.25;transform:scale(.98)}.app.deep .v2{transform:none}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.tile{background:#1B2027;border:1px solid #262C34;border-radius:6px;padding:8px 10px}.tile small{display:block;color:#8B96A3;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase}.tile b{font:600 20px "Cascadia Mono",Consolas,monospace;color:#E9EEF3}
+.tile.w b{color:#F2B45A}
+.cap{background:#1B2027;border:1px solid #262C34;border-radius:6px;padding:8px 10px}.cap small{color:#8B96A3;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase}
+.stack{display:flex;height:16px;border-radius:3px;overflow:hidden;margin-top:6px;background:#262C34}.stack i{display:block;height:100%}
+.leg{display:flex;gap:12px;margin-top:6px;font-size:11.5px;color:#8B96A3;flex-wrap:wrap}.leg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.cols{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;flex:1;min-height:0}
+.panel{background:#1B2027;border:1px solid #262C34;border-radius:6px;padding:8px 10px}.panel h4{margin:0 0 4px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:#8B96A3}
+.row{display:flex;gap:8px;align-items:center;padding:5px 0;border-top:1px solid #232930}.row:first-of-type{border-top:0}
+.led{width:8px;height:8px;border-radius:50%;flex:none}.g{background:#4CC38A}.a{background:#F2B45A}.r{background:#F26D6D;box-shadow:0 0 6px #F26D6D}
+.h{font:12px "Cascadia Mono",Consolas,monospace;color:#7FD1C7;width:34px;text-align:right}.row small{color:#8B96A3;margin-left:auto;font:11px "Cascadia Mono",Consolas,monospace}
+.lnk{text-decoration:underline dotted;cursor:pointer}
+.tag{position:absolute;right:14px;bottom:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5E6873}
+@media (max-width:600px){.tiles{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="go">Open the project</button><button id="back">Back to Today</button><span>or click the dotted project name</span></div>
+<div class="app" id="app">
+ <div class="top"><b>Shiftbook</b><span class="on">Today</span><span>Log</span><span>Tasks</span><span>Projects</span><span>Recurring</span><span>Notes</span><span>Map</span></div>
+ <section class="view v1">
+  <div class="tiles"><div class="tile"><small>Today</small><b>3.5h</b></div><div class="tile"><small>This week</small><b>27.0h</b></div><div class="tile w"><small>Needs attention</small><b>2</b></div><div class="tile"><small>Open tasks</small><b>5</b></div></div>
+  <div class="cap"><small>Today against an 8 h day</small><div class="stack"><i style="width:18.75%;background:#5AA9E6"></i><i style="width:12.5%;background:#7FD1C7"></i><i style="width:12.5%;background:#B39DDB"></i></div>
+   <div class="leg"><span><i style="background:#5AA9E6"></i>Network refresh 1.5</span><span><i style="background:#7FD1C7"></i>Tickets 1.0</span><span><i style="background:#B39DDB"></i>Meetings 1.0</span><span>4.5 h left</span></div></div>
+  <div class="cols"><div class="panel"><h4>Logged today</h4>
+   <div class="row"><span class="h">1.5</span>Firewall rule cleanup · <span class="lnk" id="proj">Network refresh</span><small>CHG0012345</small></div>
+   <div class="row"><span class="h">1.0</span>Ticket queue<small>INC0045678 +1</small></div>
+   <div class="row"><span class="h">1.0</span>Weekly ops sync<small>notes</small></div></div>
+   <div class="panel"><h4>Recurring checks</h4>
+   <div class="row"><i class="led r"></i>SSL cert renewal<small>-2d</small></div><div class="row"><i class="led a"></i>Monthly patching<small>9d</small></div><div class="row"><i class="led g"></i>Backup restore test<small>41d</small></div><div class="row"><i class="led g"></i>Licence audit<small>88d</small></div></div></div>
+ </section>
+ <section class="view v2"><div class="tiles"><div class="tile"><small>Network refresh</small><b>24.5h</b></div><div class="tile"><small>Estimate</small><b>40h</b></div><div class="tile"><small>Due</small><b class="mono" style="font-size:16px">30 Nov</b></div><div class="tile"><small>Open tasks</small><b>3</b></div></div>
+  <div class="panel"><h4>Entries</h4><div class="row"><span class="h">1.5</span>Firewall rule cleanup<small>15 Oct</small></div><div class="row"><span class="h">2.0</span>Switch config backup<small>13 Oct</small></div><div class="row"><span class="h">3.0</span>Core switch planning<small>12 Oct</small></div></div></section>
+ <span class="tag">F · Ops console · sample data</span>
+</div>
+<script>var a=document.getElementById('app');function deep(o){a.classList.toggle('deep',o)}
+document.getElementById('go').onclick=function(){deep(true)};document.getElementById('back').onclick=function(){deep(false)};document.getElementById('proj').onclick=function(){deep(true)};</script>

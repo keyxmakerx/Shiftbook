@@ -1,0 +1,44 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#E4E6EA;background:#101113}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;color:#24292F;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.app{display:grid;grid-template-columns:190px 1fr;height:460px;position:relative;overflow:hidden}
+.side{background:#0B0C0E;padding:12px 8px;display:flex;flex-direction:column;gap:1px;border-right:1px solid #1E2024}
+.ws{display:flex;align-items:center;gap:8px;padding:4px 8px 12px;font-weight:600}.ws i{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#2BB3A3,#1D6F86)}
+.it{display:flex;justify-content:space-between;padding:5px 8px;border-radius:5px;color:#9A9FA8;font-size:12.5px}.it.on{background:#1C1E22;color:#E4E6EA}.it kbd{font:10.5px "Segoe UI",sans-serif;color:#6B7079}
+.main{position:relative;overflow:hidden}
+.pane{position:absolute;inset:0;padding:14px 22px;transition:transform .4s cubic-bezier(.2,.8,.2,1),opacity .4s;background:#101113}
+.p2{transform:translateX(100%);border-left:1px solid #26292E;box-shadow:-24px 0 40px -24px #000}.app.deep .p1{opacity:.3}.app.deep .p2{transform:translateX(8%)}
+.hd{display:flex;align-items:baseline;gap:12px;margin-bottom:12px}.hd h1{margin:0;font:600 17px "Segoe UI",sans-serif}.hd span{color:#7C818A;font-size:12.5px}
+.cmd{display:flex;align-items:center;gap:10px;background:#17181B;border:1px solid #26292E;border-radius:8px;padding:8px 12px;color:#7C818A;margin-bottom:14px}.cmd kbd{margin-left:auto;font:11px "Segoe UI",sans-serif;background:#26292E;border-radius:4px;padding:1px 6px;color:#B3B8C0}
+.grp{font-size:11.5px;color:#7C818A;margin:10px 0 4px;display:flex;gap:6px}
+.row{display:grid;grid-template-columns:20px 1fr auto 44px;gap:10px;align-items:center;padding:7px 8px;border-radius:6px}.row:hover{background:#17181B}
+.pri{width:12px;height:12px;border-radius:3px;border:1.5px solid #6B7079}.pri.hi{border-color:#F08A5D;background:linear-gradient(#F08A5D 0 0) center/6px 6px no-repeat}
+.tk{font:11px "Cascadia Mono",Consolas,monospace;color:#B3B8C0;border:1px solid #2C2F35;border-radius:4px;padding:0 5px;margin-left:4px}
+.h{font:12px "Cascadia Mono",Consolas,monospace;color:#2BB3A3;text-align:right}.sub{color:#7C818A;font-size:12px}
+.lnk{cursor:pointer;color:#C9CDD3;text-decoration:underline dotted}
+.tag{position:absolute;right:14px;bottom:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#5A5F68}
+@media (max-width:620px){.app{grid-template-columns:1fr}.side{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="go">Open the project</button><button id="back">Back to Today</button><span>or click the dotted project name</span></div>
+<div class="app" id="app">
+ <aside class="side"><div class="ws"><i></i>Shiftbook</div><div class="it on">Today <kbd>G T</kbd></div><div class="it">Inbox <kbd>2</kbd></div><div class="it">Time log <kbd>G L</kbd></div><div class="it">Tasks <kbd>G K</kbd></div><div class="it">Projects <kbd>G P</kbd></div><div class="it">Recurring <kbd>G R</kbd></div><div class="it">Notes <kbd>G N</kbd></div><div class="it">Map <kbd>G M</kbd></div></aside>
+ <main class="main">
+  <section class="pane p1"><div class="hd"><h1>Today</h1><span>Thu 15 Oct · 3.5 h · week 27.0 h</span></div>
+   <div class="cmd">Log, note or search… <kbd>Ctrl Shift Space</kbd></div>
+   <div class="grp">Needs attention <span>2</span></div>
+   <div class="row"><i class="pri hi"></i><span>SSL certificate renewal <span class="sub">· overdue 2 days</span></span><span></span><span></span></div>
+   <div class="row"><i class="pri"></i><span>Monthly patching <span class="sub">· in 9 days</span></span><span></span><span></span></div>
+   <div class="grp">Logged <span>3</span></div>
+   <div class="row"><i class="pri hi"></i><span>Firewall rule cleanup <span class="sub">· <span class="lnk" id="proj">Network refresh</span></span></span><span class="tk">CHG0012345</span><span class="h">1.5h</span></div>
+   <div class="row"><i class="pri"></i><span>Ticket queue <span class="sub">· Routine</span></span><span><span class="tk">INC0045678</span><span class="tk">+1</span></span><span class="h">1.0h</span></div>
+   <div class="row"><i class="pri"></i><span>Weekly ops sync <span class="sub">· notes</span></span><span></span><span class="h">1.0h</span></div></section>
+  <section class="pane p2"><div class="hd"><h1>Network refresh</h1><span>Project · due 30 Nov · 24.5 / 40 h</span></div>
+   <div class="grp">Entries</div><div class="row"><i class="pri hi"></i><span>Firewall rule cleanup</span><span class="sub">15 Oct</span><span class="h">1.5h</span></div><div class="row"><i class="pri"></i><span>Switch config backup</span><span class="sub">13 Oct</span><span class="h">2.0h</span></div><div class="row"><i class="pri"></i><span>Core switch planning</span><span class="sub">12 Oct</span><span class="h">3.0h</span></div>
+   <div class="grp">Tasks</div><div class="row"><i class="pri hi"></i><span>Draft VLAN split change</span><span class="sub">due Tue</span><span></span></div></section>
+ </main>
+ <span class="tag">G · Keyboard-first · sample data</span>
+</div>
+<script>var a=document.getElementById('app');function deep(o){a.classList.toggle('deep',o)}
+document.getElementById('go').onclick=function(){deep(true)};document.getElementById('back').onclick=function(){deep(false)};document.getElementById('proj').onclick=function(){deep(true)};</script>

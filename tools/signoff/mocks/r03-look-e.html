@@ -1,0 +1,42 @@
+<style>
+*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",system-ui,sans-serif;color:#E8F1FA;background:#163A5F}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;color:#24292F;border-bottom:1px solid #D0D7DE;font-size:12px;flex-wrap:wrap}
+.try b{color:#57606A;margin-right:4px}.try button{font:inherit;border:1px solid #C9D1D9;background:#F6F8FA;border-radius:6px;padding:3px 10px;cursor:pointer}
+.desk{position:relative;height:470px;overflow:hidden;background:#163A5F;
+ background-image:linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+ background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+.mono{font-family:"Cascadia Mono",Consolas,Menlo,monospace}
+.nav{position:absolute;left:16px;top:14px;display:flex;gap:18px;font:600 11px "Cascadia Mono",Consolas,monospace;letter-spacing:.1em;color:#9CC3E6}.nav .on{color:#fff;border-bottom:1.5px solid #fff}
+.sheet{position:absolute;left:16px;right:16px;top:40px;bottom:16px;border:1.5px solid #CFE3F5;padding:16px 18px;background:rgba(22,58,95,.92);transition:transform .5s cubic-bezier(.2,.8,.2,1),opacity .5s}
+.s2{transform:translateX(105%);left:60px}
+.desk.deep .s1{opacity:.3}.desk.deep .s2{transform:none}
+h1{margin:0;font:600 13px "Cascadia Mono",Consolas,monospace;letter-spacing:.12em}
+.row{display:grid;grid-template-columns:1fr 200px;gap:16px;align-items:center;padding:9px 0;border-bottom:1px dashed rgba(207,227,245,.35)}
+.row b{font-weight:600}.row small{display:block;color:#9CC3E6;font:11px "Cascadia Mono",Consolas,monospace}
+.dim{position:relative;height:18px}.dim i{position:absolute;top:9px;left:0;height:0;border-top:1px solid #CFE3F5}
+.dim i:before,.dim i:after{content:"";position:absolute;top:-6px;height:11px;border-left:1px solid #CFE3F5}.dim i:after{right:0}
+.dim span{position:absolute;top:-3px;font:11px "Cascadia Mono",Consolas,monospace;background:#163A5F;padding:0 4px;transform:translateX(-50%)}
+.tb{position:absolute;right:-1.5px;bottom:-1.5px;display:grid;grid-template-columns:auto auto;border:1.5px solid #CFE3F5;font:10.5px "Cascadia Mono",Consolas,monospace}
+.tb div{padding:3px 8px;border-right:1px solid rgba(207,227,245,.6);border-bottom:1px solid rgba(207,227,245,.6)}.tb .k{color:#9CC3E6}
+.lnk{text-decoration:underline;cursor:pointer}.over{color:#FFB38A}
+.tag{position:absolute;right:16px;top:16px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#9CC3E6}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><button id="go">Open the project</button><button id="back">Back to Today</button><span>or click the underlined project</span></div>
+<div class="desk" id="desk">
+ <div class="nav"><span class="on">TODAY</span><span>LOG</span><span>TASKS</span><span>PROJECTS</span><span>RECURRING</span><span>NOTES</span><span>MAP</span></div>
+ <span class="tag">E · Blueprint · sample data</span>
+ <div class="sheet s1"><h1>SHEET 01 — TODAY</h1>
+  <div class="row"><div><b>Firewall rule cleanup</b><small><span class="lnk" id="proj">NETWORK REFRESH</span> · CHG0012345</small></div><div class="dim"><i style="width:75%"></i><span style="left:37%">1.5 h</span></div></div>
+  <div class="row"><div><b>Ticket queue</b><small>ROUTINE · INC0045678 INC0045690</small></div><div class="dim"><i style="width:50%"></i><span style="left:25%">1.0 h</span></div></div>
+  <div class="row"><div><b>Weekly ops sync</b><small>ROUTINE · MEETING NOTES</small></div><div class="dim"><i style="width:50%"></i><span style="left:25%">1.0 h</span></div></div>
+  <div class="row"><div><b class="over">SSL certificate renewal</b><small class="over">RECURRING · OVERDUE 2 D</small></div><div></div></div>
+  <div class="tb"><div class="k">DATE</div><div>2026-10-15</div><div class="k">TODAY</div><div>3.5 H</div><div class="k">WEEK</div><div>27.0 H</div><div class="k">OPEN</div><div>1 OVERDUE</div></div></div>
+ <div class="sheet s2"><h1>SHEET 02 — NETWORK REFRESH</h1>
+  <div class="row"><div><b>Estimate</b><small>24.5 H OF 40 H · DUE 2026-11-30</small></div><div class="dim"><i style="width:100%"></i><span style="left:50%">40 h</span></div></div>
+  <div class="row"><div><b>Firewall rule cleanup</b><small>2026-10-15</small></div><div class="dim"><i style="width:30%"></i><span style="left:15%">1.5</span></div></div>
+  <div class="row"><div><b>Switch config backup</b><small>2026-10-13</small></div><div class="dim"><i style="width:40%"></i><span style="left:20%">2.0</span></div></div>
+  <div class="row"><div><b>Core switch planning</b><small>2026-10-12</small></div><div class="dim"><i style="width:60%"></i><span style="left:30%">3.0</span></div></div></div>
+</div>
+<script>var d=document.getElementById('desk');function deep(o){d.classList.toggle('deep',o)}
+document.getElementById('go').onclick=function(){deep(true)};document.getElementById('back').onclick=function(){deep(false)};document.getElementById('proj').onclick=function(){deep(true)};</script>

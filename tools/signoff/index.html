@@ -124,6 +124,10 @@ fieldset.q legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 .note-item { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
 .note-item .meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
 .note-item .body, .note-item .reply { white-space: pre-wrap; overflow-wrap: anywhere; }
+.shots { display: flex; flex-wrap: wrap; gap: 8px; }
+.shots img { width: 160px; max-width: 100%; height: 110px; object-fit: cover; border: 1px solid var(--rule); border-radius: 6px; background: var(--wash); }
+.shots a { display: block; }
+.shots .x { font-size: 0.8rem; }
 .note-item .reply { border-left: 3px solid var(--stamp); padding-left: 10px; }
 
 body:not([data-view="notes"]) #notes-view, body[data-view="notes"] #cards-view { display: none; }
@@ -162,8 +166,9 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   <section id="notes-view" class="list">
     <form class="compose" id="compose">
       <label class="label" for="note-new">Tell Claude something that isn't on a card</label>
-      <textarea id="note-new" rows="3" placeholder="e.g. the timesheet codes changed this week, here are the new ones"></textarea>
-      <div class="actions"><button type="submit" class="btn btn-primary">Send note</button><span class="saved" id="note-status" role="status"></span></div>
+      <textarea id="note-new" rows="3" placeholder="e.g. an app whose look you like, or a sketch of what you pictured. Paste screenshots straight in here."></textarea>
+      <div class="shots" id="shots-new"></div>
+      <div class="actions"><button type="submit" class="btn btn-primary">Send note</button><label class="btn" id="attach-l" for="attach" hidden>Attach pictures</label><input id="attach" type="file" accept="image/*" multiple hidden><span class="saved" id="note-status" role="status"></span></div>
     </form>
     <div id="notes-list" class="list"></div>
   </section>
@@ -544,6 +549,16 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       m.appendChild(h('span', null, fmt(n.at)));
       it.appendChild(m);
       it.appendChild(h('p', 'body', n.text || ''));
+      if (Array.isArray(n.images) && n.images.length) {
+        var sh = h('div', 'shots');
+        n.images.forEach(function (id) {
+          if (typeof id !== 'string' || !/^[0-9a-f]{32}$/.test(id)) return;
+          var a = h('a'); a.href = '/_blob/' + id; a.target = '_blank'; a.rel = 'noopener';
+          var im = h('img'); im.src = '/_blob/' + id; im.alt = 'Attached picture'; im.loading = 'lazy';
+          a.appendChild(im); sh.appendChild(a);
+        });
+        it.appendChild(sh);
+      }
       if (n.reply) { var r = h('p', 'reply'); r.appendChild(h('span', 'label', 'Claude · ' + fmt(n.replied_at) + '\n')); r.appendChild(document.createTextNode(n.reply)); it.appendChild(r); }
       list.appendChild(it);
     });
@@ -592,16 +607,44 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   window.addEventListener('pagehide', flushAll);
   document.addEventListener('visibilitychange', function () { if (document.hidden) flushAll(); });
 
+  var assets = null, pending = [];
+  function paintPending() {
+    var box = $('shots-new'); box.textContent = '';
+    pending.forEach(function (f, i) {
+      var wrapEl = h('div'), im = h('img'); im.src = URL.createObjectURL(f); im.alt = f.name || 'Picture';
+      var x = h('button', 'link x', 'Remove'); x.type = 'button'; x.onclick = function () { pending.splice(i, 1); paintPending(); };
+      wrapEl.appendChild(im); wrapEl.appendChild(x); box.appendChild(wrapEl);
+    });
+  }
+  function addFiles(list) {
+    Array.prototype.forEach.call(list || [], function (f) { if (f && /^image\//.test(f.type) && pending.length < 8) pending.push(f); });
+    paintPending();
+  }
+  $('attach').addEventListener('change', function (ev) { addFiles(ev.target.files); ev.target.value = ''; });
+  $('note-new').addEventListener('paste', function (ev) {
+    var files = ev.clipboardData && ev.clipboardData.files;
+    if (files && files.length && assets) { addFiles(files); ev.preventDefault(); }
+  });
   $('compose').addEventListener('submit', function (ev) {
     ev.preventDefault();
     var ta = $('note-new'), text = ta.value.trim(), st = $('note-status');
-    if (!text) { st.textContent = 'Write the note first.'; return; }
+    if (!text && !pending.length) { st.textContent = 'Write the note first.'; return; }
     if (!notesCol) { st.textContent = 'Notes only send when this page is open in Claude.'; return; }
     var id = 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-    st.textContent = 'Sending…';
-    notesCol.doc(id).set({ text: text, at: new Date().toISOString() }).then(function () {
-      ta.value = ''; drop('compose'); st.textContent = 'Sent. Claude answers under it.';
-    }, function (e) { st.textContent = e && e.code === 'invalid_argument' ? 'Only the page owner can send notes here.' : 'That didn’t send. Your text is still here; try again.'; });
+    st.textContent = pending.length ? 'Uploading pictures…' : 'Sending…';
+    var files = pending.slice();
+    Promise.all(files.map(function (f) { return assets.upload(f).then(function (r) { return r.id; }); })).then(function (ids) {
+      st.textContent = 'Sending…';
+      var doc = { text: text, at: new Date().toISOString() };
+      if (ids.length) doc.images = ids;
+      return notesCol.doc(id).set(doc);
+    }).then(function () {
+      ta.value = ''; drop('compose'); pending = []; paintPending(); st.textContent = 'Sent. Claude answers under it.';
+    }, function (e) {
+      st.textContent = e && e.code === 'invalid_argument' ? 'Only the page owner can send notes here.'
+        : e && (e.code === 'too_large' || e.code === 'unsupported_type') ? 'One of the pictures couldn’t be uploaded (too big or not an image). Remove it and try again.'
+        : 'That didn’t send. Your text and pictures are still here; try again.';
+    });
   });
   $('note-new').addEventListener('input', function () { stash('compose', $('note-new').value); });
 
@@ -620,6 +663,8 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       filter(); return;
     }
     col = db.collection('decisions'); notesCol = db.collection('notes');
+    try { assets = await window.claude.use('assets'); } catch (e) { assets = null; }
+    $('attach-l').hidden = !assets;
     var got = { cards: false, decisions: false };
     function ready() {
       if (!got.cards || !got.decisions || live) return;
