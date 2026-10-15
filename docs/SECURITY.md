@@ -149,10 +149,11 @@ What the M1 build does not protect against, or doesn't do yet:
   kept equal to the current vault for this reason.
 - **The unlock back-off is in memory only** and resets when the app restarts. Argon2's cost is the
   real defence against guessing.
-- **After a recovery-key unlock** the password can only be changed by someone who knows it; a
-  "set a new password with the recovery key" step is not built yet.
+- **After a recovery-key unlock** the app asks for a new password at once (alpha). The new
+  password wraps the key already unlocked in memory; the command is refused unless the session
+  was just unlocked with the recovery key, and works once.
 - **Recovery key confirmation:** if the app is closed on the recovery key screen, the key is gone;
-  regenerating it (needs the password) has no screen yet.
+  make a new one in Customize → Security (needs the password; the old key stops working).
 - **WebView cache files** (WebKitGTK on Linux) sit in the app data folder with default
   permissions. Shiftbook puts no data in WebView storage.
 - **SQLCipher errors are printed to the terminal** (for example "hmac check failed" on a wrong
@@ -163,3 +164,15 @@ What the M1 build does not protect against, or doesn't do yet:
 SQLCipher 4.10.0 on SQLite 3.50.4 and OpenSSL 3.6.3. SQLCipher 4.15/4.17 fix CVE-2026-51936
 (`sqlcipher_export` in defensive mode) and FTS5 issues (CVE-2026-11822/-11824); Shiftbook uses
 neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
+
+## Alpha additions
+- **Screenshot and copy protection:** the window starts content-protected. The Protected pill
+  calls `allow_capture`, which turns protection off and starts a 10-minute timer inside the app
+  (not the page) that turns it back on; `protect_capture` and `lock` turn it on at once. While
+  protected the page blocks `copy` and `cut` everywhere (text boxes included); the explicit Copy
+  buttons write through the Clipboard API and still work. Copying the recovery key keeps its
+  60-second clipboard clear.
+- **Links are never opened.** Link fields (for example Jira) only build text to show and copy;
+  templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
+- **New commands** each have their own permission; errors stay short codes. The capability still
+  grants no plugins.
