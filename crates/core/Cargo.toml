@@ -1,0 +1,8 @@
+[package]
+name = "shiftbook-core"
+description = "Shiftbook domain models and business rules (pure, no I/O)."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
