@@ -1,0 +1,27 @@
+<style>*{box-sizing:border-box}body{margin:0;font:13px/1.45 "Segoe UI",Roboto,system-ui,sans-serif;background:#F4F6F9;color:#18212B}
+.app{display:flex;min-height:430px}.side{width:168px;background:#1B2430;color:#C9D3DE;padding:14px 10px;display:flex;flex-direction:column;gap:2px}
+.side b{color:#fff;font-size:14px;padding:4px 10px 12px}.nav{padding:7px 10px;border-radius:6px}.nav.on{background:#2C55C9;color:#fff;font-weight:600}
+.side .sp{flex:1}.lock{padding:7px 10px;border:1px solid #3A4656;border-radius:6px;text-align:center}
+.main{flex:1;padding:18px 20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.top{display:flex;align-items:baseline;gap:18px;flex-wrap:wrap}.top h1{font-size:20px;margin:0}.kpi{color:#5A6676}.kpi b{color:#18212B;font-size:16px}
+.quick{background:#fff;border:1px solid #D4DBE3;border-radius:8px;padding:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.f{border:1px solid #C9D1DB;border-radius:6px;padding:7px 9px;color:#6A7686;background:#fff}.w1{flex:2 1 160px}.w2{width:70px}.w3{width:120px}.w4{flex:3 1 200px}
+.chip{background:#E7EDFB;color:#2C55C9;border-radius:12px;padding:2px 9px;font-size:12px}.save{background:#2C55C9;color:#fff;border-radius:6px;padding:7px 16px;font-weight:600}
+.q{font-size:12px;color:#5A6676;border:1px solid #D4DBE3;border-radius:5px;padding:2px 7px;background:#fff}
+.cols{display:grid;grid-template-columns:1fr 210px;gap:14px}.panel{background:#fff;border:1px solid #D4DBE3;border-radius:8px;padding:10px 12px}
+.panel h2{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#5A6676;margin:0 0 6px}
+.row{display:flex;gap:10px;padding:7px 0;border-top:1px solid #EDF0F4;align-items:center}.row:first-of-type{border-top:0}.hrs{width:44px;font-weight:600}.d{flex:1;min-width:0}.d small{display:block;color:#5A6676}
+.add{font-size:12px;color:#2C55C9;border:1px solid #C9D6F5;border-radius:5px;padding:1px 6px}
+.due{padding:6px 0;border-top:1px solid #EDF0F4}.due:first-of-type{border-top:0}.tag{font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px}.od{background:#FBE6E6;color:#A33232}.ds{background:#FBF0E3;color:#A2560E}
+.sample{position:absolute;right:10px;bottom:8px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#8A95A3}
+.tabs{display:flex;gap:4px;background:#1B2430;padding:8px 14px;align-items:center;flex-wrap:wrap}.tabs b{color:#fff;margin-right:14px}.tabs .nav{color:#C9D3DE}.tabs .sp{flex:1}.tabs .lock{color:#C9D3DE}</style><div style="position:relative"><div class="app"><nav class="side"><b>Shiftbook</b><span class="nav on">Today</span><span class="nav">Time Log</span><span class="nav">Tasks</span><span class="nav">Projects</span><span class="nav">Recurring</span><span class="nav">Dashboard</span><span class="nav">Timesheet</span><span class="sp"></span><span class="nav">Settings</span><span class="lock">Lock now</span></nav><main class="main"><div class="top"><h1>Thursday 15 October</h1><span class="kpi">Today <b>3.5 h</b></span><span class="kpi">This week <b>27.0 h</b></span></div>
+<div class="quick"><span class="f w1">Project / task…</span><span class="f w2">Hours</span><span class="f w3">Category ▾</span><span class="f w4">What I worked on</span><span class="chip">+ Ticket</span><span class="save">Save</span>
+<span class="q">+15m</span><span class="q">+30m</span><span class="q">+1h</span><span class="q">Today ▾</span></div>
+<div class="cols"><div class="panel"><h2>Today's entries</h2>
+<div class="row"><span class="hrs">1.5 h</span><span class="d">Firewall rule cleanup<small>Sample project · Maintenance · <span class="chip">CHG0012345</span></small></span><span class="add">+ time</span></div>
+<div class="row"><span class="hrs">1.0 h</span><span class="d">Ticket queue<small>General - Tickets · Support / Tickets · <span class="chip">INC0045678</span> <span class="chip">INC0045690</span></small></span><span class="add">+ time</span></div>
+<div class="row"><span class="hrs">1.0 h</span><span class="d">Weekly ops sync<small>Meeting - General · Meetings</small></span><span class="add">+ time</span></div>
+</div><div class="panel"><h2>Due soon</h2>
+<div class="due"><span class="tag od">Overdue</span> Sample SSL cert renewal</div>
+<div class="due"><span class="tag ds">Due in 9 days</span> Monthly patching</div>
+<div class="due"><span class="tag ds">Task · today</span> Update runbook</div></div></div></main></div><span class="sample">Sample data</span></div>

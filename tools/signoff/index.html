@@ -1,0 +1,653 @@
+<title>Shiftbook Sign-offs</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700&family=Martian+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column of decision cards under a sticky shift bar; cards arrive live from the store. */
+:root {
+  --page: #F3F5F8; --paper: #FFFFFF; --wash: #E9EDF2; --ink: #17202A; --muted: #586474; --rule: #D3DAE3;
+  --stamp: #2C55C9; --stamp-wash: #E7EDFB;
+  --ok: #1D7650; --ok-wash: #E5F2EB; --ask: #A2560E; --ask-wash: #FBF0E3; --err: #A33232;
+  --sans: "Public Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: "Martian Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #0F141A; --paper: #161D25; --wash: #1D2630; --ink: #DDE4EC; --muted: #8C99A8; --rule: #2B3542;
+    --stamp: #8EA9F5; --stamp-wash: #1A2340;
+    --ok: #6CC79B; --ok-wash: #12261D; --ask: #E3A462; --ask-wash: #2B1F12; --err: #E68E8E;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #0F141A; --paper: #161D25; --wash: #1D2630; --ink: #DDE4EC; --muted: #8C99A8; --rule: #2B3542;
+  --stamp: #8EA9F5; --stamp-wash: #1A2340;
+  --ok: #6CC79B; --ok-wash: #12261D; --ask: #E3A462; --ask-wash: #2B1F12; --err: #E68E8E;
+}
+body { background: var(--page); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+p { margin: 0; }
+[hidden] { display: none !important; }
+code { font-family: var(--mono); font-size: 0.8em; background: var(--wash); padding: 1px 5px; border-radius: 3px; overflow-wrap: anywhere; }
+:focus-visible { outline: 2px solid var(--stamp); outline-offset: 2px; }
+button, input, textarea { font: inherit; color: inherit; }
+.label { font-family: var(--mono); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--rule);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.bar-in { max-width: 860px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding-block: 10px; }
+.brand { display: flex; align-items: baseline; gap: 10px; }
+.brand b { font-size: 1.05rem; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--muted); }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--rule); }
+body[data-live="on"] .live i { background: var(--ok); }
+body[data-live="off"] .live i { background: var(--err); }
+.tabs { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+.tab { border: 1px solid transparent; background: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: var(--muted); }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { border-color: var(--rule); background: var(--wash); color: var(--ink); font-weight: 600; }
+.tab .n { font-variant-numeric: tabular-nums; margin-left: 4px; }
+.tab .n.hot { color: var(--paper); background: var(--stamp); border-radius: 9px; padding: 0 6px; font-size: 0.78rem; }
+
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 24px 80px; display: flex; flex-direction: column; gap: 20px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.masthead { display: flex; flex-direction: column; gap: 8px; }
+.masthead h1 { font-size: 1.6rem; }
+.lede { color: var(--muted); max-width: 68ch; }
+.banner { padding: 10px 14px; border: 1px solid var(--ask); background: var(--ask-wash); border-radius: 6px; }
+
+.list { display: flex; flex-direction: column; gap: 16px; }
+.empty { padding: 28px 20px; border: 1px dashed var(--rule); border-radius: 8px; color: var(--muted); text-align: center; }
+.round-h { display: flex; align-items: baseline; gap: 10px; padding-top: 8px; }
+.round-h h2 { font-size: 1rem; }
+
+.card { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; display: flex; flex-direction: column; min-width: 0; }
+.card[data-state="approve"] { border-color: color-mix(in srgb, var(--ok) 45%, var(--rule)); }
+.card[data-state="change"] { border-color: color-mix(in srgb, var(--ask) 55%, var(--rule)); }
+.card[data-state="stale"] { border-color: var(--stamp); }
+.card-head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px 0; }
+.card-head .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.card-head h3 { font-size: 1.12rem; }
+.fold { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 8px; cursor: pointer; color: var(--muted); font-size: 0.8rem; white-space: nowrap; }
+.stamp { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; border: 1px solid var(--rule); color: var(--muted); white-space: nowrap; }
+.card[data-state="approve"] .stamp { color: var(--ok); border-color: var(--ok); background: var(--ok-wash); }
+.card[data-state="change"] .stamp { color: var(--ask); border-color: var(--ask); background: var(--ask-wash); }
+.card[data-state="stale"] .stamp { color: var(--stamp); border-color: var(--stamp); background: var(--stamp-wash); }
+.card-body { display: flex; flex-direction: column; gap: 14px; padding: 12px 18px 18px; min-width: 0; }
+.card[data-folded] .card-body { display: none; }
+.prose { display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+.prose ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+.update { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; background: var(--stamp-wash); border: 1px solid var(--stamp); font-size: 0.9rem; }
+
+.figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.figure .frame { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--wash); }
+.figure iframe { display: block; width: 100%; border: 0; background: #FFFFFF; }
+.figure img { display: block; width: 100%; height: auto; }
+.figure .cap { font-size: 0.85rem; color: var(--muted); }
+.figure .tools { display: flex; gap: 8px; }
+.ghost { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 0.82rem; color: var(--muted); }
+.ghost:hover { color: var(--ink); border-color: var(--muted); }
+
+.table-scroll { overflow-x: auto; }
+.table-scroll table { border-collapse: collapse; font-size: 0.88rem; min-width: 100%; }
+.table-scroll th, .table-scroll td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.table-scroll th { font-family: var(--mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+
+fieldset.q { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+fieldset.q legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; cursor: pointer; }
+.opt:has(input:checked) { border-color: var(--stamp); background: var(--stamp-wash); }
+.opt input { margin-top: 4px; accent-color: var(--stamp); }
+.opt .why { display: block; color: var(--muted); font-size: 0.88rem; }
+.rec { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--stamp); margin-left: 6px; }
+.q-text { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.pick { padding: 10px 12px; background: var(--wash); border-radius: 6px; display: flex; flex-direction: column; gap: 2px; }
+
+.decide { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.decide textarea, .compose textarea { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); resize: vertical; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 8px 16px; cursor: pointer; font-weight: 600; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-approve[aria-pressed="true"] { background: var(--ok); border-color: var(--ok); color: var(--paper); }
+.btn-change[aria-pressed="true"] { background: var(--ask); border-color: var(--ask); color: var(--paper); }
+.btn-primary { background: var(--stamp); border-color: var(--stamp); color: var(--paper); }
+.link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 0.88rem; }
+.saved { font-size: 0.88rem; color: var(--muted); min-height: 1.4em; }
+.saved.err { color: var(--err); }
+
+.search { width: 100%; box-sizing: border-box; padding: 8px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); }
+.compose { display: flex; flex-direction: column; gap: 8px; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 16px 18px; }
+.note-item { background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+.note-item .meta { display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); }
+.note-item .body, .note-item .reply { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-item .reply { border-left: 3px solid var(--stamp); padding-left: 10px; }
+
+body:not([data-view="notes"]) #notes-view, body[data-view="notes"] #cards-view { display: none; }
+body:not([data-view="archive"]) #archive-tools { display: none; }
+@media (max-width: 560px) { .tabs { margin-left: 0; } .card-head, .card-body { padding-left: 14px; padding-right: 14px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><b>Shiftbook</b><span class="label">Sign-offs</span></div>
+    <span class="live" role="status"><i></i><span id="live-text">Connecting…</span></span>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button class="tab" role="tab" data-view="needs" aria-selected="true">Needs you<span class="n hot" id="n-needs">0</span></button>
+      <button class="tab" role="tab" data-view="open" aria-selected="false">This round<span class="n" id="n-open">0</span></button>
+      <button class="tab" role="tab" data-view="archive" aria-selected="false">Archive<span class="n" id="n-arch">0</span></button>
+      <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes to Claude<span class="n" id="n-notes">0</span></button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="masthead">
+    <p class="label" id="round-label">Waiting for the first round</p>
+    <h1 id="heading">Decisions for building Shiftbook</h1>
+    <p class="lede" id="intro">Each card is one decision. My pick is already selected; press Approve, or write a note and press Needs changes. Everything saves as you go, and new cards appear here without reloading the page.</p>
+    <p class="banner" id="banner" hidden></p>
+  </section>
+
+  <div id="archive-tools"><label class="label" for="search">Search the archive</label><input id="search" class="search" type="search" placeholder="Words from a title, note or answer"></div>
+
+  <section id="cards-view" class="list" aria-live="polite">
+    <p class="empty" id="empty">No cards yet. When Claude adds a round, the cards show up here on their own.</p>
+  </section>
+
+  <section id="notes-view" class="list">
+    <form class="compose" id="compose">
+      <label class="label" for="note-new">Tell Claude something that isn't on a card</label>
+      <textarea id="note-new" rows="3" placeholder="e.g. the timesheet codes changed this week, here are the new ones"></textarea>
+      <div class="actions"><button type="submit" class="btn btn-primary">Send note</button><span class="saved" id="note-status" role="status"></span></div>
+    </form>
+    <div id="notes-list" class="list"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var LS = 'shiftbook-signoff:';
+  var cards = {};        // id -> card doc
+  var decisions = {};    // id -> decision doc
+  var notes = [];
+  var meta = null;
+  var els = {};          // id -> card element (kept across snapshots so typing is never lost)
+  var col = null, notesCol = null, writable = true, live = false;
+  var queue = {}, timers = {};
+  var view = 'needs';
+  var recent = {};       // cards decided while on "Needs you" stay put until the view changes
+
+  function $(id) { return document.getElementById(id); }
+  function stash(k, v) { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch (e) {} }
+  function unstash(k) { try { return JSON.parse(localStorage.getItem(LS + k) || 'null'); } catch (e) { return null; } }
+  function drop(k) { try { localStorage.removeItem(LS + k); } catch (e) {} }
+  function fmt(iso) {
+    try { return new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); }
+    catch (e) { return ''; }
+  }
+  function banner(t) { $('banner').textContent = t || ''; $('banner').hidden = !t; }
+  function setLive(state, text) { document.body.dataset.live = state; $('live-text').textContent = text; }
+  function h(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  // Inline text: `code` and **bold** only. Everything is set as text, never as HTML.
+  function rich(parent, s) {
+    String(s).split(/(`[^`]+`|\*\*[^*]+\*\*)/).forEach(function (part) {
+      if (!part) return;
+      if (part[0] === '`') parent.appendChild(h('code', null, part.slice(1, -1)));
+      else if (part.slice(0, 2) === '**') parent.appendChild(h('b', null, part.slice(2, -2)));
+      else parent.appendChild(document.createTextNode(part));
+    });
+    return parent;
+  }
+
+  // ---------- building a card ----------
+  var RESIZE = '<script>(function(){function s(){parent.postMessage({sbMockHeight:Math.ceil(document.documentElement.scrollHeight)},"*")}addEventListener("load",s);new ResizeObserver(s).observe(document.documentElement);setTimeout(s,50)})();<\/script>';
+
+  function buildFigure(key, f, i) {
+    var box = h('figure', 'figure'); box.style.margin = '0';
+    var frame = h('div', 'frame');
+    if (f.html) {
+      var ifr = document.createElement('iframe');
+      ifr.setAttribute('sandbox', 'allow-scripts');
+      ifr.setAttribute('title', f.caption || 'Mockup');
+      ifr.style.height = (f.height || 420) + 'px';
+      ifr.dataset.auto = f.height ? '' : '1';
+      ifr.srcdoc = f.html + RESIZE;
+      frame.appendChild(ifr);
+    } else if (f.src) {
+      var img = document.createElement('img'); img.src = f.src; img.alt = f.caption || ''; img.loading = 'lazy';
+      frame.appendChild(img);
+    }
+    box.appendChild(frame);
+    if (f.caption) box.appendChild(rich(h('figcaption', 'cap'), f.caption));
+    return box;
+  }
+
+  function buildTable(t) {
+    var wrapEl = h('div', 'table-scroll'), table = h('table'), thead = h('thead'), tr = h('tr');
+    (t.head || []).forEach(function (c) { tr.appendChild(h('th', null, c)); });
+    thead.appendChild(tr); table.appendChild(thead);
+    var tb = h('tbody');
+    (t.rows || []).forEach(function (r) { var row = h('tr'); r.forEach(function (c) { row.appendChild(rich(h('td'), c)); }); tb.appendChild(row); });
+    table.appendChild(tb); wrapEl.appendChild(table);
+    return wrapEl;
+  }
+
+  function buildQuestion(key, q) {
+    var fs = h('fieldset', 'q'); fs.dataset.q = q.id;
+    fs.appendChild(rich(h('legend'), q.legend || ''));
+    if (q.type === 'text') {
+      var inp = h('input', 'q-text'); inp.type = 'text'; inp.id = key + '-' + q.id;
+      inp.placeholder = q.placeholder || ''; inp.value = q.default || '';
+      fs.appendChild(inp);
+    } else {
+      (q.options || []).forEach(function (o, n) {
+        var lab = h('label', 'opt'), inp = h('input');
+        inp.type = q.type === 'many' ? 'checkbox' : 'radio';
+        inp.name = key + '-' + q.id; inp.value = o.value; inp.id = key + '-' + q.id + '-' + n;
+        inp.checked = !!o.rec || (q.type === 'many' && !!o.on);
+        var span = h('span'), b = rich(h('b'), o.label || o.value);
+        span.appendChild(b);
+        if (o.rec) span.appendChild(h('span', 'rec', 'my pick'));
+        if (o.why) span.appendChild(rich(h('span', 'why'), o.why));
+        lab.appendChild(inp); lab.appendChild(span); fs.appendChild(lab);
+      });
+    }
+    if (q.why) fs.appendChild(rich(h('p', 'why'), q.why));
+    return fs;
+  }
+
+  function buildCard(key, c) {
+    var el = h('article', 'card'); el.id = 'card-' + key; el.dataset.key = key; el.dataset.v = String(c.version || 1);
+    var head = h('header', 'card-head'), t = h('div', 't');
+    t.appendChild(h('span', 'label', (c.area ? c.area + ' · ' : '') + 'Round ' + (c.round || 1) + (c.version > 1 ? ' · v' + c.version : '')));
+    t.appendChild(rich(h('h3'), c.title || key));
+    head.appendChild(t);
+    head.appendChild(h('span', 'stamp', 'Waiting'));
+    var fold = h('button', 'fold', 'Hide'); fold.type = 'button'; fold.dataset.act = 'fold';
+    head.appendChild(fold);
+    el.appendChild(head);
+
+    var body = h('div', 'card-body');
+    var upd = h('div', 'update'); upd.hidden = true;
+    upd.appendChild(h('span', null, 'Claude updated this card while you were on it.'));
+    var ub = h('button', 'ghost', 'Show the new version'); ub.type = 'button'; ub.dataset.act = 'reload'; upd.appendChild(ub);
+    body.appendChild(upd);
+
+    var prose = h('div', 'prose');
+    (c.body || []).forEach(function (p) { prose.appendChild(rich(h('p'), p)); });
+    if (c.bullets && c.bullets.length) { var ul = h('ul'); c.bullets.forEach(function (b) { ul.appendChild(rich(h('li'), b)); }); prose.appendChild(ul); }
+    if (prose.childNodes.length) body.appendChild(prose);
+    (c.figures || []).forEach(function (f, i) { body.appendChild(buildFigure(key, f, i)); });
+    (c.tables || []).forEach(function (tb) { body.appendChild(buildTable(tb)); });
+    (c.questions || []).forEach(function (q) { body.appendChild(buildQuestion(key, q)); });
+    if (c.pick) { var pk = h('div', 'pick'); pk.appendChild(h('span', 'label', 'My pick')); pk.appendChild(rich(h('p'), c.pick)); body.appendChild(pk); }
+
+    var dec = h('footer', 'decide');
+    var nl = h('label', 'label', 'Note (needed for Needs changes)'); nl.htmlFor = 'note-' + key;
+    var ta = h('textarea', 'note'); ta.id = 'note-' + key; ta.rows = 2; ta.placeholder = c.note_hint || 'Anything you want changed, or a question for Claude';
+    var acts = h('div', 'actions');
+    [['approve', 'Approve', 'btn btn-approve'], ['change', 'Needs changes', 'btn btn-change']].forEach(function (a) {
+      var b = h('button', a[2], a[1]); b.type = 'button'; b.dataset.act = a[0]; b.setAttribute('aria-pressed', 'false'); acts.appendChild(b);
+    });
+    var und = h('button', 'link', 'Undo my decision'); und.type = 'button'; und.dataset.act = 'undo'; und.hidden = true; acts.appendChild(und);
+    var saved = h('p', 'saved'); saved.setAttribute('role', 'status');
+    dec.appendChild(nl); dec.appendChild(ta); dec.appendChild(acts); dec.appendChild(saved);
+    body.appendChild(dec);
+    el.appendChild(body);
+    if (c.archived) el.dataset.folded = '1';
+    return el;
+  }
+
+  // ---------- reading and painting answers ----------
+  function readAnswers(el) {
+    var out = {};
+    el.querySelectorAll('fieldset.q[data-q]').forEach(function (fs) {
+      var txt = fs.querySelector('input.q-text');
+      if (txt) { out[fs.dataset.q] = txt.value.trim(); return; }
+      var boxes = fs.querySelectorAll('input[type="checkbox"]');
+      if (boxes.length) { out[fs.dataset.q] = Array.prototype.filter.call(boxes, function (x) { return x.checked; }).map(function (x) { return x.value; }).join(' | '); return; }
+      var r = fs.querySelector('input[type="radio"]:checked');
+      if (r) out[fs.dataset.q] = r.value;
+    });
+    return out;
+  }
+  function paintAnswers(el, answers) {
+    el.querySelectorAll('fieldset.q[data-q]').forEach(function (fs) {
+      var v = answers[fs.dataset.q];
+      if (typeof v !== 'string') return;
+      var txt = fs.querySelector('input.q-text');
+      if (txt) { txt.value = v; return; }
+      var ticks = v.split(' | ');
+      fs.querySelectorAll('input').forEach(function (r) { r.checked = r.type === 'radio' ? r.value === v : ticks.indexOf(r.value) !== -1; });
+    });
+  }
+  function busy(el) { return !!el.dataset.dirty || el.contains(document.activeElement); }
+
+  function stateOf(key) {
+    var d = decisions[key], c = cards[key];
+    if (!d || !c || d.choice === 'draft') return 'waiting';
+    if ((d.version || 1) !== (c.version || 1)) return 'stale';
+    return d.choice === 'approve' || d.choice === 'change' ? d.choice : 'waiting';
+  }
+
+  function paintCard(key) {
+    var el = els[key], c = cards[key], d = decisions[key];
+    if (!el || !c) return;
+    var s = stateOf(key); el.dataset.state = s;
+    var stamp = el.querySelector('.stamp'), saved = el.querySelector('.saved');
+    var when = d ? fmt(d.at) : '';
+    stamp.textContent = s === 'approve' ? 'Approved' : s === 'change' ? 'Changes asked' : s === 'stale' ? 'Re-check' : 'Waiting';
+    if (!saved.classList.contains('err')) {
+      if (s === 'approve') saved.textContent = 'Approved ' + when + (d.note ? ', with your note.' : '.');
+      else if (s === 'change') saved.textContent = 'You asked for changes ' + when + '. Claude sees this next time it checks the sheet.';
+      else if (s === 'stale') saved.textContent = 'You answered an earlier version. This one has changed, so please look again.';
+      else if (d && d.choice === 'draft') saved.textContent = 'Your picks and note are saved. Press Approve or Needs changes when ready.';
+      else saved.textContent = '';
+    }
+    el.querySelector('[data-act="approve"]').setAttribute('aria-pressed', String(s === 'approve'));
+    el.querySelector('[data-act="change"]').setAttribute('aria-pressed', String(s === 'change'));
+    el.querySelector('[data-act="undo"]').hidden = !(s === 'approve' || s === 'change' || s === 'stale');
+    el.querySelectorAll('.actions .btn').forEach(function (b) { b.disabled = !writable || !col; });
+    // Saved answers fill the card only when you are not working in it.
+    if (d && (d.version || 1) === (c.version || 1) && !busy(el)) {
+      var ta = el.querySelector('.note');
+      if (typeof d.note === 'string') ta.value = d.note;
+      if (d.answers && typeof d.answers === 'object') paintAnswers(el, d.answers);
+    }
+  }
+
+  // ---------- syncing cards into the page without disturbing it ----------
+  function order(a, b) {
+    var ca = cards[a], cb = cards[b];
+    return (cb.round || 0) - (ca.round || 0) || (ca.order || 0) - (cb.order || 0) || (a < b ? -1 : 1);
+  }
+  function syncCards() {
+    var host = $('cards-view');
+    Object.keys(els).forEach(function (k) {
+      if (!cards[k] && !busy(els[k])) { els[k].remove(); delete els[k]; }
+    });
+    Object.keys(cards).forEach(function (k) {
+      var c = cards[k], el = els[k];
+      if (!el) { els[k] = buildCard(k, c); restoreLocal(k); return; }
+      if (el.dataset.v !== String(c.version || 1)) {
+        // Never swap a card out from under you; offer the new version instead.
+        if (busy(el) || el.dataset.pending) { el.dataset.pending = '1'; el.querySelector('.update').hidden = false; }
+        else replaceCard(k);
+      }
+      if (c.archived && !el.dataset.wasArchived && !busy(el)) el.dataset.folded = '1';
+      el.dataset.wasArchived = c.archived ? '1' : '';
+    });
+    // Put cards in order, moving only the ones that are out of place.
+    var keys = Object.keys(els).filter(function (k) { return cards[k]; }).sort(order);
+    var prev = $('empty');
+    var lastRound = null;
+    keys.forEach(function (k) {
+      var r = cards[k].round || 1;
+      if (r !== lastRound) {
+        lastRound = r;
+        var hdr = host.querySelector('.round-h[data-round="' + r + '"]');
+        if (!hdr) { hdr = h('div', 'round-h'); hdr.dataset.round = r; hdr.appendChild(h('h2', null, 'Round ' + r)); hdr.appendChild(h('span', 'label rd')); }
+        if (prev.nextSibling !== hdr) host.insertBefore(hdr, prev.nextSibling);
+        prev = hdr;
+      }
+      if (prev.nextSibling !== els[k]) host.insertBefore(els[k], prev.nextSibling);
+      prev = els[k];
+    });
+    keys.forEach(paintCard);
+    filter();
+  }
+  function replaceCard(k) {
+    var old = els[k], note = old.querySelector('.note').value, folded = old.dataset.folded;
+    var fresh = buildCard(k, cards[k]);
+    fresh.querySelector('.note').value = note;
+    if (folded && !cards[k].archived) delete fresh.dataset.folded;
+    old.replaceWith(fresh); els[k] = fresh;
+    paintCard(k);
+  }
+
+  function matches(k, q) {
+    if (!q) return true;
+    var c = cards[k], d = decisions[k] || {};
+    var hay = [c.title, c.area, (c.body || []).join(' '), d.note, JSON.stringify(d.answers || {})].join(' ').toLowerCase();
+    return q.split(/\s+/).every(function (w) { return hay.indexOf(w) !== -1; });
+  }
+  function filter() {
+    var q = $('search').value.trim().toLowerCase();
+    var curRound = meta && meta.round ? meta.round : Math.max.apply(null, [0].concat(Object.keys(cards).map(function (k) { return cards[k].round || 0; })));
+    var needs = 0, open = 0, arch = 0, shown = 0, roundsShown = {};
+    Object.keys(els).forEach(function (k) {
+      var c = cards[k]; if (!c) { els[k].hidden = true; return; }
+      var s = stateOf(k), waiting = s === 'waiting' || s === 'stale';
+      if (!c.archived && waiting) needs++;
+      if (!c.archived) open++; else arch++;
+      var show = view === 'needs' ? !c.archived && (waiting || recent[k])
+        : view === 'open' ? !c.archived
+        : view === 'archive' ? !!c.archived && matches(k, q) : false;
+      els[k].hidden = !show;
+      if (show) { shown++; roundsShown[c.round || 1] = (roundsShown[c.round || 1] || 0) + 1; }
+    });
+    document.querySelectorAll('.round-h').forEach(function (hd) {
+      var n = roundsShown[hd.dataset.round] || 0; hd.hidden = !n;
+      hd.querySelector('.rd').textContent = n + (n === 1 ? ' card' : ' cards') + (Number(hd.dataset.round) === curRound ? ' · current' : '');
+    });
+    var nn = $('n-needs'); nn.textContent = needs; nn.className = needs ? 'n hot' : 'n';
+    $('n-open').textContent = open; $('n-arch').textContent = arch;
+    var e = $('empty');
+    e.hidden = shown > 0;
+    e.textContent = !Object.keys(cards).length ? (live ? 'No cards yet. When Claude adds a round, the cards show up here on their own.' : 'Loading cards…')
+      : view === 'needs' ? 'Nothing needs you right now. Claude will add the next round here.'
+      : view === 'archive' ? (q ? 'Nothing in the archive matches that.' : 'Nothing archived yet. Finished rounds move here, and stay searchable.')
+      : 'No open cards.';
+  }
+
+  // ---------- writing decisions ----------
+  function record(el, choice) {
+    var k = el.dataset.key, d = decisions[k], c = cards[k];
+    var v = c ? c.version || 1 : 1, now = new Date().toISOString();
+    var decided = d && (d.choice === 'approve' || d.choice === 'change') && (d.version || 1) === v;
+    return {
+      choice: choice || (decided ? d.choice : 'draft'),
+      note: el.querySelector('.note').value.trim(),
+      answers: readAnswers(el),
+      version: v,
+      title: c ? c.title : '',
+      at: choice || !decided ? now : d.at,
+      edited: now
+    };
+  }
+  function write(el, rec) {
+    var k = el.dataset.key;
+    stash(k, rec);
+    var seq = el._seq = (el._seq || 0) + 1;
+    var run = (queue[k] || Promise.resolve()).then(function () {
+      if (!col || !writable) return;
+      return col.doc(k).set(rec).then(function () {
+        if (el._seq === seq && !timers[k]) { delete el.dataset.dirty; drop(k); }
+      });
+    });
+    queue[k] = run.catch(function () {});
+    return run;
+  }
+  function fail(el) {
+    return function (e) {
+      if (e && e.code === 'invalid_argument') { readOnly(); return; }
+      var s = el.querySelector('.saved'); s.textContent = 'That didn’t save yet. It is kept in this browser and will retry when you change something.'; s.classList.add('err');
+    };
+  }
+  function flush(el) {
+    var k = el.dataset.key;
+    if (timers[k]) { clearTimeout(timers[k]); delete timers[k]; }
+    if (!el.dataset.dirty) return Promise.resolve();
+    return write(el, record(el)).catch(fail(el));
+  }
+  function changed(el, now) {
+    el.dataset.dirty = '1'; el.querySelector('.saved').classList.remove('err');
+    var k = el.dataset.key; stash(k, record(el));
+    if (timers[k]) clearTimeout(timers[k]);
+    timers[k] = setTimeout(function () { delete timers[k]; flush(el); }, now ? 0 : 800);
+  }
+  function decide(el, choice) {
+    var s = el.querySelector('.saved');
+    if (choice === 'change' && !el.querySelector('.note').value.trim()) {
+      s.textContent = 'Write what should change in the note first, then press Needs changes again.'; s.classList.add('err');
+      el.querySelector('.note').focus(); return;
+    }
+    s.classList.remove('err');
+    var k = el.dataset.key;
+    if (timers[k]) { clearTimeout(timers[k]); delete timers[k]; }
+    el.dataset.dirty = '1';
+    if (view === 'needs') recent[k] = true;
+    var rec = record(el, choice);
+    decisions[k] = rec; paintCard(k); filter();
+    write(el, rec).catch(fail(el));
+  }
+  function undo(el) {
+    var rec = record(el); rec.choice = 'draft'; rec.at = rec.edited;
+    el.dataset.dirty = '1'; decisions[el.dataset.key] = rec; paintCard(el.dataset.key); filter();
+    write(el, rec).catch(fail(el));
+  }
+  function restoreLocal(k) {
+    var rec = unstash(k), el = els[k];
+    if (!rec || !el) return;
+    var d = decisions[k];
+    if (d && (d.edited || '') >= (rec.edited || '')) { drop(k); return; }
+    el.querySelector('.note').value = rec.note || '';
+    if (rec.answers) paintAnswers(el, rec.answers);
+    el.dataset.dirty = '1';
+    if (col && writable) write(el, rec).catch(fail(el));
+  }
+  function readOnly() {
+    writable = false;
+    banner('You can read every card, but only the page owner can record decisions here.');
+    Object.keys(els).forEach(paintCard);
+    $('compose').hidden = true;
+  }
+
+  // ---------- notes to Claude ----------
+  function paintNotes() {
+    var list = $('notes-list'); list.textContent = '';
+    var open = 0;
+    notes.slice().sort(function (a, b) { return (b.at || '') < (a.at || '') ? -1 : 1; }).forEach(function (n) {
+      if (!n.reply) open++;
+      var it = h('article', 'note-item'), m = h('div', 'meta');
+      m.appendChild(h('span', 'label', n.reply ? 'Answered' : n.seen ? 'Seen by Claude' : 'Waiting for Claude'));
+      m.appendChild(h('span', null, fmt(n.at)));
+      it.appendChild(m);
+      it.appendChild(h('p', 'body', n.text || ''));
+      if (n.reply) { var r = h('p', 'reply'); r.appendChild(h('span', 'label', 'Claude · ' + fmt(n.replied_at) + '\n')); r.appendChild(document.createTextNode(n.reply)); it.appendChild(r); }
+      list.appendChild(it);
+    });
+    if (!notes.length) list.appendChild(h('p', 'empty', 'No notes yet. Anything you send here, Claude reads the next time it checks the sheet, and answers underneath.'));
+    $('n-notes').textContent = open;
+  }
+
+  // ---------- events ----------
+  document.addEventListener('click', function (ev) {
+    var tab = ev.target.closest('.tab');
+    if (tab) {
+      view = tab.dataset.view; document.body.dataset.view = view; recent = {};
+      document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', String(t === tab)); });
+      try { sessionStorage.setItem(LS + 'view', view); } catch (e) {}
+      filter(); return;
+    }
+    var b = ev.target.closest('.card [data-act]');
+    if (!b) return;
+    var el = b.closest('.card'), act = b.dataset.act;
+    if (act === 'fold') { if (el.dataset.folded) delete el.dataset.folded; else el.dataset.folded = '1'; b.textContent = el.dataset.folded ? 'Show' : 'Hide'; return; }
+    if (act === 'reload') { replaceCard(el.dataset.key); return; }
+    if (act === 'undo') { undo(el); return; }
+    if (!col || !writable) return;
+    decide(el, act);
+  });
+  document.addEventListener('change', function (ev) {
+    var el = ev.target.closest && ev.target.closest('.card');
+    if (el && ev.target.closest('fieldset.q')) changed(el, true);
+  });
+  document.addEventListener('input', function (ev) {
+    var el = ev.target.closest && ev.target.closest('.card');
+    if (el && (ev.target.classList.contains('note') || ev.target.classList.contains('q-text'))) changed(el, false);
+    if (ev.target.id === 'search') filter();
+  });
+  document.addEventListener('focusout', function (ev) {
+    var el = ev.target.closest && ev.target.closest('.card');
+    if (el) { flush(el); setTimeout(function () { if (!busy(el) && els[el.dataset.key] === el) { syncCards(); } }, 0); }
+  });
+  window.addEventListener('message', function (ev) {
+    if (!ev.data || typeof ev.data.sbMockHeight !== 'number') return;
+    document.querySelectorAll('.figure iframe[data-auto="1"]').forEach(function (f) {
+      if (f.contentWindow === ev.source) f.style.height = Math.min(Math.max(ev.data.sbMockHeight, 120), 2400) + 'px';
+    });
+  });
+  function flushAll() { Object.keys(els).forEach(function (k) { flush(els[k]); }); }
+  window.addEventListener('pagehide', flushAll);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) flushAll(); });
+
+  $('compose').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var ta = $('note-new'), text = ta.value.trim(), st = $('note-status');
+    if (!text) { st.textContent = 'Write the note first.'; return; }
+    if (!notesCol) { st.textContent = 'Notes only send when this page is open in Claude.'; return; }
+    var id = 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    st.textContent = 'Sending…';
+    notesCol.doc(id).set({ text: text, at: new Date().toISOString() }).then(function () {
+      ta.value = ''; drop('compose'); st.textContent = 'Sent. Claude answers under it.';
+    }, function (e) { st.textContent = e && e.code === 'invalid_argument' ? 'Only the page owner can send notes here.' : 'That didn’t send. Your text is still here; try again.'; });
+  });
+  $('note-new').addEventListener('input', function () { stash('compose', $('note-new').value); });
+
+  // ---------- start ----------
+  try { var v0 = sessionStorage.getItem(LS + 'view'); if (v0) { var t0 = document.querySelector('.tab[data-view="' + v0 + '"]'); if (t0) t0.click(); } } catch (e) {}
+  try { var draft = unstash('compose'); if (draft) $('note-new').value = draft; } catch (e) {}
+  document.body.dataset.view = view;
+  paintNotes(); filter();
+
+  (async function () {
+    var db = null;
+    try { db = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch (e) { db = null; }
+    if (!db) {
+      setLive('off', 'Offline');
+      banner('This sheet saves and updates only when it is open in Claude. Open it from your Claude artifacts to work on it.');
+      filter(); return;
+    }
+    col = db.collection('decisions'); notesCol = db.collection('notes');
+    var got = { cards: false, decisions: false };
+    function ready() {
+      if (!got.cards || !got.decisions || live) return;
+      live = true; setLive('on', 'Live');
+      Object.keys(els).forEach(restoreLocal);
+      syncCards();
+    }
+    function lost() { setLive('off', 'Disconnected'); banner('Live updates stopped. Your typing is kept in this browser; reload the page when convenient to reconnect.'); }
+    db.collection('cards').limit(1000).onSnapshot(function (snap) {
+      var next = {};
+      snap.docs.forEach(function (d) { var v = d.exists && d.data(); if (v && typeof v === 'object') next[d.id] = v; });
+      cards = next; got.cards = true; ready(); if (live) syncCards();
+    }, lost);
+    col.limit(1000).onSnapshot(function (snap) {
+      var next = {};
+      snap.docs.forEach(function (d) { var v = d.exists && d.data(); if (v && typeof v === 'object') next[d.id] = v; });
+      // Keep a decision made here until the store has caught up with it.
+      Object.keys(decisions).forEach(function (k) { if (els[k] && els[k].dataset.dirty && (!next[k] || (next[k].edited || '') < (decisions[k].edited || ''))) next[k] = decisions[k]; });
+      decisions = next; got.decisions = true; ready(); if (live) syncCards();
+    }, lost);
+    notesCol.limit(500).onSnapshot(function (snap) {
+      notes = []; snap.docs.forEach(function (d) { var v = d.exists && d.data(); if (v && typeof v === 'object') notes.push(v); });
+      paintNotes();
+    }, function () {});
+    db.doc('meta/board').onSnapshot(function (s) {
+      meta = s.exists ? s.data() : null;
+      if (meta) {
+        if (meta.heading) $('heading').textContent = meta.heading;
+        if (meta.intro) $('intro').textContent = meta.intro;
+        $('round-label').textContent = 'Round ' + (meta.round || 1) + (meta.updated_at ? ' · updated ' + fmt(meta.updated_at) : '');
+      }
+      filter();
+    }, function () {});
+  })();
+})();
+</script>

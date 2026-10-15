@@ -1,0 +1,144 @@
+{
+  "meta": {
+    "round": 1,
+    "heading": "Round 1: before any code",
+    "intro": "Five decisions I need before scaffolding milestone M0. My pick is already selected on each card; press Approve, or write a note and press Needs changes. Everything saves as you go, and new cards appear here without reloading the page."
+  },
+  "cards": {
+    "r1-name": {
+      "round": 1, "order": 10, "area": "Naming", "version": 1,
+      "title": "Call the app Shiftbook everywhere",
+      "body": [
+        "The docs say **Work Tracker** and leave the backup extension to \"the final app name\". The repo is called **Shiftbook**. The name ends up in the window title, the data folder, the installer and the backup files, so it is cheapest to settle now.",
+        "The app identifier also sets the folder your data lives in (for example `%APPDATA%\\<identifier>` on Windows). Changing it later means moving data, so it is part of this card."
+      ],
+      "questions": [
+        { "id": "name", "legend": "App name", "options": [
+          { "value": "Shiftbook", "rec": true, "why": "Matches the repo. I would update the docs to say Shiftbook in the same commit as the scaffold." },
+          { "value": "Work Tracker", "why": "Keep the docs as written; the repo name stays Shiftbook." }
+        ]},
+        { "id": "ext", "legend": "Encrypted backup file extension", "options": [
+          { "value": ".shiftbak", "rec": true, "why": "Clearly belongs to Shiftbook; nothing else uses it." },
+          { "value": ".sbak", "why": "Shorter, but generic." },
+          { "value": ".patchbak", "why": "The placeholder from the docs." }
+        ]},
+        { "id": "ident", "legend": "App identifier", "options": [
+          { "value": "io.github.keyxmakerx.shiftbook", "rec": true, "why": "Ties it to this GitHub repo. Safe while it is a personal tool." },
+          { "value": "com.wowinc.shiftbook", "why": "Pick this if IT wants it treated as a company app." }
+        ]}
+      ],
+      "pick": "Shiftbook, `.shiftbak`, and the GitHub-based identifier unless IT says it should be a company app."
+    },
+    "r1-scratch": {
+      "round": 1, "order": 20, "area": "Starting point", "version": 1,
+      "title": "What \"start from scratch\" means for this repo",
+      "body": [
+        "Here is how I read it. The repo was empty. I committed your docs unchanged as the first commit (\"Add spec and project docs\"). No code from Fathom is reused; only the idea of this sign-off sheet carries over.",
+        "From here I go one milestone at a time, starting with M0. I stop at the end of each one and bring the next questions here."
+      ],
+      "questions": [
+        { "id": "reading", "legend": "Is that right?", "options": [
+          { "value": "Yes", "rec": true, "why": "Start M0 once the cards in this round are approved." },
+          { "value": "Review the docs first", "why": "Before any code, I read the spec closely and bring every gap or contradiction I find here as a card." }
+        ]},
+        { "id": "stale", "type": "text", "legend": "Anything in the docs you already know is out of date? (optional)", "placeholder": "e.g. the timesheet codes changed" }
+      ],
+      "pick": "Yes. I will raise doc gaps as cards when a milestone runs into them, instead of reviewing everything up front."
+    },
+    "r1-deps": {
+      "round": 1, "order": 30, "area": "M0 scaffold", "version": 1,
+      "title": "Dependencies for the M0 scaffold",
+      "body": [
+        "CLAUDE.md asks me to list every dependency and wait for your OK. M0 only needs enough to open a blank Today page and run CI. The database, encryption and file dialogs come in M1 and later, and I will ask again then.",
+        "Each package goes in at its newest stable version, pinned by `Cargo.lock` and `package-lock.json`."
+      ],
+      "tables": [
+        { "head": ["Package", "Where", "Why", "On the pre-approved list"], "rows": [
+          ["`tauri` 2, `tauri-build`", "Rust", "The desktop shell", "Yes"],
+          ["`serde`, `serde_json`", "Rust", "Passing data between the Rust core and the UI", "Yes"],
+          ["`svelte` 5, `vite`, `typescript`", "npm (dev)", "UI framework, build tool, types", "Yes"],
+          ["`vitest`", "npm (dev)", "Front-end tests", "Yes"],
+          ["`@sveltejs/vite-plugin-svelte`", "npm (dev)", "Lets Vite build Svelte files. Svelte cannot be used with Vite without it.", "**No**"],
+          ["`svelte-check`", "npm (dev)", "Type-checks `.svelte` files. This is what `npm run check` runs.", "**No**"],
+          ["`@tauri-apps/api`", "npm", "The `invoke` call. Imported only inside `web/src/lib/api/TauriApi.ts`.", "**No**"],
+          ["`@tauri-apps/cli`", "npm (dev)", "Runs `npm run tauri dev` and builds installers", "**No**"]
+        ]},
+        { "head": ["CI action", "Why"], "rows": [
+          ["`actions/checkout`, `actions/setup-node`", "GitHub's own: get the code, install Node"],
+          ["`dtolnay/rust-toolchain`", "Installs Rust with fmt and clippy"],
+          ["`Swatinem/rust-cache`", "Caches Rust builds so CI takes minutes, not half an hour"],
+          ["`cargo-audit`", "Installed in CI only: checks crates for known vulnerabilities"]
+        ]}
+      ],
+      "bullets": [
+        "No router package: there are only eight screens, so a small store handles switching between them.",
+        "No CSS framework, icon font or web font. Everything ships inside the app (no network)."
+      ],
+      "questions": [
+        { "id": "ok", "legend": "Your call", "options": [
+          { "value": "Approve the list", "rec": true, "why": "The four packages not on the list are the standard companions to the approved ones." },
+          { "value": "Approve, but use the Rust CLI", "why": "Swap `@tauri-apps/cli` for `cargo install tauri-cli`. One fewer npm package; slower first setup." },
+          { "value": "Hold", "why": "Tell me which ones in the note." }
+        ]}
+      ],
+      "pick": "Approve the list."
+    },
+    "r1-shell": {
+      "round": 1, "order": 40, "area": "Look and layout", "version": 1,
+      "title": "Where the menu goes: side or top",
+      "body": [
+        "M0 only needs a blank Today page, but the menu frame gets built now. Both mockups below show the Today screen from SPEC §2.1 with sample data. Nothing is styled for real yet; this is about layout only."
+      ],
+      "figures": [
+        { "html_file": "mocks/r01-shell-a.html", "caption": "**A · Menu on the left.** Always visible, room for all eight screens and a Lock button at the bottom." },
+        { "html_file": "mocks/r01-shell-b.html", "caption": "**B · Menu across the top.** More width for the Time Log table; gets crowded on a small laptop screen." }
+      ],
+      "questions": [
+        { "id": "nav", "legend": "Menu position", "options": [
+          { "value": "A · Left", "rec": true, "why": "Easiest to scan and click. Can collapse to icons later if you want the width back." },
+          { "value": "B · Top" }
+        ]},
+        { "id": "theme", "legend": "Light and dark", "options": [
+          { "value": "Follow Windows", "rec": true, "why": "As the spec says. Light when Windows is light, dark when it is dark." },
+          { "value": "Follow Windows, with a manual switch in Settings" }
+        ]}
+      ],
+      "pick": "A, following the Windows theme. I'll bring real visual design (colours, type) as its own card in M2, once there is a working screen to dress."
+    },
+    "r1-it": {
+      "round": 1, "order": 50, "area": "Before real data", "version": 1,
+      "title": "Has IT OK'd a self-built app for work notes?",
+      "body": [
+        "START_HERE and SECURITY.md both say to check with IT before real work data goes in, and whether the code should live in a company GitHub organisation. This doesn't block building. It decides when your real data goes in, and possibly the app identifier on the naming card."
+      ],
+      "questions": [
+        { "id": "status", "legend": "Where things stand", "options": [
+          { "value": "Approved", "why": "Tell me in the note if they said anything about where the repo should live." },
+          { "value": "Asked, waiting", "why": "I build and test with sample data only." },
+          { "value": "Not asked yet", "why": "Same as above. I'll ask again before M6 (importing your Excel data)." }
+        ]}
+      ],
+      "pick": "Your answer here. I don't need the real data until M6, so nothing waits on this."
+    },
+    "r1-sheet": {
+      "round": 1, "order": 60, "area": "This sheet", "version": 1,
+      "title": "How we work on this sheet",
+      "body": [
+        "This page is where I bring questions, mockups and screenshots, and where you decide. It keeps working while you are on it. New cards and updates arrive live without reloading the page. If I change a card while you are typing in it, the card stays put and a **Show the new version** button appears instead.",
+        "When a round is done I move its cards to **Archive**, where they stay searchable for both of us. Your decisions and notes are stored with the page, so I can read them in any later session, not only this one. **Notes to Claude** is for anything that doesn't fit a card; I answer underneath each note."
+      ],
+      "bullets": [
+        "Mockups are live HTML, so some can be clicked through. Screenshots of the real app come in from M0 onward.",
+        "Every decision you approve also goes into `docs/DECISIONS.md` in the repo, so the code history records why.",
+        "Your typing saves after a short pause. If you are offline, it stays in your browser and goes up when you're back."
+      ],
+      "questions": [
+        { "id": "more", "type": "many", "legend": "Anything else you want from it?", "options": [
+          { "value": "A short milestone summary card at the end of each milestone", "on": true, "why": "What was built, what to try, and a screenshot." },
+          { "value": "A Decisions tab: one table of everything approved so far", "why": "Handy once there are a few rounds. It's in the repo either way." }
+        ]}
+      ],
+      "pick": "Approve as is. Tell me in the note if anything about the sheet gets in your way, and I'll fix the sheet first."
+    }
+  }
+}
