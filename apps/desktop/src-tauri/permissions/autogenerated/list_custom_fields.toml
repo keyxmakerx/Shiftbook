@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-custom-fields"
+description = "Enables the list_custom_fields command without any pre-configured scope."
+commands.allow = ["list_custom_fields"]
+
+[[permission]]
+identifier = "deny-list-custom-fields"
+description = "Denies the list_custom_fields command without any pre-configured scope."
+commands.deny = ["list_custom_fields"]

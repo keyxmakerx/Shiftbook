@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-custom-value"
+description = "Enables the set_custom_value command without any pre-configured scope."
+commands.allow = ["set_custom_value"]
+
+[[permission]]
+identifier = "deny-set-custom-value"
+description = "Denies the set_custom_value command without any pre-configured scope."
+commands.deny = ["set_custom_value"]

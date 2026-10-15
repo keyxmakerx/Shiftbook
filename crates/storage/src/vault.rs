@@ -573,6 +573,23 @@ impl VaultDir {
         self.save(data)
     }
 
+    /// Set a new password with the key of a vault that is already unlocked, for
+    /// when it was unlocked with the recovery key and the old password is
+    /// forgotten (the owner decided to ask for a new one straight away). Only the
+    /// password wrap changes; the recovery key keeps working. The caller must only
+    /// offer this right after a recovery-key unlock of this same folder.
+    pub fn reset_password(&self, vault: &Vault, new: &SecretString) -> Result<(), VaultError> {
+        validate_new_password(new.expose_secret()).map_err(VaultError::WeakPassword)?;
+        let mut data = self.load()?;
+        data.password = wrap_dek(
+            vault.dek(),
+            new.expose_secret().as_bytes(),
+            &data.params,
+            Purpose::Password,
+        )?;
+        self.save(data)
+    }
+
     /// Make a new recovery key (needs the password). The old key stops working.
     pub fn regenerate_recovery_key(
         &self,
@@ -733,6 +750,27 @@ mod tests {
         // The safety copy doesn't keep the old password working.
         let prev = VaultData::parse(&fs::read(v.prev_path()).unwrap(), v.policy).unwrap();
         assert!(unwrap_dek(&prev, PW.as_bytes(), Purpose::Password).is_err());
+    }
+
+    #[test]
+    fn reset_password_after_recovery_unlock() {
+        let (_d, v, vault, key) = setup("reset");
+        let via_recovery = v.unlock_with_recovery_key(&key.display()).unwrap();
+        assert!(matches!(
+            v.reset_password(&via_recovery, &secret("short")),
+            Err(VaultError::WeakPassword(_))
+        ));
+        v.reset_password(&via_recovery, &secret("a forgotten-then-new one"))
+            .unwrap();
+        assert!(matches!(
+            v.unlock_with_password(&secret(PW)),
+            Err(VaultError::UnlockFailed)
+        ));
+        let again = v
+            .unlock_with_password(&secret("a forgotten-then-new one"))
+            .unwrap();
+        assert_eq!(again.dek().expose(), vault.dek().expose());
+        assert!(v.unlock_with_recovery_key(&key.display()).is_ok());
     }
 
     #[test]
