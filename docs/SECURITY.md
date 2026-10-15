@@ -83,3 +83,51 @@ app is the user's employer's rule to set; the app does nothing that needs a netw
 Node and npm run only on the developer's machine and in CI, to compile `web/` into static files.
 The shipped app has no Node runtime. `npm audit` still runs in CI because the compiled bundle
 contains code from those packages.
+
+## M1 security checklist (research, Oct 2026)
+Gathered before building the vault; sources are the projects' own advisories and docs. Items marked
+*unverified* were not confirmed against a primary source and get a test instead.
+
+**Advisories checked against locked versions:** tauri 2.12.4 is past GHSA-w28w-mhc8-qvjv (channel
+fetch ACL bypass, fixed 2.11.6) and CVE-2026-42184 (`is_local_url` remote IPC, fixed 2.11.1).
+`tauri-plugin-fs` must be ≥ 2.5.2 when added (GHSA-9g54-6x48-9vpw). Svelte 5.57.2 is past the
+client-side DOM-clobbering advisory GHSA-rcqx-6q8c-2c42 (fixed 5.55.7); still never spread user data
+onto elements. Vite 8.3.4 is past the Oct 2026 dev-server file-read advisories (fixed 8.3.3); never
+run the dev server with `--host`. SQLCipher: take the newest `libsqlite3-sys` sqlx accepts and check
+the bundled SQLite/OpenSSL in `Cargo.lock`; never enable extension loading. WebView2 and WebKitGTK
+are updated by the OS, not shipped by us; users should keep their OS updated.
+
+**Must (M1):**
+1. DEK, salts and nonces from OS randomness (`OsRng` / `getrandom`).
+2. XChaCha20-Poly1305 with a fresh random 24-byte nonce for every wrap and every backup; bind
+   version, KDF params, salt and purpose (`pw` / `recovery`) as AAD.
+3. Argon2id calibrated at first run to ~0.5 s, floor m = 64 MiB, t = 3, p = 1, cap ~1 GiB. KDF
+   params read from `vault.json` or a `.shiftbak` are untrusted: clamp to a range and refuse below
+   the floor. The AEAD tag check is the only password check (no separate hash compare).
+4. Password, recovery key and keys only in `secrecy`/`zeroize` types; no `Debug`/`Serialize` on
+   anything holding secrets; `argon2`'s `zeroize` feature on; errors cross IPC as generic codes.
+5. Vault writes are atomic: temp file in the same folder, fsync, rename over, fsync the folder on
+   Unix; keep `vault.json.prev`. Change password re-derives from the current password first and
+   writes the new vault before dropping the old wrap. Regenerating the recovery key needs the password.
+6. SQLCipher: `PRAGMA key = "x'…'"` as the first statement on every connection,
+   `cipher_compatibility = 4`, no `cipher_plaintext_header_size`, never `temp_store = FILE`,
+   sqlx statement logging off. sqlx keeps an un-zeroized copy of the hex key; documented limit.
+7. Lock: close the pool, zeroize the DEK, reload the WebView so decrypted state is gone. Idle
+   auto-lock and lock on OS sleep/lock.
+8. Unlock is one command; the password never returns to JS; one generic "Couldn't unlock" message;
+   back-off is kept in memory (it is UX only; Argon2 cost is the real defence); never wipe data.
+9. Recovery key shown once with a retype check of a few words; no automatic copy; if copied, warn
+   that clipboard history/sync may keep it, and clear the clipboard after 60 s.
+10. CI on all three OSes proves the database cannot be opened without the key, and opens after a
+    password change and with the recovery key.
+
+**Should:** `cipher_memory_security = ON`; `freezePrototype: true` (done); files 0600 / folders
+0700 on Unix; `autocomplete="off"` on secret fields; bound `.shiftbak` header length and
+decompressed size, and JSON size/depth, before restore/import lands; test sqlx pragma order.
+
+**Later:** Tauri isolation pattern, `mlock` for the key page, `cargo-vet`, disabling WebView2
+autofill, clearing the clipboard on lock.
+
+**Known limits (tell the user plainly):** the password briefly exists in the WebView's memory and
+IPC buffers; swap, hibernation files and crash dumps may hold memory; screenshot protection works on
+Windows, is partial on macOS and does nothing on Linux; nothing stops a phone camera.
