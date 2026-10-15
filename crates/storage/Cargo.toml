@@ -1,0 +1,8 @@
+[package]
+name = "shiftbook-storage"
+description = "Shiftbook repository traits and SQL storage (SQLite now, Postgres-compatible)."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]

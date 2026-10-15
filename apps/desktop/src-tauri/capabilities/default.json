@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "M0: the main window may only call the app's own app_info command. No plugins, no shell, fs, http or opener.",
+  "windows": ["main"],
+  "permissions": ["allow-app-info"]
+}
