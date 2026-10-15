@@ -2,6 +2,17 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 6 — 15 Oct 2026
+- **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
+  Desk (paste a ticket, press 15m/30m/1h) or via capture; the Timesheet view lists, per day, the
+  code, hours and a ready-made comment with ticket numbers, with tick-offs and a small effort
+  summary.
+- **Look:** keep pushing: user-editable project colours, right-click menus everywhere (fold-out,
+  close on click-away), a slide-out details panel, and more motion including directional view
+  transitions; motion setting Still / Calm / Lively.
+- **M1 follow-ups:** after a recovery-key unlock, ask for a new password at once; add "Make a new
+  recovery key" next milestone; keep the Copy key button with its warning and 60 s clipboard clear.
+
 ## Round 5 — 15 Oct 2026
 - **Navigation:** a time ribbon across the top (days as bars of coloured hours), the Desk as home,
   and switchable views: Planner (week/month/year, formerly "Zoom"), Canvas and Timesheet.
