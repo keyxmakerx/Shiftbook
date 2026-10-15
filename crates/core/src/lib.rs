@@ -7,9 +7,12 @@
 
 pub mod dates;
 pub mod error;
+pub mod group;
 pub mod hours;
 pub mod ids;
 pub mod minutes;
+pub mod model;
+pub mod validate;
 pub mod week;
 
 pub use error::CoreError;

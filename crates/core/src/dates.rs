@@ -18,8 +18,12 @@ pub const MIN_YEAR: i32 = 1900;
 /// Latest year the app accepts for a user-entered date.
 pub const MAX_YEAR: i32 = 2999;
 
-// `iso_date` serializes `Date` as "YYYY-MM-DD"; `iso_date::option` handles `Option<Date>`.
-time::serde::format_description!(iso_date, Date, "[year]-[month]-[day]");
+/// Serde helpers for dates as `YYYY-MM-DD`; `iso_date::option` handles `Option<Date>`.
+#[allow(missing_docs)]
+pub mod iso_date {
+    time::serde::format_description!(pub inner, Date, "[year]-[month]-[day]");
+    pub use inner::*;
+}
 
 /// Serde helpers for timestamps as RFC 3339 text in UTC.
 pub mod rfc3339 {
