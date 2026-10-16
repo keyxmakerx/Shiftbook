@@ -1,0 +1,134 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.try{display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.seg{border:1px solid var(--rule);background:#fff;border-radius:8px;padding:6px 11px;font:600 13px var(--ui);cursor:pointer}
+.seg[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.why{font-size:12.5px;color:var(--ink2);margin:0 0 8px;background:#fff;border-radius:7px;padding:8px 11px;border:1px solid var(--rule)}
+.why b{color:var(--ink)}
+.head{display:flex;align-items:center;gap:10px;padding:8px 12px;flex-wrap:wrap;background:var(--paper);border-radius:7px 7px 0 0;box-shadow:inset 0 0 0 1px var(--rule)}
+.head h1{font:600 18px/1.2 var(--display);margin:0;flex:1;min-width:140px}
+.pill{font:600 12px var(--ui);background:var(--paper2);border-radius:99px;padding:3px 10px;color:var(--ink2);border:0}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:5px 11px;font:600 12.5px var(--ui);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.stage{position:relative;height:480px;overflow:hidden;border-radius:0 0 7px 7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);
+ background:var(--paper);background-image:linear-gradient(var(--rule) 1px,transparent 1px);background-size:100% 28px;cursor:text}
+.world{position:absolute;left:0;top:0;width:1000px;height:640px;transform-origin:0 0;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.box{position:absolute;width:230px;background:#fffef9;border-radius:6px;box-shadow:0 1px 0 rgba(0,0,0,.04),0 6px 16px -10px rgba(29,33,38,.4),inset 0 0 0 1px var(--rule);border-top:4px solid var(--c);cursor:default;transition:box-shadow .2s}
+.box.on{box-shadow:0 0 0 2px var(--c),0 10px 26px -12px rgba(29,33,38,.5);z-index:2}
+.box .bh{display:flex;align-items:center;gap:6px;padding:5px 8px 3px;cursor:grab;font:600 14px var(--display)}
+.box .bh .n{font:600 10.5px var(--mono);color:var(--mut);margin-left:auto}
+.box .bh input{border:0;background:transparent;font:inherit;width:100%;outline:0;cursor:text}
+.box .ls{padding:0 6px 6px}
+.ln{display:flex;gap:6px;padding:2px 4px;border-radius:4px;font-size:13px;cursor:grab}
+.ln:hover{background:var(--paper2)}
+.ln .mk{width:13px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--mut)}
+.ln.new{animation:nw .9s}@keyframes nw{from{background:color-mix(in srgb,var(--amber) 40%,transparent)}to{background:transparent}}
+.tag{display:inline-block;font:600 10.5px var(--ui);border-radius:99px;padding:0 6px;margin-left:4px}
+.t-todo{background:#e6eefc;color:#2b4a9a}.t-task{background:#e3f4ee;color:#1d6b4d}.t-dec{background:#f3e6f0;color:#7a3c68}.t-q{background:var(--wash);color:var(--warn)}
+.box .in{width:100%;font:inherit;font-size:13px;border:1px dashed var(--rule);border-radius:5px;padding:4px 6px;background:#fff;outline:0;margin-top:3px}
+.box .in:focus{border-style:solid;border-color:var(--c)}
+.box.zone{width:280px}
+.box.drop{box-shadow:0 0 0 2px var(--accent)}
+.tray{position:absolute;right:8px;top:8px;bottom:8px;width:150px;border:2px dashed color-mix(in srgb,var(--ok) 50%,transparent);border-radius:8px;background:color-mix(in srgb,var(--ok) 6%,#fff);padding:8px;font-size:12px;overflow:auto;z-index:3}
+.tray.hot{background:color-mix(in srgb,var(--ok) 18%,#fff)}
+.tray b{display:block;font-size:12px;color:#1d6b4d;margin-bottom:4px}
+.tray div.it{background:#fff;border-radius:5px;padding:3px 6px;margin:3px 0;box-shadow:inset 0 0 0 1px var(--rule)}
+svg.trail{position:absolute;left:0;top:0;width:1000px;height:640px;pointer-events:none;overflow:visible}
+svg.trail path{fill:none;stroke:var(--accent);stroke-width:2;stroke-dasharray:5 5;opacity:.45}
+svg.trail circle{fill:var(--ink)}svg.trail text{fill:#fff;font:700 10px var(--mono);text-anchor:middle;dominant-baseline:central}
+.trailbar{position:absolute;left:8px;bottom:8px;right:166px;display:flex;gap:4px;flex-wrap:wrap;z-index:3}
+.trailbar button{border:0;border-radius:99px;padding:2px 9px;font:600 11.5px var(--ui);background:color-mix(in srgb,var(--c) 22%,#fff);cursor:pointer}
+.ghost{position:absolute;left:12px;top:10px;font-size:12px;color:var(--mut);pointer-events:none}
+.zoomout{position:absolute;left:8px;top:8px;z-index:4}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="try"><b>Compare:</b>
+<button class="seg" data-v="page" aria-pressed="true">1 · Free page</button>
+<button class="seg" data-v="trail" aria-pressed="false">2 · Page with a trail</button>
+<button class="seg" data-v="zones" aria-pressed="false">3 · Agenda zones</button>
+<button class="seg" data-v="zoom" aria-pressed="false">4 · Zoom board</button>
+</div>
+<p class="why" id="why"></p>
+<div class="head"><h1>Weekly ops sync</h1><span class="pill" id="count"></span><span class="pill">⏱ 0:24</span><button class="btn primary" id="wrap">Wrap up</button></div>
+<div class="stage" id="stage"><div class="world" id="world"></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const WHY={
+ page:'<b>1 · Free page, like OneNote.</b> A lined paper page. <b>Click anywhere empty</b> to start a new box there and type. Each box is a topic; drag it by its title to move it. To go back, click the box: where you put it is how you find it. <b>Drag any line</b> onto another box to move it, or onto <b>Actions</b> on the right to make it a task.',
+ trail:'<b>2 · Page with a trail.</b> Same free page, but Shiftbook draws the path the conversation took: a dashed line joining the boxes in the order you visited them, numbered. The row along the bottom is the same trail as buttons, so going back is one click. Not a mind map: it shows <i>when</i>, not what belongs to what.',
+ zones:'<b>3 · Agenda zones.</b> Write the agenda before the meeting and each item becomes a box laid out ready, plus a <b>Parking lot</b> for things that come up. During the meeting you click the zone being talked about and type. Off-agenda topics go in Parking lot, or <code>#name</code> makes a new zone.',
+ zoom:'<b>4 · Zoom board.</b> Starts zoomed out so you see every topic at once. Click one and the page glides in until it fills the screen; <b>Esc</b> or the button glides back out. Like Heptabase or Prezi. Good when a meeting has lots of small topics.'};
+const COL=['var(--teal)','var(--coral)','var(--plum)','var(--accent)','#4f8a2e','var(--amber)'];
+const KIND={todo:['☐','t-todo','Todo'],task:['→','t-task','Task'],dec:['!','t-dec','Decision'],q:['?','t-q','Question'],note:['•','','']};
+let view='page',B,cur,visits,act,zoomed;
+function seed(){
+ B=[{n:'Patching window',x:30,y:40,ls:[['note','Moves to Tuesday nights'],['dec','Two-person check on reboots'],['todo','Update the patching MOP']]},
+    {n:'New starter laptops',x:300,y:70,ls:[['note','Five next week, two docks missing'],['q','Who signs off the dock order?']]},
+    {n:'Printer tickets',x:90,y:250,ls:[['note','INC0045678 and INC0045690, same model']]}];
+ if(view==='zones'){B=[{n:'Patching window',x:20,y:20,ls:B[0].ls},{n:'New starter laptops',x:315,y:20,ls:B[1].ls},{n:'Printer tickets',x:20,y:200,ls:B[2].ls},{n:'Budget for Q1',x:315,y:200,ls:[]},{n:'Parking lot',x:20,y:340,ls:[],park:true}];B.forEach(b=>b.zone=true)}
+ if(view==='zoom'){B.push({n:'Budget for Q1',x:560,y:30,ls:[]},{n:'Comms room aircon',x:560,y:230,ls:[['note','Ticket raised with facilities']]},{n:'Holiday cover',x:330,y:300,ls:[]})}
+ cur=view==='zones'?0:2;visits=[0,1,0,2];act=[];zoomed=false;
+}
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function say(t){$('toast').textContent=t;$('toast').classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
+let fresh=null;
+function goTo(i,focus){if(i!==cur){cur=i;if(visits[visits.length-1]!==i)visits.push(i)}draw(focus!==false)}
+function add(i,v){v=v.trim();if(!v)return;
+ if(v.startsWith('#')){const nm=v.replace(/^#+\s*/,'');let j=B.findIndex(b=>b.n.toLowerCase().startsWith(nm.toLowerCase()));
+  if(j<0){const last=B[B.length-1];B.push({n:nm,x:Math.min($('stage').clientWidth-410,last.x+60),y:Math.min(430,last.y+120),ls:[],zone:view==='zones'});j=B.length-1;say('New topic box: '+nm)}else say('Back to '+B[j].n);goTo(j);return}
+ let k='note';if(/^\[\s?\]/.test(v)){k='todo';v=v.replace(/^\[\s?\]\s*/,'')}else if(v.startsWith('!')){k='dec';v=v.slice(1).trim()}else if(v.startsWith('?')){k='q';v=v.slice(1).trim()}else if(/\?$/.test(v))k='q';
+ B[i].ls.push([k,v]);fresh=[i,B[i].ls.length-1];draw(true)}
+function boxEl(b,i){const d=el('div','box'+(i===cur?' on':'')+(b.zone?' zone':''));d.style.left=b.x+'px';d.style.top=b.y+'px';d.style.setProperty('--c',b.park?'#9aa0a6':COL[i%COL.length]);
+ const h=el('div','bh');const ti=el('input');ti.value=b.n;ti.oninput=()=>b.n=ti.value;h.append(ti);h.append(el('span','n',b.ls.length?String(b.ls.length):''));d.append(h);
+ const L=el('div','ls');b.ls.forEach((l,j)=>{const r=el('div','ln'+(fresh&&fresh[0]===i&&fresh[1]===j?' new':''));r.draggable=true;r.ondragstart=e=>{e.dataTransfer.setData('text/plain',i+':'+j);e.stopPropagation()};
+  r.append(el('span','mk',KIND[l[0]][0]));const t=el('span',null,l[1]);if(l[0]!=='note')t.append(el('span','tag '+KIND[l[0]][1],KIND[l[0]][2]+(l[2]?' · '+l[2]:'')));r.append(t);L.append(r)});
+ if(i===cur){const inp=el('input','in');inp.id='box';inp.placeholder=b.ls.length?'Keep typing…':'Type here…';inp.onkeydown=e=>{if(e.key==='Enter'){add(i,inp.value);e.preventDefault()}};L.append(inp)}
+ d.append(L);
+ d.onmousedown=e=>{e.stopPropagation()};
+ d.onclick=e=>{if(view==='zoom'&&!zoomed){zoomed=true;goTo(i);return}if(i!==cur)goTo(i)};
+ d.ondragover=e=>{e.preventDefault();d.classList.add('drop')};d.ondragleave=()=>d.classList.remove('drop');
+ d.ondrop=e=>{e.preventDefault();d.classList.remove('drop');const [a,c]=e.dataTransfer.getData('text/plain').split(':').map(Number);if(a===i)return;const l=B[a].ls.splice(c,1)[0];B[i].ls.push(l);fresh=[i,B[i].ls.length-1];say('Moved to '+B[i].n+'.');draw(false)};
+ // drag the box by its title
+ h.onpointerdown=e=>{if(view==='zones'||view==='zoom'||e.target===ti&&document.activeElement===ti)return;const sx=e.clientX,sy=e.clientY,ox=b.x,oy=b.y;let moved=false;
+  const mv=ev=>{const dx=ev.clientX-sx,dy=ev.clientY-sy;if(Math.abs(dx)+Math.abs(dy)>3)moved=true;b.x=Math.max(0,ox+dx);b.y=Math.max(0,oy+dy);d.style.left=b.x+'px';d.style.top=b.y+'px';if(view==='trail')trail()};
+  const up=()=>{removeEventListener('pointermove',mv);removeEventListener('pointerup',up);if(!moved&&document.activeElement!==ti)ti.focus()};addEventListener('pointermove',mv);addEventListener('pointerup',up)};
+ return d}
+function trail(){const w=$('world');w.querySelectorAll('svg.trail').forEach(x=>x.remove());let s;if(view!=='trail')return;
+ const NS='http://www.w3.org/2000/svg';s=document.createElementNS(NS,'svg');s.setAttribute('class','trail');
+ const boxes=w.querySelectorAll('.box');const pts=visits.map(i=>{const e=boxes[i];return [B[i].x+115,B[i].y+e.offsetHeight/2]});
+ const p=document.createElementNS(NS,'path');p.setAttribute('d',pts.map((q,k)=>(k?'L':'M')+q[0]+' '+q[1]).join(' '));s.append(p);
+ const seen={};visits.forEach((i,k)=>{const n=seen[i]=(seen[i]||0)+1;const cx=B[i].x+150+22*n,cy=B[i].y-2;const c=document.createElementNS(NS,'circle');c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',9);const t=document.createElementNS(NS,'text');t.setAttribute('x',cx);t.setAttribute('y',cy);t.textContent=k+1;s.append(c,t)});
+ s.style.zIndex=4;w.append(s)}
+function fit(){const w=$('world'),st=$('stage');if(view!=='zoom'){w.style.transform='';return}
+ const W=st.clientWidth-170,H=st.clientHeight;
+ if(!zoomed){let mx=0,my=0;B.forEach((b,i)=>{const e=w.querySelectorAll('.box')[i];mx=Math.max(mx,b.x+230);my=Math.max(my,b.y+e.offsetHeight)});const s=Math.min(1,W/(mx+30),H/(my+30));w.style.transform='translate(10px,10px) scale('+s+')';return}
+ const b=B[cur],e=w.querySelectorAll('.box')[cur],h=e.offsetHeight;const s=Math.min(1.7,(W-40)/230,(H-60)/h);w.style.transform='translate('+(W/2-(b.x+115)*s)+'px,'+(H/2-(b.y+h/2)*s+10)+'px) scale('+s+')'}
+function draw(focus){const w=$('world'),st=$('stage');w.innerHTML='';B.forEach((b,i)=>w.append(boxEl(b,i)));
+ st.querySelectorAll('.tray,.trailbar,.ghost,.zoomout').forEach(x=>x.remove());
+ const tr=el('div','tray');tr.append(el('b',null,'Actions'));tr.append(el('span',null,'Drag a line here to make it a task.'));act.forEach(a=>tr.append(el('div','it','→ '+a)));
+ B.forEach(b=>b.ls.forEach(l=>{if(l[0]==='todo')tr.append(el('div','it','☐ '+l[1]))}));
+ tr.ondragover=e=>{e.preventDefault();tr.classList.add('hot')};tr.ondragleave=()=>tr.classList.remove('hot');
+ tr.ondrop=e=>{e.preventDefault();tr.classList.remove('hot');const [a,c]=e.dataTransfer.getData('text/plain').split(':').map(Number);const l=B[a].ls[c];l[0]='task';l[2]='Fri';act.push(l[1]+' (Fri)');say('Task made, due Friday. It stays in its box too.');draw(false)};
+ st.append(tr);
+ if(view==='page')st.append(el('div','ghost','Click anywhere empty to start a new box'));
+ if(view==='trail'){const tb=el('div','trailbar');visits.forEach((i,k)=>{const b=el('button',null,(k+1)+' '+B[i].n);b.style.setProperty('--c',COL[i%COL.length]);b.onclick=()=>goTo(i);tb.append(b)});st.append(tb)}
+ if(view==='zoom'&&zoomed){const z=el('button','btn zoomout','⤢ See all topics (Esc)');z.onclick=()=>{zoomed=false;draw(false)};st.append(z)}
+ const c={todo:0,task:0,dec:0,q:0};B.forEach(b=>b.ls.forEach(l=>{if(l[0] in c)c[l[0]]++}));$('count').textContent=c.todo+' todos · '+c.task+' tasks · '+c.dec+' decision · '+c.q+' question';
+ requestAnimationFrame(()=>{trail();fit();if(focus&&(view!=='zoom'||zoomed)){const b=$('box');if(b)b.focus({preventScroll:true})}});fresh=null}
+$('stage').addEventListener('mousedown',e=>{if(view!=='page'&&view!=='trail')return;if(e.target!==$('stage')&&e.target!==$('world'))return;
+ const r=$('world').getBoundingClientRect();const x=Math.max(0,Math.min($('stage').clientWidth-410,e.clientX-r.left-20)),y=Math.max(0,Math.min(420,e.clientY-r.top-14));
+ B.push({n:'New topic',x,y,ls:[]});cur=B.length-1;visits.push(cur);draw(false);setTimeout(()=>{const t=$('world').querySelectorAll('.box')[cur].querySelector('.bh input');t.focus();t.select()},30);e.preventDefault()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&view==='zoom'&&zoomed){zoomed=false;draw(false)}});
+document.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{view=b.dataset.v;document.querySelectorAll('.seg').forEach(x=>x.setAttribute('aria-pressed',x===b));$('why').innerHTML=WHY[view];seed();draw(false)});
+$('wrap').onclick=()=>say('Wrap up lists todos, tasks and decisions, and offers to log the time.');
+seed();$('why').innerHTML=WHY[view];draw(false);
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>

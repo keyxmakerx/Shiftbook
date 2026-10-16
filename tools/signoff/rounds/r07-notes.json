@@ -7,67 +7,63 @@
       "round": 7,
       "order": 130,
       "area": "Notes",
-      "version": 2,
-      "title": "Meetings, take two: three ways other apps do it",
+      "version": 3,
+      "title": "Meetings, take three: a OneNote-style page",
       "body": [
-        "You didn't like the first go (topics down the left, a panel of results on the right). I looked at how other note apps handle meetings. They mostly fall into three shapes:",
-        "**A · Running log.** Chat apps and \"interstitial journaling\": one box, lines stack up with the time, and the topic is just a tag on each line. Nothing to arrange while people talk; you tidy it afterwards with **By topic**.",
-        "**B · Outline.** Logseq, Workflowy, Roam and OneNote's own outlines: one page of bullets, each topic a heading you can fold. Reads like a normal document afterwards.",
-        "**C · Topic cards.** Sticky-note and canvas apps like Heptabase and Muse: each topic is a paper card, and the one you're in opens wide. It fits the Canvas you already chose.",
-        "Apps built only for meetings (Fellow, Hugo, Notion's meeting template) add two things worth keeping whichever shape wins: an optional agenda you can write beforehand, and open items that carry over to the next meeting in the series. The AI note-takers (Granola, Otter) listen to the call, which Shiftbook won't do."
+        "You said topic cards reminded you of OneNote, and asked for canvas ideas that aren't the mind map from round 3. The difference: a mind map shows what belongs to what, with lines you draw. These are just a page you write on, where *where you put things* is how you find them again, the way OneNote pages work.",
+        "Four ways to do it, all on the same meeting. Each one keeps `#name` to jump or start a topic, the `[]` `!` `?` marks, the optional agenda you said yes to, and the time log on wrap up. New in all four: **drag any line** onto another box to move it, or onto **Actions** to make it a task."
       ],
       "bullets": [
-        "All three keep what you said yes to: `#` and a name to start or go back to a topic, `[]` `!` `?` marks while typing, and a one-click time log on wrap up.",
-        "The results panel is gone. A small count in the header (\"2 todos · 1 decision\") opens the list when you want it, and each item jumps back to where it was said."
+        "**1 · Free page:** click anywhere empty to start a box and type, drag boxes by their title. Closest to OneNote.",
+        "**2 · Page with a trail:** the same, plus a numbered dashed path showing the order the conversation went, and a row of buttons to jump back along it.",
+        "**3 · Agenda zones:** the agenda you write beforehand is laid out as boxes, with a Parking lot for things that come up.",
+        "**4 · Zoom board:** see every topic small, click one to glide in, Esc to glide out.",
+        "More ideas that work with any of them: a **Tidy up** button that lines the boxes up neatly afterwards; a weekly meeting that **reuses last week's page** with open items left in their boxes; and dropping the finished page onto the **Canvas** as one card linked to its tasks."
       ],
       "figures": [
         {
-          "html_file": "mocks/r07-meeting2.html",
-          "height": 640,
-          "caption": "Live: switch between A, B and C at the top. Same meeting in each. Type a line and press Enter, try `#printer` to jump back to a topic, or `#budget` to start one."
+          "html_file": "mocks/r07-meeting3.html",
+          "height": 720,
+          "caption": "Live: switch between 1–4. In 1 and 2, click an empty spot to start a box, drag boxes by their title, and drag a line onto Actions. In 4, click a topic to zoom in."
         }
       ],
       "questions": [
         {
           "id": "shape",
-          "legend": "Which one feels right in a meeting?",
+          "legend": "Which is closest?",
           "options": [
             {
-              "value": "A · Running log",
+              "value": "1 · Free page",
+              "why": "Most like OneNote."
+            },
+            {
+              "value": "1 with the trail from 2 as a switch",
               "rec": true,
-              "why": "Fastest to keep up with; nothing to place while people talk."
+              "why": "OneNote freedom, plus a way back when you lose your place."
             },
             {
-              "value": "B · Outline"
+              "value": "3 · Agenda zones"
             },
             {
-              "value": "C · Topic cards"
+              "value": "4 · Zoom board"
             },
             {
-              "value": "A while typing, B or C to read it back"
+              "value": "Still not it (say below)"
             }
           ]
         },
         {
-          "id": "agenda",
-          "legend": "Optional agenda written before the meeting?",
-          "options": [
-            {
-              "value": "Yes, optional",
-              "rec": true
-            },
-            {
-              "value": "No"
-            }
-          ]
+          "id": "extras",
+          "legend": "Which extras? (say below)",
+          "type": "text"
         },
         {
           "id": "notes",
-          "legend": "What did you dislike about the first design? (optional)",
+          "legend": "Anything from OneNote you'd miss? (optional)",
           "type": "text"
         }
       ],
-      "pick": "A, with By topic to read it back. It never asks you to decide where something goes while you're listening."
+      "pick": "1 with the trail as a switch you can turn on. It's the OneNote feel you know, and the trail helps when a meeting jumps around."
     },
     "r7-notes": {
       "round": 7,

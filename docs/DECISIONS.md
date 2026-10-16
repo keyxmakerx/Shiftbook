@@ -9,12 +9,16 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   with Keep). Notes search extends the Find box (r7-find), not a second search.
 - **MOPs:** fixed sections (why, checks, steps with expected results, rollback) and a Run mode
   that saves a run record. Import and export must be easy and cope with varied documents without
-  an AI: rule-based import with a check screen (r7-import card, pending).
+  an AI: rule-based import (numbered lines are steps, "Verify"/"Expected" lines attach to the
+  step above, headings sort lines into checks and rollback) with a check screen where each line
+  shows where it landed and can be moved; fixes are remembered per template. Export to Word,
+  PDF, text and a round-trip Shiftbook MOP file. Approved on the r7-import card.
 - **OneNote:** both ways (paste a page, then import sections exported as Word files);
   `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
-- **Meetings:** the first design (topic rail plus results panel) was rejected; three researched
-  shapes are on the r7-meeting card v2. Kept from v1: `#` topics, `[]` `!` `?` marks, one-click
-  time log on wrap up.
+- **Meetings:** the first design (topic rail plus results panel) and the second (running log,
+  outline, topic cards) were rejected. Direction: a canvas-style page like OneNote, but not the
+  round 3 mind map; four variants are on r7-meeting v3. Kept throughout: `#` topics, `[]` `!` `?`
+  marks, an optional agenda written beforehand, one-click time log on wrap up.
 
 ## Round 6 — 15 Oct 2026
 - **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
