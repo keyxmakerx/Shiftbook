@@ -4,7 +4,7 @@
   // (crates/core/src/sheet.rs); this page shows it and remembers the tick-offs.
   import { api } from '../lib/api';
   import type { GroupBy, SheetDay, SheetWarning, Tick, WeekSheet } from '../lib/api';
-  import { addDays, dayMonth, dayOfMonth, weekdayLong, weekdayShort } from '../lib/format';
+  import { addDays, dayMonth, dayOfMonth, isWeekend, weekdayLong, weekdayShort } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { app, attempt, projectColor } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -83,7 +83,8 @@
   }
 
   const shownDays = $derived(
-    (sheet?.days ?? []).filter((d, i) => i < 5 || d.lines.length > 0),
+    // Weekdays always show; Saturday and Sunday only when something was logged.
+    (sheet?.days ?? []).filter((d) => !isWeekend(d.date) || d.lines.length > 0),
   );
   const current = $derived(groupBy ?? sheet?.groupBy ?? 'code');
 </script>

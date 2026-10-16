@@ -5,6 +5,7 @@ import {
   daysBetween,
   fmtHours,
   fmtMinutes,
+  isWeekend,
   longDay,
   relativeDay,
   toIso,
@@ -42,6 +43,9 @@ describe('display formatting', () => {
     expect(longDay('2026-10-15')).toBe('Thursday 15 October');
     expect(dayMonth('2026-10-12')).toBe('12 October');
     expect(weekdayShort('2026-10-18')).toBe('Sun');
+    expect(isWeekend('2026-10-17')).toBe(true);
+    expect(isWeekend('2026-10-18')).toBe(true);
+    expect(isWeekend('2026-10-19')).toBe(false);
     expect(relativeDay('2026-10-15', '2026-10-15')).toBe('Today');
     expect(relativeDay('2026-10-14', '2026-10-15')).toBe('Yesterday');
     expect(relativeDay('2026-10-01', '2026-10-15')).toBe('Looking back');
