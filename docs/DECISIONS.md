@@ -2,6 +2,13 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 7 — 16 Oct 2026
+- **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.
+- **"Where was I?":** approved. After a lock, a break of 30 minutes or more, or a new day, the Desk
+  shows the last task, its tickets and its next step, with Carry on / Something else / Later.
+- **"Now doing" timer:** approved as an optional feature, off by default (the owner wouldn't use
+  it). Rounds to 15 minutes, saves minutes only, suggests leaving out time away from the keyboard.
+
 ## Round 6 — 15 Oct 2026
 - **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
   Desk (paste a ticket, press 15m/30m/1h) or via capture; the Timesheet view lists, per day, the
