@@ -41,3 +41,24 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
   }
   return null;
 }
+
+/** Every shortcut, as shown on the hold-Ctrl overlay. Keep in step with `shortcutFor`. */
+export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
+  { keys: 'Ctrl Space', what: 'Log, note or find anything' },
+  { keys: 'N', what: 'Jump to Log work' },
+  { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
+  { keys: '1  2  3', what: 'Desk, Timesheet, Customize' },
+  { keys: '↑  ↓', what: 'Move between entries' },
+  { keys: 'Enter', what: 'Open the entry you are on' },
+  { keys: 'Menu or Shift F10', what: 'Options for what you are on' },
+  { keys: 'Ctrl L', what: 'Lock now' },
+  { keys: 'Esc', what: 'Close the top menu or panel' },
+];
+
+/** How long Ctrl (or ⌘) must be held on its own before the overlay shows. */
+export const HOLD_MS = 450;
+
+/** True when this key is Ctrl or ⌘ pressed on its own, which starts the hold. */
+export function startsHold(e: Pick<KeyInfo, 'key' | 'altKey' | 'shiftKey'>): boolean {
+  return (e.key === 'Control' || e.key === 'Meta') && !e.altKey && !e.shiftKey;
+}

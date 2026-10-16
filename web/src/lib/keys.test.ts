@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortcutFor, type KeyInfo } from './keys';
+import { shortcutFor, startsHold, type KeyInfo } from './keys';
 
 function key(k: string, extra: Partial<KeyInfo> = {}): KeyInfo {
   return { key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, typing: false, ...extra };
@@ -28,5 +28,16 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('n', { ctrlKey: true }))).toBeNull();
     expect(shortcutFor(key('l', { ctrlKey: true, altKey: true }))).toBeNull();
     expect(shortcutFor(key('x'))).toBeNull();
+  });
+});
+
+describe('startsHold', () => {
+  it('starts on Ctrl or Meta alone', () => {
+    expect(startsHold({ key: 'Control', altKey: false, shiftKey: false })).toBe(true);
+    expect(startsHold({ key: 'Meta', altKey: false, shiftKey: false })).toBe(true);
+  });
+  it('not with other modifiers or keys', () => {
+    expect(startsHold({ key: 'Control', altKey: false, shiftKey: true })).toBe(false);
+    expect(startsHold({ key: 'l', altKey: false, shiftKey: false })).toBe(false);
   });
 });

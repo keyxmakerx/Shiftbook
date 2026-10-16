@@ -13,12 +13,11 @@
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
 
-  const VIEW_LIST: { id: View | 'planner' | 'canvas'; label: string; later?: boolean }[] = [
-    { id: 'desk', label: 'Desk' },
-    { id: 'planner', label: 'Planner', later: true },
-    { id: 'canvas', label: 'Canvas', later: true },
-    { id: 'timesheet', label: 'Timesheet' },
-    { id: 'customize', label: 'Customize' },
+  // Planner and Canvas join this list, in their places, once they're built (round 7).
+  const VIEW_LIST: { id: View; label: string; key: string }[] = [
+    { id: 'desk', label: 'Desk', key: '1' },
+    { id: 'timesheet', label: 'Timesheet', key: '2' },
+    { id: 'customize', label: 'Customize', key: '3' },
   ];
 
   let viewsEl: HTMLElement | undefined = $state();
@@ -151,19 +150,9 @@
   <nav class="views" aria-label="Views" bind:this={viewsEl}>
     <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px"></span>
     {#each VIEW_LIST as v (v.id)}
-      {#if v.later}
-        <button type="button" aria-pressed="false" aria-disabled="true" class="later" data-tip="Coming in a later version">
-          {v.label}
-        </button>
-      {:else}
-        <button
-          type="button"
-          aria-pressed={app.view === v.id}
-          onclick={() => setView(v.id as View)}
-        >
-          {v.label}
-        </button>
-      {/if}
+      <button type="button" aria-pressed={app.view === v.id} title="{v.label} ({v.key})" onclick={() => setView(v.id)}>
+        {v.label}
+      </button>
     {/each}
   </nav>
   <div class="days" class:grow={!grown} aria-label="Last four weeks">
@@ -248,34 +237,6 @@
 
   .views button[aria-pressed='true'] {
     color: var(--ink);
-  }
-
-  .views button.later {
-    color: color-mix(in srgb, var(--ink-2) 55%, transparent);
-    cursor: not-allowed;
-  }
-
-  .views button.later::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font: 600 12px var(--ui);
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: var(--ink);
-    color: var(--paper);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-    z-index: 5;
-  }
-
-  .views button.later:hover::after,
-  .views button.later:focus-visible::after {
-    opacity: 1;
   }
 
   .pill {

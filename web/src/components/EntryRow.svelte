@@ -177,7 +177,14 @@
   title="Click to open · right-click for options"
   onclick={() => (app.drawer = entry.id)}
   onkeydown={(e) => {
-    if (e.key === 'Enter' && e.target === row) app.drawer = entry.id;
+    if (e.target !== row) return;
+    if (e.key === 'Enter') app.drawer = entry.id;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // Up and down move between entries; the time buttons show on the focused one.
+      e.preventDefault();
+      const rows = [...(row?.parentElement?.querySelectorAll<HTMLElement>(':scope > .row') ?? [])];
+      rows[rows.indexOf(row!) + (e.key === 'ArrowDown' ? 1 : -1)]?.focus();
+    }
   }}
   use:paperMenu={menu}
 >

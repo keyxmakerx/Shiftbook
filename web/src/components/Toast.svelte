@@ -1,8 +1,17 @@
 <script lang="ts">
-  import { runToastAction, toastState } from '../lib/toast.svelte';
+  import { holdToast, releaseToast, runToastAction, toastState } from '../lib/toast.svelte';
 </script>
 
-<div class="toast" class:on={toastState.on} role="status" aria-live="polite">
+<div
+  class="toast"
+  class:on={toastState.on}
+  role="status"
+  aria-live="polite"
+  onpointerenter={holdToast}
+  onpointerleave={releaseToast}
+  onfocusin={holdToast}
+  onfocusout={releaseToast}
+>
   <span>{toastState.text}</span>
   {#if toastState.action}
     <button type="button" onclick={runToastAction}>{toastState.action}</button>

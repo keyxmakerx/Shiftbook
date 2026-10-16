@@ -13,6 +13,7 @@
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import Ribbon from '../components/Ribbon.svelte';
+  import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
   import Customize from '../views/Customize.svelte';
   import Desk from '../views/Desk.svelte';
@@ -116,6 +117,8 @@
 <Drawer />
 <PaperMenu />
 <Toast />
+<ShortcutOverlay />
+<p class="hold-hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> to see shortcuts</p>
 
 <style>
   .app {
@@ -145,5 +148,23 @@
 
   .lead {
     color: var(--mut);
+  }
+
+  /* A quiet reminder that the shortcut overlay exists. */
+  .hold-hint {
+    position: fixed;
+    right: 14px;
+    bottom: 8px;
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--mut);
+    pointer-events: none;
+    opacity: 0.85;
+  }
+
+  @media (max-width: 760px) {
+    .hold-hint {
+      display: none;
+    }
   }
 </style>
