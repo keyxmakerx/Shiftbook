@@ -7,60 +7,67 @@
       "round": 7,
       "order": 130,
       "area": "Notes",
-      "version": 1,
-      "title": "Meetings: type, jump topics, turn any line into a task",
+      "version": 2,
+      "title": "Meetings, take two: three ways other apps do it",
       "body": [
-        "**What we decided so far.** Meeting notes became a goal in round 1. Round 2 put notes in the plan and said the notes map links things for you (a meeting that produced two tasks shows lines to them). Rounds 4 and 5 put meeting notes in the always-there strip on the right, as a tab next to Jot and Daily. How a meeting actually *feels* was never designed, so this card is the first go at it.",
-        "**The idea.** A meeting is one page split into topics. You just type. When the talk moves on, type `#` and the new topic's name; when it comes back, press **Alt ↑** or click the topic on the left, and you carry on where you were. Any line can become a todo, a task with a due date, a decision, a question or a new project, by typing a mark at the start or with the buttons that show when you point at the line. Everything that comes out of the meeting gathers on the right, and clicking one takes you back to the line it came from."
+        "You didn't like the first go (topics down the left, a panel of results on the right). I looked at how other note apps handle meetings. They mostly fall into three shapes:",
+        "**A · Running log.** Chat apps and \"interstitial journaling\": one box, lines stack up with the time, and the topic is just a tag on each line. Nothing to arrange while people talk; you tidy it afterwards with **By topic**.",
+        "**B · Outline.** Logseq, Workflowy, Roam and OneNote's own outlines: one page of bullets, each topic a heading you can fold. Reads like a normal document afterwards.",
+        "**C · Topic cards.** Sticky-note and canvas apps like Heptabase and Muse: each topic is a paper card, and the one you're in opens wide. It fits the Canvas you already chose.",
+        "Apps built only for meetings (Fellow, Hugo, Notion's meeting template) add two things worth keeping whichever shape wins: an optional agenda you can write beforehand, and open items that carry over to the next meeting in the series. The AI note-takers (Granola, Otter) listen to the call, which Shiftbook won't do."
       ],
       "bullets": [
-        "**Marks while typing:** `[]` todo, `!` decision, `?` question (or a line ending in ?), `#` new topic, `/` opens a menu with the rest (task, new project, link a note or MOP).",
-        "Ticket numbers turn into chips automatically, so the meeting shows up when you look that ticket up.",
-        "A recurring meeting starts with **From last time**: todos and questions still open from the previous one.",
-        "A soft timer runs while the meeting is open. **Wrap up** lists what came out of it and logs the time to Meetings, rounded to 15 minutes. Only the minutes are saved.",
-        "It opens from the strip's Meeting tab, and can grow to the full window when you need the room."
+        "All three keep what you said yes to: `#` and a name to start or go back to a topic, `[]` `!` `?` marks while typing, and a one-click time log on wrap up.",
+        "The results panel is gone. A small count in the header (\"2 todos · 1 decision\") opens the list when you want it, and each item jumps back to where it was said."
       ],
       "figures": [
         {
-          "html_file": "mocks/r07-meeting.html",
-          "height": 560,
-          "caption": "Live: type a line and press Enter. Try `[] call the vendor`, `! go with option B`, `# Budget`, or `/` for the menu. Alt ↑ and Alt ↓ move between topics. Point at a line to turn it into a task. Made-up data."
+          "html_file": "mocks/r07-meeting2.html",
+          "height": 640,
+          "caption": "Live: switch between A, B and C at the top. Same meeting in each. Type a line and press Enter, try `#printer` to jump back to a topic, or `#budget` to start one."
         }
       ],
       "questions": [
         {
-          "id": "flow",
-          "legend": "Is this how a meeting should work?",
+          "id": "shape",
+          "legend": "Which one feels right in a meeting?",
           "options": [
-            { "value": "Yes", "rec": true, "why": "Typing never stops: marks and topics happen as you type." },
-            { "value": "Yes, with changes (say below)" },
-            { "value": "No, show me something different" }
+            {
+              "value": "A · Running log",
+              "rec": true,
+              "why": "Fastest to keep up with; nothing to place while people talk."
+            },
+            {
+              "value": "B · Outline"
+            },
+            {
+              "value": "C · Topic cards"
+            },
+            {
+              "value": "A while typing, B or C to read it back"
+            }
           ]
         },
         {
-          "id": "topickey",
-          "legend": "Starting a new topic",
+          "id": "agenda",
+          "legend": "Optional agenda written before the meeting?",
           "options": [
-            { "value": "Type # and the name, or Alt N", "rec": true },
-            { "value": "Only a + New topic button" }
-          ]
-        },
-        {
-          "id": "logtime",
-          "legend": "On wrap up, log the meeting's time?",
-          "options": [
-            { "value": "Offer it, one click", "rec": true, "why": "Meetings are easy to forget on the timesheet." },
-            { "value": "Log it automatically" },
-            { "value": "No, I log it myself" }
+            {
+              "value": "Yes, optional",
+              "rec": true
+            },
+            {
+              "value": "No"
+            }
           ]
         },
         {
           "id": "notes",
-          "legend": "Anything else a meeting needs? (optional)",
+          "legend": "What did you dislike about the first design? (optional)",
           "type": "text"
         }
       ],
-      "pick": "Yes, with # for topics and a one-click time log. It keeps your hands on the keyboard and nothing said in the meeting gets lost."
+      "pick": "A, with By topic to read it back. It never asks you to decide where something goes while you're listening."
     },
     "r7-notes": {
       "round": 7,
@@ -90,16 +97,29 @@
           "id": "organise",
           "legend": "How should notes be organised?",
           "options": [
-            { "value": "By project and tags", "rec": true, "why": "Fewer places to decide between; search does the finding. OneNote sections become tags." },
-            { "value": "Notebooks and sections, like OneNote", "why": "Familiar, but every note needs a home picked for it." }
+            {
+              "value": "By project and tags",
+              "rec": true,
+              "why": "Fewer places to decide between; search does the finding. OneNote sections become tags."
+            },
+            {
+              "value": "Notebooks and sections, like OneNote",
+              "why": "Familiar, but every note needs a home picked for it."
+            }
           ]
         },
         {
           "id": "archive",
           "legend": "Archive and search work like this?",
           "options": [
-            { "value": "Yes", "rec": true },
-            { "value": "Also archive notes on their own after a while", "why": "For example meetings older than 3 months." }
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Also archive notes on their own after a while",
+              "why": "For example meetings older than 3 months."
+            }
           ]
         },
         {
@@ -137,16 +157,27 @@
           "id": "run",
           "legend": "Add Run mode with a saved run record?",
           "options": [
-            { "value": "Yes", "rec": true, "why": "\"When did we last do this, and did anything go wrong?\" gets an answer." },
-            { "value": "Just the written MOP for now" }
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "\"When did we last do this, and did anything go wrong?\" gets an answer."
+            },
+            {
+              "value": "Just the written MOP for now"
+            }
           ]
         },
         {
           "id": "shape",
           "legend": "The MOP's sections",
           "options": [
-            { "value": "Why, checks, steps, rollback", "rec": true },
-            { "value": "Let me add my own sections too" }
+            {
+              "value": "Why, checks, steps, rollback",
+              "rec": true
+            },
+            {
+              "value": "Let me add my own sections too"
+            }
           ]
         },
         {
@@ -186,17 +217,30 @@
           "id": "how",
           "legend": "Which ways should Shiftbook offer?",
           "options": [
-            { "value": "Both: paste, then section import", "rec": true },
-            { "value": "Paste only" },
-            { "value": "Section import only" }
+            {
+              "value": "Both: paste, then section import",
+              "rec": true
+            },
+            {
+              "value": "Paste only"
+            },
+            {
+              "value": "Section import only"
+            }
           ]
         },
         {
           "id": "dep",
           "legend": "Add quick-xml for reading Word files?",
           "options": [
-            { "value": "Yes", "rec": true, "why": "Small, widely used, no network. Only needed for section import." },
-            { "value": "No" }
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "Small, widely used, no network. Only needed for section import."
+            },
+            {
+              "value": "No"
+            }
           ]
         },
         {
@@ -206,6 +250,54 @@
         }
       ],
       "pick": "Both, with paste first because it's useful every day and needs nothing new."
+    },
+    "r7-import": {
+      "round": 7,
+      "order": 170,
+      "area": "Notes",
+      "version": 1,
+      "title": "Bringing documents in without guesswork",
+      "body": [
+        "You asked for MOP import and export that copes with whatever's in the file, and for OneNote import that's as flexible as possible, without an AI to read things. The way to do it is plain rules plus a check screen.",
+        "Shiftbook reads the document line by line and sorts it with simple rules: numbered lines are steps, lines starting \"Verify\" or \"Expected\" go with the step above, anything under a heading like Prerequisites, Pre-checks or Before is a check, and anything under Rollback or Backout is the undo plan. Every line shows where it landed and why. If it got one wrong, you change it with one click, and Shiftbook remembers that fix for documents from the same template."
+      ],
+      "bullets": [
+        "**Export:** Word, PDF, plain text, and a Shiftbook MOP file that comes back in exactly as it went out.",
+        "**OneNote** gets the same check screen: whatever it finds (sections, pages, sub-pages, any kind of tag, tables, pictures) is listed, with a choice of what each becomes. Nothing is dropped without being shown.",
+        "Nothing leaves the computer. Exports show the usual warning that they aren't encrypted."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-import.html",
+          "height": 620,
+          "caption": "Live: change a line's place with its menu and watch the MOP on the right update. Made-up document."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Rules plus a check screen?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "Works offline and you always see what happened."
+            },
+            {
+              "value": "Yes, but skip the check screen when nothing looks unsure"
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "legend": "Headings your MOPs use that I should know about? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "Yes, always show the check screen the first time a new template comes in, and skip it after that unless a line doesn't match."
     }
   }
 }

@@ -2,6 +2,20 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 7, Notes cards — 16 Oct 2026
+- **Notes and archive:** kinds Jot, Daily, Meeting, Page and MOP, organised by project and tags
+  (no notebooks). Archived notes leave the lists but search still finds them. Auto-archive is a
+  setting, with a soft warning on the note before it moves ("moves to the archive in N days",
+  with Keep). Notes search extends the Find box (r7-find), not a second search.
+- **MOPs:** fixed sections (why, checks, steps with expected results, rollback) and a Run mode
+  that saves a run record. Import and export must be easy and cope with varied documents without
+  an AI: rule-based import with a check screen (r7-import card, pending).
+- **OneNote:** both ways (paste a page, then import sections exported as Word files);
+  `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
+- **Meetings:** the first design (topic rail plus results panel) was rejected; three researched
+  shapes are on the r7-meeting card v2. Kept from v1: `#` topics, `[]` `!` `?` marks, one-click
+  time log on wrap up.
+
 ## Round 6 — 15 Oct 2026
 - **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
   Desk (paste a ticket, press 15m/30m/1h) or via capture; the Timesheet view lists, per day, the
