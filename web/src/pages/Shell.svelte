@@ -168,7 +168,9 @@
     font-size: 11.5px;
     color: var(--mut);
     pointer-events: none;
-    opacity: 0.85;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--desk) 85%, transparent);
   }
 
   @media (max-width: 760px) {

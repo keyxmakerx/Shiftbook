@@ -224,7 +224,7 @@
     aria-activedescendant={!logging && hits[sel] ? `hit-${sel}` : undefined}
     placeholder="Log “1.5h printer INC0045678”, or find a ticket, a word or a command"
   />
-  <div class="toks" aria-live="polite">
+  <div class="toks" class:quiet={!logging && hits.length > 0} aria-live="polite">
     {#if seen && text.trim() && logging}
       <span class="tok" style:--c="var(--ok)"><em>time</em>{fmtMinutes(seen.minutes ?? 0)}</span>
       {#if seen.projectId}
@@ -355,6 +355,12 @@
     flex-wrap: wrap;
     padding: 0 18px 12px;
     min-height: 32px;
+  }
+
+  /* Results take the space when there are some. */
+  .toks.quiet {
+    min-height: 0;
+    padding-bottom: 0;
   }
 
   .tok {
