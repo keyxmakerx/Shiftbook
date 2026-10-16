@@ -2,6 +2,24 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 7 — 16 Oct 2026
+- **Log work:** Enter logs the line when it has a time in it (`INC0045678 50m`), otherwise moves to the
+  time buttons. A "Same as yesterday" row offers yesterday's routine entries as one-click buttons.
+- **Capture finds things:** typing searches entries, days and Inbox scraps, and runs commands (Lock,
+  Book holiday, go to a view). A line with hours still logs.
+- **Views:** Planner and Canvas are hidden until they're built, so 1 to 3 match the tabs. Customize
+  stays a tab.
+- **Readability:** a daily target per weekday for the Desk ring, a slightly darker hint grey, Undo that
+  stays 10 seconds and waits while the pointer is over it. Text size: asked whether "I don't want a
+  constant text size" means a quick Ctrl + / Ctrl − zoom; building that with the setting beside it.
+- **Wrap-up and gaps:** an optional end-of-day wrap-up (off by default) that takes a short list of
+  next things, shared with the "Where was I?" card; weekdays with nothing logged get a dot on the ribbon.
+- **First-run screens:** restyle setup, unlock and the recovery key in the paper look, after the
+  sign-up size fix (PR #7) lands.
+- **Small fixes:** time buttons on the keyboard-selected entry, a This week button on the Timesheet,
+  Tab stays inside capture and the details panel, plainer names. Shortcuts: holding Ctrl shows an
+  overlay of every shortcut (not a ? key), with a subtle hint about it inside the app.
+
 ## Round 6 — 15 Oct 2026
 - **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
   Desk (paste a ticket, press 15m/30m/1h) or via capture; the Timesheet view lists, per day, the
