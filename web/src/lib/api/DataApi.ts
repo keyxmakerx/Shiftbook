@@ -41,6 +41,12 @@ export interface Prefs {
   groupBy: GroupBy;
   comment: CommentFormat;
   autoLockMinutes: number;
+  /** Daily target in minutes, Monday first (seven numbers). */
+  dayTargets: number[];
+  /** Text size in percent: 90, 100, 115 or 130. */
+  textSize: number;
+  /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
+  wrapupAt: string | null;
 }
 
 /** Setting keys `savePref` accepts (see `shiftbook_core::prefs`). */
@@ -51,7 +57,10 @@ export type PrefKey =
   | 'timesheet.group_by'
   | 'timesheet.comment_tickets'
   | 'timesheet.comment_separator'
-  | 'security.auto_lock_minutes';
+  | 'security.auto_lock_minutes'
+  | 'day.targets'
+  | 'ui.text_size'
+  | 'day.wrapup_at';
 
 export interface Project {
   id: string;
@@ -142,6 +151,8 @@ export interface RibbonDay {
   hours: string;
   parts: DayPart[];
   future: boolean;
+  /** Nothing logged on a day that has a target. */
+  gap: boolean;
 }
 
 export interface RibbonWeek {
@@ -267,6 +278,14 @@ export interface InboxItem {
   id: string;
   text: string;
   createdAt: string;
+}
+
+/** What Find turned up, best first. */
+export interface SearchResult {
+  entries: Entry[];
+  inbox: InboxItem[];
+  /** Indexes into the command names passed to `search`. */
+  commands: number[];
 }
 
 /** Mirrors `CommandError` in apps/desktop/src-tauri/src/session.rs, plus `unknown`. */
@@ -412,4 +431,8 @@ export interface DataApi {
   listInbox(): Promise<InboxItem[]>;
   addInbox(text: string): Promise<InboxItem>;
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
+
+  // ----- find -----
+  /** Entries, Inbox scraps and the given command names that match `query`. */
+  search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult>;
 }

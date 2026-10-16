@@ -6,7 +6,7 @@
   import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, protection, protectNow } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, projectColor, refresh, selectDay, setView } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import type { View } from '../lib/keys';
   import Icon from './Icon.svelte';
@@ -106,9 +106,10 @@
     });
   }
 
-  function openDay(date: string) {
+  function openDay(date: string, gap = false) {
     setView('desk');
-    void selectDay(date);
+    // A day with nothing logged opens with Log work ready to type into.
+    void selectDay(date).then(() => gap && focusLog());
   }
 
   async function toggleProtection() {
@@ -165,10 +166,11 @@
             class:now={day.date === app.today}
             class:on={day.date === app.selected}
             class:future={day.future}
+            class:gap={day.gap}
             disabled={day.future}
-            title="{longDay(day.date)} · {day.hours} h{day.future ? '' : ' · right-click for options'}"
-            aria-label="{longDay(day.date)}, {day.hours} hours"
-            onclick={() => openDay(day.date)}
+            title="{longDay(day.date)} · {day.gap ? 'nothing logged yet, click to log' : `${day.hours} h`}{day.future ? '' : ' · right-click for options'}"
+            aria-label="{longDay(day.date)}, {day.gap ? 'nothing logged' : `${day.hours} hours`}"
+            onclick={() => openDay(day.date, day.gap)}
             use:paperMenu={() => dayMenu(day)}
           >
             <span class="bar" style:--k={w * 7 + i}>
@@ -177,6 +179,7 @@
               {/each}
             </span>
             <small>{dayOfMonth(day.date)}</small>
+            <i class="gapdot" aria-hidden="true"></i>
           </button>
         {/each}
       </div>
@@ -257,7 +260,7 @@
     display: flex;
     gap: 3px;
     align-items: flex-end;
-    height: 64px;
+    height: 70px;
     overflow-x: auto;
     scrollbar-width: none;
     padding-top: 4px;
@@ -327,6 +330,22 @@
     from {
       transform: scaleY(0);
     }
+  }
+
+  .gapdot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    margin-top: -1px;
+  }
+
+  .d.gap .gapdot {
+    background: var(--warn);
+  }
+
+  .d.gap .bar {
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent);
   }
 
   .d small {

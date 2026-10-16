@@ -24,6 +24,23 @@ pub const KEY_COMMENT_SEPARATOR: &str = "timesheet.comment_separator";
 /// Minutes without activity before the app locks (1 to 240).
 pub const KEY_AUTO_LOCK: &str = "security.auto_lock_minutes";
 
+/// Daily target per weekday for the Desk ring: seven minute counts, Monday first,
+/// comma-separated (e.g. `480,480,480,480,240,0,0`).
+pub const KEY_DAY_TARGETS: &str = "day.targets";
+/// Text size in percent: `90`, `100`, `115` or `130`.
+pub const KEY_TEXT_SIZE: &str = "ui.text_size";
+/// End-of-day wrap-up time `HH:MM` (24-hour), or blank when it's off.
+pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
+
+/// Text sizes offered, in percent of normal.
+pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
+/// Normal text size.
+pub const DEFAULT_TEXT_SIZE: u32 = 100;
+/// Default daily target: 8 hours on weekdays, nothing at the weekend.
+pub const DEFAULT_DAY_TARGETS: [u32; 7] = [480, 480, 480, 480, 480, 0, 0];
+/// Largest daily target (a whole day).
+pub const MAX_DAY_TARGET: u32 = 24 * 60;
+
 /// Default minutes before auto-lock (SPEC §2.9).
 pub const DEFAULT_AUTO_LOCK_MINUTES: u32 = 15;
 /// Largest auto-lock setting (4 hours).
@@ -95,6 +112,19 @@ pub struct Prefs {
     pub comment: CommentFormat,
     /// Minutes before auto-lock.
     pub auto_lock_minutes: u32,
+    /// Daily target in minutes, Monday first.
+    pub day_targets: [u32; 7],
+    /// Text size in percent.
+    pub text_size: u32,
+    /// Wrap-up time `HH:MM`, `None` when off.
+    pub wrapup_at: Option<String>,
+}
+
+impl Prefs {
+    /// The target for a date's weekday.
+    pub fn day_target(&self, date: time::Date) -> u32 {
+        self.day_targets[usize::from(date.weekday().number_days_from_monday())]
+    }
 }
 
 impl Default for Prefs {
@@ -106,6 +136,9 @@ impl Default for Prefs {
             group_by: GroupBy::default(),
             comment: CommentFormat::default(),
             auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
+            day_targets: DEFAULT_DAY_TARGETS,
+            text_size: DEFAULT_TEXT_SIZE,
+            wrapup_at: None,
         }
     }
 }
@@ -114,6 +147,27 @@ fn invalid(value: &str) -> CoreError {
     CoreError::SettingInvalid {
         value: preview(value, 30),
     }
+}
+
+/// Read a `day.targets` value: seven whole minute counts from 0 to a day.
+pub fn parse_day_targets(value: &str) -> Option<[u32; 7]> {
+    let parts: Vec<u32> = value
+        .split(',')
+        .map(|p| {
+            p.trim()
+                .parse::<u32>()
+                .ok()
+                .filter(|n| *n <= MAX_DAY_TARGET)
+        })
+        .collect::<Option<_>>()?;
+    parts.try_into().ok()
+}
+
+/// Read a wrap-up time `H:MM` or `HH:MM` and store it as `HH:MM`.
+fn parse_clock(value: &str) -> Option<String> {
+    let (h, m) = value.split_once(':')?;
+    let (h, m) = (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?);
+    (h < 24 && m < 60 && value.len() <= 5).then(|| format!("{h:02}:{m:02}"))
 }
 
 /// Check a preference before saving. Returns the value to store. Unknown keys
@@ -156,6 +210,20 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                 max: i64::from(MAX_AUTO_LOCK_MINUTES),
             }),
         },
+        KEY_DAY_TARGETS => parse_day_targets(v)
+            .map(|t| t.map(|n| n.to_string()).join(","))
+            .ok_or_else(|| invalid(value)),
+        KEY_TEXT_SIZE => match v.parse::<u32>() {
+            Ok(n) if TEXT_SIZES.contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
+        KEY_WRAPUP_AT => {
+            if v.is_empty() {
+                Ok(String::new())
+            } else {
+                parse_clock(v).ok_or_else(|| invalid(value))
+            }
+        }
         _ => Err(invalid(key)),
     }
 }
@@ -196,6 +264,11 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_AUTO_LOCK => {
                 prefs.auto_lock_minutes = v.parse().unwrap_or(DEFAULT_AUTO_LOCK_MINUTES)
             }
+            KEY_DAY_TARGETS => {
+                prefs.day_targets = parse_day_targets(&v).unwrap_or(DEFAULT_DAY_TARGETS)
+            }
+            KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
+            KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             _ => {}
         }
     }
@@ -280,5 +353,42 @@ mod tests {
         assert_eq!(json["groupBy"], "code");
         assert_eq!(json["comment"]["includeTickets"], true);
         assert_eq!(json["autoLockMinutes"], 15);
+        assert_eq!(json["dayTargets"][0], 480);
+        assert_eq!(json["dayTargets"][6], 0);
+        assert_eq!(json["textSize"], 100);
+        assert!(json["wrapupAt"].is_null());
+    }
+
+    #[test]
+    fn day_targets() {
+        assert_eq!(
+            validate_pref(KEY_DAY_TARGETS, " 480, 480,480,480,240,0,0 "),
+            Ok("480,480,480,480,240,0,0".into())
+        );
+        assert!(validate_pref(KEY_DAY_TARGETS, "480,480,480,480,480,0").is_err());
+        assert!(validate_pref(KEY_DAY_TARGETS, "480,480,480,480,480,0,0,0").is_err());
+        assert!(validate_pref(KEY_DAY_TARGETS, "480,480,480,480,1441,0,0").is_err());
+        assert!(validate_pref(KEY_DAY_TARGETS, "8h,480,480,480,480,0,0").is_err());
+
+        let p = prefs_from_settings(&[("day.targets", "420,420,420,420,240,0,0")]);
+        assert_eq!(p.day_target(time::macros::date!(2026 - 10 - 16)), 240); // Friday
+        assert_eq!(p.day_target(time::macros::date!(2026 - 10 - 12)), 420); // Monday
+        assert_eq!(p.day_target(time::macros::date!(2026 - 10 - 18)), 0); // Sunday
+        let broken = prefs_from_settings(&[("day.targets", "lots")]);
+        assert_eq!(broken.day_targets, DEFAULT_DAY_TARGETS);
+    }
+
+    #[test]
+    fn text_size_and_wrapup() {
+        assert_eq!(validate_pref(KEY_TEXT_SIZE, "115"), Ok("115".into()));
+        assert!(validate_pref(KEY_TEXT_SIZE, "120").is_err());
+        assert_eq!(validate_pref(KEY_WRAPUP_AT, "9:05"), Ok("09:05".into()));
+        assert_eq!(validate_pref(KEY_WRAPUP_AT, "17:00"), Ok("17:00".into()));
+        assert_eq!(validate_pref(KEY_WRAPUP_AT, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_WRAPUP_AT, "24:00").is_err());
+        assert!(validate_pref(KEY_WRAPUP_AT, "5pm").is_err());
+        let p = prefs_from_settings(&[("ui.text_size", "130"), ("day.wrapup_at", "17:30")]);
+        assert_eq!(p.text_size, 130);
+        assert_eq!(p.wrapup_at.as_deref(), Some("17:30"));
     }
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
   // The Desk: today's card (date, hours ring, week total, Log work, entries) beside the
   // Done tickets tray and the Inbox.
-  import { fmtHours, longDay, relativeDay } from '../lib/format';
+  import { fmtHours, fromIso, longDay, relativeDay, weekdayLong } from '../lib/format';
   import { countTo } from '../lib/motion';
   import { app, ribbonDay, ribbonWeekOf } from '../lib/store.svelte';
   import EntryRow from '../components/EntryRow.svelte';
@@ -10,7 +10,9 @@
   import TrayCard from '../components/TrayCard.svelte';
 
   const RING = 119.4;
-  const DAY_TARGET = 480;
+
+  // The day's target from Customize → Look (Monday first); 8 h until it's set.
+  const target = $derived(app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7] ?? 480);
 
   const dayMinutes = $derived(ribbonDay(app.selected)?.minutes ?? 0);
   const weekMinutes = $derived(ribbonWeekOf(app.selected)?.minutes ?? 0);
@@ -44,7 +46,7 @@
         <span class="lbl">{relativeDay(app.selected, app.today)}</span>
         <h1>{longDay(app.selected)}</h1>
       </div>
-      <div class="ring" title="{fmtHours(dayMinutes)} of 8 hours">
+      <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
         <svg viewBox="0 0 46 46" aria-hidden="true">
           <circle class="track" cx="23" cy="23" r="19" />
           <circle
@@ -53,10 +55,10 @@
             cy="23"
             r="19"
             stroke-dasharray={RING}
-            stroke-dashoffset={RING * (1 - Math.min(shownDay / DAY_TARGET, 1))}
+            stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
           />
         </svg>
-        <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">of 8 h</span></div>
+        <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
       </div>
       <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
     </div>

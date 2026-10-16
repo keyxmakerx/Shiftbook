@@ -4,11 +4,12 @@
   // toast). Also the keyboard shortcuts and the copy guard.
   import { onMount } from 'svelte';
   import { errorMessage } from '../lib/messages';
-  import { shortcutFor, VIEWS, type View } from '../lib/keys';
+  import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
-  import { app, focusLog, loadAll, setView } from '../lib/store.svelte';
+  import { app, focusLog, loadAll, savePref, setView } from '../lib/store.svelte';
+  import { toast } from '../lib/toast.svelte';
   import Capture from '../components/Capture.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
@@ -81,6 +82,14 @@
         if (menuOpen() || app.captureOpen) return;
         setView(s.view);
         break;
+      case 'zoom': {
+        event.preventDefault();
+        const size = nextTextSize(app.prefs?.textSize ?? 100, s.step);
+        if (size !== app.prefs?.textSize) {
+          void savePref('ui.text_size', String(size)).then((p) => p && toast(`Text size ${size}%`));
+        }
+        break;
+      }
       case 'menu-key':
         // Elements with a paper menu handle the Menu key themselves.
         break;
@@ -113,7 +122,7 @@
   </main>
 </div>
 
-<Capture />
+<Capture {onLock} />
 <Drawer />
 <PaperMenu />
 <Toast />

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shortcutFor, startsHold, type KeyInfo } from './keys';
+import { nextTextSize, shortcutFor, startsHold, type KeyInfo } from './keys';
 
 function key(k: string, extra: Partial<KeyInfo> = {}): KeyInfo {
   return { key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, typing: false, ...extra };
@@ -39,5 +39,23 @@ describe('startsHold', () => {
   it('not with other modifiers or keys', () => {
     expect(startsHold({ key: 'Control', altKey: false, shiftKey: true })).toBe(false);
     expect(startsHold({ key: 'l', altKey: false, shiftKey: false })).toBe(false);
+  });
+});
+
+describe('text size', () => {
+  it('Ctrl + − 0 change it, even while typing', () => {
+    expect(shortcutFor(key('=', { ctrlKey: true, typing: true }))).toEqual({ kind: 'zoom', step: 1 });
+    expect(shortcutFor(key('+', { metaKey: true }))).toEqual({ kind: 'zoom', step: 1 });
+    expect(shortcutFor(key('-', { ctrlKey: true }))).toEqual({ kind: 'zoom', step: -1 });
+    expect(shortcutFor(key('0', { ctrlKey: true }))).toEqual({ kind: 'zoom', step: 0 });
+    expect(shortcutFor(key('0'))).toBeNull();
+  });
+  it('steps through the sizes and stops at the ends', () => {
+    expect(nextTextSize(100, 1)).toBe(115);
+    expect(nextTextSize(130, 1)).toBe(130);
+    expect(nextTextSize(100, -1)).toBe(90);
+    expect(nextTextSize(90, -1)).toBe(90);
+    expect(nextTextSize(115, 0)).toBe(100);
+    expect(nextTextSize(105, 1)).toBe(130);
   });
 });

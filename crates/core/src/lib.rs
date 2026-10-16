@@ -19,6 +19,7 @@ pub mod project;
 pub mod quicklog;
 pub mod recurring;
 pub mod ribbon;
+pub mod search;
 pub mod seed;
 pub mod sheet;
 pub mod task;

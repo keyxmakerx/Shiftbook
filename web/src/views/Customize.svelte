@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize: Look, Projects, Timesheet, Fields and Security in one place.
+  // Customize: Look, Your day, Projects, Timesheet, Fields and Security in one place.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
   import Fields from './customize/Fields.svelte';
@@ -7,10 +7,12 @@
   import Projects from './customize/Projects.svelte';
   import Security from './customize/Security.svelte';
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
+  import YourDay from './customize/YourDay.svelte';
 
-  type Section = 'look' | 'projects' | 'timesheet' | 'fields' | 'security';
+  type Section = 'look' | 'day' | 'projects' | 'timesheet' | 'fields' | 'security';
   const SECTIONS: { id: Section; label: string; icon: IconName }[] = [
     { id: 'look', label: 'Look', icon: 'palette' },
+    { id: 'day', label: 'Your day', icon: 'clock' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
     { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
     { id: 'fields', label: 'Fields', icon: 'sliders' },
@@ -34,6 +36,8 @@
       <div class="sec rise">
         {#if section === 'look'}
           <Look />
+        {:else if section === 'day'}
+          <YourDay />
         {:else if section === 'projects'}
           <Projects />
         {:else if section === 'timesheet'}

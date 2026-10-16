@@ -179,6 +179,7 @@ pub fn run() {
             api::list_custom_values,
             api::set_custom_value,
             api::list_inbox,
+            api::search,
             api::add_inbox,
             api::set_inbox_deleted,
         ])

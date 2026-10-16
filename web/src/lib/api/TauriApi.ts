@@ -16,6 +16,7 @@ import type {
   FieldInput,
   GroupBy,
   InboxItem,
+  SearchResult,
   IsoDate,
   PrefKey,
   Prefs,
@@ -194,5 +195,9 @@ export class TauriApi implements DataApi {
   }
   setInboxDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_inbox_deleted', { id, deleted });
+  }
+
+  search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {
+    return call('search', { query, today, commands });
   }
 }

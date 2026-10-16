@@ -52,6 +52,7 @@
     "allow-list-custom-values",
     "allow-set-custom-value",
     "allow-list-inbox",
+    "allow-search",
     "allow-add-inbox",
     "allow-set-inbox-deleted"
   ]

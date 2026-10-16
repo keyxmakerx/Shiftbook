@@ -2,10 +2,12 @@
   // Customize → Look: theme, motion, accent and project colours. Changes show at once.
   import { api } from '../../lib/api';
   import type { PrefKey, Project } from '../../lib/api';
+  import { TEXT_SIZES } from '../../lib/keys';
   import { ACCENTS, SWATCHES } from '../../lib/palette';
   import { app, applyPrefs, attempt, refreshProjects } from '../../lib/store.svelte';
 
   const prefs = $derived(app.prefs);
+  const SIZE_NAMES: Record<number, string> = { 90: 'Small', 100: 'Normal', 115: 'Large', 130: 'Larger' };
 
   async function set(key: PrefKey, value: string) {
     const p = await attempt(() => api.savePref(key, value));
@@ -46,6 +48,18 @@
       <button type="button" aria-pressed={prefs.motion === 'still'} onclick={() => set('ui.motion', 'still')}>Still</button>
       <button type="button" aria-pressed={prefs.motion === 'calm'} onclick={() => set('ui.motion', 'calm')}>Calm</button>
       <button type="button" aria-pressed={prefs.motion === 'lively'} onclick={() => set('ui.motion', 'lively')}>Lively</button>
+    </div>
+  </article>
+
+  <article class="paper cz-card">
+    <h3>Text size</h3>
+    <p class="sub">Change it any time with <span class="kbd">Ctrl +</span> and <span class="kbd">Ctrl −</span>; <span class="kbd">Ctrl 0</span> goes back to normal.</p>
+    <div class="seg" role="group" aria-label="Text size">
+      {#each TEXT_SIZES as size (size)}
+        <button type="button" aria-pressed={prefs.textSize === size} onclick={() => set('ui.text_size', String(size))}>
+          {SIZE_NAMES[size]}
+        </button>
+      {/each}
     </div>
   </article>
 

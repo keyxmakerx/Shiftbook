@@ -49,6 +49,7 @@ fn main() {
             "list_custom_values",
             "set_custom_value",
             "list_inbox",
+            "search",
             "add_inbox",
             "set_inbox_deleted",
         ]),
