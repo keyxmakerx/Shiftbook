@@ -17,7 +17,8 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
 - **Meetings:** the first design (topic rail plus results panel) and the second (running log,
   outline, topic cards) were rejected. Direction: a canvas-style page like OneNote, but not the
-  round 3 mind map; four variants are on r7-meeting v3. Kept throughout: `#` topics, `[]` `!` `?`
+  round 3 mind map. The four canvas variants (v3) didn't land either; v4 lets the owner mix
+  five choices (topic look, where you type, going back, making tasks, results) instead. Kept throughout: `#` topics, `[]` `!` `?`
   marks, an optional agenda written beforehand, one-click time log on wrap up.
 
 ## Round 6 — 15 Oct 2026

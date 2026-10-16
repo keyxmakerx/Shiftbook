@@ -7,63 +7,132 @@
       "round": 7,
       "order": 130,
       "area": "Notes",
-      "version": 3,
-      "title": "Meetings, take three: a OneNote-style page",
+      "version": 4,
+      "title": "Meetings: build your own, one piece at a time",
       "body": [
-        "You said topic cards reminded you of OneNote, and asked for canvas ideas that aren't the mind map from round 3. The difference: a mind map shows what belongs to what, with lines you draw. These are just a page you write on, where *where you put things* is how you find them again, the way OneNote pages work.",
-        "Four ways to do it, all on the same meeting. Each one keeps `#name` to jump or start a topic, the `[]` `!` `?` marks, the optional agenda you said yes to, and the time log on wrap up. New in all four: **drag any line** onto another box to move it, or onto **Actions** to make it a task."
+        "That's fine, it's hard to judge a whole design at once. So instead of more complete designs, this card splits a meeting page into five choices and lets you mix them. The page underneath changes as you click, and you can type into it to try each mix.",
+        "Two of the looks are new: **tabs across the top**, like OneNote's section tabs, and **columns side by side**. The right-click menu and the \"recent\" strip are new too. Everything else comes from the earlier tries, so you can rebuild any of them or something none of them had."
       ],
       "bullets": [
-        "**1 · Free page:** click anywhere empty to start a box and type, drag boxes by their title. Closest to OneNote.",
-        "**2 · Page with a trail:** the same, plus a numbered dashed path showing the order the conversation went, and a row of buttons to jump back along it.",
-        "**3 · Agenda zones:** the agenda you write beforehand is laid out as boxes, with a Parking lot for things that come up.",
-        "**4 · Zoom board:** see every topic small, click one to glide in, Esc to glide out.",
-        "More ideas that work with any of them: a **Tidy up** button that lines the boxes up neatly afterwards; a weekly meeting that **reuses last week's page** with open items left in their boxes; and dropping the finished page onto the **Canvas** as one card linked to its tasks."
+        "Whatever you pick, `#name` still jumps to a topic or starts one, the `[]` `!` `?` marks still work, and wrap up still offers to log the time.",
+        "If nothing clicks, that's an answer too. I can build Notes first with a plain meeting note, you use it in a real meeting, and we shape it from what bugs you."
       ],
       "figures": [
         {
-          "html_file": "mocks/r07-meeting3.html",
-          "height": 720,
-          "caption": "Live: switch between 1–4. In 1 and 2, click an empty spot to start a box, drag boxes by their title, and drag a line onto Actions. In 4, click a topic to zoom in."
+          "html_file": "mocks/r07-meeting4.html",
+          "height": 800,
+          "caption": "Live: click the choices A–E at the top and the meeting page below changes. Type a line and press Enter, try #patch to jump back, and right-click a line when D allows it."
         }
       ],
       "questions": [
         {
-          "id": "shape",
-          "legend": "Which is closest?",
+          "id": "look",
+          "legend": "A · Topics look like",
           "options": [
             {
-              "value": "1 · Free page",
-              "why": "Most like OneNote."
+              "value": "Tabs, like OneNote sections",
+              "rec": true
             },
             {
-              "value": "1 with the trail from 2 as a switch",
-              "rec": true,
-              "why": "OneNote freedom, plus a way back when you lose your place."
+              "value": "Headings on one page"
             },
             {
-              "value": "3 · Agenda zones"
+              "value": "Boxes on a page"
             },
             {
-              "value": "4 · Zoom board"
+              "value": "Columns side by side"
             },
             {
-              "value": "Still not it (say below)"
+              "value": "Not sure yet"
             }
           ]
         },
         {
-          "id": "extras",
-          "legend": "Which extras? (say below)",
-          "type": "text"
+          "id": "type",
+          "legend": "B · You type",
+          "options": [
+            {
+              "value": "Right where the topic is",
+              "rec": true
+            },
+            {
+              "value": "In one box at the bottom"
+            },
+            {
+              "value": "Not sure yet"
+            }
+          ]
+        },
+        {
+          "id": "back",
+          "legend": "C · Going back to a topic",
+          "options": [
+            {
+              "value": "Just click it"
+            },
+            {
+              "value": "Plus a \"recent\" strip",
+              "rec": true
+            },
+            {
+              "value": "Not sure yet"
+            }
+          ]
+        },
+        {
+          "id": "act",
+          "legend": "D · Making a todo or task",
+          "options": [
+            {
+              "value": "Marks while typing only"
+            },
+            {
+              "value": "Plus right-click a line",
+              "rec": true
+            },
+            {
+              "value": "Plus drag to Actions"
+            },
+            {
+              "value": "Not sure yet"
+            }
+          ]
+        },
+        {
+          "id": "side",
+          "legend": "E · Seeing what came out",
+          "options": [
+            {
+              "value": "Only at wrap up"
+            },
+            {
+              "value": "A count at the top",
+              "rec": true
+            },
+            {
+              "value": "A list down the side"
+            },
+            {
+              "value": "Not sure yet"
+            }
+          ]
+        },
+        {
+          "id": "plan",
+          "legend": "Or…",
+          "options": [
+            {
+              "value": "Build Notes first, try meetings for real, then shape it"
+            }
+          ]
         },
         {
           "id": "notes",
-          "legend": "Anything from OneNote you'd miss? (optional)",
+          "legend": "Anything that felt wrong in any of them? (optional)",
           "type": "text"
         }
       ],
-      "pick": "1 with the trail as a switch you can turn on. It's the OneNote feel you know, and the trail helps when a meeting jumps around."
+      "pick": "Tabs with a recent strip, typing in place, right-click to make tasks, and a count at the top. If you're still unsure, build Notes first and try it in a real meeting."
     },
     "r7-notes": {
       "round": 7,
