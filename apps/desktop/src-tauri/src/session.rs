@@ -15,8 +15,8 @@ use shiftbook_core::ids::OwnerId;
 use shiftbook_storage::db::{database_path, open_encrypted};
 use shiftbook_storage::repo::SettingsRepository;
 use shiftbook_storage::{
-    create_private_dir, ExposeSecret, SecretString, SqliteStore, StorageError, Vault, VaultDir,
-    VaultError,
+    create_private_dir, delete_local_data, ExposeSecret, SecretString, SqliteStore, StorageError,
+    Vault, VaultDir, VaultError,
 };
 use tokio::sync::Mutex;
 use zeroize::Zeroizing;
@@ -356,6 +356,28 @@ impl VaultSession {
     }
 }
 
+impl VaultSession {
+    /// Delete the database and the vault so the app starts again at setup. Needs
+    /// only the typed confirmation word: it works while locked, for someone who has
+    /// lost both the password and the recovery key. Closes the database first.
+    pub async fn delete_all_data(&self, typed: &str) -> Result<(), CommandError> {
+        if !shiftbook_core::wipe::confirms_delete(typed) {
+            return Err(CommandError::InvalidInput);
+        }
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        let dir = self.data_dir()?;
+        if let Some(session) = inner.session.take() {
+            session.store.pool().close().await;
+            drop(session);
+        }
+        blocking(move || delete_local_data(&dir))
+            .await?
+            .map_err(|_| CommandError::StorageError)?;
+        inner.backoff.record_success();
+        Ok(())
+    }
+}
+
 /// Expose the recovery key text for its one trip to the WebView.
 pub fn reveal_once(key: SecretString) -> String {
     key.expose_secret().to_string()
@@ -571,6 +593,48 @@ mod tests {
                 Ok(true)
             );
             session.lock().await.unwrap();
+            session.lock().await.unwrap();
+        });
+    }
+
+    #[test]
+    fn delete_all_data_starts_again() {
+        let dir = TempDir::new("delete");
+        let session = VaultSession::new(Some(dir.0.clone()));
+        block_on(async {
+            session.setup(s("first password 1")).await.unwrap();
+            assert_eq!(
+                session.delete_all_data("yes").await,
+                Err(CommandError::InvalidInput)
+            );
+            assert_eq!(session.status().await, Ok(VaultStatus::Unlocked));
+
+            // While unlocked: closes the database, then deletes it.
+            session.delete_all_data("delete").await.unwrap();
+            assert_eq!(session.status().await, Ok(VaultStatus::NeedsSetup));
+            assert_eq!(session.data().await.err(), Some(CommandError::Locked));
+            assert!(!database_path(&dir.0).exists());
+
+            // While locked, after failed unlocks: no password needed.
+            session.setup(s("second password 2")).await.unwrap();
+            session.lock().await.unwrap();
+            assert_eq!(
+                session
+                    .unlock(s("forgotten password"), SecretKind::Password)
+                    .await,
+                Err(CommandError::UnlockFailed)
+            );
+            session.delete_all_data(" DELETE ").await.unwrap();
+            assert_eq!(session.status().await, Ok(VaultStatus::NeedsSetup));
+
+            // A fresh start opens a new, empty database.
+            session.setup(s("third password 3")).await.unwrap();
+            let (store, owner) = session.data().await.unwrap();
+            assert!(store
+                .get_setting(owner, RECOVERY_SAVED_KEY)
+                .await
+                .unwrap()
+                .is_none());
             session.lock().await.unwrap();
         });
     }

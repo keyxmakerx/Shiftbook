@@ -29,6 +29,7 @@ pub mod timesheet;
 pub mod tray;
 pub mod validate;
 pub mod week;
+pub mod wipe;
 
 pub use error::CoreError;
 pub use minutes::Minutes;
