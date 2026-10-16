@@ -48,6 +48,12 @@ export function weekdayLong(iso: string): string {
   return WEEKDAYS[fromIso(iso).getDay()] ?? '';
 }
 
+/** Saturday or Sunday. */
+export function isWeekend(iso: string): boolean {
+  const day = fromIso(iso).getDay();
+  return day === 0 || day === 6;
+}
+
 export function weekdayShort(iso: string): string {
   return weekdayLong(iso).slice(0, 3);
 }

@@ -46,8 +46,7 @@ the README for what it does.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
 - Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
-  can only be filled in on entries; the tray's roll-up entry starts with no project; the week
-  always starts on Monday (the rule supports other days, there is no setting yet); Planner and
+  can only be filled in on entries; the tray's roll-up entry starts with no project; Planner and
   Canvas keyboard shortcuts (4, 5) are not assigned.
 
 ## Phase 2 — Hosted (only if adopted by the team)

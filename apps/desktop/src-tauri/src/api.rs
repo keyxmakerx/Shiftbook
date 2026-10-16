@@ -46,8 +46,9 @@ fn opt_id<T: std::str::FromStr>(text: &Option<String>) -> Res<Option<T>> {
         .transpose()
 }
 
-fn week_start() -> WeekStart {
-    WeekStart::default()
+/// The week start day from the user's preferences.
+async fn week_start(store: &SqliteStore, owner: OwnerId) -> Res<WeekStart> {
+    Ok(store.prefs(owner).await?.week_start)
 }
 
 // ---------- views ----------
@@ -374,7 +375,7 @@ async fn one_entry(store: &SqliteStore, owner: OwnerId, rec: EntryRecord) -> Res
     Ok(entry_view(rec, &links_for(store, owner).await?))
 }
 
-fn capture_with(text: &str, today: Date, projects: &[Project]) -> Capture {
+fn capture_with(text: &str, today: Date, start: WeekStart, projects: &[Project]) -> Capture {
     let live: Vec<CaptureProject<'_>> = projects
         .iter()
         .filter(|p| !p.archived)
@@ -383,7 +384,7 @@ fn capture_with(text: &str, today: Date, projects: &[Project]) -> Capture {
             name: &p.name,
         })
         .collect();
-    parse_capture(text, today, week_start(), &live)
+    parse_capture(text, today, start, &live)
 }
 
 // ---------- preferences ----------
@@ -556,7 +557,7 @@ pub async fn quick_log(
     let (store, owner) = s.data().await?;
     let date = date_arg(&date)?;
     let projects = store.list_projects(owner).await?;
-    let capture = capture_with(&text, date, &projects);
+    let capture = capture_with(&text, date, week_start(&store, owner).await?, &projects);
     let rec = store
         .quick_log(owner, date, &capture, Minutes(minutes))
         .await?;
@@ -572,7 +573,8 @@ pub async fn parse_capture_line(
 ) -> Res<Capture> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
-    Ok(capture_with(&text, date_arg(&today)?, &projects))
+    let start = week_start(&store, owner).await?;
+    Ok(capture_with(&text, date_arg(&today)?, start, &projects))
 }
 
 /// Maps to `DataApi.captureLog()`: log a capture line (it must have hours).
@@ -584,7 +586,8 @@ pub async fn capture_log(
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
-    let capture = capture_with(&text, date_arg(&today)?, &projects);
+    let start = week_start(&store, owner).await?;
+    let capture = capture_with(&text, date_arg(&today)?, start, &projects);
     let minutes = capture.minutes.ok_or(CommandError::InvalidInput)?;
     let rec = store
         .quick_log(owner, capture.date, &capture, minutes)
@@ -649,14 +652,15 @@ pub async fn tray_restore(s: State<'_, VaultSession>, id: String) -> Res<TrayDay
 pub async fn ribbon(s: State<'_, VaultSession>, today: String) -> Res<Vec<RibbonWeek>> {
     let (store, owner) = s.data().await?;
     let today = date_arg(&today)?;
-    let (from, to) = ribbon_range(today, week_start(), RIBBON_WEEKS);
+    let start = week_start(&store, owner).await?;
+    let (from, to) = ribbon_range(today, start, RIBBON_WEEKS);
     let entries: Vec<_> = store
         .list_entries(owner, from, to)
         .await?
         .into_iter()
         .map(|r| r.entry)
         .collect();
-    Ok(build_ribbon(today, week_start(), RIBBON_WEEKS, &entries))
+    Ok(build_ribbon(today, start, RIBBON_WEEKS, &entries))
 }
 
 /// Maps to `DataApi.weekSheet()`: the crib sheet for the week containing `date`.
@@ -668,9 +672,9 @@ pub async fn week_sheet(
     group_by: Option<GroupBy>,
 ) -> Res<WeekSheet> {
     let (store, owner) = s.data().await?;
-    let start = week_of(date_arg(&date)?, week_start());
-    let today = date_arg(&today)?;
     let prefs = store.prefs(owner).await?;
+    let start = week_of(date_arg(&date)?, prefs.week_start);
+    let today = date_arg(&today)?;
     let projects = store.list_projects(owner).await?;
     let codes = store.list_timesheet_codes(owner).await?;
     let mappings = store.list_category_codes(owner).await?;
