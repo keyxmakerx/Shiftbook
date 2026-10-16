@@ -154,6 +154,71 @@
           "legend": "What to change (optional)"
         }
       ]
+    },
+    "r7-backups": {
+      "round": 7,
+      "order": 125,
+      "area": "Built",
+      "version": 1,
+      "title": "Backups: automatic, Back up now and Restore",
+      "body": [
+        "You picked backups next, so they're built. **Customize → Backups** is a new section. Shiftbook saves a backup on its own once a day when you unlock it, and keeps the last 14. **Back up now…** saves one wherever you like, such as a USB stick.",
+        "**Restore…** works on any backup in the list, or on a file you pick. First it shows what the backup holds and asks you to confirm. Your data as it is right then is saved first, so a restore can always be undone. Every backup is locked with your password, like the data itself. It's in a draft pull request, waiting for your OK."
+      ],
+      "bullets": [
+        "A backup made on this computer opens without asking for your password again.",
+        "A backup from another computer, or from before Delete all data, asks for the password or recovery key from when it was made.",
+        "Still to do later: a backup when you close Shiftbook, and choosing how many to keep."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/a37bc9b453d0bda303f2f70c5a222934",
+          "caption": "Restoring a backup from the list: what it holds, and the warning that today's data is saved first. Made-up data."
+        },
+        {
+          "src": "/_blob/82f3ff635992f52a97e9e9e725763923",
+          "caption": "Restoring a file from another computer: it asks for the password or recovery key it was made with."
+        }
+      ],
+      "questions": [
+        {
+          "id": "delete",
+          "legend": "When you use Delete all data, what should happen to your backups?",
+          "options": [
+            {
+              "value": "Keep them",
+              "rec": true,
+              "why": "A way back if you delete by mistake. They stay locked with the old password."
+            },
+            {
+              "value": "Delete them too",
+              "why": "Nothing of yours is left on this computer."
+            },
+            {
+              "value": "Ask me each time",
+              "why": "A tick box in the red Delete panel."
+            }
+          ]
+        },
+        {
+          "id": "merge",
+          "legend": "Merge backups into the app?",
+          "options": [
+            {
+              "value": "Yes, merge it",
+              "rec": true
+            },
+            {
+              "value": "Change something first"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything to change? (optional)"
+        }
+      ]
     }
   }
 }

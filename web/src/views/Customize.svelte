@@ -1,19 +1,21 @@
 <script lang="ts">
-  // Customize: Look, Projects, Timesheet, Fields and Security in one place.
+  // Customize: Look, Projects, Timesheet, Fields, Backups and Security in one place.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
+  import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
   import Projects from './customize/Projects.svelte';
   import Security from './customize/Security.svelte';
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
 
-  type Section = 'look' | 'projects' | 'timesheet' | 'fields' | 'security';
+  type Section = 'look' | 'projects' | 'timesheet' | 'fields' | 'backups' | 'security';
   const SECTIONS: { id: Section; label: string; icon: IconName }[] = [
     { id: 'look', label: 'Look', icon: 'palette' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
     { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
     { id: 'fields', label: 'Fields', icon: 'sliders' },
+    { id: 'backups', label: 'Backups', icon: 'archive' },
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
 
@@ -40,6 +42,8 @@
           <TimesheetSettings />
         {:else if section === 'fields'}
           <Fields />
+        {:else if section === 'backups'}
+          <Backups />
         {:else}
           <Security />
         {/if}

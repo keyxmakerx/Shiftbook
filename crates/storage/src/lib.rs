@@ -4,6 +4,7 @@
 //!
 //! - [`vault`]: create/unlock/change password/regenerate recovery key.
 //! - [`recovery`]: the recovery key's display and forgiving parsing.
+//! - [`backup`]: encrypted `.shiftbak` backups, the backups folder and restore.
 //! - [`db`]: open the encrypted database with the DEK and run migrations.
 //! - [`repo`]: repository traits and the SQLite implementation.
 //! - [`wipe`]: delete all local data to start again.
@@ -13,6 +14,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod backup;
 pub mod db;
 pub mod error;
 pub mod extras;

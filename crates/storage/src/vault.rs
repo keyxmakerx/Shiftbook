@@ -608,6 +608,44 @@ impl VaultDir {
     }
 }
 
+/// Which secret opens a vault copied into a backup file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SecretKind {
+    /// The master password at the time of the backup.
+    Password,
+    /// The recovery key at the time of the backup.
+    RecoveryKey,
+}
+
+impl VaultDir {
+    /// The current vault, checked and re-encoded, for copying into a backup so the
+    /// backup can be opened on another computer with the password or recovery key.
+    pub(crate) fn vault_for_backup(&self) -> Result<Vec<u8>, VaultError> {
+        self.load()?.to_json()
+    }
+
+    /// Unwrap the DEK of a vault copied into a backup. Any failure is
+    /// [`VaultError::UnlockFailed`], as for the real vault.
+    pub(crate) fn unlock_copied_vault(
+        &self,
+        vault_json: &[u8],
+        secret: &SecretString,
+        kind: SecretKind,
+    ) -> Result<Dek, VaultError> {
+        let data = VaultData::parse(vault_json, self.policy)?;
+        match kind {
+            SecretKind::Password => {
+                unwrap_dek(&data, secret.expose_secret().as_bytes(), Purpose::Password)
+            }
+            SecretKind::RecoveryKey => {
+                let key =
+                    RecoveryKey::parse(secret.expose_secret()).ok_or(VaultError::UnlockFailed)?;
+                unwrap_dek(&data, key.as_bytes(), Purpose::Recovery)
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

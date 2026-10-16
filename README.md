@@ -37,7 +37,8 @@ The alpha is a working app you can use day to day for logging time:
 - **Customize:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
-  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Security.
+  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
+  (Back up now, the daily automatic backups, Restore from a backup or a file), Security.
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
@@ -46,7 +47,7 @@ The alpha is a working app you can use day to day for logging time:
   menus, capture and the drawer.
 
 Not in the alpha yet: Planner, Canvas, notes and the notes map, a global (outside the app)
-capture shortcut, backups/export/import, the picture editor, bundled fonts and signed installers.
+capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 
 ## Development
