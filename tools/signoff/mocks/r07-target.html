@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--mut2:#565e67;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--bad:#c2412d;--none:#8a919a;--none2:#6c737c;
+--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,'Times New Roman',serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:720px){.pair{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tag{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.tag.new{color:var(--ok)}
+.why{font-size:12.5px;color:var(--ink2);margin:0}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:14px 16px;position:relative}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.in{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.text-in{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:8px 10px;font:inherit;color:inherit;min-width:0;flex:1 1 150px;outline:0}
+.text-in:focus{box-shadow:0 0 0 2px var(--accent)}
+.hbtn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:7px 10px;font:700 12.5px var(--mono);color:var(--ink);cursor:pointer}
+.hbtn.hot{background:var(--ink);color:var(--paper)}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 11.5px var(--mono);padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--c,var(--accent)) 15%,transparent);color:color-mix(in srgb,var(--c,var(--accent)) 78%,var(--ink));white-space:nowrap}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 12px;font:600 13px var(--ui);color:var(--ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.kbd{font:500 10.5px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink2)}
+.toast{background:var(--ink);color:var(--paper);border-radius:9px;padding:8px 12px;font-size:13px;display:inline-block}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-radius:6px;border-left:3px solid var(--c,var(--none))}
+.row .h{font:700 14px var(--mono)}
+.row b{display:block;font-weight:600}
+.row small{color:var(--mut)}
+.note{font-size:12px;color:var(--mut);margin:0}
+.bad{outline:2px dashed var(--bad);outline-offset:3px;border-radius:6px}
+.callout{font-size:12px;color:var(--bad);font-weight:600}
+.good{outline:2px dashed var(--ok);outline-offset:3px;border-radius:6px}
+.callout.ok{color:var(--ok)}
+</style></head><body><div class="pair"><div class="side"><span class="tag">Today</span><p class="why">The ring always measures against 8 hours.</p><div class="paper"><span class="lbl">Friday</span><div style="font:650 26px/1.1 var(--display);margin:2px 0 10px">17 October</div><div style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 46 46" width="56" height="56" style="transform:rotate(-90deg)"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(29,33,38,.1)" stroke-width="6"/><circle cx="23" cy="23" r="19" fill="none" stroke="var(--ok)" stroke-width="6" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="59.7"/></svg><div><div style="font:700 28px var(--mono)">4 h</div><span class="lbl">of 8 h</span></div></div><p class="callout" style="margin-top:8px">A short Friday always looks half done.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)"><p style="margin:0;color:var(--mut);font-size:11px">HINT TEXT · 4.1 to 1 on the desk</p><p style="margin:4px 0 0;color:var(--none);font-size:12px">No project</p></div><p class="note" style="margin-top:8px">Undo toast: gone after about 5 seconds.</p></div></div><div class="side"><span class="tag new">Proposed</span><p class="why">Your own target per weekday, a text size choice, and a slightly darker hint grey.</p><div class="paper"><span class="lbl">Friday</span><div style="font:650 26px/1.1 var(--display);margin:2px 0 10px">17 October</div><div style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 46 46" width="56" height="56" style="transform:rotate(-90deg)"><circle cx="23" cy="23" r="19" fill="none" stroke="rgba(29,33,38,.1)" stroke-width="6"/><circle cx="23" cy="23" r="19" fill="none" stroke="var(--ok)" stroke-width="6" stroke-linecap="round" stroke-dasharray="119.4" stroke-dashoffset="0.0"/></svg><div><div style="font:700 28px var(--mono)">4 h</div><span class="lbl">of 4 h · Friday target</span></div></div><p class="note" style="margin-top:8px;color:var(--ok);font-weight:600">Ring closed. Target set per weekday in Customize.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--rule)"><p style="margin:0;color:var(--mut2);font-size:12px">HINT TEXT · darker, easy to read</p><p style="margin:4px 0 0;color:var(--none2);font-size:13px">No project</p></div><div style="margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span class="lbl">Text size</span><span style="display:inline-flex;background:color-mix(in srgb,var(--ink) 7%,transparent);border-radius:8px;padding:2px"><span style="padding:4px 10px;font-size:12px;color:var(--ink2)">Small</span><span style="padding:4px 10px;background:var(--paper);border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.15);font-weight:600">Normal</span><span style="padding:4px 10px;font-size:16px;color:var(--ink2)">Large</span></span></div><div style="margin-top:12px"><span class="toast">Entry deleted <b style="color:#8ea6ee;margin-left:10px">Undo</b> <span style="opacity:.6;margin-left:8px;font-size:11px">stays 10 s</span></span></div></div></div></div><script>;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()</script></body></html>

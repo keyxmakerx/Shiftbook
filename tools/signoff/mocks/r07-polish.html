@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--mut2:#565e67;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--bad:#c2412d;--none:#8a919a;--none2:#6c737c;
+--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,'Times New Roman',serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:720px){.pair{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tag{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.tag.new{color:var(--ok)}
+.why{font-size:12.5px;color:var(--ink2);margin:0}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:14px 16px;position:relative}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.in{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.text-in{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:8px 10px;font:inherit;color:inherit;min-width:0;flex:1 1 150px;outline:0}
+.text-in:focus{box-shadow:0 0 0 2px var(--accent)}
+.hbtn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:7px 10px;font:700 12.5px var(--mono);color:var(--ink);cursor:pointer}
+.hbtn.hot{background:var(--ink);color:var(--paper)}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 11.5px var(--mono);padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--c,var(--accent)) 15%,transparent);color:color-mix(in srgb,var(--c,var(--accent)) 78%,var(--ink));white-space:nowrap}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 12px;font:600 13px var(--ui);color:var(--ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.kbd{font:500 10.5px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink2)}
+.toast{background:var(--ink);color:var(--paper);border-radius:9px;padding:8px 12px;font-size:13px;display:inline-block}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-radius:6px;border-left:3px solid var(--c,var(--none))}
+.row .h{font:700 14px var(--mono)}
+.row b{display:block;font-weight:600}
+.row small{color:var(--mut)}
+.note{font-size:12px;color:var(--mut);margin:0}
+.bad{outline:2px dashed var(--bad);outline-offset:3px;border-radius:6px}
+.callout{font-size:12px;color:var(--bad);font-weight:600}
+.good{outline:2px dashed var(--ok);outline-offset:3px;border-radius:6px}
+.callout.ok{color:var(--ok)}
+</style></head><body><div class="pair"><div class="side"><span class="tag">Today</span><p class="why">Hidden buttons and no shortcut list.</p><div class="paper"><div class="row" style="--c:var(--coral);outline:2px solid var(--accent)"><span class="h">1.5</span><span><b>Printer on 2nd floor</b><small>Support</small></span><span></span></div><p class="callout" style="margin-top:8px">Selected with the keyboard: the +15m / +30m / +1h buttons stay hidden until you hover with a mouse.</p><p class="note" style="margin-top:10px">No list of shortcuts anywhere in the app.</p></div></div><div class="side"><span class="tag new">Proposed</span><p class="why">Buttons show on the selected row; ? opens the shortcut sheet.</p><div class="paper"><div class="row" style="--c:var(--coral);outline:2px solid var(--accent)"><span class="h">1.5</span><span><b>Printer on 2nd floor</b><small>Support</small></span><span style="display:flex;gap:4px"><button class="hbtn" style="padding:3px 7px">+15m</button><button class="hbtn" style="padding:3px 7px">+30m</button><button class="hbtn" style="padding:3px 7px">+1h</button></span></div><div class="paper" style="margin-top:12px;box-shadow:0 2px 4px rgba(29,33,38,.08),0 22px 40px -18px rgba(29,33,38,.45),inset 0 0 0 1px var(--rule)"><b style="font:650 17px var(--display)">Keyboard shortcuts</b><span class="note" style="float:right">press <span class="kbd">?</span></span><div style="display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin-top:10px;font-size:13px"><span class="kbd">N</span><span>Log work</span><span class="kbd">Ctrl Space</span><span>Capture and find</span><span class="kbd">1 2 3</span><span>Desk, Timesheet, Customize</span><span class="kbd">↑ ↓</span><span>Move between entries</span><span class="kbd">Ctrl L</span><span>Lock</span><span class="kbd">Esc</span><span>Close</span></div></div></div></div><script>;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()</script></body></html>
