@@ -1,5 +1,6 @@
 <script lang="ts">
-  // Customize → Security: change password, auto-lock time and a new recovery key.
+  // Customize → Security: change password, auto-lock time, a new recovery key and deleting
+  // all data.
   import { api } from '../../lib/api';
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';
   import { errorMessage } from '../../lib/messages';
@@ -7,6 +8,7 @@
   import { app, attempt } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ChangePassword from '../../components/ChangePassword.svelte';
+  import DeleteAllData from '../../components/DeleteAllData.svelte';
 
   let changing = $state(false);
   let minutes = $state(app.prefs?.autoLockMinutes ?? 15);
@@ -16,6 +18,7 @@
   // Held only until "I saved it" is pressed.
   let newKey = $state<string | null>(null);
   let copied = $state(false);
+  let deleting = $state(false);
 
   async function saveMinutes() {
     const p = await attempt(() => api.savePref('security.auto_lock_minutes', String(minutes)));
@@ -109,6 +112,16 @@
       </button>
     </form>
     {#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
+  {/if}
+</article>
+
+<article class="paper cz-card">
+  {#if deleting}
+    <DeleteAllData onCancel={() => (deleting = false)} />
+  {:else}
+    <h3>Delete all data</h3>
+    <p class="sub">Remove everything Shiftbook keeps on this computer and start again. This can't be undone.</p>
+    <div><button class="btn danger" type="button" onclick={() => (deleting = true)}>Delete all data…</button></div>
   {/if}
 </article>
 

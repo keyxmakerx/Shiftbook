@@ -115,7 +115,8 @@ are updated by the OS, not shipped by us; users should keep their OS updated.
 7. Lock: close the pool, zeroize the DEK, reload the WebView so decrypted state is gone. Idle
    auto-lock and lock on OS sleep/lock.
 8. Unlock is one command; the password never returns to JS; one generic "Couldn't unlock" message;
-   back-off is kept in memory (it is UX only; Argon2 cost is the real defence); never wipe data.
+   back-off is kept in memory (it is UX only; Argon2 cost is the real defence); never wipe data
+   after failed attempts (deleting everything is only ever the user's own typed choice).
 9. Recovery key shown once with a retype check of a few words; no automatic copy; if copied, warn
    that clipboard history/sync may keep it, and clear the clipboard after 60 s.
 10. CI on all three OSes proves the database cannot be opened without the key, and opens after a
@@ -176,3 +177,13 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
 - **New commands** each have their own permission; errors stay short codes. The capability still
   grants no plugins.
+- **Delete all data** (`delete_all_data`, Customize → Security and the unlock screen's recovery-key
+  mode): needs the typed word `DELETE`, checked in `shiftbook_core::wipe` (the page only uses it to
+  enable the button). It needs no password, so it works for someone who lost both the password
+  and the recovery key; anyone at the computer could delete the files by hand anyway. The command
+  closes the database, then deletes `shiftbook.db` and its side files, leftover vault temp files,
+  `vault.json.prev` and last `vault.json` (so a failure part-way still leaves the unlock screen).
+  Files are unlinked, not overwritten: SSDs make overwriting unreliable, and once the vault is
+  gone the database key is gone, so recovered database blocks can't be read. An old copy of
+  `vault.json` in a user's own file backup, together with recovered database blocks and the
+  password of that time, would still open them (see "Old copies of `vault.json`" above).

@@ -6,6 +6,7 @@
 //! - [`recovery`]: the recovery key's display and forgiving parsing.
 //! - [`db`]: open the encrypted database with the DEK and run migrations.
 //! - [`repo`]: repository traits and the SQLite implementation.
+//! - [`wipe`]: delete all local data to start again.
 //!
 //! Secrets live only in `secrecy`/`zeroize` types and never implement `Debug`
 //! or `Serialize`.
@@ -20,6 +21,7 @@ pub mod hex;
 pub mod recovery;
 pub mod repo;
 pub mod vault;
+pub mod wipe;
 pub mod work;
 
 pub use error::StorageError;
@@ -27,6 +29,7 @@ pub use fsutil::create_private_dir;
 pub use recovery::RecoveryKey;
 pub use repo::SqliteStore;
 pub use vault::{Dek, Vault, VaultDir, VaultError};
+pub use wipe::delete_local_data;
 
 /// The secret string type used for passwords and typed recovery keys.
 pub use secrecy::{ExposeSecret, SecretString};
