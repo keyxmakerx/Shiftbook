@@ -14,6 +14,7 @@ pub mod hours;
 pub mod ids;
 pub mod minutes;
 pub mod model;
+pub mod nextup;
 pub mod prefs;
 pub mod project;
 pub mod quicklog;

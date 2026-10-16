@@ -40,6 +40,8 @@ export const app = $state({
   captureOpen: false,
   /** Bumped to ask Log work to take focus, with optional text to put in it. */
   logFocus: { serial: 0, text: '' },
+  /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
+  wrapupClosed: '',
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
 });

@@ -283,6 +283,13 @@ export interface InboxItem {
   createdAt: string;
 }
 
+/** One thing on the "next up" list (written at the wrap-up, shown by "Where was I?"). */
+export interface NextUpItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
 /** What Find turned up, best first. */
 export interface SearchResult {
   entries: Entry[];
@@ -434,6 +441,13 @@ export interface DataApi {
   listInbox(): Promise<InboxItem[]>;
   addInbox(text: string): Promise<InboxItem>;
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
+
+  // ----- next up -----
+  /** The "next up" list, in order. */
+  nextUp(): Promise<NextUpItem[]>;
+  /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
+  setNextUp(items: string[]): Promise<NextUpItem[]>;
+  tickNextUp(id: string, done: boolean): Promise<void>;
 
   // ----- find -----
   /** Entries, Inbox scraps and the given command names that match `query`. */

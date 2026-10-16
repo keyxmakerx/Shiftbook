@@ -8,10 +8,11 @@
   import InboxCard from '../components/InboxCard.svelte';
   import LogWork from '../components/LogWork.svelte';
   import TrayCard from '../components/TrayCard.svelte';
+  import WrapUp from '../components/WrapUp.svelte';
 
   const RING = 119.4;
 
-  // The day's target from Customize → Look (Monday first); 8 h until it's set.
+  // The day's target from Customize → Your day (Monday first); 8 h until it's set.
   const target = $derived(app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7] ?? 480);
 
   const dayMinutes = $derived(ribbonDay(app.selected)?.minutes ?? 0);
@@ -78,6 +79,7 @@
   </article>
 
   <div class="side">
+    <WrapUp />
     <div class="rise" style:--i={1}><TrayCard /></div>
     <div class="rise" style:--i={2}><InboxCard /></div>
   </div>

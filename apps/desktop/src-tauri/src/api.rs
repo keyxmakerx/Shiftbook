@@ -10,8 +10,8 @@ use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date}
 use shiftbook_core::fields::{build_link, ticket_matches_prefix, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    CustomFieldId, InboxItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
-    TrayItemId,
+    CustomFieldId, InboxItemId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId,
+    TimesheetCodeId, TrayItemId,
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
@@ -219,6 +219,15 @@ pub struct InboxView {
     id: InboxItemId,
     text: String,
     created_at: String,
+}
+
+/// One thing on the "next up" list.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NextUpView {
+    id: NextUpItemId,
+    text: String,
+    done: bool,
 }
 
 /// What `unlock` tells the UI.
@@ -1024,6 +1033,40 @@ pub async fn set_inbox_deleted(s: State<'_, VaultSession>, id: String, deleted: 
     Ok(store
         .set_inbox_deleted(owner, id_arg(&id)?, deleted)
         .await?)
+}
+
+// ---------- next up ----------
+
+fn next_up_views(items: Vec<shiftbook_core::model::NextUpItem>) -> Vec<NextUpView> {
+    items
+        .into_iter()
+        .map(|i| NextUpView {
+            id: i.id,
+            text: i.text,
+            done: i.done_at.is_some(),
+        })
+        .collect()
+}
+
+/// Maps to `DataApi.nextUp()`.
+#[tauri::command]
+pub async fn next_up(s: State<'_, VaultSession>) -> Res<Vec<NextUpView>> {
+    let (store, owner) = s.data().await?;
+    Ok(next_up_views(store.next_up(owner).await?))
+}
+
+/// Maps to `DataApi.setNextUp()`: replace the list (an empty list clears it).
+#[tauri::command]
+pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<Vec<NextUpView>> {
+    let (store, owner) = s.data().await?;
+    Ok(next_up_views(store.set_next_up(owner, &items).await?))
+}
+
+/// Maps to `DataApi.tickNextUp()`.
+#[tauri::command]
+pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.tick_next_up(owner, id_arg(&id)?, done).await?)
 }
 
 #[cfg(test)]

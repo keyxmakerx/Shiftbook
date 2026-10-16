@@ -52,6 +52,9 @@ fn main() {
             "search",
             "add_inbox",
             "set_inbox_deleted",
+            "next_up",
+            "set_next_up",
+            "tick_next_up",
         ]),
     ))
     .expect("failed to run tauri-build");

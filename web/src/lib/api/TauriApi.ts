@@ -16,6 +16,7 @@ import type {
   FieldInput,
   GroupBy,
   InboxItem,
+  NextUpItem,
   SearchResult,
   IsoDate,
   PrefKey,
@@ -195,6 +196,16 @@ export class TauriApi implements DataApi {
   }
   setInboxDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_inbox_deleted', { id, deleted });
+  }
+
+  nextUp(): Promise<NextUpItem[]> {
+    return call('next_up');
+  }
+  setNextUp(items: string[]): Promise<NextUpItem[]> {
+    return call('set_next_up', { items });
+  }
+  tickNextUp(id: string, done: boolean): Promise<void> {
+    return call('tick_next_up', { id, done });
   }
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {

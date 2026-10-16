@@ -54,6 +54,9 @@
     "allow-list-inbox",
     "allow-search",
     "allow-add-inbox",
-    "allow-set-inbox-deleted"
+    "allow-set-inbox-deleted",
+    "allow-next-up",
+    "allow-set-next-up",
+    "allow-tick-next-up"
   ]
 }

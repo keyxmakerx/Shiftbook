@@ -182,6 +182,9 @@ pub fn run() {
             api::search,
             api::add_inbox,
             api::set_inbox_deleted,
+            api::next_up,
+            api::set_next_up,
+            api::tick_next_up,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Shiftbook");

@@ -583,3 +583,49 @@ fn inbox_and_prefs() {
         assert_eq!(s.prefs(other).await.unwrap().theme, Theme::System);
     });
 }
+
+#[test]
+fn next_up_list() {
+    let dir = TestDir::new("nextup");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        assert!(s.next_up(me).await.unwrap().is_empty());
+        let lines = |v: &[&str]| v.iter().map(|l| l.to_string()).collect::<Vec<_>>();
+        let list = s
+            .set_next_up(me, &lines(&[" Call the vendor ", "", "Renew certs"]))
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].text, "Call the vendor");
+        assert_eq!(list[1].position, 1);
+
+        s.tick_next_up(me, list[1].id, true).await.unwrap();
+        assert!(s.next_up(me).await.unwrap()[1].done_at.is_some());
+        s.tick_next_up(me, list[1].id, false).await.unwrap();
+        assert!(s.next_up(me).await.unwrap()[1].done_at.is_none());
+        assert!(matches!(
+            s.tick_next_up(other, list[0].id, true).await,
+            Err(StorageError::NotFound)
+        ));
+        assert!(s.next_up(other).await.unwrap().is_empty());
+
+        // A new list replaces the old one; an empty list clears it.
+        let list = s
+            .set_next_up(me, &lines(&["Write the report"]))
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 1);
+        assert!(matches!(
+            s.tick_next_up(me, s.next_up(me).await.unwrap()[0].id, true)
+                .await,
+            Ok(())
+        ));
+        assert!(s.set_next_up(me, &lines(&["a"; 8])).await.is_err());
+        assert_eq!(
+            s.next_up(me).await.unwrap().len(),
+            1,
+            "a bad list changes nothing"
+        );
+        assert!(s.set_next_up(me, &[]).await.unwrap().is_empty());
+    });
+}
