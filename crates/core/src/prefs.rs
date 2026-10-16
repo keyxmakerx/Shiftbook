@@ -3,11 +3,13 @@
 //! Every key has a default; a stored value that is unknown or broken falls back
 //! to the default instead of failing. Saving checks the value first.
 
-use serde::Serialize;
+use serde::{Serialize, Serializer};
+use time::Weekday;
 
 use crate::error::{preview, CoreError};
 use crate::sheet::{CommentFormat, GroupBy};
 use crate::validate::validate_color;
+use crate::week::WeekStart;
 
 /// Theme: `system`, `light` or `dark`.
 pub const KEY_THEME: &str = "ui.theme";
@@ -21,6 +23,8 @@ pub const KEY_GROUP_BY: &str = "timesheet.group_by";
 pub const KEY_COMMENT_TICKETS: &str = "timesheet.comment_tickets";
 /// Text between comment items (1 to 5 characters, e.g. `; `).
 pub const KEY_COMMENT_SEPARATOR: &str = "timesheet.comment_separator";
+/// First day of the week: `monday` … `sunday`.
+pub const KEY_WEEK_START: &str = "calendar.week_start";
 /// Minutes without activity before the app locks (1 to 240).
 pub const KEY_AUTO_LOCK: &str = "security.auto_lock_minutes";
 
@@ -70,6 +74,35 @@ pub fn next_project_color<S: AsRef<str>>(used: &[Option<S>]) -> String {
         .to_string()
 }
 
+/// Week start days by their stored names, Monday first.
+const WEEKDAY_NAMES: [(&str, Weekday); 7] = [
+    ("monday", Weekday::Monday),
+    ("tuesday", Weekday::Tuesday),
+    ("wednesday", Weekday::Wednesday),
+    ("thursday", Weekday::Thursday),
+    ("friday", Weekday::Friday),
+    ("saturday", Weekday::Saturday),
+    ("sunday", Weekday::Sunday),
+];
+
+fn weekday_from_name(name: &str) -> Option<Weekday> {
+    WEEKDAY_NAMES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|(_, d)| *d)
+}
+
+fn weekday_name(day: Weekday) -> &'static str {
+    WEEKDAY_NAMES
+        .iter()
+        .find(|(_, d)| *d == day)
+        .map_or("monday", |(n, _)| n)
+}
+
+fn serialize_week_start<S: Serializer>(start: &WeekStart, s: S) -> Result<S::Ok, S::Error> {
+    s.serialize_str(weekday_name(start.0))
+}
+
 /// Light, dark or follow the system.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -110,6 +143,9 @@ pub struct Prefs {
     pub group_by: GroupBy,
     /// Comment style.
     pub comment: CommentFormat,
+    /// First day of the week.
+    #[serde(serialize_with = "serialize_week_start")]
+    pub week_start: WeekStart,
     /// Minutes before auto-lock.
     pub auto_lock_minutes: u32,
     /// Daily target in minutes, Monday first.
@@ -135,6 +171,7 @@ impl Default for Prefs {
             accent: None,
             group_by: GroupBy::default(),
             comment: CommentFormat::default(),
+            week_start: WeekStart::default(),
             auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
             day_targets: DEFAULT_DAY_TARGETS,
             text_size: DEFAULT_TEXT_SIZE,
@@ -186,6 +223,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
         KEY_COMMENT_TICKETS => ok(&["true", "false"]),
+        KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
                 Ok(String::new())
@@ -261,6 +299,9 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             }
             KEY_COMMENT_TICKETS => prefs.comment.include_tickets = v == "true",
             KEY_COMMENT_SEPARATOR => prefs.comment.separator = v,
+            KEY_WEEK_START => {
+                prefs.week_start = WeekStart(weekday_from_name(&v).unwrap_or(Weekday::Monday))
+            }
             KEY_AUTO_LOCK => {
                 prefs.auto_lock_minutes = v.parse().unwrap_or(DEFAULT_AUTO_LOCK_MINUTES)
             }
@@ -289,6 +330,7 @@ mod tests {
         assert!(p.comment.include_tickets);
         assert_eq!(p.comment.separator, "; ");
         assert_eq!(p.group_by, GroupBy::Code);
+        assert_eq!(p.week_start, WeekStart(Weekday::Monday));
     }
 
     #[test]
@@ -301,6 +343,7 @@ mod tests {
             ("timesheet.comment_tickets", "false"),
             ("timesheet.comment_separator", " / "),
             ("security.auto_lock_minutes", "30"),
+            ("calendar.week_start", "sunday"),
             ("seed.version", "1"),
         ]);
         assert_eq!(p.theme, Theme::Dark);
@@ -310,9 +353,11 @@ mod tests {
         assert!(!p.comment.include_tickets);
         assert_eq!(p.comment.separator, " / ");
         assert_eq!(p.auto_lock_minutes, 30);
+        assert_eq!(p.week_start, WeekStart(Weekday::Sunday));
 
         let p = prefs_from_settings(&[
             ("ui.theme", "purple"),
+            ("calendar.week_start", "Funday"),
             ("security.auto_lock_minutes", "0"),
             ("ui.accent", "blue"),
         ]);
@@ -331,7 +376,22 @@ mod tests {
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "------").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "\n").is_err());
+        assert_eq!(
+            validate_pref(KEY_WEEK_START, " saturday "),
+            Ok("saturday".into())
+        );
+        assert!(validate_pref(KEY_WEEK_START, "Saturday").is_err());
+        assert!(validate_pref(KEY_WEEK_START, "sun").is_err());
         assert!(validate_pref("security.password", "x").is_err());
+    }
+
+    #[test]
+    fn every_week_start_round_trips() {
+        for (name, day) in WEEKDAY_NAMES {
+            let p = prefs_from_settings(&[(KEY_WEEK_START, name)]);
+            assert_eq!(p.week_start, WeekStart(day), "{name}");
+            assert_eq!(weekday_name(day), name);
+        }
     }
 
     #[test]
@@ -357,6 +417,12 @@ mod tests {
         assert_eq!(json["dayTargets"][6], 0);
         assert_eq!(json["textSize"], 100);
         assert!(json["wrapupAt"].is_null());
+        assert_eq!(json["weekStart"], "monday");
+        let sunday = Prefs {
+            week_start: WeekStart(Weekday::Sunday),
+            ..Prefs::default()
+        };
+        assert_eq!(serde_json::to_value(sunday).unwrap()["weekStart"], "sunday");
     }
 
     #[test]

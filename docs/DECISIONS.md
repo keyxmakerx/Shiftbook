@@ -3,6 +3,11 @@
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
 ## Round 7 — 16 Oct 2026
+- **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.
+- **"Where was I?":** approved. After a lock, a break of 30 minutes or more, or a new day, the Desk
+  shows the last task, its tickets and its next step, with Carry on / Something else / Later.
+- **"Now doing" timer:** approved as an optional feature, off by default (the owner wouldn't use
+  it). Rounds to 15 minutes, saves minutes only, suggests leaving out time away from the keyboard.
 - **Log work:** Enter logs the line when it has a time in it (`INC0045678 50m`), otherwise moves to the
   time buttons. A "Same as yesterday" row offers yesterday's routine entries as one-click buttons.
 - **Capture finds things:** typing searches entries, days and Inbox scraps, and runs commands (Lock,

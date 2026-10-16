@@ -78,7 +78,7 @@
 | `sheet` | Timesheet crib sheet (`build_week_sheet`): lines per day by code or project, comments, effort, warnings, tab-separated week |
 | `ribbon` | The last four weeks as days of minutes per project, with week totals |
 | `fields` | Custom field kinds, option lists, value checks, ticket prefixes and link building |
-| `prefs` | Preferences (theme, motion, accent, grouping, comment format, auto-lock) with defaults; project colour palette |
+| `prefs` | Preferences (theme, motion, accent, grouping, comment format, week start day, auto-lock) with defaults; project colour palette |
 
 Interpretations made where the spec is silent:
 - **Hours rounding:** decimal hours round to the nearest whole minute, halves up (`0.01` → 1 min,

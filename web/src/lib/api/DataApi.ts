@@ -27,6 +27,7 @@ export type IsoDate = string;
 export type Theme = 'system' | 'light' | 'dark';
 export type Motion = 'still' | 'calm' | 'lively';
 export type GroupBy = 'code' | 'project';
+export type WeekStartDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 export interface CommentFormat {
   includeTickets: boolean;
@@ -40,6 +41,7 @@ export interface Prefs {
   accent: string | null;
   groupBy: GroupBy;
   comment: CommentFormat;
+  weekStart: WeekStartDay;
   autoLockMinutes: number;
   /** Daily target in minutes, Monday first (seven numbers). */
   dayTargets: number[];
@@ -57,6 +59,7 @@ export type PrefKey =
   | 'timesheet.group_by'
   | 'timesheet.comment_tickets'
   | 'timesheet.comment_separator'
+  | 'calendar.week_start'
   | 'security.auto_lock_minutes'
   | 'day.targets'
   | 'ui.text_size'

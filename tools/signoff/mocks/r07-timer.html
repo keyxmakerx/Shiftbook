@@ -1,0 +1,62 @@
+<style>
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper-2:#f6f3ec;--ink:#1d2126;--ink-2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);--accent:#3d5bb0;--ok:#2e8a5a;--warn:#9f5a06;--warn-wash:#fcf1df;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35);--display:Fraunces,Georgia,serif;--ui:"Instrument Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui)}
+.try{display:flex;gap:6px;align-items:center;padding:8px 12px;background:#fff;border-bottom:1px solid #d7dadd;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.try button{font:inherit;border:1px solid #c9cdd1;background:#f6f7f8;border-radius:6px;padding:3px 10px;cursor:pointer}
+.bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,.75);border-bottom:1px solid var(--rule)}
+.bar .name{font:600 17px var(--display)}.sp{flex:1}
+.now{display:none;align-items:center;gap:8px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:4px 6px 4px 12px;box-shadow:var(--shadow);font-size:13px}
+.now.on{display:inline-flex;animation:pop .35s cubic-bezier(.3,1.4,.5,1)}@keyframes pop{from{transform:scale(.8);opacity:0}}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--ok);animation:p 1.6s infinite}@keyframes p{50%{opacity:.35}}
+.now .clock{font:600 13px var(--mono)}.now button{font:600 12px var(--ui);border:0;background:var(--ink);color:#fff;border-radius:14px;padding:4px 10px;cursor:pointer}
+.wrap{padding:14px;max-width:760px}
+.paper{background:var(--paper);border-radius:6px;box-shadow:var(--shadow);padding:12px 16px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.entry{display:flex;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--rule)}.entry:first-of-type{border-top:0}
+.entry .h{font:600 14px var(--mono);width:52px;transition:color .3s}.entry .h.grew{color:var(--ok)}
+.entry .t{flex:1}.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.play{font:600 13px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:16px;padding:5px 12px;cursor:pointer}
+.play.running{background:var(--ok);color:#fff;border-color:var(--ok)}
+.sheet{display:none;margin-top:12px;border-top:3px solid var(--ok)}.sheet.on{display:block;animation:pop .3s ease-out}
+.sheet h3{margin:2px 0 6px;font:600 18px var(--display)}
+.opts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.opt{font:600 14px var(--mono);border:1px solid var(--rule);background:#fff;border-radius:8px;padding:8px 14px;cursor:pointer}.opt.rec{border-color:var(--ok);box-shadow:0 0 0 2px rgba(46,138,90,.2)}
+.away{display:none;background:var(--warn-wash);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:13.5px}.away.on{display:block}.away b{color:var(--warn)}
+.mut{color:var(--mut);font-size:12.5px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try:</b> press <b>▶ Start</b> on an entry, then <b>Stop</b>. The clock runs 60× faster here.
+<button id="awayBtn">Pretend I walked away for 40 min</button></div>
+<div class="bar"><span class="name">Shiftbook</span><span class="sp"></span>
+<span class="now" id="now"><span class="pulse"></span><span id="nowName"></span><span class="clock" id="clock">0:00</span><button id="stop">Stop</button></span></div>
+<div class="wrap"><div class="paper">
+ <span class="lbl">Today · Friday 16 October</span>
+ <div id="list" style="margin-top:6px"></div>
+ <div class="paper sheet" id="sheet">
+  <span class="lbl">Timer stopped</span><h3 id="sTitle"></h3>
+  <div class="away" id="away"><b>You were away about 40 minutes</b> while it ran (no keyboard or mouse). Keep that time?</div>
+  <div class="mut">Shiftbook saves minutes only, rounded to 15. No start or end times are kept.</div>
+  <div class="opts" id="opts"></div>
+  <button class="play" id="drop">Don't add anything</button>
+ </div>
+</div></div>
+<script>
+const entries=[{t:'Review rule set for VLAN 40',p:'#3d5bb0',m:90},{t:'Ticket queue',p:'#148c79',m:45},{t:'Laptop refresh: imaging',p:'#de9930',m:0}];
+let run=null,secs=0,tick=null,away=false,ticking=false;
+const list=document.getElementById('list'),now=document.getElementById('now'),clock=document.getElementById('clock'),sheet=document.getElementById('sheet');
+const fmt=m=>m===0?'0h':(m%60===0?m/60+'h':(m>=60?Math.floor(m/60)+'h '+m%60+'m':m+'m'));
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function render(grew){list.innerHTML='';entries.forEach((e,i)=>{const r=el('div','entry');const h=el('span','h'+(grew===i?' grew':''),fmt(e.m));const t=el('span','t');const d=el('span','dot');d.style.background=e.p;t.append(d,document.createTextNode(e.t));
+ const b=el('button','play'+(run===i&&ticking?' running':''),run===i?(ticking?'● Running':'Stopped'):'▶ Start');b.onclick=()=>start(i);r.append(h,t,b);list.append(r)})}
+function start(i){if(run!==null)return;run=i;secs=0;away=false;sheet.classList.remove('on');document.getElementById('nowName').textContent=entries[i].t;now.classList.add('on');ticking=true;
+ tick=setInterval(()=>{secs+=60;const m=Math.floor(secs/60);clock.textContent=Math.floor(m/60)+':'+String(m%60).padStart(2,'0')},1000);render()}
+function stop(){if(run===null)return;clearInterval(tick);ticking=false;now.classList.remove('on');const i=run;const mins=Math.max(1,Math.round(secs/60));
+ document.getElementById('sTitle').textContent='Add time to “'+entries[i].t+'”';document.getElementById('away').classList.toggle('on',away);
+ const r=Math.max(15,Math.round((away?mins-40:mins)/15)*15);const opts=document.getElementById('opts');opts.innerHTML='';
+ const choices=away?[r,Math.max(15,Math.round(mins/15)*15)]:[Math.max(15,r-15),r,r+15];
+ [...new Set(choices)].forEach(v=>{const b=el('button','opt'+(v===r?' rec':''),'+'+fmt(v)+(away&&v!==r?' (keep it all)':''));b.onclick=()=>{entries[i].m+=v;run=null;sheet.classList.remove('on');render(i)};opts.append(b)});
+ document.getElementById('drop').onclick=()=>{run=null;sheet.classList.remove('on');render()};sheet.classList.add('on');render()}
+document.getElementById('stop').onclick=stop;
+document.getElementById('awayBtn').onclick=()=>{if(run===null){start(0)}away=true;secs+=40*60};
+render();
+</script>
