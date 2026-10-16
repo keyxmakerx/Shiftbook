@@ -26,6 +26,30 @@ Each milestone should end with passing tests and a working build on all three OS
 - **M7 Hardening:** security review of crypto/unlock code, accessibility pass, keyboard shortcuts,
   release workflow producing Windows `.msi/.exe`, macOS `.dmg`, Linux `.AppImage/.deb`.
 
+## Alpha (Oct 2026)
+The owner moved from mockups to a working app. The alpha covers M2 (time log and tickets), the
+look and motion from the approved prototype, the timesheet crib sheet and timesheet codes from
+M5, quick capture inside the app, the Done tickets tray, custom fields and the paper menus. See
+the README for what it does.
+
+### Known gaps in alpha
+- **Planner** (week/month/year) and **Canvas** views: shown in the view switcher but disabled
+  ("coming in a later version").
+- **Notes**, the always-available jot strip and the **notes map**.
+- **Global capture shortcut** (`tauri-plugin-global-shortcut`, Ctrl+Shift+Space from anywhere):
+  capture only works while the Shiftbook window has focus.
+- **Backups, export and import** (`.shiftbak`, xlsx/csv/json, Import JSON/Excel) — M6.
+- **Picture editor** for notes.
+- **Bundled fonts:** the look uses Fraunces / Instrument Sans / JetBrains Mono where installed
+  and otherwise Georgia, Segoe UI/system-ui and Consolas/monospace. Bundling the OFL fonts
+  inside the app (no network) is a follow-up.
+- **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
+- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
+  fields on tickets and projects can be defined (link fields already work on tickets) but values
+  can only be filled in on entries; the tray's roll-up entry starts with no project; the week
+  always starts on Monday (the rule supports other days, there is no setting yet); Planner and
+  Canvas keyboard shortcuts (4, 5) are not assigned.
+
 ## Phase 2 — Hosted (only if adopted by the team)
 - **S1** `apps/server` with Axum reusing core/storage; Postgres migrations verified in CI.
 - **S2** `HttpApi` adapter in `web/`; same UI served as static files by the server.

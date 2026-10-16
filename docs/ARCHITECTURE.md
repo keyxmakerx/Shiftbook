@@ -72,6 +72,13 @@
 | `seed` | Generic default lists and frequencies (no timesheet codes) |
 | `validate` | Input checks returning `CoreError` |
 | `error` | `CoreError` with plain-English messages |
+| `capture` | One-line capture parser (`parse_capture`): hours, tickets, `#project`, day words, description |
+| `quicklog` | Log work: reuse the same day's entry for a known ticket, or plan a new entry |
+| `tray` | Done tickets tray: minutes per ticket, paste splitting, per-day roll-up plan |
+| `sheet` | Timesheet crib sheet (`build_week_sheet`): lines per day by code or project, comments, effort, warnings, tab-separated week |
+| `ribbon` | The last four weeks as days of minutes per project, with week totals |
+| `fields` | Custom field kinds, option lists, value checks, ticket prefixes and link building |
+| `prefs` | Preferences (theme, motion, accent, grouping, comment format, auto-lock) with defaults; project colour palette |
 
 Interpretations made where the spec is silent:
 - **Hours rounding:** decimal hours round to the nearest whole minute, halves up (`0.01` → 1 min,
@@ -91,6 +98,22 @@ Interpretations made where the spec is silent:
 - **Tickets:** repeats are matched ignoring case (`INC1` = `inc1`); at most 64 characters per
   ticket and 100 tickets per entry; control characters are rejected.
 - **Category → code lookup** ignores case and surrounding spaces.
+- **Capture:** a plain whole number counts as hours only as the first word and only up to 24
+  (`45 errors` stays text); decimals, `1:30`, `90m`, `2 hours`, `1h 30m` count anywhere; the first
+  time wins. Tickets are 2–10 letters, an optional dash, 2+ digits; lower-case letters need 4+
+  digits (`inc0045678` yes, `win10` no); tickets are upper-cased. `#name` matches a project by
+  whole name, name prefix, name-without-spaces prefix, then word prefix. Day words are today,
+  yesterday and weekdays of the current week; the first one wins.
+- **Log work** reuses an entry on the same day that has one of the pasted tickets when no new
+  words were typed (or the words equal its title); the tray's roll-up entry is never reused.
+  A new entry takes its title and project from the latest earlier entry with that ticket.
+- **Tray:** 15 minutes per ticket by default, steps of 5, 0 to 480; the roll-up is capped at
+  24 h. Pasting text that contains ticket-shaped words keeps only those.
+- **Crib sheet:** items with the same title in a line merge (tickets combined); Unassigned is
+  listed first; the ticket count counts each number once; weekend days without entries are
+  hidden in the UI; "nothing logged" warns only for Monday–Friday before today.
+- **Link templates** must start with `http://` or `https://` and contain `{ticket}`; the ticket
+  is percent-encoded. Links are only displayed and copied.
 
 ## Storage, vault and unlock (M1)
 `crates/storage` modules:
@@ -101,6 +124,8 @@ Interpretations made where the spec is silent:
 | `recovery` | `RecoveryKey`: 256 random bits shown as 13 groups of 4 Crockford base32 characters; forgiving parser |
 | `db` | `open_encrypted(path, dek)`: SQLCipher pool with the key pragma first, then migrations |
 | `repo` | Repository traits + `SqliteStore` (local user, settings, list options, frequencies) |
+| `work` | Projects, time entries, tickets, the Done tickets tray and its roll-up, Log work |
+| `extras` | Timesheet codes and category defaults, crib sheet tick-offs, custom fields and values, Inbox, preferences |
 | `fsutil` | Private folders/files and atomic replace (temp file → fsync → rename → fsync folder) |
 | `hex` | Tiny hex helpers |
 
@@ -148,3 +173,68 @@ Errors reach the WebView only as codes (`unlock_failed`, `weak_password`, `busy`
 the back-off wait) the others answer `busy`. The frontend locks on `Lock now`, `Ctrl+L`, 15 minutes
 without keyboard/mouse activity, and when its timer notices a gap of a minute or more (the
 computer slept); after locking it reloads the page.
+
+## Alpha: tables, commands and UI
+
+### Migration 0002 (`crates/storage/migrations/0002_alpha.sql`)
+- `projects.color` (`#rrggbb`) and `projects.archived`.
+- `time_entries.source`: `NULL` for entries the user logged, `'tray'` for a day's roll-up of the
+  Done tickets tray, with a partial unique index so there is at most one live roll-up per day.
+- `ticket_tray` (date, ticket_number, minutes 0–480, note). **Why a table of its own:** the
+  existing `tickets` table requires a time entry, and SQLite can't drop a `NOT NULL` without a
+  table rebuild (not portable). Tray tickets exist before any entry, so they live in their own
+  table and every tray change re-plans the day's roll-up entry in the same transaction
+  (`shiftbook_core::tray::plan_rollup`): create it, update its minutes and tickets, or remove
+  it when the tray is empty. Its title, project and notes stay editable; deleting it empties the
+  tray and restoring brings both back.
+- `custom_fields` (applies_to entry/ticket/project, name, kind text/number/choice/link,
+  options one per line, link_template, ticket_prefix, sort_order, hidden) and `custom_values`
+  (field_id, record_id, value; one live value per field and record).
+- `timesheet_ticks` (week_start, day, line_key, done): crib sheet tick-offs.
+- `inbox_items` (text): scraps saved from capture.
+
+Repositories for the alpha are inherent async methods on `SqliteStore` (`work.rs`, `extras.rs`);
+like the M1 ones they take the `OwnerId`, bind every value and soft-delete. They become traits
+when the Postgres implementation arrives.
+
+### Desktop commands (`apps/desktop/src-tauri/src/api.rs`, `protect.rs`, `lib.rs`)
+Each command has its own `allow-<command>` permission (declared in `build.rs`, granted in
+`capabilities/default.json`); no plugins are used.
+
+| Area | Commands |
+|---|---|
+| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once) |
+| Protection | `allow_capture` (content protection off for 10 minutes; a timer in the app turns it back on, only the latest allow counts), `protect_capture` |
+| Preferences | `load_prefs`, `save_pref` |
+| Projects | `list_projects`, `create_project`, `update_project` |
+| Entries | `list_entries`, `create_entry`, `update_entry`, `add_entry_minutes`, `delete_entry`, `restore_entry`, `add_entry_tickets`, `remove_ticket`, `quick_log` |
+| Capture | `parse_capture_line`, `capture_log` |
+| Tray | `tray_day`, `tray_add`, `tray_set_minutes`, `tray_remove`, `tray_restore` |
+| Ribbon, crib sheet | `ribbon`, `week_sheet`, `list_ticks`, `set_tick` |
+| Timesheet codes | `list_timesheet_codes`, `save_timesheet_code`, `category_codes`, `set_category_code` |
+| Custom fields | `list_custom_fields`, `save_custom_field`, `delete_custom_field`, `list_custom_values`, `set_custom_value` |
+| Inbox | `list_inbox`, `add_inbox`, `set_inbox_deleted` |
+
+New error codes: `invalid_input`, `not_found`, `duplicate`, `tray_managed`, `not_allowed`.
+The UI passes the user's local date (`today`) because the app computes week-of and day words
+from it. Ticket chips carry ready-made links from link fields whose prefix matches.
+
+### Web UI (`web/src/`)
+- `App.svelte` — setup / recovery key / unlock / new password / app; idle lock uses the
+  auto-lock preference.
+- `pages/Shell.svelte` — ribbon, the current view (sliding left or right by view order), the
+  overlays, keyboard shortcuts (`lib/keys.ts`) and the copy guard (`lib/protection.svelte.ts`).
+- `components/` — `Ribbon`, `LogWork`, `EntryRow`, `TicketChip`, `TrayCard`, `InboxCard`,
+  `Drawer`, `Capture`, `PaperMenu`, `Toast`, `Icon` (inline SVG paths in `lib/icons.ts`).
+- `views/` — `Desk`, `Timesheet`, `Customize` with `customize/Look|Projects|TimesheetSettings|
+  Fields|FieldEditor|Security`.
+- `lib/store.svelte.ts` — shared state filled only from `DataApi`; `lib/menu.svelte.ts` and
+  `lib/menuPlacement.ts` (pure, tested) for the paper menu; `lib/motion.ts` scales animation by
+  the Motion setting and turns it off for Still or the system's reduced-motion setting.
+- **CSP:** styles are the compiled stylesheet plus CSSOM changes (Svelte `style:` directives,
+  `element.style`), never inline `style` attributes, so `style-src 'self'` holds. Animations use
+  CSS and the Web Animations API.
+- **Paper menu:** the source element is hidden and a copy of it is drawn above everything with
+  a lift; the sheet sits in a clip box that starts at the object's edge so it slides out from
+  underneath; it comes out below unless below is cramped, and scrolls when it doesn't fit.
+  Icon rails sit on the right (left if there's no room) and on top (below if there's no room).

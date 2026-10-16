@@ -124,6 +124,26 @@ typed_id!(
     /// A timesheet week record (submitted or not).
     TimesheetWeekId
 );
+typed_id!(
+    /// A ticket in the "Done tickets" tray.
+    TrayItemId
+);
+typed_id!(
+    /// A user-defined custom field.
+    CustomFieldId
+);
+typed_id!(
+    /// A custom field's value on one record.
+    CustomValueId
+);
+typed_id!(
+    /// A crib sheet tick-off.
+    TimesheetTickId
+);
+typed_id!(
+    /// A scrap in the Inbox.
+    InboxItemId
+);
 
 #[cfg(test)]
 mod tests {

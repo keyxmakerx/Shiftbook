@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-category-code"
+description = "Enables the set_category_code command without any pre-configured scope."
+commands.allow = ["set_category_code"]
+
+[[permission]]
+identifier = "deny-set-category-code"
+description = "Denies the set_category_code command without any pre-configured scope."
+commands.deny = ["set_category_code"]

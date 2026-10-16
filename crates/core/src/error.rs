@@ -118,6 +118,35 @@ pub enum CoreError {
         max: usize,
     },
 
+    /// A setting name isn't known, or its value isn't one of the allowed ones.
+    #[error("That setting can't be set to \"{value}\".")]
+    SettingInvalid {
+        /// The value given (shortened).
+        value: String,
+    },
+
+    /// A value isn't one of a choice field's options.
+    #[error("\"{value}\" isn't one of the choices for this field.")]
+    NotAChoice {
+        /// The value given (shortened).
+        value: String,
+    },
+
+    /// A number field got something that isn't a number.
+    #[error("\"{input}\" isn't a number.")]
+    NumberInvalid {
+        /// What was given (shortened).
+        input: String,
+    },
+
+    /// A link template must start with http:// or https:// and contain {ticket}.
+    #[error("A link needs to start with https:// and contain {{ticket}} where the ticket goes.")]
+    LinkTemplateInvalid,
+
+    /// Log work needs a ticket or a few words.
+    #[error("Paste a ticket or type what you did first.")]
+    NothingToLog,
+
     /// A text value was not a valid id.
     #[error("\"{input}\" isn't a valid id.")]
     IdInvalid {

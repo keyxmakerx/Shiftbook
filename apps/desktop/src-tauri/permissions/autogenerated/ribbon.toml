@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ribbon"
+description = "Enables the ribbon command without any pre-configured scope."
+commands.allow = ["ribbon"]
+
+[[permission]]
+identifier = "deny-ribbon"
+description = "Denies the ribbon command without any pre-configured scope."
+commands.deny = ["ribbon"]

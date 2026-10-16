@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-add-entry-tickets"
+description = "Enables the add_entry_tickets command without any pre-configured scope."
+commands.allow = ["add_entry_tickets"]
+
+[[permission]]
+identifier = "deny-add-entry-tickets"
+description = "Denies the add_entry_tickets command without any pre-configured scope."
+commands.deny = ["add_entry_tickets"]

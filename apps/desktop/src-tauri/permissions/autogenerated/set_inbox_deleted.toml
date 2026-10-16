@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-inbox-deleted"
+description = "Enables the set_inbox_deleted command without any pre-configured scope."
+commands.allow = ["set_inbox_deleted"]
+
+[[permission]]
+identifier = "deny-set-inbox-deleted"
+description = "Denies the set_inbox_deleted command without any pre-configured scope."
+commands.deny = ["set_inbox_deleted"]

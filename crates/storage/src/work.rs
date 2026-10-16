@@ -1,0 +1,1200 @@
+//! Projects, time entries, their tickets, the Done tickets tray and Log work.
+//!
+//! All methods are owner-scoped and use bound parameters only. Records are
+//! soft-deleted. Creation order is the UUID v7 id order.
+//!
+//! The tray's roll-up entry (`time_entries.source = 'tray'`, one per day) is kept
+//! in step with the tray inside the same transaction as every tray change; its
+//! minutes and tickets come from the tray (see `shiftbook_core::tray`), while
+//! its title, project and notes stay editable.
+
+use shiftbook_core::capture::Capture;
+use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
+use shiftbook_core::error::CoreError;
+use shiftbook_core::ids::{OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId};
+use shiftbook_core::minutes::{Minutes, MAX_ENTRY_MINUTES};
+use shiftbook_core::model::{EntryTarget, Project, TargetType, Ticket, TimeEntry, TrayItem};
+use shiftbook_core::prefs::next_project_color;
+use shiftbook_core::quicklog::{plan_quick_log, DayEntry, PastUse, QuickLogPlan};
+use shiftbook_core::tickets::add_tickets;
+use shiftbook_core::tray::{
+    new_tray_tickets, plan_rollup, validate_tray_minutes, RollupAction, DEFAULT_TRAY_MINUTES,
+    TRAY_ENTRY_TITLE,
+};
+use shiftbook_core::validate::{validate_color, validate_project, validate_time_entry};
+use sqlx::sqlite::{SqliteConnection, SqliteRow};
+use sqlx::Row;
+use time::{Date, OffsetDateTime};
+use uuid::Uuid;
+
+use crate::error::StorageError;
+use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, u32_from, Result};
+use crate::SqliteStore;
+
+/// `time_entries.source` for a day's tray roll-up.
+pub const SOURCE_TRAY: &str = "tray";
+
+/// An entry with its live tickets.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryRecord {
+    /// The entry.
+    pub entry: TimeEntry,
+    /// Its tickets, in the order they were added.
+    pub tickets: Vec<Ticket>,
+    /// True for the day's tray roll-up entry.
+    pub is_tray: bool,
+}
+
+/// The editable parts of an entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntryInput {
+    /// The day.
+    pub date: Date,
+    /// Minutes (ignored on update of a tray entry).
+    pub minutes: Minutes,
+    /// What I worked on.
+    pub description: String,
+    /// Project, or none.
+    pub project: Option<ProjectId>,
+    /// Category list value.
+    pub category: Option<String>,
+    /// Notes / next step.
+    pub next_step: Option<String>,
+    /// Timesheet code override.
+    pub timesheet_code_id: Option<TimesheetCodeId>,
+}
+
+/// The editable parts of a project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectInput {
+    /// Name.
+    pub name: String,
+    /// Colour `#rrggbb`.
+    pub color: Option<String>,
+    /// Default timesheet code.
+    pub default_timesheet_code_id: Option<TimesheetCodeId>,
+    /// Archived.
+    pub archived: bool,
+}
+
+/// One day's tray and its roll-up.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrayDay {
+    /// The day.
+    pub date: Date,
+    /// Tray tickets in the order they were pasted.
+    pub items: Vec<TrayItem>,
+    /// The roll-up entry, if the tray isn't empty.
+    pub entry_id: Option<TimeEntryId>,
+    /// Total minutes of the roll-up.
+    pub minutes: Minutes,
+}
+
+fn corrupt_date(text: &str) -> Result<Date> {
+    parse_date(text).map_err(|_| StorageError::Corrupt("date"))
+}
+
+fn opt_uuid(text: Option<String>) -> Result<Option<Uuid>> {
+    text.as_deref().map(parse_uuid).transpose()
+}
+
+macro_rules! project_columns {
+    () => {
+        "id, owner_id, name, description, requested_by, due_date, status, priority, \
+         estimated_minutes, default_timesheet_code_id, color, archived, created_at, updated_at, \
+         deleted_at"
+    };
+}
+
+fn project_from_row(row: &SqliteRow) -> Result<Project> {
+    let estimate: Option<i64> = row.try_get("estimated_minutes")?;
+    let due: Option<String> = row.try_get("due_date")?;
+    Ok(Project {
+        id: ProjectId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        name: row.try_get("name")?,
+        description: row.try_get("description")?,
+        requested_by: row.try_get("requested_by")?,
+        due_date: due.as_deref().map(corrupt_date).transpose()?,
+        status: row.try_get("status")?,
+        priority: row.try_get("priority")?,
+        estimated_minutes: estimate
+            .map(|m| u32_from(m, "estimate").map(Minutes))
+            .transpose()?,
+        default_timesheet_code_id: opt_uuid(row.try_get("default_timesheet_code_id")?)?
+            .map(TimesheetCodeId::from_uuid),
+        color: row.try_get("color")?,
+        archived: row.try_get("archived")?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    })
+}
+
+macro_rules! entry_columns {
+    () => {
+        "id, owner_id, date, minutes, target_type, target_id, category, description, status, \
+         priority, next_step, timesheet_code_id, legacy_ticket_text, source, created_at, \
+         updated_at, deleted_at"
+    };
+}
+
+fn parse_target_type(text: &str) -> Result<TargetType> {
+    match text {
+        "project" => Ok(TargetType::Project),
+        "recurring" => Ok(TargetType::Recurring),
+        "none" => Ok(TargetType::None),
+        _ => Err(StorageError::Corrupt("target type")),
+    }
+}
+
+fn entry_from_row(row: &SqliteRow) -> Result<(TimeEntry, bool)> {
+    let target_type = parse_target_type(row.try_get("target_type")?)?;
+    let target_id = opt_uuid(row.try_get("target_id")?)?;
+    let source: Option<String> = row.try_get("source")?;
+    let entry = TimeEntry {
+        id: TimeEntryId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        date: corrupt_date(row.try_get("date")?)?,
+        minutes: Minutes(u32_from(row.try_get("minutes")?, "minutes")?),
+        target: EntryTarget::from_columns(target_type, target_id)
+            .ok_or(StorageError::Corrupt("target"))?,
+        category: row.try_get("category")?,
+        description: row.try_get("description")?,
+        status: row.try_get("status")?,
+        priority: row.try_get("priority")?,
+        next_step: row.try_get("next_step")?,
+        timesheet_code_id: opt_uuid(row.try_get("timesheet_code_id")?)?
+            .map(TimesheetCodeId::from_uuid),
+        legacy_ticket_text: row.try_get("legacy_ticket_text")?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    };
+    Ok((entry, source.as_deref() == Some(SOURCE_TRAY)))
+}
+
+fn ticket_from_row(row: &SqliteRow) -> Result<Ticket> {
+    Ok(Ticket {
+        id: TicketId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        time_entry_id: TimeEntryId::from_uuid(parse_uuid(row.try_get("time_entry_id")?)?),
+        ticket_number: row.try_get("ticket_number")?,
+        note: row.try_get("note")?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    })
+}
+
+fn tray_from_row(row: &SqliteRow) -> Result<TrayItem> {
+    Ok(TrayItem {
+        id: TrayItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        date: corrupt_date(row.try_get("date")?)?,
+        ticket_number: row.try_get("ticket_number")?,
+        minutes: Minutes(u32_from(row.try_get("minutes")?, "minutes")?),
+        note: row.try_get("note")?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    })
+}
+
+async fn project_exists(conn: &mut SqliteConnection, owner: OwnerId, id: ProjectId) -> Result<()> {
+    let n: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+    )
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .fetch_one(&mut *conn)
+    .await?;
+    if n == 0 {
+        Err(StorageError::NotFound)
+    } else {
+        Ok(())
+    }
+}
+
+pub(crate) async fn code_exists(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimesheetCodeId,
+) -> Result<()> {
+    let n: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM timesheet_codes WHERE id = $1 AND owner_id = $2 \
+         AND deleted_at IS NULL",
+    )
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .fetch_one(&mut *conn)
+    .await?;
+    if n == 0 {
+        Err(StorageError::NotFound)
+    } else {
+        Ok(())
+    }
+}
+
+async fn fetch_project(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: ProjectId,
+) -> Result<Project> {
+    let row = sqlx::query(concat!(
+        "SELECT ",
+        project_columns!(),
+        " FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"
+    ))
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .fetch_optional(&mut *conn)
+    .await?
+    .ok_or(StorageError::NotFound)?;
+    project_from_row(&row)
+}
+
+async fn ensure_unique_project(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    name: &str,
+    except: Option<ProjectId>,
+) -> Result<()> {
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT id, name FROM projects WHERE owner_id = $1 AND deleted_at IS NULL")
+            .bind(owner.to_string())
+            .fetch_all(&mut *conn)
+            .await?;
+    let wanted = name.trim().to_lowercase();
+    let except = except.map(|id| id.to_string());
+    if rows
+        .iter()
+        .any(|(id, n)| Some(id) != except.as_ref() && n.trim().to_lowercase() == wanted)
+    {
+        return Err(StorageError::Duplicate(name.trim().to_string()));
+    }
+    Ok(())
+}
+
+async fn fetch_entry(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimeEntryId,
+) -> Result<(TimeEntry, bool)> {
+    let row = sqlx::query(concat!(
+        "SELECT ",
+        entry_columns!(),
+        " FROM time_entries WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL"
+    ))
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .fetch_optional(&mut *conn)
+    .await?
+    .ok_or(StorageError::NotFound)?;
+    entry_from_row(&row)
+}
+
+async fn entry_tickets(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimeEntryId,
+) -> Result<Vec<Ticket>> {
+    let rows = sqlx::query(
+        "SELECT id, owner_id, time_entry_id, ticket_number, note, created_at, updated_at, \
+         deleted_at FROM tickets WHERE owner_id = $1 AND time_entry_id = $2 \
+         AND deleted_at IS NULL ORDER BY id",
+    )
+    .bind(owner.to_string())
+    .bind(id.to_string())
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.iter().map(ticket_from_row).collect()
+}
+
+async fn entry_record(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimeEntryId,
+) -> Result<EntryRecord> {
+    let (entry, is_tray) = fetch_entry(conn, owner, id).await?;
+    let tickets = entry_tickets(conn, owner, id).await?;
+    Ok(EntryRecord {
+        entry,
+        tickets,
+        is_tray,
+    })
+}
+
+async fn insert_tickets(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    entry: TimeEntryId,
+    tickets: &[String],
+) -> Result<()> {
+    let now = now_text();
+    for t in tickets {
+        sqlx::query(
+            "INSERT INTO tickets (id, owner_id, time_entry_id, ticket_number, note, created_at, \
+             updated_at, deleted_at) VALUES ($1, $2, $3, $4, NULL, $5, $5, NULL)",
+        )
+        .bind(TicketId::new().to_string())
+        .bind(owner.to_string())
+        .bind(entry.to_string())
+        .bind(t)
+        .bind(&now)
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(())
+}
+
+fn clean_opt(value: &Option<String>) -> Option<String> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(str::to_string)
+}
+
+fn checked_entry(owner: OwnerId, input: &EntryInput) -> Result<TimeEntry> {
+    let now = OffsetDateTime::now_utc();
+    let entry = TimeEntry {
+        id: TimeEntryId::new(),
+        owner_id: owner,
+        date: input.date,
+        minutes: input.minutes,
+        target: input
+            .project
+            .map_or(EntryTarget::None, EntryTarget::Project),
+        category: clean_opt(&input.category),
+        description: input.description.trim().to_string(),
+        status: None,
+        priority: None,
+        next_step: input
+            .next_step
+            .as_deref()
+            .map(str::trim_end)
+            .filter(|v| !v.trim().is_empty())
+            .map(str::to_string),
+        timesheet_code_id: input.timesheet_code_id,
+        legacy_ticket_text: None,
+        created_at: now,
+        updated_at: now,
+        deleted_at: None,
+    };
+    validate_time_entry(&entry)?;
+    Ok(entry)
+}
+
+async fn check_links(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    input: &EntryInput,
+) -> Result<()> {
+    if let Some(p) = input.project {
+        project_exists(conn, owner, p).await?;
+    }
+    if let Some(c) = input.timesheet_code_id {
+        code_exists(conn, owner, c).await?;
+    }
+    Ok(())
+}
+
+async fn insert_entry(
+    conn: &mut SqliteConnection,
+    entry: &TimeEntry,
+    source: Option<&str>,
+) -> Result<()> {
+    sqlx::query(concat!(
+        "INSERT INTO time_entries (",
+        entry_columns!(),
+        ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, NULL, $9, $10, NULL, $11, $12, $12, NULL)"
+    ))
+    .bind(entry.id.to_string())
+    .bind(entry.owner_id.to_string())
+    .bind(format_date(entry.date))
+    .bind(i64::from(entry.minutes.get()))
+    .bind(entry.target.target_type().as_str())
+    .bind(entry.target.target_id().map(|u| u.to_string()))
+    .bind(entry.category.as_deref())
+    .bind(&entry.description)
+    .bind(entry.next_step.as_deref())
+    .bind(entry.timesheet_code_id.map(|c| c.to_string()))
+    .bind(source)
+    .bind(format_timestamp(entry.created_at))
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+async fn set_minutes(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimeEntryId,
+    minutes: Minutes,
+) -> Result<()> {
+    if minutes.get() > MAX_ENTRY_MINUTES {
+        return Err(CoreError::HoursTooLarge.into());
+    }
+    sqlx::query(
+        "UPDATE time_entries SET minutes = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+    )
+    .bind(i64::from(minutes.get()))
+    .bind(now_text())
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+async fn create_entry_in(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    input: &EntryInput,
+    tickets: &str,
+) -> Result<TimeEntryId> {
+    let entry = checked_entry(owner, input)?;
+    check_links(conn, owner, input).await?;
+    let tickets = add_tickets::<&str>(&[], tickets)?;
+    insert_entry(conn, &entry, None).await?;
+    insert_tickets(conn, owner, entry.id, &tickets).await?;
+    Ok(entry.id)
+}
+
+async fn tray_items(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+) -> Result<Vec<TrayItem>> {
+    let rows = sqlx::query(
+        "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
+         deleted_at FROM ticket_tray WHERE owner_id = $1 AND date = $2 AND deleted_at IS NULL \
+         ORDER BY id",
+    )
+    .bind(owner.to_string())
+    .bind(format_date(date))
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.iter().map(tray_from_row).collect()
+}
+
+async fn tray_entry_id(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+) -> Result<Option<TimeEntryId>> {
+    let id: Option<String> = sqlx::query_scalar(
+        "SELECT id FROM time_entries WHERE owner_id = $1 AND date = $2 AND source = $3 \
+         AND deleted_at IS NULL",
+    )
+    .bind(owner.to_string())
+    .bind(format_date(date))
+    .bind(SOURCE_TRAY)
+    .fetch_optional(&mut *conn)
+    .await?;
+    Ok(id
+        .as_deref()
+        .map(parse_uuid)
+        .transpose()?
+        .map(TimeEntryId::from_uuid))
+}
+
+/// Make the tickets on `entry` exactly `wanted` (ignoring case), keeping the
+/// ones already there.
+async fn replace_tickets(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    entry: TimeEntryId,
+    wanted: &[String],
+) -> Result<()> {
+    let current = entry_tickets(conn, owner, entry).await?;
+    let now = now_text();
+    for t in &current {
+        if !wanted
+            .iter()
+            .any(|w| w.eq_ignore_ascii_case(&t.ticket_number))
+        {
+            sqlx::query(
+                "UPDATE tickets SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+            )
+            .bind(&now)
+            .bind(t.id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *conn)
+            .await?;
+        }
+    }
+    let missing: Vec<String> = wanted
+        .iter()
+        .filter(|w| {
+            !current
+                .iter()
+                .any(|t| t.ticket_number.eq_ignore_ascii_case(w))
+        })
+        .cloned()
+        .collect();
+    insert_tickets(conn, owner, entry, &missing).await
+}
+
+/// Bring the day's roll-up entry in line with its tray.
+async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<()> {
+    let items = tray_items(conn, owner, date).await?;
+    let pairs: Vec<(String, Minutes)> = items
+        .iter()
+        .map(|i| (i.ticket_number.clone(), i.minutes))
+        .collect();
+    let existing = tray_entry_id(conn, owner, date).await?;
+    match plan_rollup(&pairs, existing) {
+        RollupAction::Create(rollup) => {
+            let now = OffsetDateTime::now_utc();
+            let entry = TimeEntry {
+                id: TimeEntryId::new(),
+                owner_id: owner,
+                date,
+                minutes: rollup.minutes,
+                target: EntryTarget::None,
+                category: None,
+                description: TRAY_ENTRY_TITLE.to_string(),
+                status: None,
+                priority: None,
+                next_step: None,
+                timesheet_code_id: None,
+                legacy_ticket_text: None,
+                created_at: now,
+                updated_at: now,
+                deleted_at: None,
+            };
+            insert_entry(conn, &entry, Some(SOURCE_TRAY)).await?;
+            insert_tickets(conn, owner, entry.id, &rollup.tickets).await
+        }
+        RollupAction::Update { entry, rollup } => {
+            set_minutes(conn, owner, entry, rollup.minutes).await?;
+            replace_tickets(conn, owner, entry, &rollup.tickets).await
+        }
+        RollupAction::Remove(entry) => {
+            sqlx::query(
+                "UPDATE time_entries SET deleted_at = $1, updated_at = $1 \
+                 WHERE id = $2 AND owner_id = $3",
+            )
+            .bind(now_text())
+            .bind(entry.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *conn)
+            .await?;
+            Ok(())
+        }
+        RollupAction::Nothing => Ok(()),
+    }
+}
+
+async fn tray_day_in(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<TrayDay> {
+    let items = tray_items(conn, owner, date).await?;
+    let entry_id = tray_entry_id(conn, owner, date).await?;
+    let minutes = match entry_id {
+        Some(id) => fetch_entry(conn, owner, id).await?.0.minutes,
+        None => Minutes::ZERO,
+    };
+    Ok(TrayDay {
+        date,
+        items,
+        entry_id,
+        minutes,
+    })
+}
+
+async fn tray_item_date(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TrayItemId,
+    live: bool,
+) -> Result<Date> {
+    let date: Option<String> = sqlx::query_scalar(
+        "SELECT date FROM ticket_tray WHERE id = $1 AND owner_id = $2 \
+         AND ((deleted_at IS NULL) = $3)",
+    )
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .bind(live)
+    .fetch_optional(&mut *conn)
+    .await?;
+    corrupt_date(&date.ok_or(StorageError::NotFound)?)
+}
+
+impl SqliteStore {
+    // ---------- projects ----------
+
+    /// Live projects, active first, then by name.
+    pub async fn list_projects(&self, owner: OwnerId) -> Result<Vec<Project>> {
+        let rows = sqlx::query(concat!(
+            "SELECT ",
+            project_columns!(),
+            " FROM projects WHERE owner_id = $1 AND deleted_at IS NULL \
+             ORDER BY archived, lower(name), id"
+        ))
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(project_from_row).collect()
+    }
+
+    /// Add a project. Without a colour it gets the next unused palette colour.
+    pub async fn create_project(
+        &self,
+        owner: OwnerId,
+        name: &str,
+        color: Option<&str>,
+    ) -> Result<Project> {
+        let color = color.map(validate_color).transpose()?;
+        let mut tx = self.pool.begin().await?;
+        ensure_unique_project(&mut tx, owner, name, None).await?;
+        let used: Vec<Option<String>> = sqlx::query_scalar(
+            "SELECT color FROM projects WHERE owner_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&mut *tx)
+        .await?;
+        let now = parse_ts(&now_text())?;
+        let project = Project {
+            id: ProjectId::new(),
+            owner_id: owner,
+            name: name.trim().to_string(),
+            description: String::new(),
+            requested_by: None,
+            due_date: None,
+            status: None,
+            priority: None,
+            estimated_minutes: None,
+            default_timesheet_code_id: None,
+            color: Some(color.unwrap_or_else(|| next_project_color(&used))),
+            archived: false,
+            created_at: now,
+            updated_at: now,
+            deleted_at: None,
+        };
+        validate_project(&project)?;
+        sqlx::query(concat!(
+            "INSERT INTO projects (",
+            project_columns!(),
+            ") VALUES ($1, $2, $3, '', NULL, NULL, NULL, NULL, NULL, NULL, $4, FALSE, $5, $5, NULL)"
+        ))
+        .bind(project.id.to_string())
+        .bind(owner.to_string())
+        .bind(&project.name)
+        .bind(project.color.as_deref())
+        .bind(format_timestamp(now))
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(project)
+    }
+
+    /// Change a project's name, colour, default code or archived flag.
+    pub async fn update_project(
+        &self,
+        owner: OwnerId,
+        id: ProjectId,
+        input: &ProjectInput,
+    ) -> Result<Project> {
+        let color = input.color.as_deref().map(validate_color).transpose()?;
+        let mut tx = self.pool.begin().await?;
+        let mut project = fetch_project(&mut tx, owner, id).await?;
+        project.name = input.name.trim().to_string();
+        validate_project(&project)?;
+        ensure_unique_project(&mut tx, owner, &project.name, Some(id)).await?;
+        if let Some(code) = input.default_timesheet_code_id {
+            code_exists(&mut tx, owner, code).await?;
+        }
+        sqlx::query(
+            "UPDATE projects SET name = $1, color = $2, default_timesheet_code_id = $3, \
+             archived = $4, updated_at = $5 WHERE id = $6 AND owner_id = $7",
+        )
+        .bind(&project.name)
+        .bind(color)
+        .bind(input.default_timesheet_code_id.map(|c| c.to_string()))
+        .bind(input.archived)
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let updated = fetch_project(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(updated)
+    }
+
+    // ---------- entries ----------
+
+    /// One live entry with its tickets.
+    pub async fn get_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<EntryRecord> {
+        let mut conn = self.pool.acquire().await?;
+        entry_record(&mut conn, owner, id).await
+    }
+
+    /// Live entries from `from` to `to` (inclusive), by date then creation.
+    pub async fn list_entries(
+        &self,
+        owner: OwnerId,
+        from: Date,
+        to: Date,
+    ) -> Result<Vec<EntryRecord>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows = sqlx::query(concat!(
+            "SELECT ",
+            entry_columns!(),
+            " FROM time_entries WHERE owner_id = $1 AND date >= $2 AND date <= $3 \
+             AND deleted_at IS NULL ORDER BY date, id"
+        ))
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        let mut records: Vec<EntryRecord> = rows
+            .iter()
+            .map(|r| {
+                entry_from_row(r).map(|(entry, is_tray)| EntryRecord {
+                    entry,
+                    tickets: Vec::new(),
+                    is_tray,
+                })
+            })
+            .collect::<Result<_>>()?;
+        let ticket_rows = sqlx::query(
+            "SELECT t.id, t.owner_id, t.time_entry_id, t.ticket_number, t.note, t.created_at, \
+             t.updated_at, t.deleted_at FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND e.date >= $2 AND e.date <= $3 \
+             AND e.deleted_at IS NULL AND t.deleted_at IS NULL ORDER BY t.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &ticket_rows {
+            let ticket = ticket_from_row(row)?;
+            if let Some(rec) = records
+                .iter_mut()
+                .find(|r| r.entry.id == ticket.time_entry_id)
+            {
+                rec.tickets.push(ticket);
+            }
+        }
+        Ok(records)
+    }
+
+    /// Add an entry with tickets pasted as text (split like multi-paste).
+    pub async fn create_entry(
+        &self,
+        owner: OwnerId,
+        input: &EntryInput,
+        tickets: &str,
+    ) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let id = create_entry_in(&mut tx, owner, input, tickets).await?;
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Change an entry. A tray roll-up entry keeps its date and minutes (they
+    /// come from the tray).
+    pub async fn update_entry(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        input: &EntryInput,
+    ) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let (current, is_tray) = fetch_entry(&mut tx, owner, id).await?;
+        let mut input = input.clone();
+        if is_tray {
+            input.minutes = current.minutes;
+            input.date = current.date;
+        }
+        let checked = checked_entry(owner, &input)?;
+        check_links(&mut tx, owner, &input).await?;
+        sqlx::query(
+            "UPDATE time_entries SET date = $1, minutes = $2, target_type = $3, target_id = $4, \
+             category = $5, description = $6, next_step = $7, timesheet_code_id = $8, \
+             updated_at = $9 WHERE id = $10 AND owner_id = $11",
+        )
+        .bind(format_date(checked.date))
+        .bind(i64::from(checked.minutes.get()))
+        .bind(checked.target.target_type().as_str())
+        .bind(checked.target.target_id().map(|u| u.to_string()))
+        .bind(checked.category.as_deref())
+        .bind(&checked.description)
+        .bind(checked.next_step.as_deref())
+        .bind(checked.timesheet_code_id.map(|c| c.to_string()))
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Add (or with a negative number, take away) minutes. Never below zero;
+    /// over 24 hours is refused. Not allowed on the tray roll-up.
+    pub async fn add_entry_minutes(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        delta: i32,
+    ) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let (entry, is_tray) = fetch_entry(&mut tx, owner, id).await?;
+        if is_tray {
+            return Err(StorageError::TrayManaged);
+        }
+        let next = (i64::from(entry.minutes.get()) + i64::from(delta)).max(0);
+        let next = u32::try_from(next).map_err(|_| CoreError::HoursTooLarge)?;
+        set_minutes(&mut tx, owner, id, Minutes(next)).await?;
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Soft-delete an entry. Deleting the tray roll-up also empties that day's
+    /// tray (restoring brings both back).
+    pub async fn delete_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        let (entry, is_tray) = fetch_entry(&mut tx, owner, id).await?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE time_entries SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+        )
+        .bind(&now)
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        if is_tray {
+            sqlx::query(
+                "UPDATE ticket_tray SET deleted_at = $1, updated_at = $1 \
+                 WHERE owner_id = $2 AND date = $3 AND deleted_at IS NULL",
+            )
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(format_date(entry.date))
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Undo a delete.
+    pub async fn restore_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let row: Option<(String, Option<String>, String)> = sqlx::query_as(
+            "SELECT date, source, deleted_at FROM time_entries \
+             WHERE id = $1 AND owner_id = $2 AND deleted_at IS NOT NULL",
+        )
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let (date, source, deleted_at) = row.ok_or(StorageError::NotFound)?;
+        let is_tray = source.as_deref() == Some(SOURCE_TRAY);
+        if is_tray
+            && tray_entry_id(&mut tx, owner, corrupt_date(&date)?)
+                .await?
+                .is_some()
+        {
+            return Err(StorageError::Duplicate(TRAY_ENTRY_TITLE.to_string()));
+        }
+        let now = now_text();
+        sqlx::query(
+            "UPDATE time_entries SET deleted_at = NULL, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+        )
+        .bind(&now)
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        if is_tray {
+            sqlx::query(
+                "UPDATE ticket_tray SET deleted_at = NULL, updated_at = $1 \
+                 WHERE owner_id = $2 AND date = $3 AND deleted_at = $4",
+            )
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(&date)
+            .bind(&deleted_at)
+            .execute(&mut *tx)
+            .await?;
+            sync_tray(&mut tx, owner, corrupt_date(&date)?).await?;
+        }
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Paste tickets onto an entry (multi-paste; repeats skipped).
+    pub async fn add_entry_tickets(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        text: &str,
+    ) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let (_, is_tray) = fetch_entry(&mut tx, owner, id).await?;
+        if is_tray {
+            return Err(StorageError::TrayManaged);
+        }
+        let existing: Vec<String> = entry_tickets(&mut tx, owner, id)
+            .await?
+            .into_iter()
+            .map(|t| t.ticket_number)
+            .collect();
+        let added = add_tickets(&existing, text)?;
+        insert_tickets(&mut tx, owner, id, &added).await?;
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Remove one ticket from its entry (soft delete). Returns the entry.
+    pub async fn remove_ticket(&self, owner: OwnerId, ticket: TicketId) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let entry: Option<String> = sqlx::query_scalar(
+            "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(ticket.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let entry = TimeEntryId::from_uuid(parse_uuid(&entry.ok_or(StorageError::NotFound)?)?);
+        let (_, is_tray) = fetch_entry(&mut tx, owner, entry).await?;
+        if is_tray {
+            return Err(StorageError::TrayManaged);
+        }
+        sqlx::query(
+            "UPDATE tickets SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+        )
+        .bind(now_text())
+        .bind(ticket.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let rec = entry_record(&mut tx, owner, entry).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// The most recent earlier user entry carrying one of `tickets` (tray roll-ups excluded).
+    async fn past_use(
+        conn: &mut SqliteConnection,
+        owner: OwnerId,
+        tickets: &[String],
+    ) -> Result<Option<PastUse>> {
+        let mut best: Option<(String, String, PastUse)> = None;
+        for t in tickets {
+            let row = sqlx::query(
+                "SELECT e.date, e.id, e.description, e.target_type, e.target_id \
+                 FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+                 WHERE t.owner_id = $1 AND e.owner_id = $1 AND lower(t.ticket_number) = lower($2) \
+                 AND t.deleted_at IS NULL AND e.deleted_at IS NULL AND e.source IS NULL \
+                 ORDER BY e.date DESC, e.id DESC LIMIT 1",
+            )
+            .bind(owner.to_string())
+            .bind(t)
+            .fetch_optional(&mut *conn)
+            .await?;
+            if let Some(row) = row {
+                let date: String = row.try_get("date")?;
+                let id: String = row.try_get("id")?;
+                let target = EntryTarget::from_columns(
+                    parse_target_type(row.try_get("target_type")?)?,
+                    opt_uuid(row.try_get("target_id")?)?,
+                )
+                .ok_or(StorageError::Corrupt("target"))?;
+                let found = PastUse {
+                    description: row.try_get("description")?,
+                    target,
+                };
+                let newer = best.as_ref().is_none_or(|(d, i, _)| (&date, &id) > (d, i));
+                if newer {
+                    best = Some((date, id, found));
+                }
+            }
+        }
+        Ok(best.map(|(_, _, p)| p))
+    }
+
+    /// Log work: add `minutes` on `date` following `shiftbook_core::quicklog`.
+    /// The capture's own hours and day are ignored (the button and the selected
+    /// day decide). Returns the entry that was created or added to.
+    pub async fn quick_log(
+        &self,
+        owner: OwnerId,
+        date: Date,
+        capture: &Capture,
+        minutes: Minutes,
+    ) -> Result<EntryRecord> {
+        let day: Vec<DayEntry> = self
+            .list_entries(owner, date, date)
+            .await?
+            .into_iter()
+            .map(|r| DayEntry {
+                id: r.entry.id,
+                description: r.entry.description,
+                tickets: r.tickets.into_iter().map(|t| t.ticket_number).collect(),
+                is_tray: r.is_tray,
+            })
+            .collect();
+        let mut tx = self.pool.begin().await?;
+        let past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
+        let id = match plan_quick_log(capture, minutes, &day, past.as_ref())? {
+            QuickLogPlan::AddTo {
+                entry,
+                minutes,
+                new_tickets,
+            } => {
+                let (current, _) = fetch_entry(&mut tx, owner, entry).await?;
+                set_minutes(&mut tx, owner, entry, current.minutes + minutes).await?;
+                let existing: Vec<String> = entry_tickets(&mut tx, owner, entry)
+                    .await?
+                    .into_iter()
+                    .map(|t| t.ticket_number)
+                    .collect();
+                let added = add_tickets(&existing, &new_tickets.join("\n"))?;
+                insert_tickets(&mut tx, owner, entry, &added).await?;
+                entry
+            }
+            QuickLogPlan::Create {
+                description,
+                target,
+                minutes,
+                tickets,
+            } => {
+                let project = match target {
+                    EntryTarget::Project(p) => Some(p),
+                    _ => None,
+                };
+                let input = EntryInput {
+                    date,
+                    minutes,
+                    description,
+                    project,
+                    category: None,
+                    next_step: None,
+                    timesheet_code_id: None,
+                };
+                create_entry_in(&mut tx, owner, &input, &tickets.join("\n")).await?
+            }
+        };
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    // ---------- the Done tickets tray ----------
+
+    /// One day's tray.
+    pub async fn tray_day(&self, owner: OwnerId, date: Date) -> Result<TrayDay> {
+        let mut conn = self.pool.acquire().await?;
+        tray_day_in(&mut conn, owner, date).await
+    }
+
+    /// Paste tickets into a day's tray (multi-paste splits, repeats skipped);
+    /// each gets 15 minutes. The roll-up entry follows.
+    pub async fn tray_add(&self, owner: OwnerId, date: Date, text: &str) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        let existing: Vec<String> = tray_items(&mut tx, owner, date)
+            .await?
+            .into_iter()
+            .map(|i| i.ticket_number)
+            .collect();
+        let added = new_tray_tickets(&existing, text)?;
+        let now = now_text();
+        for t in &added {
+            sqlx::query(
+                "INSERT INTO ticket_tray (id, owner_id, date, ticket_number, minutes, note, \
+                 created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, NULL, $6, $6, NULL)",
+            )
+            .bind(TrayItemId::new().to_string())
+            .bind(owner.to_string())
+            .bind(format_date(date))
+            .bind(t)
+            .bind(i64::from(DEFAULT_TRAY_MINUTES))
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+        }
+        sync_tray(&mut tx, owner, date).await?;
+        let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Change one tray ticket's minutes (0 to 480).
+    pub async fn tray_set_minutes(
+        &self,
+        owner: OwnerId,
+        id: TrayItemId,
+        minutes: u32,
+    ) -> Result<TrayDay> {
+        let minutes = validate_tray_minutes(minutes)?;
+        let mut tx = self.pool.begin().await?;
+        let date = tray_item_date(&mut tx, owner, id, true).await?;
+        sqlx::query(
+            "UPDATE ticket_tray SET minutes = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(i64::from(minutes.get()))
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        sync_tray(&mut tx, owner, date).await?;
+        let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Take a ticket out of the tray (soft delete).
+    pub async fn tray_remove(&self, owner: OwnerId, id: TrayItemId) -> Result<TrayDay> {
+        self.tray_set_deleted(owner, id, true).await
+    }
+
+    /// Undo [`Self::tray_remove`].
+    pub async fn tray_restore(&self, owner: OwnerId, id: TrayItemId) -> Result<TrayDay> {
+        self.tray_set_deleted(owner, id, false).await
+    }
+
+    async fn tray_set_deleted(
+        &self,
+        owner: OwnerId,
+        id: TrayItemId,
+        delete: bool,
+    ) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        let date = tray_item_date(&mut tx, owner, id, delete).await?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE ticket_tray SET deleted_at = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(if delete { Some(now.as_str()) } else { None })
+        .bind(&now)
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::Database(ref d) if d.is_unique_violation() => {
+                StorageError::Duplicate(String::from("That ticket"))
+            }
+            other => StorageError::Database(other),
+        })?;
+        sync_tray(&mut tx, owner, date).await?;
+        let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+}

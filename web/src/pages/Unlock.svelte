@@ -3,7 +3,7 @@
   import type { SecretKind } from '../lib/api';
   import { errorMessage } from '../lib/messages';
 
-  let { onUnlocked }: { onUnlocked: () => void } = $props();
+  let { onUnlocked }: { onUnlocked: (mustSetPassword: boolean) => void } = $props();
 
   let kind = $state<SecretKind>('password');
   let secret = $state('');
@@ -31,8 +31,8 @@
     error = '';
     working = true;
     try {
-      await api.unlock(typed, kind);
-      onUnlocked();
+      const outcome = await api.unlock(typed, kind);
+      onUnlocked(outcome.mustSetPassword);
     } catch (e) {
       error = errorMessage(e);
       input?.focus();

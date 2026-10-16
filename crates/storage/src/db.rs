@@ -28,11 +28,18 @@ use crate::DATABASE_FILE_NAME;
 const MAX_CONNECTIONS: u32 = 4;
 
 /// The schema migrations, embedded in the binary.
-const MIGRATIONS: &[(i64, &str, &str)] = &[(
-    1,
-    "initial schema",
-    include_str!("../migrations/0001_initial_schema.sql"),
-)];
+const MIGRATIONS: &[(i64, &str, &str)] = &[
+    (
+        1,
+        "initial schema",
+        include_str!("../migrations/0001_initial_schema.sql"),
+    ),
+    (
+        2,
+        "alpha: colours, tray, custom fields, tick-offs, inbox",
+        include_str!("../migrations/0002_alpha.sql"),
+    ),
+];
 
 fn migrator() -> Migrator {
     Migrator::with_migrations(
@@ -232,16 +239,21 @@ mod tests {
                 tables,
                 [
                     "category_code_defaults",
+                    "custom_fields",
+                    "custom_values",
                     "frequencies",
+                    "inbox_items",
                     "list_options",
                     "projects",
                     "recurring_tasks",
                     "settings",
                     "task_checklist_items",
                     "tasks",
+                    "ticket_tray",
                     "tickets",
                     "time_entries",
                     "timesheet_codes",
+                    "timesheet_ticks",
                     "timesheet_weeks",
                     "users"
                 ]

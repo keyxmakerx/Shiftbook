@@ -5,19 +5,26 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod capture;
 pub mod dates;
 pub mod error;
+pub mod fields;
 pub mod group;
 pub mod hours;
 pub mod ids;
 pub mod minutes;
 pub mod model;
+pub mod prefs;
 pub mod project;
+pub mod quicklog;
 pub mod recurring;
+pub mod ribbon;
 pub mod seed;
+pub mod sheet;
 pub mod task;
 pub mod tickets;
 pub mod timesheet;
+pub mod tray;
 pub mod validate;
 pub mod week;
 

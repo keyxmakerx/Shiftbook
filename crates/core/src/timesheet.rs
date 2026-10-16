@@ -195,6 +195,8 @@ mod tests {
             priority: None,
             estimated_minutes: None,
             default_timesheet_code_id: code,
+            color: None,
+            archived: false,
             created_at: datetime!(2026-10-01 09:00 UTC),
             updated_at: datetime!(2026-10-01 09:00 UTC),
             deleted_at: None,
