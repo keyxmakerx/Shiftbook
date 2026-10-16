@@ -12,6 +12,7 @@ fn main() {
             "change_password",
             "set_new_password",
             "regenerate_recovery_key",
+            "delete_all_data",
             "allow_capture",
             "protect_capture",
             "load_prefs",

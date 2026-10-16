@@ -121,6 +121,7 @@ Interpretations made where the spec is silent:
 | Module | What it holds |
 |---|---|
 | `vault` | `VaultDir` (create, unlock with password or recovery key, change password, regenerate recovery key), `Vault`/`Dek` (the unlocked key, wiped on drop), `VaultError` |
+| `wipe` | `delete_local_data`: delete the database, its side files and the vault (vault last) to start again |
 | `recovery` | `RecoveryKey`: 256 random bits shown as 13 groups of 4 Crockford base32 characters; forgiving parser |
 | `db` | `open_encrypted(path, dek)`: SQLCipher pool with the key pragma first, then migrations |
 | `repo` | Repository traits + `SqliteStore` (local user, settings, list options, frequencies) |
@@ -167,6 +168,7 @@ unlock(secret, kind) ─────────▶  unlock_with_password / _rec
           ◀── ok | "unlock_failed" (after 5 failures: wait 1 s, 2 s … 60 s)
 lock ─────────────────────────▶  close pool, drop Vault (key wiped) ── WebView reloads
 change_password(cur, new) ────▶  VaultDir::change_password (re-wrap only)
+delete_all_data("DELETE") ────▶  close pool, wipe::delete_local_data ── WebView reloads to setup
 ```
 Errors reach the WebView only as codes (`unlock_failed`, `weak_password`, `busy`,
 `already_set_up`, `not_set_up`, `locked`, `storage_error`). While a vault command runs (including
@@ -203,7 +205,7 @@ Each command has its own `allow-<command>` permission (declared in `build.rs`, g
 
 | Area | Commands |
 |---|---|
-| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once) |
+| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once), `delete_all_data` (needs the typed word `DELETE`; works locked or unlocked) |
 | Protection | `allow_capture` (content protection off for 10 minutes; a timer in the app turns it back on, only the latest allow counts), `protect_capture` |
 | Preferences | `load_prefs`, `save_pref` |
 | Projects | `list_projects`, `create_project`, `update_project` |

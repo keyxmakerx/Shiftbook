@@ -343,6 +343,11 @@ export interface DataApi {
   setNewPassword(newPassword: string): Promise<void>;
   /** Make a new recovery key (needs the password); resolves with it, shown once. */
   regenerateRecoveryKey(password: string): Promise<string>;
+  /**
+   * Delete all local data (database and vault) so Shiftbook starts again at setup. Works
+   * while locked. `confirm` must be the word in `DELETE_CONFIRM_WORD`. Tauri: `delete_all_data`.
+   */
+  deleteAllData(confirm: string): Promise<void>;
 
   // ----- screenshot protection -----
   /** Allow screenshots/screen sharing for a while; resolves with the seconds. */

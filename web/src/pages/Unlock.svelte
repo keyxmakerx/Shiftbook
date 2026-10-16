@@ -2,6 +2,7 @@
   import { api } from '../lib/api';
   import type { SecretKind } from '../lib/api';
   import { errorMessage } from '../lib/messages';
+  import DeleteAllData from '../components/DeleteAllData.svelte';
 
   let { onUnlocked }: { onUnlocked: (mustSetPassword: boolean) => void } = $props();
 
@@ -10,6 +11,8 @@
   let working = $state(false);
   let error = $state('');
   let input: HTMLInputElement | undefined = $state();
+  // Lost both the password and the recovery key: offer to delete everything.
+  let startingOver = $state(false);
 
   $effect(() => {
     // Focus the field on open and whenever the mode switches.
@@ -43,44 +46,53 @@
 </script>
 
 <main class="narrow">
-  <h1>Shiftbook is locked</h1>
-  <p class="lead">
-    {kind === 'password'
-      ? 'Enter your password to open your work log.'
-      : 'Enter the recovery key you saved when you set up Shiftbook.'}
-  </p>
+  {#if startingOver}
+    <DeleteAllData locked onCancel={() => (startingOver = false)} />
+  {:else}
+    <h1>Shiftbook is locked</h1>
+    <p class="lead">
+      {kind === 'password'
+        ? 'Enter your password to open your work log.'
+        : 'Enter the recovery key you saved when you set up Shiftbook.'}
+    </p>
 
-  <form onsubmit={submit} class="stack">
-    <div class="field">
-      <label for="unlock-secret">{kind === 'password' ? 'Password' : 'Recovery key'}</label>
-      <input
-        bind:this={input}
-        id="unlock-secret"
-        class:mono={kind === 'recovery_key'}
-        type={kind === 'password' ? 'password' : 'text'}
-        bind:value={secret}
-        autocomplete="off"
-        spellcheck="false"
-        autocapitalize="off"
-        disabled={working}
-        aria-describedby={kind === 'recovery_key' ? 'recovery-help' : undefined}
-      />
-      {#if kind === 'recovery_key'}
-        <p id="recovery-help" class="help">
-          52 letters and numbers. Spaces, dashes and upper or lower case don't matter.
-        </p>
+    <form onsubmit={submit} class="stack">
+      <div class="field">
+        <label for="unlock-secret">{kind === 'password' ? 'Password' : 'Recovery key'}</label>
+        <input
+          bind:this={input}
+          id="unlock-secret"
+          class:mono={kind === 'recovery_key'}
+          type={kind === 'password' ? 'password' : 'text'}
+          bind:value={secret}
+          autocomplete="off"
+          spellcheck="false"
+          autocapitalize="off"
+          disabled={working}
+          aria-describedby={kind === 'recovery_key' ? 'recovery-help' : undefined}
+        />
+        {#if kind === 'recovery_key'}
+          <p id="recovery-help" class="help">
+            52 letters and numbers. Spaces, dashes and upper or lower case don't matter.
+          </p>
+        {/if}
+      </div>
+
+      {#if error}
+        <p class="error" role="alert">{error}</p>
       {/if}
-    </div>
 
-    {#if error}
-      <p class="error" role="alert">{error}</p>
-    {/if}
-
-    <button type="submit" class="primary" disabled={working || secret.length === 0}>
-      {working ? 'Unlocking…' : 'Unlock'}
-    </button>
-    <button type="button" class="link" onclick={switchKind} disabled={working}>
-      {kind === 'password' ? 'Forgot your password? Use your recovery key' : 'Use your password instead'}
-    </button>
-  </form>
+      <button type="submit" class="primary" disabled={working || secret.length === 0}>
+        {working ? 'Unlocking…' : 'Unlock'}
+      </button>
+      <button type="button" class="link" onclick={switchKind} disabled={working}>
+        {kind === 'password' ? 'Forgot your password? Use your recovery key' : 'Use your password instead'}
+      </button>
+      {#if kind === 'recovery_key'}
+        <button type="button" class="link" onclick={() => (startingOver = true)} disabled={working}>
+          Lost your recovery key too? Delete everything and start again
+        </button>
+      {/if}
+    </form>
+  {/if}
 </main>

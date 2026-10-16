@@ -2,7 +2,7 @@
 //! `shiftbook-storage` and translate results for the frontend's `TauriApi`.
 //!
 //! Vault commands (`vault_status`, `vault_setup`, `vault_confirm_recovery_saved`,
-//! `unlock`, `lock`, `change_password`) go through [`session::VaultSession`]. Errors
+//! `unlock`, `lock`, `change_password`, `delete_all_data`) go through [`session::VaultSession`]. Errors
 //! reach the WebView only as short codes such as `"unlock_failed"`.
 
 mod api;
@@ -117,6 +117,21 @@ async fn change_password(
         .await
 }
 
+/// Delete all local data (database and vault) so the app starts again at setup.
+/// Needs the typed confirmation word; works while locked. Turns screenshot
+/// protection back on like `lock`. The frontend reloads the WebView next.
+#[tauri::command]
+async fn delete_all_data(
+    state: State<'_, VaultSession>,
+    window: tauri::WebviewWindow,
+    guard: State<'_, protect::CaptureGuard>,
+    confirm: String,
+) -> Result<(), CommandError> {
+    guard.end_allow();
+    let _ = window.set_content_protected(true);
+    state.delete_all_data(&confirm).await
+}
+
 /// Starts the desktop app.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -140,6 +155,7 @@ pub fn run() {
             unlock,
             lock,
             change_password,
+            delete_all_data,
             set_new_password,
             regenerate_recovery_key,
             protect::allow_capture,

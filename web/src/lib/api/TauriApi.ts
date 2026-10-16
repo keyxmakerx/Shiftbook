@@ -68,6 +68,9 @@ export class TauriApi implements DataApi {
   regenerateRecoveryKey(password: string): Promise<string> {
     return call('regenerate_recovery_key', { password });
   }
+  deleteAllData(confirm: string): Promise<void> {
+    return call('delete_all_data', { confirm });
+  }
 
   allowCapture(): Promise<number> {
     return call('allow_capture');
