@@ -6,6 +6,7 @@ describe('API errors', () => {
   it('keeps known codes and hides everything else', () => {
     expect(toApiError('unlock_failed').code).toBe('unlock_failed');
     expect(toApiError('busy').code).toBe('busy');
+    expect(toApiError('backup_needs_secret').code).toBe('backup_needs_secret');
     expect(toApiError('some long internal detail').code).toBe('unknown');
     expect(toApiError(new Error('boom')).code).toBe('unknown');
     expect(toApiError(undefined).code).toBe('unknown');

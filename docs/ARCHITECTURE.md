@@ -36,8 +36,12 @@
   `vault.json.prev` and `shiftbook.db` (files `0600` on Unix). Relocating via Settings (stored in
   a small config file in the app config dir) comes later. On Linux the WebView (WebKitGTK) also
   keeps its own cache folders there; Shiftbook stores nothing in WebView storage.
-- Backups: copy DB with SQLite online backup API (`VACUUM INTO`) to `backups/YYYY-MM-DD.db`.
-- Plugins allowed: `dialog` (pick backup/import file), `fs` scoped to app data + user-picked paths.
+- Backups: `shiftbook_storage::backup` reads every table into JSON, gzips it and encrypts it
+  with the DEK into a `.shiftbak` file (SECURITY.md "Backup file format"). Restore replaces every
+  table in one transaction. Commands: `backup_now`, `list_backups`, `pick_backup_file`,
+  `check_backup`, `restore_backup`; the daily automatic backup starts after `unlock`.
+- Plugins allowed: `dialog` (pick backup/import file, called from Rust commands only; the
+  WebView gets no dialog permission), `fs` scoped to app data + user-picked paths.
   Not allowed: `shell`, `http`, `opener` for remote URLs, updater (until signing is set up).
 
 ## Server specifics (Phase 2 — plan only)
