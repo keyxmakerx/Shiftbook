@@ -95,7 +95,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           projectPath: apps/desktop/src-tauri
-          tauriScript: npm --prefix ../../../web run tauri --
+          # Call the Tauri CLI directly: tauri-action rewrites scripts that start with npm.
+          tauriScript: node ../../../web/node_modules/@tauri-apps/cli/tauri.js
           args: ${{ matrix.args }}
           tagName: ${{ env.TAG }}
           releaseName: 'Shiftbook ${{ env.TAG }}'
