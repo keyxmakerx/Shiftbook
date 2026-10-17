@@ -121,51 +121,57 @@
 <style>
   .key {
     list-style: none;
-    margin: 0 0 0.75rem;
-    padding: 0.75rem 1rem;
+    margin: 0 0 10px;
+    padding: 10px 12px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
-    gap: 0.25rem 1rem;
-    border: 2px dashed var(--line-strong);
-    border-radius: 0.5rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px 8px;
+    background: var(--paper-2);
+    border-radius: 8px;
+  }
+
+  @media (max-width: 460px) {
+    .key {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 
   .key li {
     display: flex;
     align-items: baseline;
-    gap: 0.4rem;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 0;
   }
 
   .num {
-    color: var(--muted);
-    font-size: 0.8rem;
-    min-width: 1.4rem;
+    color: var(--mut);
+    font: 500 10px var(--mono);
+    min-width: 1.2rem;
     text-align: right;
   }
 
   code {
-    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono',
-      monospace;
-    font-size: 1.2rem;
-    letter-spacing: 0.08em;
+    font: 600 14.5px var(--mono);
+    letter-spacing: 0.06em;
   }
 
   .copy-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 1rem;
+    margin-bottom: 14px;
   }
 
   .copy-row .help {
-    flex: 1 1 16rem;
+    flex: 1 1 14rem;
     margin: 0;
   }
 
   .checks {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem 1rem;
+    gap: 8px 14px;
   }
 </style>
