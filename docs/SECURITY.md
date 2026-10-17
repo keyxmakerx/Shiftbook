@@ -175,7 +175,7 @@ What the M1 build does not protect against, or doesn't do yet:
   password wraps the key already unlocked in memory; the command is refused unless the session
   was just unlocked with the recovery key, and works once.
 - **Recovery key confirmation:** if the app is closed on the recovery key screen, the key is gone;
-  make a new one in Customize → Security (needs the password; the old key stops working).
+  make a new one in Settings → Security (needs the password; the old key stops working).
 - **WebView cache files** (WebKitGTK on Linux) sit in the app data folder with default
   permissions. Shiftbook puts no data in WebView storage.
 - **SQLCipher errors are printed to the terminal** (for example "hmac check failed" on a wrong
@@ -198,7 +198,7 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
 - **New commands** each have their own permission; errors stay short codes. The capability still
   grants no plugins.
-- **Delete all data** (`delete_all_data`, Customize → Security and the unlock screen's recovery-key
+- **Delete all data** (`delete_all_data`, Settings → Security and the unlock screen's recovery-key
   mode): needs the typed word `DELETE`, checked in `shiftbook_core::wipe` (the page only uses it to
   enable the button). It needs no password, so it works for someone who lost both the password
   and the recovery key; anyone at the computer could delete the files by hand anyway. The command

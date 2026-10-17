@@ -6,17 +6,18 @@
 
 use serde::{Deserialize, Serialize};
 use shiftbook_core::capture::{parse_capture, Capture, CaptureProject};
-use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
+use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::fields::{build_link, ticket_matches_prefix, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    CustomFieldId, InboxItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
-    TrayItemId,
+    CustomFieldId, InboxItemId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId,
+    TimesheetCodeId, TrayItemId,
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
 use shiftbook_core::prefs::Prefs;
-use shiftbook_core::ribbon::{build_ribbon, ribbon_range, RibbonWeek, RIBBON_WEEKS};
+use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, RIBBON_WEEKS};
+use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
 use shiftbook_core::timesheet::CodeDefaults;
 use shiftbook_core::week::{week_of, WeekStart};
@@ -218,6 +219,15 @@ pub struct InboxView {
     id: InboxItemId,
     text: String,
     created_at: String,
+}
+
+/// One thing on the "next up" list.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NextUpView {
+    id: NextUpItemId,
+    text: String,
+    done: bool,
 }
 
 /// What `unlock` tells the UI.
@@ -660,7 +670,9 @@ pub async fn ribbon(s: State<'_, VaultSession>, today: String) -> Res<Vec<Ribbon
         .into_iter()
         .map(|r| r.entry)
         .collect();
-    Ok(build_ribbon(today, start, RIBBON_WEEKS, &entries))
+    let mut weeks = build_ribbon(today, start, RIBBON_WEEKS, &entries);
+    mark_gaps(&mut weeks, &store.prefs(owner).await?.day_targets);
+    Ok(weeks)
 }
 
 /// Maps to `DataApi.weekSheet()`: the crib sheet for the week containing `date`.
@@ -913,6 +925,88 @@ fn inbox_view(i: shiftbook_core::model::InboxItem) -> InboxView {
     }
 }
 
+/// How far back Find looks.
+const SEARCH_DAYS: i64 = 2 * 366;
+/// Most entries Find returns.
+const SEARCH_ENTRIES: usize = 8;
+/// Most Inbox scraps Find returns.
+const SEARCH_SCRAPS: usize = 4;
+
+/// What Find found.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchView {
+    /// Entries, best first.
+    entries: Vec<EntryView>,
+    /// Inbox scraps, best first.
+    inbox: Vec<InboxView>,
+    /// Indexes into the `commands` that were passed in, best first.
+    commands: Vec<usize>,
+}
+
+/// Maps to `DataApi.search()`: entries (title, notes, tickets, project) from the last
+/// two years, Inbox scraps and the UI's command names that match `query`, ranked by
+/// `shiftbook_core::search`.
+#[tauri::command]
+pub async fn search(
+    s: State<'_, VaultSession>,
+    query: String,
+    today: String,
+    commands: Vec<String>,
+) -> Res<SearchView> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let links = links_for(&store, owner).await?;
+    let projects = store.list_projects(owner).await?;
+    let mut records = store
+        .list_entries(owner, add_days(today, -SEARCH_DAYS), today)
+        .await?;
+    records.reverse();
+    let entries = rank(
+        &query,
+        records.into_iter().map(|r| {
+            let project = match r.entry.target {
+                EntryTarget::Project(id) => projects
+                    .iter()
+                    .find(|p| p.id == id)
+                    .map(|p| p.name.as_str()),
+                _ => None,
+            };
+            let text = [
+                r.entry.description.as_str(),
+                r.entry.next_step.as_deref().unwrap_or(""),
+                project.unwrap_or(""),
+            ]
+            .into_iter()
+            .chain(r.tickets.iter().map(|t| t.ticket_number.as_str()))
+            .collect::<Vec<_>>()
+            .join(" ");
+            (r, text)
+        }),
+        SEARCH_ENTRIES,
+    )
+    .into_iter()
+    .map(|r| entry_view(r, &links))
+    .collect();
+    let inbox = rank(
+        &query,
+        store.list_inbox(owner).await?.into_iter().map(|i| {
+            let text = i.text.clone();
+            (i, text)
+        }),
+        SEARCH_SCRAPS,
+    )
+    .into_iter()
+    .map(inbox_view)
+    .collect();
+    let commands = rank(&query, commands.iter().cloned().enumerate(), commands.len());
+    Ok(SearchView {
+        entries,
+        inbox,
+        commands,
+    })
+}
+
 /// Maps to `DataApi.listInbox()`.
 #[tauri::command]
 pub async fn list_inbox(s: State<'_, VaultSession>) -> Res<Vec<InboxView>> {
@@ -939,6 +1033,40 @@ pub async fn set_inbox_deleted(s: State<'_, VaultSession>, id: String, deleted: 
     Ok(store
         .set_inbox_deleted(owner, id_arg(&id)?, deleted)
         .await?)
+}
+
+// ---------- next up ----------
+
+fn next_up_views(items: Vec<shiftbook_core::model::NextUpItem>) -> Vec<NextUpView> {
+    items
+        .into_iter()
+        .map(|i| NextUpView {
+            id: i.id,
+            text: i.text,
+            done: i.done_at.is_some(),
+        })
+        .collect()
+}
+
+/// Maps to `DataApi.nextUp()`.
+#[tauri::command]
+pub async fn next_up(s: State<'_, VaultSession>) -> Res<Vec<NextUpView>> {
+    let (store, owner) = s.data().await?;
+    Ok(next_up_views(store.next_up(owner).await?))
+}
+
+/// Maps to `DataApi.setNextUp()`: replace the list (an empty list clears it).
+#[tauri::command]
+pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<Vec<NextUpView>> {
+    let (store, owner) = s.data().await?;
+    Ok(next_up_views(store.set_next_up(owner, &items).await?))
+}
+
+/// Maps to `DataApi.tickNextUp()`.
+#[tauri::command]
+pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.tick_next_up(owner, id_arg(&id)?, done).await?)
 }
 
 #[cfg(test)]

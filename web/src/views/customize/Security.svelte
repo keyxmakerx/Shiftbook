@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Security: change password, auto-lock time, a new recovery key and deleting
+  // Settings → Security: change password, auto-lock time, a new recovery key and deleting
   // all data.
   import { api } from '../../lib/api';
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';

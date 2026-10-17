@@ -3,7 +3,8 @@
 //! The ribbon shows whole weeks ending with the week that contains today. Each
 //! day has its total and its minutes per project (projects in creation order,
 //! "No project" last); each week has its total. Days after today are marked as
-//! future. Only live entries count.
+//! future. Only live entries count. A past or present day with a daily target but
+//! nothing logged is a **gap**, marked with a dot so missed days stand out.
 
 use std::collections::BTreeMap;
 
@@ -45,6 +46,8 @@ pub struct RibbonDay {
     pub parts: Vec<DayPart>,
     /// After today.
     pub future: bool,
+    /// Nothing logged on a day that has a target (see [`mark_gaps`]).
+    pub gap: bool,
 }
 
 /// One week in the ribbon.
@@ -116,6 +119,7 @@ pub fn build_ribbon(
                         hours: format_hours(minutes),
                         parts,
                         future: date > today,
+                        gap: false,
                     }
                 })
                 .collect();
@@ -128,6 +132,15 @@ pub fn build_ribbon(
             }
         })
         .collect()
+}
+
+/// Mark gaps: days up to today with nothing logged whose weekday has a target
+/// (`targets` in minutes, Monday first). Today counts, so an empty Desk shows it.
+pub fn mark_gaps(weeks: &mut [RibbonWeek], targets: &[u32; 7]) {
+    for day in weeks.iter_mut().flat_map(|w| w.days.iter_mut()) {
+        let target = targets[usize::from(day.date.weekday().number_days_from_monday())];
+        day.gap = !day.future && day.minutes.is_zero() && target > 0;
+    }
 }
 
 #[cfg(test)]
@@ -205,5 +218,18 @@ mod tests {
         assert_eq!(weeks[2].minutes, Minutes(120));
         assert_eq!(weeks[2].days[0].parts.len(), 1);
         assert_eq!(weeks[0].minutes, Minutes::ZERO);
+    }
+
+    #[test]
+    fn gaps_are_empty_working_days_up_to_today() {
+        let entries = vec![entry(date!(2026 - 10 - 13), 60, None)];
+        let mut weeks = build_ribbon(date!(2026 - 10 - 15), WeekStart::default(), 1, &entries);
+        assert!(weeks[0].days.iter().all(|d| !d.gap));
+        mark_gaps(&mut weeks, &[480, 480, 480, 480, 0, 0, 0]);
+        let gaps: Vec<bool> = weeks[0].days.iter().map(|d| d.gap).collect();
+        // Mon empty, Tue logged, Wed empty, Thu (today) empty, Fri future, weekend no target.
+        assert_eq!(gaps, vec![true, false, true, true, false, false, false]);
+        let json = serde_json::to_value(&weeks[0].days[0]).unwrap();
+        assert_eq!(json["gap"], true);
     }
 }

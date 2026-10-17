@@ -3,7 +3,9 @@
   // reuses today's entry for a ticket it already has (see crates/core/src/quicklog.rs).
   import { api } from '../lib/api';
   import type { Capture } from '../lib/api';
-  import { fmtMinutes } from '../lib/format';
+  import type { Entry } from '../lib/api';
+  import { addDays, fmtMinutes } from '../lib/format';
+  import { repeatCandidates } from '../lib/repeat';
   import { app, attempt, flashEntry, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
 
@@ -14,6 +16,27 @@
   let input: HTMLInputElement | undefined = $state();
   let working = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let timesEl: HTMLElement | undefined = $state();
+  let earlier = $state<Entry[]>([]);
+
+  // The week before the selected day, for "Same as yesterday".
+  $effect(() => {
+    const day = app.selected;
+    let live = true;
+    api
+      .listEntries(addDays(day, -7), addDays(day, -1))
+      .then((list) => {
+        if (live) earlier = list;
+      })
+      .catch(() => {
+        if (live) earlier = [];
+      });
+    return () => {
+      live = false;
+    };
+  });
+
+  const repeats = $derived(repeatCandidates(app.selected, earlier, app.entries));
 
   $effect(() => {
     const serial = app.logFocus.serial;
@@ -38,15 +61,65 @@
     }, 120);
   }
 
-  async function log(minutes: number) {
-    if (!text.trim()) {
+  /** Enter: log the line when it has a time in it, otherwise move to the time buttons. */
+  async function enter() {
+    if (!text.trim()) return;
+    const now = text;
+    const c = await api.parseCapture(now, app.selected).catch(() => null);
+    if (text !== now) return;
+    seen = c;
+    if (c?.minutes && c.hoursText) {
+      await log(c.minutes, now.replace(c.hoursText, ' ').replace(/\s+/g, ' ').trim());
+    } else {
+      timesEl?.querySelector<HTMLButtonElement>('button')?.focus();
+    }
+  }
+
+  /** Left and right arrows move between the time buttons. */
+  function timesKey(event: KeyboardEvent) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const list = [...(timesEl?.querySelectorAll<HTMLButtonElement>('button') ?? [])];
+    const i = list.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    event.preventDefault();
+    if (event.key === 'ArrowLeft' && i === 0) input?.focus();
+    else list[Math.min(list.length - 1, Math.max(0, i + (event.key === 'ArrowRight' ? 1 : -1)))]?.focus();
+  }
+
+  async function repeat(e: Entry) {
+    working = true;
+    const entry = await attempt(() =>
+      api.createEntry(
+        {
+          date: app.selected,
+          minutes: e.minutes,
+          description: e.description,
+          projectId: e.projectId,
+          category: e.category,
+          notes: null,
+          timesheetCodeId: e.timesheetCodeId,
+        },
+        '',
+      ),
+    );
+    working = false;
+    if (!entry) return;
+    await refresh();
+    flashEntry(entry.id);
+    toast(`Logged ${fmtMinutes(e.minutes)} of ${e.description}`, 'Undo', () => {
+      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
+    });
+  }
+
+  async function log(minutes: number, line = text) {
+    if (!line.trim()) {
       input?.focus();
       toast('Paste a ticket or type what you did first.');
       return;
     }
     working = true;
     const before = new Map(app.entries.map((e) => [e.id, e.minutes]));
-    const entry = await attempt(() => api.quickLog(app.selected, text, minutes));
+    const entry = await attempt(() => api.quickLog(app.selected, line, minutes));
     working = false;
     if (!entry) return;
     text = '';
@@ -68,7 +141,7 @@
 </script>
 
 <div class="quick">
-  <label class="lbl" for="log-work">Log work · paste a ticket or say what you did, then pick the time</label>
+  <label class="lbl" for="log-work">Log work · paste a ticket or say what you did, add a time or pick one</label>
   <div class="in">
     <input
       id="log-work"
@@ -79,16 +152,21 @@
       onkeydown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          toast('Pick a time button to log it.');
+          void enter();
+        } else if (e.key === 'ArrowRight' && input && input.selectionStart === text.length && text) {
+          e.preventDefault();
+          timesEl?.querySelector<HTMLButtonElement>('button')?.focus();
         }
       }}
-      placeholder="INC0045678 or “printer on 2nd floor”"
+      placeholder="INC0045678 50m or “printer on 2nd floor”"
       autocomplete="off"
       spellcheck="false"
     />
-    {#each TIMES as m (m)}
-      <button type="button" class="hbtn" disabled={working} onclick={() => log(m)}>{fmtMinutes(m)}</button>
-    {/each}
+    <span class="times" role="toolbar" tabindex="-1" aria-label="Log it as" bind:this={timesEl} onkeydown={timesKey}>
+      {#each TIMES as m (m)}
+        <button type="button" class="hbtn" disabled={working} onclick={() => log(m)}>{fmtMinutes(m)}</button>
+      {/each}
+    </span>
   </div>
   <div class="recog" aria-live="polite">
     {#if seen && text.trim()}
@@ -101,9 +179,23 @@
         <span class="warn">no project called “{seen.projectQuery}”</span>
       {/if}
       {#if seen.description}<span>as “{seen.description}”</span>{/if}
-      <span class="lbl pick">pick a time →</span>
+      {#if seen.minutes}
+        <span class="lbl pick"><b class="mono">{fmtMinutes(seen.minutes)}</b> · <span class="kbd">Enter</span> logs it</span>
+      {:else}
+        <span class="lbl pick">pick a time, or <span class="kbd">Enter</span> to jump to them</span>
+      {/if}
     {/if}
   </div>
+  {#if repeats.length > 0}
+    <div class="repeat">
+      <span class="lbl">Same as yesterday</span>
+      {#each repeats as r (r.id)}
+        <button type="button" class="btn rep" disabled={working} onclick={() => repeat(r)} title="Log {fmtMinutes(r.minutes)} of {r.description} again">
+          <span class="chip" style:--c={projectColor(r.projectId)}>{fmtMinutes(r.minutes)}</span>{r.description}
+        </button>
+      {/each}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -142,6 +234,33 @@
 
   .pick {
     margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .times {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .repeat {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .repeat .lbl {
+    margin-right: 2px;
+  }
+
+  .rep {
+    font-weight: 500;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .warn {

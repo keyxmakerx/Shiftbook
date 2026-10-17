@@ -32,7 +32,7 @@
       <button type="button" aria-label="Remove “{item.text}”" onclick={() => drop(item, false)}><Icon name="x" size={13} /></button>
     </div>
   {:else}
-    <p class="empty-note">Inbox zero. Ctrl+Enter in capture saves a scrap here.</p>
+    <p class="empty-note">Nothing waiting. Ctrl+Enter in capture saves a half-thought here for later.</p>
   {/each}
 </article>
 

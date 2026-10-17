@@ -13,5 +13,5 @@ export const SWATCHES: readonly string[] = [
   '#5a5f68',
 ];
 
-/** Accent colours offered in Customize → Look (blank = built-in). */
+/** Accent colours offered in Settings → Look (blank = built-in). */
 export const ACCENTS: readonly string[] = ['#3d5bb0', '#148c79', '#8a4c7b', '#c2417a', '#2b8fc9', '#5c9145'];

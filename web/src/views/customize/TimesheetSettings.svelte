@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Timesheet: your timesheet codes (area, phase, code, order, hide), which
+  // Settings → Timesheet: your timesheet codes (area, phase, code, order, hide), which
   // code each category gets, the comment format, the default grouping and the week start day.
   import { api } from '../../lib/api';
   import type { CategoryCode, CodeInput, PrefKey, TimesheetCode, WeekStartDay } from '../../lib/api';

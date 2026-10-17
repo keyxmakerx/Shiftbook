@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Delete all data and start again. Used in Customize → Security and on the unlock
+  // Delete all data and start again. Used in Settings → Security and on the unlock
   // screen (for someone who lost both the password and the recovery key). The button
   // only turns on once the confirmation word is typed; the app checks it again.
   import { api } from '../lib/api';

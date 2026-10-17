@@ -232,7 +232,7 @@ from it. Ticket chips carry ready-made links from link fields whose prefix match
   overlays, keyboard shortcuts (`lib/keys.ts`) and the copy guard (`lib/protection.svelte.ts`).
 - `components/` — `Ribbon`, `LogWork`, `EntryRow`, `TicketChip`, `TrayCard`, `InboxCard`,
   `Drawer`, `Capture`, `PaperMenu`, `Toast`, `Icon` (inline SVG paths in `lib/icons.ts`).
-- `views/` — `Desk`, `Timesheet`, `Customize` with `customize/Look|Projects|TimesheetSettings|
+- `views/` — `Desk`, `Timesheet`, `Settings` with `customize/Look|Projects|TimesheetSettings|
   Fields|FieldEditor|Security`.
 - `lib/store.svelte.ts` — shared state filled only from `DataApi`; `lib/menu.svelte.ts` and
   `lib/menuPlacement.ts` (pure, tested) for the paper menu; `lib/motion.ts` scales animation by

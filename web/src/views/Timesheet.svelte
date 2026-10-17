@@ -99,6 +99,9 @@
       <button class="btn" type="button" aria-label="Next week" disabled={sheet !== null && addDays(sheet.weekStart, 7) > app.today} onclick={() => (anchor = addDays(anchor, 7))}>
         <Icon name="right" size={15} />
       </button>
+      {#if sheet && addDays(sheet.weekStart, 7) <= app.today}
+        <button class="btn" type="button" onclick={() => (anchor = app.today)}>This week</button>
+      {/if}
     </span>
     <button class="btn primary" type="button" disabled={!sheet?.tsv} onclick={() => sheet && copy(sheet.tsv, 'Week copied as columns. Paste it into a spreadsheet or your timesheet.')}>
       <Icon name="copy" size={14} /> Copy whole week

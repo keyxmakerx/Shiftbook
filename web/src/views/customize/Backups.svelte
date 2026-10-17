@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Backups: save a backup now, see the automatic ones, and restore one. Every
+  // Settings → Backups: save a backup now, see the automatic ones, and restore one. Every
   // backup is encrypted; the app checks it and saves a copy of the current data before a
   // restore.
   import { api } from '../../lib/api';

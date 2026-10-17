@@ -16,7 +16,7 @@ Svelte; runs on Windows, macOS and Linux. No server, no network access, data sta
 The alpha is a working app you can use day to day for logging time:
 
 - **Lock and protect:** a master password (and a recovery key) encrypts everything; Lock now,
-  Ctrl+L and auto-lock after idle (minutes are set in Customize → Security). After unlocking with
+  Ctrl+L and auto-lock after idle (minutes are set in Settings → Security). After unlocking with
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
 - **Desk:** today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
@@ -34,7 +34,7 @@ The alpha is a working app you can use day to day for logging time:
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
-- **Customize:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
+- **Settings:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
   such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
