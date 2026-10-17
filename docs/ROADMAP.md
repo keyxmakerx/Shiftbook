@@ -33,8 +33,7 @@ M5, quick capture inside the app, the Done tickets tray, custom fields and the p
 the README for what it does.
 
 ### Known gaps in alpha
-- **Planner** (week/month/year) and **Canvas** views: shown in the view switcher but disabled
-  ("coming in a later version").
+- **Planner** (week/month/year) and **Canvas** views: hidden until they are built.
 - **Notes**, the always-available jot strip and the **notes map**.
 - **Global capture shortcut** (`tauri-plugin-global-shortcut`, Ctrl+Shift+Space from anywhere):
   capture only works while the Shiftbook window has focus.
