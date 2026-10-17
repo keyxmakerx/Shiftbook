@@ -18,7 +18,9 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 - **Meetings:** the first design (topic rail plus results panel) and the second (running log,
   outline, topic cards) were rejected. Direction: a canvas-style page like OneNote, but not the
   round 3 mind map. The four canvas variants (v3) didn't land either; v4 lets the owner mix
-  five choices (topic look, where you type, going back, making tasks, results) instead. Kept throughout: `#` topics, `[]` `!` `?`
+  five choices (topic look, where you type, going back, making tasks, results) instead.
+  Picked on v4: tabs like OneNote sections, typing in place, a recent strip, right-click a line
+  to make a task, a count at the top. Wanted on a canvas with motion; three versions on v5. Kept throughout: `#` topics, `[]` `!` `?`
   marks, an optional agenda written beforehand, one-click time log on wrap up.
 
 ## Round 6 — 15 Oct 2026

@@ -7,132 +7,56 @@
       "round": 7,
       "order": 130,
       "area": "Notes",
-      "version": 4,
-      "title": "Meetings: build your own, one piece at a time",
+      "version": 5,
+      "title": "Meetings: your picks, on a canvas",
       "body": [
-        "That's fine, it's hard to judge a whole design at once. So instead of more complete designs, this card splits a meeting page into five choices and lets you mix them. The page underneath changes as you click, and you can type into it to try each mix.",
-        "Two of the looks are new: **tabs across the top**, like OneNote's section tabs, and **columns side by side**. The right-click menu and the \"recent\" strip are new too. Everything else comes from the earlier tries, so you can rebuild any of them or something none of them had."
+        "Your picks were **tabs like OneNote sections**, **typing right where the topic is**, a **recent strip**, **right-click to make a task**, and **a count at the top**. These three versions keep all of that and put it on paper you can write anywhere on, with motion instead of a fixed grid.",
+        "On every page you **click empty paper to start writing there**, drag a block by its top edge, and right-click a line for a menu that folds out. When a line becomes a todo or task, a small label flies up into the count."
       ],
       "bullets": [
-        "Whatever you pick, `#name` still jumps to a topic or starts one, the `[]` `!` `?` marks still work, and wrap up still offers to log the time.",
-        "If nothing clicks, that's an answer too. I can build Notes first with a plain meeting note, you use it in a real meeting, and we shape it from what bugs you."
+        "**1 · Tabs over paper pages:** each tab is its own page, and switching slides the page left or right, so you can feel which way you went.",
+        "**2 · One big canvas:** every topic is a coloured area on one sheet. A tab glides the view across to its area, and **See all** pulls back to show the whole meeting.",
+        "**3 · Binder with divider tabs:** topics are sheets in a binder, and a tab lifts its sheet to the front.",
+        "`#name` still jumps to a tab or makes one, and the `[]` `!` `?` marks still work. Motion follows the Still / Calm / Lively setting from round 6."
       ],
       "figures": [
         {
-          "html_file": "mocks/r07-meeting4.html",
-          "height": 800,
-          "caption": "Live: click the choices A–E at the top and the meeting page below changes. Type a line and press Enter, try #patch to jump back, and right-click a line when D allows it."
+          "html_file": "mocks/r07-meeting5.html",
+          "height": 760,
+          "caption": "Live: switch between 1, 2 and 3. Click a tab, click empty paper and type, right-click a line and make it a task. In 2, try See all."
         }
       ],
       "questions": [
         {
-          "id": "look",
-          "legend": "A · Topics look like",
+          "id": "shape",
+          "legend": "Which one?",
           "options": [
             {
-              "value": "Tabs, like OneNote sections",
-              "rec": true
+              "value": "1 · Tabs over paper pages",
+              "rec": true,
+              "why": "Closest to OneNote, and the slide tells you where you are."
             },
             {
-              "value": "Headings on one page"
+              "value": "2 · One big canvas"
             },
             {
-              "value": "Boxes on a page"
+              "value": "3 · Binder with divider tabs"
             },
             {
-              "value": "Columns side by side"
+              "value": "Mix (say below)"
             },
             {
-              "value": "Not sure yet"
-            }
-          ]
-        },
-        {
-          "id": "type",
-          "legend": "B · You type",
-          "options": [
-            {
-              "value": "Right where the topic is",
-              "rec": true
-            },
-            {
-              "value": "In one box at the bottom"
-            },
-            {
-              "value": "Not sure yet"
-            }
-          ]
-        },
-        {
-          "id": "back",
-          "legend": "C · Going back to a topic",
-          "options": [
-            {
-              "value": "Just click it"
-            },
-            {
-              "value": "Plus a \"recent\" strip",
-              "rec": true
-            },
-            {
-              "value": "Not sure yet"
-            }
-          ]
-        },
-        {
-          "id": "act",
-          "legend": "D · Making a todo or task",
-          "options": [
-            {
-              "value": "Marks while typing only"
-            },
-            {
-              "value": "Plus right-click a line",
-              "rec": true
-            },
-            {
-              "value": "Plus drag to Actions"
-            },
-            {
-              "value": "Not sure yet"
-            }
-          ]
-        },
-        {
-          "id": "side",
-          "legend": "E · Seeing what came out",
-          "options": [
-            {
-              "value": "Only at wrap up"
-            },
-            {
-              "value": "A count at the top",
-              "rec": true
-            },
-            {
-              "value": "A list down the side"
-            },
-            {
-              "value": "Not sure yet"
-            }
-          ]
-        },
-        {
-          "id": "plan",
-          "legend": "Or…",
-          "options": [
-            {
-              "value": "Build Notes first, try meetings for real, then shape it"
+              "value": "Still not it (say below)"
             }
           ]
         },
         {
           "id": "notes",
-          "legend": "Anything that felt wrong in any of them? (optional)",
+          "legend": "Anything to change? (optional)",
           "type": "text"
         }
       ],
-      "pick": "Tabs with a recent strip, typing in place, right-click to make tasks, and a count at the top. If you're still unsure, build Notes first and try it in a real meeting."
+      "pick": "1, with See all from 2 added so you can still see the whole meeting at once."
     },
     "r7-notes": {
       "round": 7,
