@@ -219,6 +219,55 @@
           "legend": "Anything to change? (optional)"
         }
       ]
+    },
+    "r7-resume-built": {
+      "round": 7,
+      "order": 126,
+      "area": "Built",
+      "version": 1,
+      "title": "Done: \"Where was I?\" and the optional timer",
+      "body": [
+        "**Where was I?** When you unlock, come back from a break of 30 minutes or more, or start a new day, a card appears at the top of the Desk. If you wrote a list at the wrap-up, it shows that list: the first thing, then the rest as a checklist, so having several things for tomorrow works. Otherwise it shows the last thing you logged, with its tickets and next step. **Carry on** puts it into Log work, and **Later** hides it until you next unlock.",
+        "**Timer.** It's off unless you turn it on in **Settings → Your day → Timer**, as you asked. Then today's entries get a **▶ Start** button and a small clock runs under the top bar. **■ Stop** offers to add the time rounded to 15 minutes. It also offers a second amount that leaves out time you were away from the keyboard. Nothing is added unless you pick it. Both are in a draft pull request, waiting for your OK."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/693447ae0a54e16fc2e61e739daa922c",
+          "caption": "Back from a break: the last thing logged, with its ticket and next step. Made-up data."
+        },
+        {
+          "src": "/_blob/f9fc9d66fdd6eeec0c417ebdc07f1532",
+          "caption": "The next morning: the list from yesterday's wrap-up, first thing on top."
+        },
+        {
+          "src": "/_blob/1957066447c635090655e3c3c5ec0149",
+          "caption": "Timer on (Settings → Your day): the clock under the top bar while it runs."
+        },
+        {
+          "src": "/_blob/17df22345453a61d392373adcf4cab77",
+          "caption": "After Stop: add the full time, or leave out the 31 minutes away. Nothing is added without a click."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Merge these into the app?",
+          "options": [
+            {
+              "value": "Yes, merge it",
+              "rec": true
+            },
+            {
+              "value": "Change something first"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything to change? (optional)"
+        }
+      ]
     }
   }
 }
