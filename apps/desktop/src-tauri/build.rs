@@ -56,6 +56,11 @@ fn main() {
             "next_up",
             "set_next_up",
             "tick_next_up",
+            "backup_now",
+            "list_backups",
+            "pick_backup_file",
+            "check_backup",
+            "restore_backup",
         ]),
     ))
     .expect("failed to run tauri-build");

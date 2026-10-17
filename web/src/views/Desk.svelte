@@ -12,7 +12,7 @@
 
   const RING = 119.4;
 
-  // The day's target from Customize → Your day (Monday first); 8 h until it's set.
+  // The day's target from Settings → Your day (Monday first); 8 h until it's set.
   const target = $derived(app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7] ?? 480);
 
   const dayMinutes = $derived(ribbonDay(app.selected)?.minutes ?? 0);

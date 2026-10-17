@@ -11,7 +11,9 @@ mod protect;
 mod session;
 
 use serde::Serialize;
-use tauri::{Manager, State};
+use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
+use tauri::{AppHandle, Manager, State};
+use tauri_plugin_dialog::DialogExt;
 
 use session::{reveal_once, take_secret, CommandError, SecretKind, VaultSession, VaultStatus};
 
@@ -63,6 +65,7 @@ async fn vault_confirm_recovery_saved(state: State<'_, VaultSession>) -> Result<
 /// to ask for a new password now (after a recovery-key unlock).
 #[tauri::command]
 async fn unlock(
+    app: AppHandle,
     state: State<'_, VaultSession>,
     secret: String,
     kind: String,
@@ -70,6 +73,7 @@ async fn unlock(
     let secret = take_secret(secret);
     let kind = SecretKind::parse(&kind).ok_or(CommandError::UnlockFailed)?;
     let must_set_password = state.unlock(secret, kind).await?;
+    start_automatic_backup(app);
     Ok(api::UnlockOutcome { must_set_password })
 }
 
@@ -132,10 +136,140 @@ async fn delete_all_data(
     state.delete_all_data(&confirm).await
 }
 
+// ---------- backups ----------
+
+/// Make the daily automatic backup in the background, if one is due. A failure
+/// is not shown: the next unlock tries again.
+fn start_automatic_backup(app: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        let _ = app.state::<VaultSession>().automatic_backup().await;
+    });
+}
+
+/// A dialog result as a path, off the main thread.
+async fn dialog_path(
+    work: impl FnOnce() -> Option<tauri_plugin_dialog::FilePath> + Send + 'static,
+) -> Result<Option<std::path::PathBuf>, CommandError> {
+    let picked = tauri::async_runtime::spawn_blocking(work)
+        .await
+        .map_err(|_| CommandError::StorageError)?;
+    Ok(picked.and_then(|p| p.into_path().ok()))
+}
+
+fn file_name_of(path: &std::path::Path) -> String {
+    path.file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// Save a backup where the user chooses; `today` (the local date) names the
+/// file. Returns the file name, or `None` if the dialog was cancelled. Maps to
+/// `DataApi.backupNow()`.
+#[tauri::command]
+async fn backup_now(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+    today: String,
+) -> Result<Option<String>, CommandError> {
+    let today = shiftbook_core::dates::parse_date(&today)
+        .map(shiftbook_core::dates::format_date)
+        .map_err(|_| CommandError::InvalidInput)?;
+    let dialog = app
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .set_title("Save a backup")
+        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION])
+        .set_file_name(format!("Shiftbook backup {today}.{BACKUP_EXTENSION}"));
+    let Some(mut path) = dialog_path(move || dialog.blocking_save_file()).await? else {
+        return Ok(None);
+    };
+    if path.extension().is_none_or(|e| e != BACKUP_EXTENSION) {
+        path.set_extension(BACKUP_EXTENSION);
+    }
+    let name = file_name_of(&path);
+    state.backup_to(path).await?;
+    Ok(Some(name))
+}
+
+/// The automatic and safety backups. Maps to `DataApi.listBackups()`.
+#[tauri::command]
+async fn list_backups(state: State<'_, VaultSession>) -> Result<Vec<BackupFile>, CommandError> {
+    state.list_backups().await
+}
+
+/// Pick a backup file to restore. Returns its name, or `None` if cancelled; the
+/// file is then the `"picked"` source. Maps to `DataApi.pickBackupFile()`.
+#[tauri::command]
+async fn pick_backup_file(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+) -> Result<Option<String>, CommandError> {
+    let dialog = app
+        .dialog()
+        .file()
+        .set_parent(&window)
+        .set_title("Restore from a backup")
+        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
+    let Some(path) = dialog_path(move || dialog.blocking_pick_file()).await? else {
+        return Ok(None);
+    };
+    let name = file_name_of(&path);
+    state.set_picked_backup(path).await?;
+    Ok(Some(name))
+}
+
+fn backup_secret(
+    secret: Option<String>,
+    kind: Option<String>,
+) -> Result<Option<(shiftbook_storage::SecretString, SecretKind)>, CommandError> {
+    match secret {
+        None => Ok(None),
+        Some(text) => {
+            let secret = take_secret(text);
+            let kind = kind
+                .as_deref()
+                .and_then(SecretKind::parse)
+                .ok_or(CommandError::InvalidInput)?;
+            Ok(Some((secret, kind)))
+        }
+    }
+}
+
+/// Check a backup (`source` is a name from `list_backups` or `"picked"`) and
+/// say what it holds. `secret` is only needed for a backup from another
+/// computer or an older vault. Maps to `DataApi.checkBackup()`.
+#[tauri::command]
+async fn check_backup(
+    state: State<'_, VaultSession>,
+    source: String,
+    secret: Option<String>,
+    kind: Option<String>,
+) -> Result<BackupSummary, CommandError> {
+    let secret = backup_secret(secret, kind)?;
+    state.check_backup(&source, secret).await
+}
+
+/// Replace all data with a backup, after saving a safety backup of the current
+/// data. The frontend reloads everything next. Maps to `DataApi.restoreBackup()`.
+#[tauri::command]
+async fn restore_backup(
+    state: State<'_, VaultSession>,
+    source: String,
+    secret: Option<String>,
+    kind: Option<String>,
+) -> Result<BackupSummary, CommandError> {
+    let secret = backup_secret(secret, kind)?;
+    state.restore_backup(&source, secret).await
+}
+
 /// Starts the desktop app.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // Tauri's per-user app data folder; never a hard-coded path.
             let data_dir = app
@@ -201,6 +335,11 @@ pub fn run() {
             api::next_up,
             api::set_next_up,
             api::tick_next_up,
+            backup_now,
+            list_backups,
+            pick_backup_file,
+            check_backup,
+            restore_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Shiftbook");

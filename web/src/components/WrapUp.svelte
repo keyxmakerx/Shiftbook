@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The end-of-day wrap-up (Customize → Your day, off until a time is set): today's hours,
+  // The end-of-day wrap-up (Settings → Your day, off until a time is set): today's hours,
   // what still needs a timesheet code, the tray, and a short list of what to start with
   // tomorrow. "Where was I?" shows that list the next morning.
   import { tick } from 'svelte';

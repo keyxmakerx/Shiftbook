@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Projects: add, rename, colour, default timesheet code, archive.
+  // Settings → Projects: add, rename, colour, default timesheet code, archive.
   // Right-click a project for its paper menu.
   import { api } from '../../lib/api';
   import type { Project, ProjectInput } from '../../lib/api';

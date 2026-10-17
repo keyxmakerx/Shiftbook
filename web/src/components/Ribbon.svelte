@@ -17,7 +17,7 @@
   const VIEW_LIST: { id: View; label: string; key: string }[] = [
     { id: 'desk', label: 'Desk', key: '1' },
     { id: 'timesheet', label: 'Timesheet', key: '2' },
-    { id: 'customize', label: 'Customize', key: '3' },
+    { id: 'settings', label: 'Settings', key: '3' },
   ];
 
   let viewsEl: HTMLElement | undefined = $state();

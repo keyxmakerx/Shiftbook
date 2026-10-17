@@ -5,8 +5,8 @@
 // the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
-export type View = 'desk' | 'timesheet' | 'customize';
-export const VIEWS: readonly View[] = ['desk', 'timesheet', 'customize'];
+export type View = 'desk' | 'timesheet' | 'settings';
+export const VIEWS: readonly View[] = ['desk', 'timesheet', 'settings'];
 
 export type Shortcut =
   | { kind: 'capture' }
@@ -52,7 +52,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Ctrl Space', what: 'Log, note or find anything' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
-  { keys: '1  2  3', what: 'Desk, Timesheet, Customize' },
+  { keys: '1  2  3', what: 'Desk, Timesheet, Settings' },
   { keys: '↑  ↓', what: 'Move between entries' },
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },

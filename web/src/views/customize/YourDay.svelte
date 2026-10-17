@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Your day: the Desk ring's target for each weekday, and the optional
+  // Settings → Your day: the Desk ring's target for each weekday, and the optional
   // end-of-day wrap-up (round 7).
   import { app, savePref } from '../../lib/store.svelte';
 

@@ -24,6 +24,27 @@ export interface UnlockOutcome {
 /** ISO local date, `YYYY-MM-DD`. */
 export type IsoDate = string;
 
+/** A file in the backups folder: made automatically, or the copy made just before a restore. */
+export interface BackupFile {
+  name: string;
+  kind: 'automatic' | 'before_restore';
+  /** UTC, RFC 3339. */
+  createdAt: string;
+  bytes: number;
+}
+
+/** What a backup holds, shown before restoring it. */
+export interface BackupSummary {
+  /** UTC, RFC 3339. */
+  createdAt: string;
+  entries: number;
+  tickets: number;
+  projects: number;
+}
+
+/** Where a backup to check or restore comes from: a name from `listBackups()`, or the picked file. */
+export const PICKED_BACKUP = 'picked';
+
 export type Theme = 'system' | 'light' | 'dark';
 export type Motion = 'still' | 'calm' | 'lively';
 export type GroupBy = 'code' | 'project';
@@ -312,6 +333,9 @@ export type ApiErrorCode =
   | 'duplicate'
   | 'tray_managed'
   | 'not_allowed'
+  | 'backup_invalid'
+  | 'backup_needs_secret'
+  | 'backup_too_new'
   | 'unknown';
 
 const KNOWN_CODES: readonly ApiErrorCode[] = [
@@ -327,6 +351,9 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   'duplicate',
   'tray_managed',
   'not_allowed',
+  'backup_invalid',
+  'backup_needs_secret',
+  'backup_too_new',
 ];
 
 /** Every DataApi failure is one of these: a short code, never details or secrets. */
@@ -374,6 +401,31 @@ export interface DataApi {
    * while locked. `confirm` must be the word in `DELETE_CONFIRM_WORD`. Tauri: `delete_all_data`.
    */
   deleteAllData(confirm: string): Promise<void>;
+
+  // ----- backups (always encrypted) -----
+  /**
+   * Save a backup where the user chooses (a save dialog); `today` names the file. Resolves
+   * with the file name, or null if cancelled. Tauri: `backup_now`.
+   */
+  backupNow(today: IsoDate): Promise<string | null>;
+  /** The automatic and safety backups, newest first. Tauri: `list_backups`. */
+  listBackups(): Promise<BackupFile[]>;
+  /**
+   * Choose a backup file to restore (an open dialog). Resolves with its name, or null if
+   * cancelled; it is then the `PICKED_BACKUP` source. Tauri: `pick_backup_file`.
+   */
+  pickBackupFile(): Promise<string | null>;
+  /**
+   * Open a backup and say what it holds. A backup from another computer (or from before
+   * Delete all data) rejects with `backup_needs_secret`: ask for the password or recovery
+   * key it was made with and call again. Tauri: `check_backup`.
+   */
+  checkBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary>;
+  /**
+   * Replace all data with the backup, after saving a safety copy of the current data.
+   * Reload the page afterwards. Tauri: `restore_backup`.
+   */
+  restoreBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary>;
 
   // ----- screenshot protection -----
   /** Allow screenshots/screen sharing for a while; resolves with the seconds. */

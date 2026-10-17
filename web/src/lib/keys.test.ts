@@ -14,7 +14,7 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('n'))).toEqual({ kind: 'focus-log' });
     expect(shortcutFor(key('1'))).toEqual({ kind: 'view', view: 'desk' });
     expect(shortcutFor(key('2'))).toEqual({ kind: 'view', view: 'timesheet' });
-    expect(shortcutFor(key('3'))).toEqual({ kind: 'view', view: 'customize' });
+    expect(shortcutFor(key('3'))).toEqual({ kind: 'view', view: 'settings' });
     expect(shortcutFor(key('Escape', { typing: true }))).toEqual({ kind: 'escape' });
     expect(shortcutFor(key('F10', { shiftKey: true }))).toEqual({ kind: 'menu-key' });
     expect(shortcutFor(key('ContextMenu'))).toEqual({ kind: 'menu-key' });

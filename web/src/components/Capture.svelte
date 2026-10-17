@@ -34,7 +34,7 @@
   const COMMANDS: Command[] = [
     { label: 'Go to Desk', keys: '1', run: () => setView('desk') },
     { label: 'Go to Timesheet', keys: '2', run: () => setView('timesheet') },
-    { label: 'Go to Customize', keys: '3', run: () => setView('customize') },
+    { label: 'Go to Settings', keys: '3', run: () => setView('settings') },
     { label: 'Lock now', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book today as holiday (8 h)', run: () => holiday() },
     {

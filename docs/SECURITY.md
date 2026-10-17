@@ -21,8 +21,9 @@ work data ending up in Git.
    GitHub Actions). CI runs `cargo audit` and `npm audit --omit=dev` (fail on high/critical).
 7. **Git hygiene:** `.gitignore` blocks databases, exports, backups and `.env`. Branch protection on `main`.
    The repo holds code and docs only, never anyone's work data or employer details.
-8. **Backups:** automatic daily local backups + manual Export. Restores are tested in CI with a
-   fixture database.
+8. **Backups:** automatic daily encrypted local backups, Backup now and Restore (see "Backup file
+   format"), plus manual Export later. Restores are tested by `cargo test`; a CI restore of a
+   fixture backup is still to do.
 9. **Encryption at rest is mandatory (from milestone M1)** — see "Encryption design" below.
    There is no unencrypted mode. Readable files only exist when the user explicitly exports.
 10. **Releases:** built only by GitHub Actions from tagged commits. Code signing (Windows
@@ -52,15 +53,35 @@ work data ending up in Git.
 
 ## Backup file format (`.shiftbak`)
 ```
-magic "PBAK" | u16 format_version | u32 header_len | header (JSON) | encrypted payload
-header: { app_version, created_at, kdf, kdf_params, salt_password, salt_recovery,
-          wrapped_dek_password, wrapped_dek_recovery, cipher: "xchacha20poly1305", nonce }
-payload: XChaCha20-Poly1305( DEK, zstd/gzip( JSON export, schema_version N ) ), header as AAD
+magic "SBAK" | u16 BE format_version (1) | u32 BE header_len | header (JSON) | ciphertext
+header: { app_version, created_at, schema_version, cipher: "xchacha20poly1305",
+          compression: "gzip", nonce, key_check, vault }
+ciphertext: XChaCha20-Poly1305( DEK, nonce, gzip( JSON of every table, schema_version N ) )
+            with every byte before it (magic, version, length, header) as AAD
 ```
-- Self-contained: restorable on any OS / new computer with the password **or** recovery key.
-- Authenticated encryption (header bound as AAD) → tampering or corruption is detected before restore.
-- Restore flow: verify → preview counts → safety backup of current data → replace in one transaction.
-- Automatic backups use the same format.
+- **Same key as the data.** The payload is encrypted with the vault's DEK, which never changes
+  (a password change only re-wraps it). So a backup made on this computer opens with the
+  current session, with no password asked again.
+- **Self-contained.** `vault` is a copy of `vault.json` (the DEK wrapped by the password and the
+  recovery key, never the DEK itself) as it was when the backup was made. On a new computer, or
+  after Delete all data made a new vault, the backup opens with the password **or** recovery key
+  from that time. The KDF parameters in that copy are clamped like `vault.json`'s.
+- **`key_check`** is the Poly1305 tag of an empty message under the DEK, with an all-zero nonce
+  and the label `shiftbook-backup-key-check-v1` as AAD. It only tells "made with another key"
+  (ask for the secret) apart from "damaged". It reveals nothing about the DEK.
+- **Tamper-evident.** The header is bound as AAD, so any changed byte is refused before anything
+  is replaced. Header size (64 KiB), file size (512 MiB) and unpacked size (2 GiB) are capped;
+  unknown header fields and a newer `schema_version` are refused.
+- **Restore flow:** open and verify → preview counts → write a safety backup of the current data
+  (`backups/before-restore-*.shiftbak`) → replace every table in one transaction (columns are
+  checked against the current schema) → reload the UI.
+- **Automatic backups** use the same format: `backups/auto-YYYYMMDD-HHMMSS.shiftbak` in the app
+  data folder (files `0600`), made in the background at most once a day after unlock, keeping the
+  last 14. Safety copies are not pruned. **Delete all data keeps the backups folder**; those
+  backups still need the old password or recovery key.
+- **Dialogs run in Rust.** Backup now and Restore from a file use the dialog plugin from the
+  commands; the WebView has no dialog or file-system permission and refers to a picked file only
+  as `"picked"`. The frontend never sees a path, a key or file bytes.
 
 ## Exports (unencrypted by design)
 - Excel (.xlsx via `rust_xlsxwriter`), CSV (UTF-8 with BOM, via `csv` crate; optional zip), JSON.
@@ -154,7 +175,7 @@ What the M1 build does not protect against, or doesn't do yet:
   password wraps the key already unlocked in memory; the command is refused unless the session
   was just unlocked with the recovery key, and works once.
 - **Recovery key confirmation:** if the app is closed on the recovery key screen, the key is gone;
-  make a new one in Customize → Security (needs the password; the old key stops working).
+  make a new one in Settings → Security (needs the password; the old key stops working).
 - **WebView cache files** (WebKitGTK on Linux) sit in the app data folder with default
   permissions. Shiftbook puts no data in WebView storage.
 - **SQLCipher errors are printed to the terminal** (for example "hmac check failed" on a wrong
@@ -177,7 +198,7 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
 - **New commands** each have their own permission; errors stay short codes. The capability still
   grants no plugins.
-- **Delete all data** (`delete_all_data`, Customize → Security and the unlock screen's recovery-key
+- **Delete all data** (`delete_all_data`, Settings → Security and the unlock screen's recovery-key
   mode): needs the typed word `DELETE`, checked in `shiftbook_core::wipe` (the page only uses it to
   enable the button). It needs no password, so it works for someone who lost both the password
   and the recovery key; anyone at the computer could delete the files by hand anyway. The command

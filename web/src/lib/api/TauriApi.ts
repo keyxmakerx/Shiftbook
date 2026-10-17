@@ -5,6 +5,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { toApiError } from './DataApi';
 import type {
   AppInfo,
+  BackupFile,
+  BackupSummary,
   Capture,
   CategoryCode,
   CodeInput,
@@ -72,6 +74,22 @@ export class TauriApi implements DataApi {
   }
   deleteAllData(confirm: string): Promise<void> {
     return call('delete_all_data', { confirm });
+  }
+
+  backupNow(today: IsoDate): Promise<string | null> {
+    return call('backup_now', { today });
+  }
+  listBackups(): Promise<BackupFile[]> {
+    return call('list_backups');
+  }
+  pickBackupFile(): Promise<string | null> {
+    return call('pick_backup_file');
+  }
+  checkBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary> {
+    return call('check_backup', { source, secret: secret ?? null, kind: kind ?? null });
+  }
+  restoreBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary> {
+    return call('restore_backup', { source, secret: secret ?? null, kind: kind ?? null });
   }
 
   allowCapture(): Promise<number> {

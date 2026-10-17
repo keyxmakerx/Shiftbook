@@ -38,7 +38,9 @@ the README for what it does.
 - **Notes**, the always-available jot strip and the **notes map**.
 - **Global capture shortcut** (`tauri-plugin-global-shortcut`, Ctrl+Shift+Space from anywhere):
   capture only works while the Shiftbook window has focus.
-- **Backups, export and import** (`.shiftbak`, xlsx/csv/json, Import JSON/Excel) — M6.
+- **Export and import** (xlsx/csv/json, Import JSON/Excel) — M6. Encrypted backups are in:
+  automatic once a day after unlock (last 14 kept), Back up now and Restore. Still to do for
+  backups: a backup on app close, a setting for how many to keep, and a restore test in CI.
 - **Picture editor** for notes.
 - **Bundled fonts:** the look uses Fraunces / Instrument Sans / JetBrains Mono where installed
   and otherwise Georgia, Segoe UI/system-ui and Consolas/monospace. Bundling the OFL fonts

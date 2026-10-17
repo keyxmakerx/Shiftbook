@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Delete all data and start again. Used in Customize → Security and on the unlock
+  // Delete all data and start again. Used in Settings → Security and on the unlock
   // screen (for someone who lost both the password and the recovery key). The button
   // only turns on once the confirmation word is typed; the app checks it again.
   import { api } from '../lib/api';
@@ -51,7 +51,10 @@
       This deletes everything Shiftbook keeps on this computer: your time log, tickets, projects,
       notes and settings, and your password and recovery key with them.
     </p>
-    <p><strong>It can't be undone.</strong> There is no backup to bring it back.</p>
+    <p>
+      <strong>It can't be undone.</strong> Your backups are kept. To restore one later you'll need
+      the password or recovery key it was made with.
+    </p>
     {#if locked}
       <p>
         Use this only if you've lost both your password and your recovery key. Shiftbook will start

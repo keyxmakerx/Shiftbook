@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Customize → Look: theme, motion, accent and project colours. Changes show at once.
+  // Settings → Look: theme, motion, accent and project colours. Changes show at once.
   import { api } from '../../lib/api';
   import type { PrefKey, Project } from '../../lib/api';
   import { TEXT_SIZES } from '../../lib/keys';
