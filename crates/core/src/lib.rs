@@ -26,6 +26,7 @@ pub mod seed;
 pub mod sheet;
 pub mod task;
 pub mod tickets;
+pub mod timer;
 pub mod timesheet;
 pub mod tray;
 pub mod validate;

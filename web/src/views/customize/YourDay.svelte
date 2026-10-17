@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Settings → Your day: the Desk ring's target for each weekday, and the optional
-  // end-of-day wrap-up (round 7).
+  // Settings → Your day: the Desk ring's target for each weekday, the optional
+  // end-of-day wrap-up (round 7) and the optional timer (off by default).
   import { app, savePref } from '../../lib/store.svelte';
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -74,6 +74,23 @@
         onchange={() => prefs.wrapupAt && savePref('day.wrapup_at', wrapTime)}
       />
     </div>
+  </article>
+
+  <article class="paper cz-card">
+    <h3>Timer</h3>
+    <p class="sub">
+      Adds a ▶ Start button to today's entries. A small clock runs under the top bar, and Stop
+      offers to add the time, rounded to 15 minutes. Nothing is added unless you choose it. Off
+      unless you turn it on.
+    </p>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={prefs.timer}
+        onchange={(e) => savePref('day.timer', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      Show the timer
+    </label>
   </article>
 {/if}
 

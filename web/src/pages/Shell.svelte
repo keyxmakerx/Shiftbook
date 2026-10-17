@@ -9,12 +9,14 @@
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
   import { noticeReturn } from '../lib/resume';
+  import { restoreTimer, timerActivity } from '../lib/timer.svelte';
   import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Capture from '../components/Capture.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import Ribbon from '../components/Ribbon.svelte';
+  import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
   import Settings from '../views/Settings.svelte';
@@ -26,7 +28,7 @@
 
   onMount(() => {
     loadAll()
-      .then(() => checkResume('unlocked'))
+      .then(() => Promise.all([checkResume('unlocked'), restoreTimer()]))
       .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
   });
@@ -35,6 +37,7 @@
   onMount(() => {
     let last = Date.now();
     const onActivity = () => {
+      timerActivity();
       const seen = noticeReturn(last, Date.now());
       last = seen.lastActivity;
       if (seen.awayMinutes !== null && app.ready) void checkResume('break', seen.awayMinutes);
@@ -123,6 +126,7 @@
 
 <div class="app">
   <Ribbon {onLock} onCapture={() => (app.captureOpen = true)} />
+  <TimerBar />
   <main class="stage">
     {#if problem}
       <p class="error pad" role="alert">{problem}</p>

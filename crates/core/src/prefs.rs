@@ -8,6 +8,7 @@ use time::Weekday;
 
 use crate::error::{preview, CoreError};
 use crate::sheet::{CommentFormat, GroupBy};
+use crate::timer::PausedTimer;
 use crate::validate::validate_color;
 use crate::week::WeekStart;
 
@@ -35,6 +36,10 @@ pub const KEY_DAY_TARGETS: &str = "day.targets";
 pub const KEY_TEXT_SIZE: &str = "ui.text_size";
 /// End-of-day wrap-up time `HH:MM` (24-hour), or blank when it's off.
 pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
+/// The optional "Now doing" timer: `true` or `false` (off by default).
+pub const KEY_TIMER: &str = "day.timer";
+/// A timer paused by locking (see [`PausedTimer`]), or blank.
+pub const KEY_TIMER_PAUSED: &str = "timer.paused";
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -154,6 +159,10 @@ pub struct Prefs {
     pub text_size: u32,
     /// Wrap-up time `HH:MM`, `None` when off.
     pub wrapup_at: Option<String>,
+    /// The "Now doing" timer is turned on.
+    pub timer: bool,
+    /// A timer paused by locking, to pick up after unlock.
+    pub paused_timer: Option<PausedTimer>,
 }
 
 impl Prefs {
@@ -176,6 +185,8 @@ impl Default for Prefs {
             day_targets: DEFAULT_DAY_TARGETS,
             text_size: DEFAULT_TEXT_SIZE,
             wrapup_at: None,
+            timer: false,
+            paused_timer: None,
         }
     }
 }
@@ -222,7 +233,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER => ok(&["true", "false"]),
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -260,6 +271,15 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                 Ok(String::new())
             } else {
                 parse_clock(v).ok_or_else(|| invalid(value))
+            }
+        }
+        KEY_TIMER_PAUSED => {
+            if v.is_empty() {
+                Ok(String::new())
+            } else {
+                PausedTimer::parse(v)
+                    .map(|p| p.format())
+                    .ok_or_else(|| invalid(value))
             }
         }
         _ => Err(invalid(key)),
@@ -310,6 +330,8 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             }
             KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
+            KEY_TIMER => prefs.timer = v == "true",
+            KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             _ => {}
         }
     }
@@ -328,6 +350,8 @@ mod tests {
         assert_eq!(p.motion, Motion::Calm);
         assert_eq!(p.auto_lock_minutes, 15);
         assert!(p.comment.include_tickets);
+        assert!(!p.timer, "the timer is off unless turned on");
+        assert_eq!(p.paused_timer, None);
         assert_eq!(p.comment.separator, "; ");
         assert_eq!(p.group_by, GroupBy::Code);
         assert_eq!(p.week_start, WeekStart(Weekday::Monday));
@@ -456,5 +480,19 @@ mod tests {
         let p = prefs_from_settings(&[("ui.text_size", "130"), ("day.wrapup_at", "17:30")]);
         assert_eq!(p.text_size, 130);
         assert_eq!(p.wrapup_at.as_deref(), Some("17:30"));
+    }
+
+    #[test]
+    fn timer_on_and_paused() {
+        assert_eq!(validate_pref(KEY_TIMER, "true"), Ok("true".into()));
+        assert!(validate_pref(KEY_TIMER, "yes").is_err());
+        let id = crate::ids::TimeEntryId::new();
+        let stored = format!("{id} 3700 400,90");
+        assert_eq!(validate_pref(KEY_TIMER_PAUSED, &stored), Ok(stored.clone()));
+        assert_eq!(validate_pref(KEY_TIMER_PAUSED, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_TIMER_PAUSED, "12:00 start").is_err());
+        let p = prefs_from_settings(&[("day.timer", "true"), ("timer.paused", stored.as_str())]);
+        assert!(p.timer);
+        assert_eq!(p.paused_timer.map(|t| t.seconds), Some(3700));
     }
 }

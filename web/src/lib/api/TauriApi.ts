@@ -30,6 +30,7 @@ import type {
   RibbonWeek,
   SecretKind,
   Tick,
+  TimerOffer,
   TimesheetCode,
   TrayDay,
   UnlockOutcome,
@@ -232,6 +233,9 @@ export class TauriApi implements DataApi {
   }
   whereWasI(today: IsoDate, trigger: ResumeTrigger, awayMinutes: number): Promise<ResumeCard | null> {
     return call('where_was_i', { today, trigger, awayMinutes });
+  }
+  timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer> {
+    return call('timer_offer', { seconds, quiet });
   }
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {

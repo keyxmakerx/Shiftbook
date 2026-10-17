@@ -28,6 +28,10 @@ The alpha is a working app you can use day to day for logging time:
   day starts, the Desk shows what to pick up: the list from your wrap-up, or else the last
   thing you logged with its tickets and next step. **Carry on** puts it into Log work;
   **Later** hides it until the next unlock.
+- **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
+  today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded
+  to 15 minutes, and to leave out stretches of 5 minutes or more away from the keyboard. Only
+  minutes are saved. Locking pauses it.
 - **Details drawer:** click an entry to change its title, hours, project, category, tickets
   (paste several at once), notes and your own custom fields.
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as

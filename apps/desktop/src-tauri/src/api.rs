@@ -22,6 +22,7 @@ use shiftbook_core::resume::{
 use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, RIBBON_WEEKS};
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
+use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
 use shiftbook_core::timesheet::CodeDefaults;
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
@@ -1135,6 +1136,18 @@ pub async fn where_was_i(
         }
     };
     Ok(Some(view))
+}
+
+// ---------- timer ----------
+
+/// Maps to `DataApi.timerOffer()`: what Stop offers to add for `seconds` counted, given
+/// the quiet stretches (seconds) noticed while it ran. Needs no data, only the rule.
+#[tauri::command]
+pub fn timer_offer(seconds: u64, quiet: Vec<u64>) -> Res<TimerOffer> {
+    if quiet.len() > MAX_QUIET_STRETCHES {
+        return Err(CommandError::InvalidInput);
+    }
+    Ok(shiftbook_core::timer::timer_offer(seconds, &quiet))
 }
 
 #[cfg(test)]

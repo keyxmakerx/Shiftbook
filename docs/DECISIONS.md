@@ -9,6 +9,8 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   tickets and its next step, with Carry on / Something else / Later. Built.
 - **"Now doing" timer:** approved as an optional feature, off by default (the owner wouldn't use
   it). Rounds to 15 minutes, saves minutes only, suggests leaving out time away from the keyboard.
+  Built: Settings → Your day → Timer; ▶ Start on today's entries; quiet stretches of 5 minutes
+  or more count as away; locking keeps it as a paused timer (entry and seconds only).
 - **Backups:** approved and merged: a daily automatic encrypted backup after unlock (last 14
   kept), Back up now, and Restore with a preview and a safety copy first. **Delete all data keeps
   the backups**; they still need the password or recovery key they were made with.

@@ -70,6 +70,26 @@ export interface Prefs {
   textSize: number;
   /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
   wrapupAt: string | null;
+  /** The optional "Now doing" timer is turned on (off by default). */
+  timer: boolean;
+  /** A timer paused by locking, to pick up after unlock. */
+  pausedTimer: PausedTimer | null;
+}
+
+/** A timer paused by locking: the entry and what it had counted (never a start or end time). */
+export interface PausedTimer {
+  entryId: string;
+  seconds: number;
+  /** Quiet stretches noticed while it ran, in seconds. */
+  quiet: number[];
+}
+
+/** What Stop offers to add, rounded to 15 minutes. */
+export interface TimerOffer {
+  minutes: number;
+  /** Without the time away; only when that makes a difference. */
+  withoutAway: number | null;
+  awayMinutes: number;
 }
 
 /** Setting keys `savePref` accepts (see `shiftbook_core::prefs`). */
@@ -84,7 +104,9 @@ export type PrefKey =
   | 'security.auto_lock_minutes'
   | 'day.targets'
   | 'ui.text_size'
-  | 'day.wrapup_at';
+  | 'day.wrapup_at'
+  | 'day.timer'
+  | 'timer.paused';
 
 export interface Project {
   id: string;
@@ -522,6 +544,13 @@ export interface DataApi {
    * break) or there's nothing to pick up. Tauri: `where_was_i`.
    */
   whereWasI(today: IsoDate, trigger: ResumeTrigger, awayMinutes: number): Promise<ResumeCard | null>;
+
+  // ----- timer -----
+  /**
+   * What Stop offers to add for `seconds` counted, given the quiet stretches (seconds)
+   * noticed while it ran. Tauri: `timer_offer`.
+   */
+  timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer>;
 
   // ----- find -----
   /** Entries, Inbox scraps and the given command names that match `query`. */
