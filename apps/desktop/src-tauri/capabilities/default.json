@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may only call the app's own commands: app info, the vault (status, setup, confirm recovery key saved, unlock, lock, change password, new password after a recovery unlock, new recovery key), screenshot protection (allow for 10 minutes, protect now) and the alpha's data commands. No plugins: no shell, fs, http or opener.",
+  "description": "The main window may only call the app's own commands: app info, the vault (status, setup, confirm recovery key saved, unlock, lock, change password, new password after a recovery unlock, new recovery key, delete all data), screenshot protection (allow for 10 minutes, protect now), the alpha's data commands and backups (save, list, pick, check, restore). No plugin permissions: the dialog plugin is only called from Rust, and there is no shell, fs, http or opener access.",
   "windows": [
     "main"
   ],
@@ -15,6 +15,7 @@
     "allow-change-password",
     "allow-set-new-password",
     "allow-regenerate-recovery-key",
+    "allow-delete-all-data",
     "allow-allow-capture",
     "allow-protect-capture",
     "allow-load-prefs",
@@ -52,7 +53,16 @@
     "allow-list-custom-values",
     "allow-set-custom-value",
     "allow-list-inbox",
+    "allow-search",
     "allow-add-inbox",
-    "allow-set-inbox-deleted"
+    "allow-set-inbox-deleted",
+    "allow-next-up",
+    "allow-set-next-up",
+    "allow-tick-next-up",
+    "allow-backup-now",
+    "allow-list-backups",
+    "allow-pick-backup-file",
+    "allow-check-backup",
+    "allow-restore-backup"
   ]
 }

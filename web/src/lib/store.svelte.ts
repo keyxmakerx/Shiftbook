@@ -6,6 +6,7 @@ import type {
   CustomField,
   Entry,
   InboxItem,
+  PrefKey,
   Prefs,
   Project,
   RibbonDay,
@@ -39,6 +40,8 @@ export const app = $state({
   captureOpen: false,
   /** Bumped to ask Log work to take focus, with optional text to put in it. */
   logFocus: { serial: 0, text: '' },
+  /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
+  wrapupClosed: '',
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
 });
@@ -90,7 +93,19 @@ export function applyPrefs(prefs: Prefs): void {
   root.style.setProperty('--m', prefs.motion === 'lively' ? '1.35' : '1');
   if (prefs.accent) root.style.setProperty('--accent', prefs.accent);
   else root.style.removeProperty('--accent');
+  // Text size scales the whole page; every size in the look is in px.
+  if (prefs.textSize && prefs.textSize !== 100) root.style.setProperty('zoom', String(prefs.textSize / 100));
+  else root.style.removeProperty('zoom');
   setMotion(prefs.motion);
+}
+
+/** Save one preference and apply the result. */
+export async function savePref(key: PrefKey, value: string): Promise<Prefs | undefined> {
+  const p = await attempt(() => api.savePref(key, value));
+  if (!p) return undefined;
+  app.prefs = p;
+  applyPrefs(p);
+  return p;
 }
 
 export async function refreshDay(): Promise<void> {

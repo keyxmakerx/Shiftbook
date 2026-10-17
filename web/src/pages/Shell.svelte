@@ -1,20 +1,22 @@
 <script lang="ts">
-  // The unlocked app: the ribbon, one working view (Desk, Timesheet or Customize) that
+  // The unlocked app: the ribbon, one working view (Desk, Timesheet or Settings) that
   // slides in from the direction you move, and the overlays (capture, drawer, paper menu,
   // toast). Also the keyboard shortcuts and the copy guard.
   import { onMount } from 'svelte';
   import { errorMessage } from '../lib/messages';
-  import { shortcutFor, VIEWS, type View } from '../lib/keys';
+  import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
-  import { app, focusLog, loadAll, setView } from '../lib/store.svelte';
+  import { app, focusLog, loadAll, savePref, setView } from '../lib/store.svelte';
+  import { toast } from '../lib/toast.svelte';
   import Capture from '../components/Capture.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import Ribbon from '../components/Ribbon.svelte';
+  import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
-  import Customize from '../views/Customize.svelte';
+  import Settings from '../views/Settings.svelte';
   import Desk from '../views/Desk.svelte';
   import Timesheet from '../views/Timesheet.svelte';
 
@@ -30,7 +32,7 @@
     return VIEWS.indexOf(v);
   }
 
-  /** The views slide in the direction you move (Desk → Timesheet → Customize). */
+  /** The views slide in the direction you move (Desk → Timesheet → Settings). */
   function slide(_node: Element, { out }: { out: boolean }) {
     const k = scale();
     const dir = order(app.view) > order(app.previousView) ? 1 : -1;
@@ -80,6 +82,14 @@
         if (menuOpen() || app.captureOpen) return;
         setView(s.view);
         break;
+      case 'zoom': {
+        event.preventDefault();
+        const size = nextTextSize(app.prefs?.textSize ?? 100, s.step);
+        if (size !== app.prefs?.textSize) {
+          void savePref('ui.text_size', String(size)).then((p) => p && toast(`Text size ${size}%`));
+        }
+        break;
+      }
       case 'menu-key':
         // Elements with a paper menu handle the Menu key themselves.
         break;
@@ -102,7 +112,7 @@
           {:else if app.view === 'timesheet'}
             <Timesheet />
           {:else}
-            <Customize />
+            <Settings />
           {/if}
         </section>
       {/key}
@@ -112,10 +122,12 @@
   </main>
 </div>
 
-<Capture />
+<Capture {onLock} />
 <Drawer />
 <PaperMenu />
 <Toast />
+<ShortcutOverlay />
+<p class="hold-hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> to see shortcuts</p>
 
 <style>
   .app {
@@ -145,5 +157,25 @@
 
   .lead {
     color: var(--mut);
+  }
+
+  /* A quiet reminder that the shortcut overlay exists. */
+  .hold-hint {
+    position: fixed;
+    right: 14px;
+    bottom: 8px;
+    margin: 0;
+    font-size: 11.5px;
+    color: var(--mut);
+    pointer-events: none;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--desk) 85%, transparent);
+  }
+
+  @media (max-width: 760px) {
+    .hold-hint {
+      display: none;
+    }
   }
 </style>

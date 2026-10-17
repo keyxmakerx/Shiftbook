@@ -16,6 +16,10 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   tray_managed:
     "This entry's time and tickets come from the Done tickets tray. Change them in the tray.",
   not_allowed: "That isn't allowed right now.",
+  backup_invalid: "That isn't a Shiftbook backup, or the file is damaged. Try another backup.",
+  backup_needs_secret:
+    'This backup was made with a different password. Enter the password or recovery key from when it was made.',
+  backup_too_new: 'This backup was made by a newer version of Shiftbook. Update Shiftbook, then try again.',
   unknown: 'Something went wrong. Please try again.',
 };
 

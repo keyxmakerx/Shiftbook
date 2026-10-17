@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tick-next-up"
+description = "Enables the tick_next_up command without any pre-configured scope."
+commands.allow = ["tick_next_up"]
+
+[[permission]]
+identifier = "deny-tick-next-up"
+description = "Denies the tick_next_up command without any pre-configured scope."
+commands.deny = ["tick_next_up"]

@@ -1,0 +1,311 @@
+{
+  "meta": {
+    "round": 7,
+    "heading": "Round 7: polishing the alpha against modern apps",
+    "intro": "I went through every screen of the alpha and compared it with how apps like Toggl, Todoist, Linear and Sunsama handle the same job. The look and motion hold up well; these cards are the small frictions worth fixing next. The full review is in [Shiftbook UI/UX review](https://claude.ai/artifact/G6HhC9X4WjonRat2hQjoTL). The sign-up screen bug (text too big, the code check needing a scroll) is being fixed separately."
+  },
+  "cards": {
+    "r7-enter": {
+      "round": 7,
+      "order": 10,
+      "area": "Logging",
+      "version": 2,
+      "title": "Enter logs it, and typing a time works in the Log work box",
+      "body": [
+        "Today, pressing **Enter** in the Log work box only shows \"Pick a time button\". Every modern tracker commits on Enter, and Shiftbook's own capture box already understands \"50m\" or \"1.5h\". The paste-then-15m/30m/1h flow you approved stays exactly as it is; this only adds a faster path."
+      ],
+      "bullets": [
+        "Type `INC0045678 50m` and press **Enter**: logged as 50 minutes.",
+        "Paste a ticket with no time and press **Enter**: focus jumps to the time buttons, and the arrow keys pick one.",
+        "A **Same as yesterday** row under the box shows yesterday's routine entries (daily meeting, general tickets) as one-click buttons."
+      ],
+      "questions": [
+        {
+          "id": "enter",
+          "legend": "Enter in the Log work box",
+          "options": [
+            {
+              "value": "Logs it, or jumps to the time buttons",
+              "rec": true
+            },
+            {
+              "value": "Leave it as it is"
+            }
+          ]
+        },
+        {
+          "id": "repeat",
+          "legend": "Same as yesterday row",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "Routine work becomes one click."
+            },
+            {
+              "value": "Not now"
+            }
+          ]
+        }
+      ],
+      "pick": "Both. Every step saved is one less reason to skip logging.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-enter.html",
+          "caption": "Live: type a ticket and a time on the right, then press Enter. Or click a Same as yesterday button."
+        }
+      ]
+    },
+    "r7-find": {
+      "round": 7,
+      "order": 20,
+      "area": "Capture",
+      "version": 2,
+      "title": "Find things again from the capture box",
+      "body": [
+        "The capture button says **Log, note or find**, but finding isn't built yet. Linear, Raycast and Notion all open one box that searches everything and runs commands. In Shiftbook it would be the same capture box:"
+      ],
+      "bullets": [
+        "Type a ticket number or a word: matching entries, days and Inbox scraps appear under the line. Enter opens the one you pick.",
+        "Type a command such as **Lock**, **Book holiday** or **Timesheet** to do it straight away.",
+        "Logging still works the same: a line with hours in it logs, as today."
+      ],
+      "questions": [
+        {
+          "id": "find",
+          "legend": "Add Find to capture?",
+          "options": [
+            {
+              "value": "Yes, search and commands",
+              "rec": true
+            },
+            {
+              "value": "Search only"
+            },
+            {
+              "value": "Not now"
+            }
+          ]
+        }
+      ],
+      "pick": "Search and commands. \"Which day was that ticket?\" is the question a work log should answer fastest.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-find.html",
+          "caption": "Live: type in the box on the right, for example \"vpn\" or \"lock\". Arrow keys move the highlight."
+        }
+      ]
+    },
+    "r7-views": {
+      "round": 7,
+      "order": 30,
+      "area": "Navigation",
+      "version": 2,
+      "title": "Number keys and the greyed-out views",
+      "body": [
+        "The view switcher shows five tabs, but Planner and Canvas are greyed out until they're built. Keys **1, 2, 3** open Desk, Timesheet and Customize, so pressing **2** opens the fourth tab. The ribbon layout from round 5 doesn't change either way."
+      ],
+      "questions": [
+        {
+          "id": "later",
+          "legend": "Until Planner and Canvas are built",
+          "options": [
+            {
+              "value": "Hide them, and 1 to 3 match the tabs",
+              "rec": true
+            },
+            {
+              "value": "Keep them greyed out, renumber the keys to 1, 4, 5"
+            }
+          ]
+        },
+        {
+          "id": "customize",
+          "legend": "Where Customize lives",
+          "options": [
+            {
+              "value": "Keep it as a tab",
+              "rec": true
+            },
+            {
+              "value": "Move it behind a gear button and Ctrl+,",
+              "why": "How most apps do settings; leaves the tabs for your work."
+            }
+          ]
+        }
+      ],
+      "pick": "Hide the unfinished views so what you see is what works, and keep Customize where it is for now.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-views.html",
+          "caption": "Left: the switcher today. Right: the recommended version, and the gear option for Customize."
+        }
+      ]
+    },
+    "r7-target": {
+      "round": 7,
+      "order": 40,
+      "area": "Look and feel",
+      "version": 2,
+      "title": "Your own daily target, a text size option, easier-to-read grey",
+      "bullets": [
+        "**Daily target:** the ring on the Desk always measures against 8 hours. A setting per weekday (for example 4 h on Fridays) lets a short day still close the ring.",
+        "**Text size:** Small, Normal or Large next to Theme and Motion. Some labels are 10 to 11 px today.",
+        "**Contrast:** the light grey used for hints and \"No project\" is a little too faint to read comfortably. A slightly darker grey fixes it; colours otherwise stay the same.",
+        "**Undo:** the Undo toast stays for 10 seconds instead of about 5, and waits while the pointer is over it."
+      ],
+      "questions": [
+        {
+          "id": "pick",
+          "type": "many",
+          "legend": "Which of these?",
+          "options": [
+            {
+              "value": "Daily target per weekday",
+              "on": true
+            },
+            {
+              "value": "Text size option",
+              "on": true
+            },
+            {
+              "value": "Darker hint grey",
+              "on": true
+            },
+            {
+              "value": "Longer Undo",
+              "on": true
+            }
+          ]
+        }
+      ],
+      "pick": "All four. They're small and they make the app kinder on long days.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-target.html",
+          "caption": "A 4 hour Friday, today and with a Friday target of 4 h."
+        }
+      ]
+    },
+    "r7-wrapup": {
+      "round": 7,
+      "order": 50,
+      "area": "Ideas",
+      "version": 2,
+      "title": "A gentle end-of-day wrap-up, and marks for days with nothing logged",
+      "body": [
+        "Two ideas borrowed from Sunsama and Toggl. Neither nags: both can be turned off in Customize."
+      ],
+      "bullets": [
+        "**Wrap-up card** at a time you choose: hours logged today, anything without a timesheet code, the tray total, and one line for \"tomorrow I start with…\".",
+        "**Gap marks:** weekdays on the ribbon with nothing logged get a small dot. Clicking one opens capture for that day."
+      ],
+      "questions": [
+        {
+          "id": "wrap",
+          "legend": "End-of-day wrap-up",
+          "options": [
+            {
+              "value": "Yes, off by default",
+              "rec": true
+            },
+            {
+              "value": "Yes, on by default"
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "gaps",
+          "legend": "Gap marks on the ribbon",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "No"
+            }
+          ]
+        }
+      ],
+      "pick": "Both, with the wrap-up off until you switch it on.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-wrapup.html",
+          "caption": "Gap dots on the ribbon, and the wrap-up card (off until you switch it on)."
+        }
+      ]
+    },
+    "r7-firstrun": {
+      "round": 7,
+      "order": 60,
+      "area": "First run",
+      "version": 2,
+      "title": "Setup, unlock and the recovery key in the same paper look",
+      "body": [
+        "The first screens you see (create password, recovery key, unlock) still use the plain style from before the look was decided, with bigger text and thicker borders. That's why sign-up feels oversized. Bringing them onto the same paper cards as the app makes the first impression match, and the recovery key would sit in a compact grid with **Copy** and **Save as file** beside it, like 1Password's recovery kit."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Restyle the first-run screens?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Just fix the size bug for now"
+            }
+          ]
+        }
+      ],
+      "pick": "Yes, after the sign-up bug fix lands, so the two changes don't collide.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-firstrun.html",
+          "caption": "The recovery key screen today and in the paper look."
+        }
+      ]
+    },
+    "r7-polish": {
+      "round": 7,
+      "order": 70,
+      "area": "Small fixes",
+      "version": 2,
+      "title": "Small fixes I'd fold in along the way",
+      "bullets": [
+        "A **shortcut sheet** on the **?** key listing every key.",
+        "The **+15m / +30m / +1h** buttons on an entry also show when it's selected with the keyboard, not only on hover.",
+        "A **This week** button on the Timesheet to jump back after browsing.",
+        "Tab stays inside capture and the details panel while they're open.",
+        "Plainer names where internal words leak through, for example \"Inbox zero\"."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Fold these in?",
+          "options": [
+            {
+              "value": "Yes, all of them",
+              "rec": true
+            },
+            {
+              "value": "Some, see my note"
+            }
+          ]
+        }
+      ],
+      "pick": "Yes. None of them changes anything you've already approved.",
+      "figures": [
+        {
+          "html_file": "mocks/r07-polish.html",
+          "caption": "An entry selected with the keyboard, and the shortcut sheet on the ? key."
+        }
+      ]
+    }
+  }
+}

@@ -50,6 +50,15 @@ pub enum CoreError {
         max: usize,
     },
 
+    /// A list had more items than allowed.
+    #[error("Keep {field} to at most {max} items.")]
+    TooManyItems {
+        /// The list's name as shown to the user.
+        field: &'static str,
+        /// The most items allowed.
+        max: usize,
+    },
+
     /// A number was outside the allowed range.
     #[error("{field} must be between {min} and {max}.")]
     OutOfRange {

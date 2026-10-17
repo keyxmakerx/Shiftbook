@@ -6,19 +6,18 @@
   import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, protection, protectNow } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, projectColor, refresh, selectDay, setView } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import type { View } from '../lib/keys';
   import Icon from './Icon.svelte';
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
 
-  const VIEW_LIST: { id: View | 'planner' | 'canvas'; label: string; later?: boolean }[] = [
-    { id: 'desk', label: 'Desk' },
-    { id: 'planner', label: 'Planner', later: true },
-    { id: 'canvas', label: 'Canvas', later: true },
-    { id: 'timesheet', label: 'Timesheet' },
-    { id: 'customize', label: 'Customize' },
+  // Planner and Canvas join this list, in their places, once they're built (round 7).
+  const VIEW_LIST: { id: View; label: string; key: string }[] = [
+    { id: 'desk', label: 'Desk', key: '1' },
+    { id: 'timesheet', label: 'Timesheet', key: '2' },
+    { id: 'settings', label: 'Settings', key: '3' },
   ];
 
   let viewsEl: HTMLElement | undefined = $state();
@@ -107,9 +106,10 @@
     });
   }
 
-  function openDay(date: string) {
+  function openDay(date: string, gap = false) {
     setView('desk');
-    void selectDay(date);
+    // A day with nothing logged opens with Log work ready to type into.
+    void selectDay(date).then(() => gap && focusLog());
   }
 
   async function toggleProtection() {
@@ -151,19 +151,9 @@
   <nav class="views" aria-label="Views" bind:this={viewsEl}>
     <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px"></span>
     {#each VIEW_LIST as v (v.id)}
-      {#if v.later}
-        <button type="button" aria-pressed="false" aria-disabled="true" class="later" data-tip="Coming in a later version">
-          {v.label}
-        </button>
-      {:else}
-        <button
-          type="button"
-          aria-pressed={app.view === v.id}
-          onclick={() => setView(v.id as View)}
-        >
-          {v.label}
-        </button>
-      {/if}
+      <button type="button" aria-pressed={app.view === v.id} title="{v.label} ({v.key})" onclick={() => setView(v.id)}>
+        {v.label}
+      </button>
     {/each}
   </nav>
   <div class="days" class:grow={!grown} aria-label="Last four weeks">
@@ -176,10 +166,11 @@
             class:now={day.date === app.today}
             class:on={day.date === app.selected}
             class:future={day.future}
+            class:gap={day.gap}
             disabled={day.future}
-            title="{longDay(day.date)} · {day.hours} h{day.future ? '' : ' · right-click for options'}"
-            aria-label="{longDay(day.date)}, {day.hours} hours"
-            onclick={() => openDay(day.date)}
+            title="{longDay(day.date)} · {day.gap ? 'nothing logged yet, click to log' : `${day.hours} h`}{day.future ? '' : ' · right-click for options'}"
+            aria-label="{longDay(day.date)}, {day.gap ? 'nothing logged' : `${day.hours} hours`}"
+            onclick={() => openDay(day.date, day.gap)}
             use:paperMenu={() => dayMenu(day)}
           >
             <span class="bar" style:--k={w * 7 + i}>
@@ -188,6 +179,7 @@
               {/each}
             </span>
             <small>{dayOfMonth(day.date)}</small>
+            <i class="gapdot" aria-hidden="true"></i>
           </button>
         {/each}
       </div>
@@ -250,34 +242,6 @@
     color: var(--ink);
   }
 
-  .views button.later {
-    color: color-mix(in srgb, var(--ink-2) 55%, transparent);
-    cursor: not-allowed;
-  }
-
-  .views button.later::after {
-    content: attr(data-tip);
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 50%;
-    transform: translateX(-50%);
-    white-space: nowrap;
-    font: 600 12px var(--ui);
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: var(--ink);
-    color: var(--paper);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-    z-index: 5;
-  }
-
-  .views button.later:hover::after,
-  .views button.later:focus-visible::after {
-    opacity: 1;
-  }
-
   .pill {
     position: absolute;
     z-index: 0;
@@ -296,7 +260,7 @@
     display: flex;
     gap: 3px;
     align-items: flex-end;
-    height: 64px;
+    height: 70px;
     overflow-x: auto;
     scrollbar-width: none;
     padding-top: 4px;
@@ -366,6 +330,22 @@
     from {
       transform: scaleY(0);
     }
+  }
+
+  .gapdot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    margin-top: -1px;
+  }
+
+  .d.gap .gapdot {
+    background: var(--warn);
+  }
+
+  .d.gap .bar {
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent);
   }
 
   .d small {

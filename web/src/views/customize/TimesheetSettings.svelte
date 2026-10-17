@@ -1,9 +1,9 @@
 <script lang="ts">
-  // Customize → Timesheet: your timesheet codes (area, phase, code, order, hide), which
-  // code each category gets, the comment format and the default grouping.
+  // Settings → Timesheet: your timesheet codes (area, phase, code, order, hide), which
+  // code each category gets, the comment format, the default grouping and the week start day.
   import { api } from '../../lib/api';
-  import type { CategoryCode, CodeInput, PrefKey, TimesheetCode } from '../../lib/api';
-  import { app, attempt } from '../../lib/store.svelte';
+  import type { CategoryCode, CodeInput, PrefKey, TimesheetCode, WeekStartDay } from '../../lib/api';
+  import { app, attempt, refreshRibbon } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import Icon from '../../components/Icon.svelte';
 
@@ -46,6 +46,21 @@
   async function pref(key: PrefKey, value: string) {
     const p = await attempt(() => api.savePref(key, value));
     if (p) app.prefs = p;
+  }
+
+  const WEEK_DAYS: { value: WeekStartDay; label: string }[] = [
+    { value: 'monday', label: 'Monday' },
+    { value: 'tuesday', label: 'Tuesday' },
+    { value: 'wednesday', label: 'Wednesday' },
+    { value: 'thursday', label: 'Thursday' },
+    { value: 'friday', label: 'Friday' },
+    { value: 'saturday', label: 'Saturday' },
+    { value: 'sunday', label: 'Sunday' },
+  ];
+
+  async function setWeekStart(day: string) {
+    await pref('calendar.week_start', day);
+    await attempt(refreshRibbon);
   }
 
   const example = $derived(
@@ -156,6 +171,20 @@
         <button type="button" aria-pressed={app.prefs.groupBy === 'project'} onclick={() => pref('timesheet.group_by', 'project')}>By project</button>
       </div>
     </div>
+    <div class="cz-row">
+      <span class="cz-grow">My week starts on</span>
+      <select
+        class="text-in"
+        value={app.prefs.weekStart}
+        aria-label="My week starts on"
+        onchange={(e) => setWeekStart((e.currentTarget as HTMLSelectElement).value)}
+      >
+        {#each WEEK_DAYS as d (d.value)}
+          <option value={d.value}>{d.label}</option>
+        {/each}
+      </select>
+    </div>
+    <p class="sub">Changes the weeks in the ribbon, the crib sheet and words like “next week”.</p>
   </article>
 {/if}
 

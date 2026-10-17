@@ -5,6 +5,8 @@ import { invoke } from '@tauri-apps/api/core';
 import { toApiError } from './DataApi';
 import type {
   AppInfo,
+  BackupFile,
+  BackupSummary,
   Capture,
   CategoryCode,
   CodeInput,
@@ -16,6 +18,8 @@ import type {
   FieldInput,
   GroupBy,
   InboxItem,
+  NextUpItem,
+  SearchResult,
   IsoDate,
   PrefKey,
   Prefs,
@@ -67,6 +71,25 @@ export class TauriApi implements DataApi {
   }
   regenerateRecoveryKey(password: string): Promise<string> {
     return call('regenerate_recovery_key', { password });
+  }
+  deleteAllData(confirm: string): Promise<void> {
+    return call('delete_all_data', { confirm });
+  }
+
+  backupNow(today: IsoDate): Promise<string | null> {
+    return call('backup_now', { today });
+  }
+  listBackups(): Promise<BackupFile[]> {
+    return call('list_backups');
+  }
+  pickBackupFile(): Promise<string | null> {
+    return call('pick_backup_file');
+  }
+  checkBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary> {
+    return call('check_backup', { source, secret: secret ?? null, kind: kind ?? null });
+  }
+  restoreBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary> {
+    return call('restore_backup', { source, secret: secret ?? null, kind: kind ?? null });
   }
 
   allowCapture(): Promise<number> {
@@ -194,5 +217,19 @@ export class TauriApi implements DataApi {
   }
   setInboxDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_inbox_deleted', { id, deleted });
+  }
+
+  nextUp(): Promise<NextUpItem[]> {
+    return call('next_up');
+  }
+  setNextUp(items: string[]): Promise<NextUpItem[]> {
+    return call('set_next_up', { items });
+  }
+  tickNextUp(id: string, done: boolean): Promise<void> {
+    return call('tick_next_up', { id, done });
+  }
+
+  search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {
+    return call('search', { query, today, commands });
   }
 }

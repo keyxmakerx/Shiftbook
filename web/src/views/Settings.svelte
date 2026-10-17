@@ -1,19 +1,23 @@
 <script lang="ts">
-  // Customize: Look, Projects, Timesheet, Fields and Security in one place.
+  // Settings: Look, Your day, Projects, Timesheet, Fields, Backups and Security in one place.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
+  import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
   import Projects from './customize/Projects.svelte';
   import Security from './customize/Security.svelte';
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
+  import YourDay from './customize/YourDay.svelte';
 
-  type Section = 'look' | 'projects' | 'timesheet' | 'fields' | 'security';
+  type Section = 'look' | 'day' | 'projects' | 'timesheet' | 'fields' | 'backups' | 'security';
   const SECTIONS: { id: Section; label: string; icon: IconName }[] = [
     { id: 'look', label: 'Look', icon: 'palette' },
+    { id: 'day', label: 'Your day', icon: 'clock' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
     { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
     { id: 'fields', label: 'Fields', icon: 'sliders' },
+    { id: 'backups', label: 'Backups', icon: 'archive' },
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
 
@@ -21,8 +25,8 @@
 </script>
 
 <div class="cz">
-  <nav class="paper side" aria-label="Customize sections">
-    <h2>Customize</h2>
+  <nav class="paper side" aria-label="Settings sections">
+    <h2>Settings</h2>
     {#each SECTIONS as s (s.id)}
       <button type="button" aria-current={section === s.id ? 'page' : undefined} onclick={() => (section = s.id)}>
         <Icon name={s.icon} size={16} />{s.label}
@@ -34,12 +38,16 @@
       <div class="sec rise">
         {#if section === 'look'}
           <Look />
+        {:else if section === 'day'}
+          <YourDay />
         {:else if section === 'projects'}
           <Projects />
         {:else if section === 'timesheet'}
           <TimesheetSettings />
         {:else if section === 'fields'}
           <Fields />
+        {:else if section === 'backups'}
+          <Backups />
         {:else}
           <Security />
         {/if}

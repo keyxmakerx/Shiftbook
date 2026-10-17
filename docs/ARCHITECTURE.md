@@ -36,8 +36,12 @@
   `vault.json.prev` and `shiftbook.db` (files `0600` on Unix). Relocating via Settings (stored in
   a small config file in the app config dir) comes later. On Linux the WebView (WebKitGTK) also
   keeps its own cache folders there; Shiftbook stores nothing in WebView storage.
-- Backups: copy DB with SQLite online backup API (`VACUUM INTO`) to `backups/YYYY-MM-DD.db`.
-- Plugins allowed: `dialog` (pick backup/import file), `fs` scoped to app data + user-picked paths.
+- Backups: `shiftbook_storage::backup` reads every table into JSON, gzips it and encrypts it
+  with the DEK into a `.shiftbak` file (SECURITY.md "Backup file format"). Restore replaces every
+  table in one transaction. Commands: `backup_now`, `list_backups`, `pick_backup_file`,
+  `check_backup`, `restore_backup`; the daily automatic backup starts after `unlock`.
+- Plugins allowed: `dialog` (pick backup/import file, called from Rust commands only; the
+  WebView gets no dialog permission), `fs` scoped to app data + user-picked paths.
   Not allowed: `shell`, `http`, `opener` for remote URLs, updater (until signing is set up).
 
 ## Server specifics (Phase 2 — plan only)
@@ -78,7 +82,7 @@
 | `sheet` | Timesheet crib sheet (`build_week_sheet`): lines per day by code or project, comments, effort, warnings, tab-separated week |
 | `ribbon` | The last four weeks as days of minutes per project, with week totals |
 | `fields` | Custom field kinds, option lists, value checks, ticket prefixes and link building |
-| `prefs` | Preferences (theme, motion, accent, grouping, comment format, auto-lock) with defaults; project colour palette |
+| `prefs` | Preferences (theme, motion, accent, grouping, comment format, week start day, auto-lock) with defaults; project colour palette |
 
 Interpretations made where the spec is silent:
 - **Hours rounding:** decimal hours round to the nearest whole minute, halves up (`0.01` → 1 min,
@@ -121,6 +125,7 @@ Interpretations made where the spec is silent:
 | Module | What it holds |
 |---|---|
 | `vault` | `VaultDir` (create, unlock with password or recovery key, change password, regenerate recovery key), `Vault`/`Dek` (the unlocked key, wiped on drop), `VaultError` |
+| `wipe` | `delete_local_data`: delete the database, its side files and the vault (vault last) to start again |
 | `recovery` | `RecoveryKey`: 256 random bits shown as 13 groups of 4 Crockford base32 characters; forgiving parser |
 | `db` | `open_encrypted(path, dek)`: SQLCipher pool with the key pragma first, then migrations |
 | `repo` | Repository traits + `SqliteStore` (local user, settings, list options, frequencies) |
@@ -167,6 +172,7 @@ unlock(secret, kind) ─────────▶  unlock_with_password / _rec
           ◀── ok | "unlock_failed" (after 5 failures: wait 1 s, 2 s … 60 s)
 lock ─────────────────────────▶  close pool, drop Vault (key wiped) ── WebView reloads
 change_password(cur, new) ────▶  VaultDir::change_password (re-wrap only)
+delete_all_data("DELETE") ────▶  close pool, wipe::delete_local_data ── WebView reloads to setup
 ```
 Errors reach the WebView only as codes (`unlock_failed`, `weak_password`, `busy`,
 `already_set_up`, `not_set_up`, `locked`, `storage_error`). While a vault command runs (including
@@ -203,7 +209,7 @@ Each command has its own `allow-<command>` permission (declared in `build.rs`, g
 
 | Area | Commands |
 |---|---|
-| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once) |
+| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once), `delete_all_data` (needs the typed word `DELETE`; works locked or unlocked) |
 | Protection | `allow_capture` (content protection off for 10 minutes; a timer in the app turns it back on, only the latest allow counts), `protect_capture` |
 | Preferences | `load_prefs`, `save_pref` |
 | Projects | `list_projects`, `create_project`, `update_project` |
@@ -226,7 +232,7 @@ from it. Ticket chips carry ready-made links from link fields whose prefix match
   overlays, keyboard shortcuts (`lib/keys.ts`) and the copy guard (`lib/protection.svelte.ts`).
 - `components/` — `Ribbon`, `LogWork`, `EntryRow`, `TicketChip`, `TrayCard`, `InboxCard`,
   `Drawer`, `Capture`, `PaperMenu`, `Toast`, `Icon` (inline SVG paths in `lib/icons.ts`).
-- `views/` — `Desk`, `Timesheet`, `Customize` with `customize/Look|Projects|TimesheetSettings|
+- `views/` — `Desk`, `Timesheet`, `Settings` with `customize/Look|Projects|TimesheetSettings|
   Fields|FieldEditor|Security`.
 - `lib/store.svelte.ts` — shared state filled only from `DataApi`; `lib/menu.svelte.ts` and
   `lib/menuPlacement.ts` (pure, tested) for the paper menu; `lib/motion.ts` scales animation by
