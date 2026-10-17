@@ -15,13 +15,15 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   PDF, text and a round-trip Shiftbook MOP file. Approved on the r7-import card.
 - **OneNote:** both ways (paste a page, then import sections exported as Word files);
   `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
-- **Meetings:** the first design (topic rail plus results panel) and the second (running log,
-  outline, topic cards) were rejected. Direction: a canvas-style page like OneNote, but not the
-  round 3 mind map. The four canvas variants (v3) didn't land either; v4 lets the owner mix
-  five choices (topic look, where you type, going back, making tasks, results) instead.
-  Picked on v4: tabs like OneNote sections, typing in place, a recent strip, right-click a line
-  to make a task, a count at the top. Wanted on a canvas with motion; three versions on v5. Kept throughout: `#` topics, `[]` `!` `?`
-  marks, an optional agenda written beforehand, one-click time log on wrap up.
+- **Meetings (approved on r7-meeting v5):** one big canvas. Each topic is a coloured area on one
+  sheet; topic tabs along the top glide the view to their area, and See all pulls back to the
+  whole meeting. Click empty paper to write there, drag blocks, a recent-topics strip, right-click
+  a line to make a todo, task, decision or question, a count at the top. Kept throughout: `#name`
+  to jump to or start a topic, `[]` `!` `?` marks, an optional agenda written beforehand, open
+  items carry to the next meeting in a series, one-click time log on wrap up. The canvas must be
+  easy to tidy (a Tidy up that lines blocks up, blocks that snap and don't overlap).
+  Earlier rejected tries: topic rail plus results panel (v1); running log, outline and topic
+  cards (v2); OneNote-style free page, trail, agenda zones and zoom board (v3).
 
 ## Round 6 — 15 Oct 2026
 - **Timesheet view:** a "what to enter" crib sheet, not a data-entry grid. Logging happens on the
