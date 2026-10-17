@@ -10,6 +10,7 @@
   import { fmtHours } from '../lib/format';
   import { app, attempt, flashEntry, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
   import TicketChip from './TicketChip.svelte';
 
@@ -145,10 +146,12 @@
   function close() {
     app.drawer = null;
   }
+  let drawerEl: HTMLElement | undefined = $state();
 </script>
 
 <div class="dscrim" class:on={open} onclick={close} aria-hidden="true"></div>
-<aside class="paper drawer" class:on={open} aria-label="Entry details" aria-hidden={!open} style:--c={projectColor(entry?.projectId)}>
+<svelte:window onkeydown={(e) => open && !e.defaultPrevented && trapTab(e, drawerEl)} />
+<aside bind:this={drawerEl} class="paper drawer" class:on={open} aria-label="Entry details" aria-hidden={!open} style:--c={projectColor(entry?.projectId)}>
   {#if entry}
     {#key entry.id}
       <button class="x" type="button" aria-label="Close" onclick={close}><Icon name="x" size={18} /></button>

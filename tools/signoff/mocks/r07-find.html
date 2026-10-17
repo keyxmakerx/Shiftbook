@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--mut2:#565e67;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--bad:#c2412d;--none:#8a919a;--none2:#6c737c;
+--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,'Times New Roman',serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono','Cascadia Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:14px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media (max-width:720px){.pair{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:8px;min-width:0}
+.tag{font:700 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.tag.new{color:var(--ok)}
+.why{font-size:12.5px;color:var(--ink2);margin:0}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:14px 16px;position:relative}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.in{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.text-in{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:8px 10px;font:inherit;color:inherit;min-width:0;flex:1 1 150px;outline:0}
+.text-in:focus{box-shadow:0 0 0 2px var(--accent)}
+.hbtn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:7px 10px;font:700 12.5px var(--mono);color:var(--ink);cursor:pointer}
+.hbtn.hot{background:var(--ink);color:var(--paper)}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 11.5px var(--mono);padding:1px 8px;border-radius:99px;background:color-mix(in srgb,var(--c,var(--accent)) 15%,transparent);color:color-mix(in srgb,var(--c,var(--accent)) 78%,var(--ink));white-space:nowrap}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 12px;font:600 13px var(--ui);color:var(--ink);cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.kbd{font:500 10.5px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink2)}
+.toast{background:var(--ink);color:var(--paper);border-radius:9px;padding:8px 12px;font-size:13px;display:inline-block}
+.row{display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;padding:8px 6px;border-radius:6px;border-left:3px solid var(--c,var(--none))}
+.row .h{font:700 14px var(--mono)}
+.row b{display:block;font-weight:600}
+.row small{color:var(--mut)}
+.note{font-size:12px;color:var(--mut);margin:0}
+.bad{outline:2px dashed var(--bad);outline-offset:3px;border-radius:6px}
+.callout{font-size:12px;color:var(--bad);font-weight:600}
+.good{outline:2px dashed var(--ok);outline-offset:3px;border-radius:6px}
+.callout.ok{color:var(--ok)}
+</style></head><body><div class="pair"><div class="side"><span class="tag">Today</span><p class="why">Capture can log or save a scrap, nothing else.</p><div class="paper"><input class="text-in" value="INC0045678" readonly style="width:100%;font-size:16px">
+<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap"><span class="chip">ticket INC0045678</span><span class="chip" style="--c:var(--warn)">no hours · Enter saves it to the Inbox</span></div>
+<p class="callout" style="margin-top:12px">The button says "Log, note or find", but typing a ticket only offers to save it as a scrap.</p></div></div><div class="side"><span class="tag new">Proposed</span><p class="why">Type anything: matching entries and commands appear. Try "vpn" or "lock".</p><div class="paper" style="padding:0;overflow:hidden"><div style="padding:12px 14px;border-bottom:1px solid var(--rule)"><input id="q" class="text-in" value="INC00456" style="width:100%;font-size:16px" autocomplete="off"></div>
+<div id="res" style="padding:6px"></div>
+<div style="padding:8px 14px;border-top:1px solid var(--rule);display:flex;gap:14px;font-size:12px;color:var(--mut)"><span><span class="kbd">↑↓</span> choose</span><span><span class="kbd">Enter</span> open</span><span>a line with hours still logs it</span></div></div></div></div><script>
+var D=[["entry","Tue 14 Oct","Printer on 2nd floor","INC0045678 · 1.5 h","var(--coral)"],["entry","Thu 9 Oct","Badge reader reset","INC0045612 · 30m","var(--teal)"],["entry","Mon 6 Oct","VPN for new starter","INC0045601 · 45m","var(--accent)"],
+["cmd","Command","Lock now","Ctrl L",""],["cmd","Command","Book today as holiday","8 h",""],["cmd","Command","Go to Timesheet","2",""],["cmd","Command","Customize · Look","",""]];
+var q=document.getElementById('q'),r=document.getElementById('res'),sel=0,hits=[];
+function draw(){var t=q.value.toLowerCase().trim();hits=D.filter(function(d){return !t||(d[1]+' '+d[2]+' '+d[3]).toLowerCase().indexOf(t)>=0});if(sel>=hits.length)sel=0;
+r.innerHTML='';var head='';hits.forEach(function(d,k){var g=d[0]=='cmd'?'Commands':'Entries';if(g!=head){head=g;var h=document.createElement('div');h.className='lbl';h.style.padding='6px 8px 2px';h.textContent=g;r.appendChild(h)}
+var e=document.createElement('div');e.style.cssText='display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:6px;cursor:pointer'+(k==sel?';background:color-mix(in srgb,var(--accent) 12%,transparent)':'');
+e.innerHTML=(d[4]?'<i style="width:10px;height:10px;border-radius:3px;background:'+d[4]+'"></i>':'<i style="width:10px"></i>')+'<span style="flex:1"><b style="font-weight:600"></b> <small style="color:var(--mut)"></small></span><span class="kbd"></span>';
+e.querySelector('b').textContent=d[2];e.querySelector('small').textContent=d[0]=='cmd'?'':d[1];var kb=e.querySelector('.kbd');if(d[3])kb.textContent=d[3];else kb.remove();e.onmouseenter=function(){sel=k;draw()};r.appendChild(e)});
+if(!hits.length)r.innerHTML='<p class="note" style="padding:10px">Nothing found. Enter saves it to the Inbox.</p>'}
+q.addEventListener('input',function(){sel=0;draw()});q.addEventListener('keydown',function(e){if(e.key=='ArrowDown'){sel=(sel+1)%Math.max(hits.length,1);draw();e.preventDefault()}if(e.key=='ArrowUp'){sel=(sel-1+hits.length)%Math.max(hits.length,1);draw();e.preventDefault()}});draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()</script></body></html>

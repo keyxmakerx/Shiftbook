@@ -39,6 +39,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "alpha: colours, tray, custom fields, tick-offs, inbox",
         include_str!("../migrations/0002_alpha.sql"),
     ),
+    (
+        3,
+        "next up list",
+        include_str!("../migrations/0003_next_up.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -244,6 +249,7 @@ mod tests {
                     "frequencies",
                     "inbox_items",
                     "list_options",
+                    "next_up_items",
                     "projects",
                     "recurring_tasks",
                     "settings",

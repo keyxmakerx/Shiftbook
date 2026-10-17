@@ -1,0 +1,273 @@
+{
+  "meta": {
+    "round": 7
+  },
+  "cards": {
+    "r7-resume": {
+      "round": 7,
+      "order": 80,
+      "area": "Ideas",
+      "version": 1,
+      "title": "\"Where was I?\": pick up where you left off",
+      "body": [
+        "Getting back into something after a break is often the hardest part of the day. When you unlock Shiftbook, a card at the top of the Desk shows the last thing you worked on, its tickets and its next step. **Carry on** puts it straight into Log work.",
+        "Every entry already has a hidden **next step** field, so this mostly shows what's already saved. It pairs with the wrap-up card above: what you write in \"tomorrow I start with…\" is what this card shows the next morning."
+      ],
+      "bullets": [
+        "Shows only after a lock, a break of 30 minutes or more, or a new day. Never in the middle of work.",
+        "**Later** hides it until the next unlock. With nothing to pick up, it doesn't appear at all.",
+        "The entry's details panel gets a **Next step** box, so you can fill it in as you go."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-resume.html",
+          "height": 520,
+          "caption": "Switch between \"Back from lunch\" and \"Next morning\" at the top, then press Carry on. Made-up data."
+        }
+      ],
+      "questions": [
+        {
+          "id": "want",
+          "legend": "Add the \"Where was I?\" card?",
+          "options": [
+            { "value": "Yes", "rec": true, "why": "Small to build: the data is already there." },
+            { "value": "Yes, but only in the morning", "why": "Not after breaks or locks." },
+            { "value": "Not now" }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything you'd want on the card? (optional)"
+        }
+      ]
+    },
+    "r7-timer": {
+      "round": 7,
+      "order": 90,
+      "area": "Ideas",
+      "version": 1,
+      "title": "A soft \"now doing\" timer for when you lose track of time",
+      "body": [
+        "Press **▶ Start** on an entry and a small clock sits at the top of the window. Press **Stop** and Shiftbook offers to add the time, rounded to 15 minutes. You always choose; nothing is added on its own.",
+        "It keeps the rule you set at the start: **only minutes are saved**, never start or end times. If you walked away while it ran, it notices the quiet time and suggests leaving that out."
+      ],
+      "bullets": [
+        "One timer at a time. Starting another asks to stop the first.",
+        "Locking the app or the computer sleeping pauses it.",
+        "Hyperfocus-friendly: no alarms or pop-ups while it runs, only the clock."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-timer.html",
+          "height": 540,
+          "caption": "Press ▶ Start, wait a few seconds (the clock runs 60× fast), then press \"Pretend I walked away\" and Stop."
+        }
+      ],
+      "questions": [
+        {
+          "id": "want",
+          "legend": "Add the timer?",
+          "options": [
+            { "value": "Yes", "rec": true, "why": "Helps on long focused stretches." },
+            { "value": "Yes, without the walked-away check" },
+            { "value": "No, I log time myself" }
+          ]
+        },
+        {
+          "id": "round",
+          "legend": "Round to",
+          "options": [
+            { "value": "15 minutes", "rec": true, "why": "Matches the 15m buttons." },
+            { "value": "5 minutes" },
+            { "value": "Exact minutes" }
+          ]
+        }
+      ]
+    },
+    "r7-next": {
+      "round": 7,
+      "order": 100,
+      "area": "What's next",
+      "version": 1,
+      "title": "What's unfinished, and what I'd build next",
+      "body": [
+        "I went through the alpha looking for things that are half built. The full list is in the project files (*unfinished-and-ideas.md*). These are the big ones, in the order I'd take them. Search and the greyed-out views are already on cards above, so they're not repeated here."
+      ],
+      "bullets": [
+        "**Backups.** There are none yet. If the database file is lost or damaged, everything is gone. Encrypted `.shiftbak` backups (automatic, plus Backup now and Restore) were always planned as a must.",
+        "**Recurring work and Due soon.** The rules (next due, days left, overdue, routine items) are written and tested, and the table exists. It needs saving, a screen and the Due soon panel on the Desk.",
+        "**Project budgets and alerts.** Hours left, % of estimate used, Over budget and Overdue are worked out already; projects only show a name and colour today.",
+        "**Tasks.** The table and the overdue rule exist; there's no list or board yet.",
+        "**Ctrl+Shift+Space from anywhere.** Approved in round 2; capture only works while Shiftbook is in front."
+      ],
+      "questions": [
+        {
+          "id": "order",
+          "legend": "What should come first?",
+          "options": [
+            { "value": "Backups", "rec": true, "why": "Protects everything else you log." },
+            { "value": "Recurring work and Due soon" },
+            { "value": "Project budgets and alerts" },
+            { "value": "Tasks" },
+            { "value": "Capture from anywhere" }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything missing from this list? (optional)"
+        }
+      ]
+    },
+    "r7-weekstart": {
+      "round": 7,
+      "order": 110,
+      "area": "Built",
+      "version": 1,
+      "title": "Done: your week can start on any day",
+      "body": [
+        "The week always started on Monday. Now **Customize → Timesheet** has **My week starts on**. The ribbon, the crib sheet and words like \"next week\" in capture all follow it. It's in a draft pull request, waiting for your OK."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/2802b08154f06101c31f4756b9de8070",
+          "caption": "The new setting at the bottom of Customize → Timesheet. Screenshot of the real app with made-up data."
+        },
+        {
+          "src": "/_blob/a7a0860fcbf2edc36bf9faaef14670af",
+          "caption": "With Sunday picked, each block on the ribbon runs Sunday to Saturday (this week is 11 to 17 October)."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Happy with it?",
+          "options": [
+            { "value": "Yes, merge it", "rec": true },
+            { "value": "Change something", "why": "Say what below." }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "What to change (optional)"
+        }
+      ]
+    },
+    "r7-backups": {
+      "round": 7,
+      "order": 125,
+      "area": "Built",
+      "version": 1,
+      "title": "Backups: automatic, Back up now and Restore",
+      "body": [
+        "You picked backups next, so they're built. **Customize → Backups** is a new section. Shiftbook saves a backup on its own once a day when you unlock it, and keeps the last 14. **Back up now…** saves one wherever you like, such as a USB stick.",
+        "**Restore…** works on any backup in the list, or on a file you pick. First it shows what the backup holds and asks you to confirm. Your data as it is right then is saved first, so a restore can always be undone. Every backup is locked with your password, like the data itself. It's in a draft pull request, waiting for your OK."
+      ],
+      "bullets": [
+        "A backup made on this computer opens without asking for your password again.",
+        "A backup from another computer, or from before Delete all data, asks for the password or recovery key from when it was made.",
+        "Still to do later: a backup when you close Shiftbook, and choosing how many to keep."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/a37bc9b453d0bda303f2f70c5a222934",
+          "caption": "Restoring a backup from the list: what it holds, and the warning that today's data is saved first. Made-up data."
+        },
+        {
+          "src": "/_blob/82f3ff635992f52a97e9e9e725763923",
+          "caption": "Restoring a file from another computer: it asks for the password or recovery key it was made with."
+        }
+      ],
+      "questions": [
+        {
+          "id": "delete",
+          "legend": "When you use Delete all data, what should happen to your backups?",
+          "options": [
+            {
+              "value": "Keep them",
+              "rec": true,
+              "why": "A way back if you delete by mistake. They stay locked with the old password."
+            },
+            {
+              "value": "Delete them too",
+              "why": "Nothing of yours is left on this computer."
+            },
+            {
+              "value": "Ask me each time",
+              "why": "A tick box in the red Delete panel."
+            }
+          ]
+        },
+        {
+          "id": "merge",
+          "legend": "Merge backups into the app?",
+          "options": [
+            {
+              "value": "Yes, merge it",
+              "rec": true
+            },
+            {
+              "value": "Change something first"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything to change? (optional)"
+        }
+      ]
+    },
+    "r7-resume-built": {
+      "round": 7,
+      "order": 126,
+      "area": "Built",
+      "version": 1,
+      "title": "Done: \"Where was I?\" and the optional timer",
+      "body": [
+        "**Where was I?** When you unlock, come back from a break of 30 minutes or more, or start a new day, a card appears at the top of the Desk. If you wrote a list at the wrap-up, it shows that list: the first thing, then the rest as a checklist, so having several things for tomorrow works. Otherwise it shows the last thing you logged, with its tickets and next step. **Carry on** puts it into Log work, and **Later** hides it until you next unlock.",
+        "**Timer.** It's off unless you turn it on in **Settings → Your day → Timer**, as you asked. Then today's entries get a **▶ Start** button and a small clock runs under the top bar. **■ Stop** offers to add the time rounded to 15 minutes. It also offers a second amount that leaves out time you were away from the keyboard. Nothing is added unless you pick it. Both are in a draft pull request, waiting for your OK."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/693447ae0a54e16fc2e61e739daa922c",
+          "caption": "Back from a break: the last thing logged, with its ticket and next step. Made-up data."
+        },
+        {
+          "src": "/_blob/f9fc9d66fdd6eeec0c417ebdc07f1532",
+          "caption": "The next morning: the list from yesterday's wrap-up, first thing on top."
+        },
+        {
+          "src": "/_blob/1957066447c635090655e3c3c5ec0149",
+          "caption": "Timer on (Settings → Your day): the clock under the top bar while it runs."
+        },
+        {
+          "src": "/_blob/17df22345453a61d392373adcf4cab77",
+          "caption": "After Stop: add the full time, or leave out the 31 minutes away. Nothing is added without a click."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Merge these into the app?",
+          "options": [
+            {
+              "value": "Yes, merge it",
+              "rec": true
+            },
+            {
+              "value": "Change something first"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "type": "text",
+          "legend": "Anything to change? (optional)"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-where-was-i"
+description = "Enables the where_was_i command without any pre-configured scope."
+commands.allow = ["where_was_i"]
+
+[[permission]]
+identifier = "deny-where-was-i"
+description = "Denies the where_was_i command without any pre-configured scope."
+commands.deny = ["where_was_i"]

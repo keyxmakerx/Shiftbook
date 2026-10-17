@@ -1,0 +1,68 @@
+<style>
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper-2:#f6f3ec;--ink:#1d2126;--ink-2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);--accent:#3d5bb0;--ok:#2e8a5a;--warn:#9f5a06;--warn-wash:#fcf1df;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35);--display:Fraunces,Georgia,serif;--ui:"Instrument Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui)}
+.try{display:flex;gap:6px;align-items:center;padding:8px 12px;background:#fff;border-bottom:1px solid #d7dadd;font-size:12px;flex-wrap:wrap}
+.try b{color:var(--mut);font-weight:600}.try button{font:inherit;border:1px solid #c9cdd1;background:#f6f7f8;border-radius:6px;padding:3px 10px;cursor:pointer}.try button[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.wrap{padding:14px;display:grid;gap:12px;max-width:760px}
+.paper{background:var(--paper);border-radius:6px;box-shadow:var(--shadow);padding:14px 16px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+h2{font:600 22px/1.2 var(--display);margin:2px 0 0}
+.resume{border-top:3px solid var(--c,#3d5bb0);transform-origin:top;animation:fold .45s cubic-bezier(.2,.9,.25,1.08)}
+@keyframes fold{from{opacity:0;transform:translateY(-8px) scaleY(.96)}to{opacity:1;transform:none}}
+.resume h3{margin:4px 0 2px;font:600 19px/1.25 var(--display)}
+.proj{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink-2)}.dot{width:9px;height:9px;border-radius:50%;background:var(--c,#3d5bb0)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.chip{font:600 12px var(--mono);background:var(--paper-2);border:1px solid var(--rule);border-radius:12px;padding:2px 9px}
+.next{background:var(--warn-wash);border-radius:6px;padding:8px 10px;margin:8px 0 12px;font-size:14px}.next b{color:var(--warn)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:600 14px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:8px;padding:9px 14px;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn:hover{filter:brightness(.97)}
+.mut{color:var(--mut);font-size:12.5px}
+.log{display:flex;gap:8px}.log input{flex:1;font:inherit;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;background:#fffef9}
+.t{font:600 12px var(--mono);border:1px solid var(--rule);background:#fff;border-radius:7px;padding:0 10px}
+.entry{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--rule)}.entry .h{font:600 13px var(--mono);width:44px}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try:</b>
+<button data-s="break" aria-pressed="true">Back from lunch</button>
+<button data-s="morning" aria-pressed="false">Next morning (after wrap-up)</button>
+<button data-s="none" aria-pressed="false">Nothing to pick up</button></div>
+<div class="wrap">
+  <div class="paper"><span class="lbl">Today</span><h2>Friday 16 October</h2></div>
+  <div id="slot"></div>
+  <div class="paper">
+    <span class="lbl">Log work · paste a ticket or say what you did, then pick the time</span>
+    <div class="log" style="margin-top:8px"><input id="box" placeholder="INC0045678 or “printer on 2nd floor”"><button class="t">15m</button><button class="t">30m</button><button class="t">1h</button></div>
+    <div id="list" style="margin-top:10px"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const S={
+ break:{when:"Before your break",c:"#3d5bb0",proj:"Firewall cleanup",title:"Review rule set for VLAN 40",tickets:["CHG0012345"],next:"Send the change for approval",ago:"Last logged 52 minutes ago"},
+ morning:{when:"You said you'd start with",c:"#148c79",proj:"Ticket queue",title:"Chase the two stuck printer tickets",tickets:["INC0045678","INC0045690"],next:"Call the 2nd floor before 10",ago:"From yesterday's wrap-up"}};
+let cur='break';
+const slot=document.getElementById('slot'),list=document.getElementById('list'),box=document.getElementById('box'),toast=document.getElementById('toast');
+function say(t){toast.textContent=t;toast.classList.add('on');setTimeout(()=>toast.classList.remove('on'),2200)}
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function render(){
+ slot.innerHTML='';list.innerHTML='';
+ if(cur==='none'){const p=el('p','mut','Nothing to pick up, so the card stays out of the way. The Desk looks like it does today.');list.append(p);return}
+ const s=S[cur];const card=el('div','paper resume');card.style.setProperty('--c',s.c);
+ const top=el('div','row');top.style.justifyContent='space-between';top.append(el('span','lbl','Where was I? · '+s.when),el('span','mut',s.ago));
+ const pr=el('span','proj');pr.style.setProperty('--c',s.c);pr.append(el('span','dot'),document.createTextNode(s.proj));
+ const chips=el('div','chips');s.tickets.forEach(t=>chips.append(el('span','chip',t)));
+ const nx=el('div','next');nx.append(el('b',null,'Next step: '),document.createTextNode(s.next));
+ const row=el('div','row');const go=el('button','btn primary','Carry on');const other=el('button','btn','Something else');const later=el('button','btn','Later');
+ go.onclick=()=>{box.value=s.tickets.join(' ')+' '+s.title;box.focus();slot.innerHTML='';say('Ready in Log work. Pick a time when you’re done.')};
+ other.onclick=()=>{slot.innerHTML='';box.focus()};
+ later.onclick=()=>{slot.innerHTML='';say('It’s back when you next unlock.')};
+ row.append(go,other,later);
+ card.append(top,el('h3',null,s.title),pr,chips,nx,row);slot.append(card);
+ if(cur==='break'){const e=el('div','entry');e.append(el('span','h','1.5h'),el('span',null,'Review rule set for VLAN 40'));list.append(e)}
+}
+document.querySelectorAll('.try button').forEach(b=>b.onclick=()=>{cur=b.dataset.s;document.querySelectorAll('.try button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()});
+render();
+</script>

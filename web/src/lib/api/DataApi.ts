@@ -24,9 +24,31 @@ export interface UnlockOutcome {
 /** ISO local date, `YYYY-MM-DD`. */
 export type IsoDate = string;
 
+/** A file in the backups folder: made automatically, or the copy made just before a restore. */
+export interface BackupFile {
+  name: string;
+  kind: 'automatic' | 'before_restore';
+  /** UTC, RFC 3339. */
+  createdAt: string;
+  bytes: number;
+}
+
+/** What a backup holds, shown before restoring it. */
+export interface BackupSummary {
+  /** UTC, RFC 3339. */
+  createdAt: string;
+  entries: number;
+  tickets: number;
+  projects: number;
+}
+
+/** Where a backup to check or restore comes from: a name from `listBackups()`, or the picked file. */
+export const PICKED_BACKUP = 'picked';
+
 export type Theme = 'system' | 'light' | 'dark';
 export type Motion = 'still' | 'calm' | 'lively';
 export type GroupBy = 'code' | 'project';
+export type WeekStartDay = 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
 
 export interface CommentFormat {
   includeTickets: boolean;
@@ -40,7 +62,34 @@ export interface Prefs {
   accent: string | null;
   groupBy: GroupBy;
   comment: CommentFormat;
+  weekStart: WeekStartDay;
   autoLockMinutes: number;
+  /** Daily target in minutes, Monday first (seven numbers). */
+  dayTargets: number[];
+  /** Text size in percent: 90, 100, 115 or 130. */
+  textSize: number;
+  /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
+  wrapupAt: string | null;
+  /** The optional "Now doing" timer is turned on (off by default). */
+  timer: boolean;
+  /** A timer paused by locking, to pick up after unlock. */
+  pausedTimer: PausedTimer | null;
+}
+
+/** A timer paused by locking: the entry and what it had counted (never a start or end time). */
+export interface PausedTimer {
+  entryId: string;
+  seconds: number;
+  /** Quiet stretches noticed while it ran, in seconds. */
+  quiet: number[];
+}
+
+/** What Stop offers to add, rounded to 15 minutes. */
+export interface TimerOffer {
+  minutes: number;
+  /** Without the time away; only when that makes a difference. */
+  withoutAway: number | null;
+  awayMinutes: number;
 }
 
 /** Setting keys `savePref` accepts (see `shiftbook_core::prefs`). */
@@ -51,7 +100,13 @@ export type PrefKey =
   | 'timesheet.group_by'
   | 'timesheet.comment_tickets'
   | 'timesheet.comment_separator'
-  | 'security.auto_lock_minutes';
+  | 'calendar.week_start'
+  | 'security.auto_lock_minutes'
+  | 'day.targets'
+  | 'ui.text_size'
+  | 'day.wrapup_at'
+  | 'day.timer'
+  | 'timer.paused';
 
 export interface Project {
   id: string;
@@ -142,6 +197,8 @@ export interface RibbonDay {
   hours: string;
   parts: DayPart[];
   future: boolean;
+  /** Nothing logged on a day that has a target. */
+  gap: boolean;
 }
 
 export interface RibbonWeek {
@@ -269,6 +326,33 @@ export interface InboxItem {
   createdAt: string;
 }
 
+/** One thing on the "next up" list (written at the wrap-up, shown by "Where was I?"). */
+export interface NextUpItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** What brought the user back to Shiftbook. */
+export type ResumeTrigger = 'unlocked' | 'break' | 'new_day';
+
+/** The "Where was I?" card: the open wrap-up list (first item first), or else the last entry. */
+export interface ResumeCard {
+  trigger: ResumeTrigger;
+  list: NextUpItem[];
+  entry: Entry | null;
+  /** When that entry last changed (UTC, RFC 3339). */
+  changedAt: string | null;
+}
+
+/** What Find turned up, best first. */
+export interface SearchResult {
+  entries: Entry[];
+  inbox: InboxItem[];
+  /** Indexes into the command names passed to `search`. */
+  commands: number[];
+}
+
 /** Mirrors `CommandError` in apps/desktop/src-tauri/src/session.rs, plus `unknown`. */
 export type ApiErrorCode =
   | 'unlock_failed'
@@ -283,6 +367,9 @@ export type ApiErrorCode =
   | 'duplicate'
   | 'tray_managed'
   | 'not_allowed'
+  | 'backup_invalid'
+  | 'backup_needs_secret'
+  | 'backup_too_new'
   | 'unknown';
 
 const KNOWN_CODES: readonly ApiErrorCode[] = [
@@ -298,6 +385,9 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   'duplicate',
   'tray_managed',
   'not_allowed',
+  'backup_invalid',
+  'backup_needs_secret',
+  'backup_too_new',
 ];
 
 /** Every DataApi failure is one of these: a short code, never details or secrets. */
@@ -340,6 +430,36 @@ export interface DataApi {
   setNewPassword(newPassword: string): Promise<void>;
   /** Make a new recovery key (needs the password); resolves with it, shown once. */
   regenerateRecoveryKey(password: string): Promise<string>;
+  /**
+   * Delete all local data (database and vault) so Shiftbook starts again at setup. Works
+   * while locked. `confirm` must be the word in `DELETE_CONFIRM_WORD`. Tauri: `delete_all_data`.
+   */
+  deleteAllData(confirm: string): Promise<void>;
+
+  // ----- backups (always encrypted) -----
+  /**
+   * Save a backup where the user chooses (a save dialog); `today` names the file. Resolves
+   * with the file name, or null if cancelled. Tauri: `backup_now`.
+   */
+  backupNow(today: IsoDate): Promise<string | null>;
+  /** The automatic and safety backups, newest first. Tauri: `list_backups`. */
+  listBackups(): Promise<BackupFile[]>;
+  /**
+   * Choose a backup file to restore (an open dialog). Resolves with its name, or null if
+   * cancelled; it is then the `PICKED_BACKUP` source. Tauri: `pick_backup_file`.
+   */
+  pickBackupFile(): Promise<string | null>;
+  /**
+   * Open a backup and say what it holds. A backup from another computer (or from before
+   * Delete all data) rejects with `backup_needs_secret`: ask for the password or recovery
+   * key it was made with and call again. Tauri: `check_backup`.
+   */
+  checkBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary>;
+  /**
+   * Replace all data with the backup, after saving a safety copy of the current data.
+   * Reload the page afterwards. Tauri: `restore_backup`.
+   */
+  restoreBackup(source: string, secret?: string, kind?: SecretKind): Promise<BackupSummary>;
 
   // ----- screenshot protection -----
   /** Allow screenshots/screen sharing for a while; resolves with the seconds. */
@@ -412,4 +532,27 @@ export interface DataApi {
   listInbox(): Promise<InboxItem[]>;
   addInbox(text: string): Promise<InboxItem>;
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
+
+  // ----- next up -----
+  /** The "next up" list, in order. */
+  nextUp(): Promise<NextUpItem[]>;
+  /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
+  setNextUp(items: string[]): Promise<NextUpItem[]>;
+  tickNextUp(id: string, done: boolean): Promise<void>;
+  /**
+   * The "Where was I?" card for this return, or null when it shouldn't show (a short
+   * break) or there's nothing to pick up. Tauri: `where_was_i`.
+   */
+  whereWasI(today: IsoDate, trigger: ResumeTrigger, awayMinutes: number): Promise<ResumeCard | null>;
+
+  // ----- timer -----
+  /**
+   * What Stop offers to add for `seconds` counted, given the quiet stretches (seconds)
+   * noticed while it ran. Tauri: `timer_offer`.
+   */
+  timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer>;
+
+  // ----- find -----
+  /** Entries, Inbox scraps and the given command names that match `query`. */
+  search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult>;
 }

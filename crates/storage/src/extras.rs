@@ -8,12 +8,14 @@ use shiftbook_core::fields::{
     join_options, parse_options, validate_field, validate_value, AppliesTo, FieldKind,
 };
 use shiftbook_core::ids::{
-    CategoryCodeDefaultId, CustomFieldId, CustomValueId, InboxItemId, OwnerId, TimesheetCodeId,
-    TimesheetTickId,
+    CategoryCodeDefaultId, CustomFieldId, CustomValueId, InboxItemId, NextUpItemId, OwnerId,
+    TimesheetCodeId, TimesheetTickId,
 };
 use shiftbook_core::model::{
-    CategoryCodeDefault, CustomField, CustomValue, InboxItem, TimesheetCode, TimesheetTick,
+    CategoryCodeDefault, CustomField, CustomValue, InboxItem, NextUpItem, TimesheetCode,
+    TimesheetTick,
 };
+use shiftbook_core::nextup::clean_next_up;
 use shiftbook_core::prefs::{prefs_from_settings, validate_pref, Prefs};
 use shiftbook_core::validate::{
     validate_list_value, validate_required, validate_timesheet_code, MAX_LINE_CHARS,
@@ -243,6 +245,19 @@ fn inbox_from_row(row: &SqliteRow) -> Result<InboxItem> {
         id: InboxItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
         owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
         text: row.try_get("text")?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    })
+}
+
+fn next_up_from_row(row: &SqliteRow) -> Result<NextUpItem> {
+    Ok(NextUpItem {
+        id: NextUpItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        position: u32::try_from(row.try_get::<i64, _>("position")?).unwrap_or(0),
+        text: row.try_get("text")?,
+        done_at: parse_opt_ts(row.try_get("done_at")?)?,
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
         deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
@@ -744,6 +759,68 @@ impl SqliteStore {
             .bind(id.to_string())
             .bind(owner.to_string())
             .bind(delete)
+            .execute(&self.pool)
+            .await?,
+        )
+    }
+
+    // ---------- next up ----------
+
+    /// The live "next up" list, in order.
+    pub async fn next_up(&self, owner: OwnerId) -> Result<Vec<NextUpItem>> {
+        let rows = sqlx::query(
+            "SELECT id, owner_id, position, text, done_at, created_at, updated_at, deleted_at \
+             FROM next_up_items WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY position",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(next_up_from_row).collect()
+    }
+
+    /// Replace the "next up" list (blank lines dropped). An empty list clears it.
+    pub async fn set_next_up(&self, owner: OwnerId, lines: &[String]) -> Result<Vec<NextUpItem>> {
+        let items = clean_next_up(lines)?;
+        let now = now_text();
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(
+            "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 \
+             WHERE owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        for (position, text) in items.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO next_up_items \
+                 (id, owner_id, position, text, done_at, created_at, updated_at, deleted_at) \
+                 VALUES ($1, $2, $3, $4, NULL, $5, $5, NULL)",
+            )
+            .bind(NextUpItemId::new().to_string())
+            .bind(owner.to_string())
+            .bind(i64::try_from(position).unwrap_or(i64::MAX))
+            .bind(text)
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        self.next_up(owner).await
+    }
+
+    /// Tick one thing off the list, or with `done = false` untick it.
+    pub async fn tick_next_up(&self, owner: OwnerId, id: NextUpItemId, done: bool) -> Result<()> {
+        let now = now_text();
+        not_found_if_zero(
+            sqlx::query(
+                "UPDATE next_up_items SET done_at = $1, updated_at = $2 \
+                 WHERE id = $3 AND owner_id = $4 AND deleted_at IS NULL",
+            )
+            .bind(if done { Some(now.as_str()) } else { None })
+            .bind(&now)
+            .bind(id.to_string())
+            .bind(owner.to_string())
             .execute(&self.pool)
             .await?,
         )

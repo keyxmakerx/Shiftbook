@@ -39,7 +39,7 @@
     await lockAndReload();
   }
 
-  // Idle auto-lock (15 minutes unless changed in Customize → Security) and lock after the
+  // Idle auto-lock (15 minutes unless changed in Settings → Security) and lock after the
   // computer sleeps, while unlocked.
   $effect(() => {
     if (!unlocked) return;

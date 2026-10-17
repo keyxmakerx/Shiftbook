@@ -4,7 +4,7 @@
   // (crates/core/src/sheet.rs); this page shows it and remembers the tick-offs.
   import { api } from '../lib/api';
   import type { GroupBy, SheetDay, SheetWarning, Tick, WeekSheet } from '../lib/api';
-  import { addDays, dayMonth, dayOfMonth, weekdayLong, weekdayShort } from '../lib/format';
+  import { addDays, dayMonth, dayOfMonth, isWeekend, weekdayLong, weekdayShort } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { app, attempt, projectColor } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -83,7 +83,8 @@
   }
 
   const shownDays = $derived(
-    (sheet?.days ?? []).filter((d, i) => i < 5 || d.lines.length > 0),
+    // Weekdays always show; Saturday and Sunday only when something was logged.
+    (sheet?.days ?? []).filter((d) => !isWeekend(d.date) || d.lines.length > 0),
   );
   const current = $derived(groupBy ?? sheet?.groupBy ?? 'code');
 </script>
@@ -98,6 +99,9 @@
       <button class="btn" type="button" aria-label="Next week" disabled={sheet !== null && addDays(sheet.weekStart, 7) > app.today} onclick={() => (anchor = addDays(anchor, 7))}>
         <Icon name="right" size={15} />
       </button>
+      {#if sheet && addDays(sheet.weekStart, 7) <= app.today}
+        <button class="btn" type="button" onclick={() => (anchor = app.today)}>This week</button>
+      {/if}
     </span>
     <button class="btn primary" type="button" disabled={!sheet?.tsv} onclick={() => sheet && copy(sheet.tsv, 'Week copied as columns. Paste it into a spreadsheet or your timesheet.')}>
       <Icon name="copy" size={14} /> Copy whole week

@@ -144,6 +144,10 @@ typed_id!(
     /// A scrap in the Inbox.
     InboxItemId
 );
+typed_id!(
+    /// One thing on the "next up" list.
+    NextUpItemId
+);
 
 #[cfg(test)]
 mod tests {

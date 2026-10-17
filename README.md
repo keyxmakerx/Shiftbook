@@ -16,7 +16,7 @@ Svelte; runs on Windows, macOS and Linux. No server, no network access, data sta
 The alpha is a working app you can use day to day for logging time:
 
 - **Lock and protect:** a master password (and a recovery key) encrypts everything; Lock now,
-  Ctrl+L and auto-lock after idle (minutes are set in Customize → Security). After unlocking with
+  Ctrl+L and auto-lock after idle (minutes are set in Settings → Security). After unlocking with
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
 - **Desk:** today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
@@ -24,6 +24,14 @@ The alpha is a working app you can use day to day for logging time:
   entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
   can step up or down, and they roll up into one “Tickets” entry for the day); the entries list
   with +15m/+30m/+1h and ticket chips you click to copy; the Inbox.
+- **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
+  day starts, the Desk shows what to pick up: the list from your wrap-up, or else the last
+  thing you logged with its tickets and next step. **Carry on** puts it into Log work;
+  **Later** hides it until the next unlock.
+- **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
+  today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded
+  to 15 minutes, and to leave out stretches of 5 minutes or more away from the keyboard. Only
+  minutes are saved. Locking pauses it.
 - **Details drawer:** click an entry to change its title, hours, project, category, tickets
   (paste several at once), notes and your own custom fields.
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as
@@ -34,10 +42,11 @@ The alpha is a working app you can use day to day for logging time:
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
-- **Customize:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
+- **Settings:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
-  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Security.
+  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
+  (Back up now, the daily automatic backups, Restore from a backup or a file), Security.
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
@@ -46,7 +55,7 @@ The alpha is a working app you can use day to day for logging time:
   menus, capture and the drawer.
 
 Not in the alpha yet: Planner, Canvas, notes and the notes map, a global (outside the app)
-capture shortcut, backups/export/import, the picture editor, bundled fonts and signed installers.
+capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 
 ## Development
