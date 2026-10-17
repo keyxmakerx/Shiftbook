@@ -5,7 +5,8 @@
   // entries, Inbox scraps and commands appear below, ranked by crates/core/src/search.rs.
   // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox.
   import { api } from '../lib/api';
-  import type { Capture, Entry, InboxItem } from '../lib/api';
+  import type { Capture, Entry, InboxItem, Note } from '../lib/api';
+  import { KIND_LABEL } from '../lib/notes';
   import { dayOfMonth, fmtMinutes, relativeDay, weekdayShort } from '../lib/format';
   import { allowCapture, protectNow } from '../lib/protection.svelte';
   import {
@@ -13,6 +14,7 @@
     attempt,
     flashEntry,
     focusLog,
+    openNote,
     projectById,
     projectColor,
     refresh,
@@ -29,12 +31,15 @@
   type Hit =
     | { kind: 'entry'; entry: Entry }
     | { kind: 'scrap'; item: InboxItem }
+    | { kind: 'note'; note: Note }
     | { kind: 'command'; command: Command };
 
   const COMMANDS: Command[] = [
     { label: 'Go to Desk', keys: '1', run: () => setView('desk') },
     { label: 'Go to Timesheet', keys: '2', run: () => setView('timesheet') },
-    { label: 'Go to Settings', keys: '3', run: () => setView('settings') },
+    { label: 'Go to Notes', keys: '3', run: () => setView('notes') },
+    { label: 'Go to Settings', keys: '4', run: () => setView('settings') },
+    { label: 'New note', run: () => openNote(null) },
     { label: 'Lock now', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book today as holiday (8 h)', run: () => holiday() },
     {
@@ -88,6 +93,7 @@
       hits = found
         ? [
             ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
+            ...found.notes.map((note): Hit => ({ kind: 'note', note })),
             ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ...found.commands.flatMap((i): Hit[] => {
               const command = COMMANDS[i];
@@ -135,6 +141,8 @@
     close();
     if (hit.kind === 'command') {
       await hit.command.run();
+    } else if (hit.kind === 'note') {
+      openNote(hit.note.id);
     } else if (hit.kind === 'entry') {
       setView('desk');
       await selectDay(hit.entry.date);
@@ -184,7 +192,13 @@
   }
 
   function group(hit: Hit): string {
-    return hit.kind === 'entry' ? 'Entries' : hit.kind === 'scrap' ? 'Inbox' : 'Commands';
+    return hit.kind === 'entry'
+      ? 'Entries'
+      : hit.kind === 'note'
+        ? 'Notes'
+        : hit.kind === 'scrap'
+          ? 'Inbox'
+          : 'Commands';
   }
 </script>
 
@@ -267,6 +281,10 @@
             <span class="what"><b>{hit.entry.description || 'Untitled'}</b>
               <small>{relativeDay(hit.entry.date, app.today)}{hit.entry.tickets.length ? ' · ' + hit.entry.tickets.map((t) => t.number).join(', ') : ''}</small></span>
             <span class="mono amt">{hit.entry.hours} h</span>
+          {:else if hit.kind === 'note'}
+            <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
+            <span class="what"><b>{hit.note.title}</b>
+              <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}</small></span>
           {:else if hit.kind === 'scrap'}
             <i class="dot" style:--c="var(--warn)"></i>
             <span class="what"><b>{hit.item.text}</b><small>Inbox · Enter puts it in Log work</small></span>

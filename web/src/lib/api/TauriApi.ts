@@ -19,6 +19,10 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
+  Note,
+  NoteInput,
+  NoteKind,
+  NoteList,
   ResumeCard,
   ResumeTrigger,
   SearchResult,
@@ -236,6 +240,28 @@ export class TauriApi implements DataApi {
   }
   timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer> {
     return call('timer_offer', { seconds, quiet });
+  }
+
+  listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList> {
+    return call('list_notes', { query, kind, includeArchived });
+  }
+  getNote(id: string): Promise<Note> {
+    return call('get_note', { id });
+  }
+  createNote(note: NoteInput): Promise<Note> {
+    return call('create_note', { note });
+  }
+  updateNote(id: string, note: NoteInput): Promise<Note> {
+    return call('update_note', { id, note });
+  }
+  setNoteArchived(id: string, archived: boolean): Promise<void> {
+    return call('set_note_archived', { id, archived });
+  }
+  setNoteKeep(id: string, keep: boolean): Promise<void> {
+    return call('set_note_keep', { id, keep });
+  }
+  setNoteDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('set_note_deleted', { id, deleted });
   }
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {

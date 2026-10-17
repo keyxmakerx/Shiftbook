@@ -24,6 +24,10 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   easy to tidy (a Tidy up that lines blocks up, blocks that snap and don't overlap).
   Earlier rejected tries: topic rail plus results panel (v1); running log, outline and topic
   cards (v2); OneNote-style free page, trail, agenda zones and zoom board (v3).
+- **Build order (owner approved, 17 Oct):** notes core, then the meeting canvas, then MOPs, then
+  imports. Notes core built: a Notes view (key 3; Settings moves to 4), auto-archive after 3
+  months by default (Settings → Notes; 1, 2, 3, 6 or 12 months, or off) for Jot, Daily and
+  Meeting notes only, warning on the note for the last 7 days; editing or Keep stops it.
 
 ## Round 7 — 16 Oct 2026
 - **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.

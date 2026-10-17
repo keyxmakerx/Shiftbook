@@ -35,7 +35,10 @@ the README for what it does.
 ### Known gaps in alpha
 - **Planner** (week/month/year) and **Canvas** views: shown in the view switcher but disabled
   ("coming in a later version").
-- **Notes**, the always-available jot strip and the **notes map**.
+- **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
+  Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
+  imports (paste, MOP import with its check screen, OneNote sections). Also the always-available
+  jot strip and the **notes map**.
 - **Global capture shortcut** (`tauri-plugin-global-shortcut`, Ctrl+Shift+Space from anywhere):
   capture only works while the Shiftbook window has focus.
 - **Export and import** (xlsx/csv/json, Import JSON/Excel) — M6. Encrypted backups are in:
