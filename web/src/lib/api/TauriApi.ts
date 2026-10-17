@@ -19,6 +19,8 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
+  ResumeCard,
+  ResumeTrigger,
   SearchResult,
   IsoDate,
   PrefKey,
@@ -227,6 +229,9 @@ export class TauriApi implements DataApi {
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });
+  }
+  whereWasI(today: IsoDate, trigger: ResumeTrigger, awayMinutes: number): Promise<ResumeCard | null> {
+    return call('where_was_i', { today, trigger, awayMinutes });
   }
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {

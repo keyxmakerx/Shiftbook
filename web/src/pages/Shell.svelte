@@ -8,7 +8,8 @@
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
-  import { app, focusLog, loadAll, savePref, setView } from '../lib/store.svelte';
+  import { noticeReturn } from '../lib/resume';
+  import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Capture from '../components/Capture.svelte';
   import Drawer from '../components/Drawer.svelte';
@@ -24,8 +25,29 @@
   let problem = $state('');
 
   onMount(() => {
-    loadAll().catch((e: unknown) => (problem = errorMessage(e)));
+    loadAll()
+      .then(() => checkResume('unlocked'))
+      .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
+  });
+
+  // "Where was I?" after a quiet stretch or when the day changes while open.
+  onMount(() => {
+    let last = Date.now();
+    const onActivity = () => {
+      const seen = noticeReturn(last, Date.now());
+      last = seen.lastActivity;
+      if (seen.awayMinutes !== null && app.ready) void checkResume('break', seen.awayMinutes);
+    };
+    const events = ['keydown', 'pointerdown', 'pointermove', 'wheel'] as const;
+    for (const name of events) window.addEventListener(name, onActivity, { passive: true });
+    const timer = setInterval(async () => {
+      if (app.ready && (await rollDay())) void checkResume('new_day');
+    }, 60_000);
+    return () => {
+      clearInterval(timer);
+      for (const name of events) window.removeEventListener(name, onActivity);
+    };
   });
 
   function order(v: View): number {

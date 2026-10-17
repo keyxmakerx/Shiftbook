@@ -335,6 +335,7 @@ pub fn run() {
             api::next_up,
             api::set_next_up,
             api::tick_next_up,
+            api::where_was_i,
             backup_now,
             list_backups,
             pick_backup_file,

@@ -59,6 +59,7 @@
     "allow-next-up",
     "allow-set-next-up",
     "allow-tick-next-up",
+    "allow-where-was-i",
     "allow-backup-now",
     "allow-list-backups",
     "allow-pick-backup-file",
