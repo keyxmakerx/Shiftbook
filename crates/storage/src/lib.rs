@@ -7,6 +7,7 @@
 //! - [`backup`]: encrypted `.shiftbak` backups, the backups folder and restore.
 //! - [`db`]: open the encrypted database with the DEK and run migrations.
 //! - [`repo`]: repository traits and the SQLite implementation.
+//! - [`notes`]: notes, the archive and auto-archive.
 //! - [`wipe`]: delete all local data to start again.
 //!
 //! Secrets live only in `secrecy`/`zeroize` types and never implement `Debug`
@@ -20,6 +21,7 @@ pub mod error;
 pub mod extras;
 mod fsutil;
 pub mod hex;
+pub mod notes;
 pub mod recovery;
 pub mod repo;
 pub mod vault;
@@ -53,6 +55,8 @@ pub(crate) mod test_rt {
     }
 }
 
+#[cfg(test)]
+mod notes_tests;
 #[cfg(test)]
 mod repo_tests;
 #[cfg(test)]

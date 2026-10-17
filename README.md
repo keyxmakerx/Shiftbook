@@ -37,6 +37,12 @@ The alpha is a working app you can use day to day for logging time:
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as
   `1.5h firewall cleanup CHG0012345 #network yesterday`. Enter logs it; Ctrl+Enter (or a line
   without hours) saves it to the Inbox.
+- **Notes:** Jot, Daily, Meeting, Page and MOP notes, each with an optional project and tags,
+  saved as you type. Search every note with the match highlighted, filter by kind, and
+  **Archive** notes to get them out of the way (Include archived, or Find, still shows them).
+  Auto-archive (Settings → Notes, 3 months by default, can be off) moves Jot, Daily and Meeting
+  notes that haven't changed for that long, after a week of warning on the note with a Keep
+  button. Capture's Find shows notes too, archived ones included.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
@@ -51,10 +57,10 @@ The alpha is a working app you can use day to day for logging time:
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1/2/3 switch views, Ctrl+L lock, Esc closes
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1/2/3/4 switch views (Desk, Timesheet, Notes, Settings), Ctrl+L lock, Esc closes
   menus, capture and the drawer.
 
-Not in the alpha yet: Planner, Canvas, notes and the notes map, a global (outside the app)
+Not in the alpha yet: Planner, Canvas, the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 

@@ -12,10 +12,11 @@ use crate::dates::{iso_date, rfc3339};
 use crate::fields::{AppliesTo, FieldKind};
 use crate::ids::{
     CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId, InboxItemId,
-    ListOptionId, NextUpItemId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId, TimeEntryId,
-    TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
+    ListOptionId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId,
+    TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
 };
 use crate::minutes::Minutes;
+use crate::notes::NoteKind;
 
 /// The status value that means "finished" in every rule.
 pub const STATUS_DONE: &str = "Done";
@@ -635,6 +636,40 @@ pub struct NextUpItem {
     /// When ticked off (UTC), if it is.
     #[serde(with = "rfc3339::option")]
     pub done_at: Option<OffsetDateTime>,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A note (see `crate::notes`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Note {
+    /// Id.
+    pub id: NoteId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// Jot, Daily, Meeting, Page or MOP.
+    pub kind: NoteKind,
+    /// Title (never blank; see `crate::notes::note_title`).
+    pub title: String,
+    /// What's written in it.
+    pub body: String,
+    /// The project it belongs to, if any.
+    pub project_id: Option<ProjectId>,
+    /// Tags, cleaned by `crate::notes::parse_tags`.
+    pub tags: Vec<String>,
+    /// Keep was pressed: auto-archive leaves it alone.
+    pub keep: bool,
+    /// When it went to the archive, if it has.
+    #[serde(with = "rfc3339::option")]
+    pub archived_at: Option<OffsetDateTime>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

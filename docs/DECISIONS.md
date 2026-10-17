@@ -2,6 +2,33 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 7, Notes cards — 16 Oct 2026
+- **Notes and archive:** kinds Jot, Daily, Meeting, Page and MOP, organised by project and tags
+  (no notebooks). Archived notes leave the lists but search still finds them. Auto-archive is a
+  setting, with a soft warning on the note before it moves ("moves to the archive in N days",
+  with Keep). Notes search extends the Find box (r7-find), not a second search.
+- **MOPs:** fixed sections (why, checks, steps with expected results, rollback) and a Run mode
+  that saves a run record. Import and export must be easy and cope with varied documents without
+  an AI: rule-based import (numbered lines are steps, "Verify"/"Expected" lines attach to the
+  step above, headings sort lines into checks and rollback) with a check screen where each line
+  shows where it landed and can be moved; fixes are remembered per template. Export to Word,
+  PDF, text and a round-trip Shiftbook MOP file. Approved on the r7-import card.
+- **OneNote:** both ways (paste a page, then import sections exported as Word files);
+  `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
+- **Meetings (approved on r7-meeting v5):** one big canvas. Each topic is a coloured area on one
+  sheet; topic tabs along the top glide the view to their area, and See all pulls back to the
+  whole meeting. Click empty paper to write there, drag blocks, a recent-topics strip, right-click
+  a line to make a todo, task, decision or question, a count at the top. Kept throughout: `#name`
+  to jump to or start a topic, `[]` `!` `?` marks, an optional agenda written beforehand, open
+  items carry to the next meeting in a series, one-click time log on wrap up. The canvas must be
+  easy to tidy (a Tidy up that lines blocks up, blocks that snap and don't overlap).
+  Earlier rejected tries: topic rail plus results panel (v1); running log, outline and topic
+  cards (v2); OneNote-style free page, trail, agenda zones and zoom board (v3).
+- **Build order (owner approved, 17 Oct):** notes core, then the meeting canvas, then MOPs, then
+  imports. Notes core built: a Notes view (key 3; Settings moves to 4), auto-archive after 3
+  months by default (Settings → Notes; 1, 2, 3, 6 or 12 months, or off) for Jot, Daily and
+  Meeting notes only, warning on the note for the last 7 days; editing or Keep stops it.
+
 ## Round 7 — 16 Oct 2026
 - **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.
 - **"Where was I?":** approved. After a lock, a break of 30 minutes or more, or a new day, the Desk

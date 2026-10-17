@@ -1,0 +1,81 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--bad:#c2412d;--plum:#8C4F7A;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.try{display:flex;gap:6px;align-items:center;margin-bottom:10px;font-size:12px;flex-wrap:wrap}
+.try b{color:var(--mut)}
+.seg{border:1px solid var(--rule);background:#fff;border-radius:8px;padding:6px 14px;font:600 13px var(--ui);cursor:pointer}
+.seg[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:14px 16px;border-top:3px solid var(--plum)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+h2{font:600 21px/1.2 var(--display);margin:2px 0 8px}
+h3{font-size:13px;margin:14px 0 6px;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.box{border:1px solid var(--rule);border-radius:6px;background:#fffef9;padding:7px 10px;font-size:13.5px;margin-bottom:6px}
+.step{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--rule)}
+.num{font:700 13px var(--mono);width:24px;height:24px;border-radius:50%;background:var(--paper2);display:flex;align-items:center;justify-content:center}
+.exp{font-size:12.5px;color:var(--ok)}.exp b{font-weight:600}
+.pic{display:inline-block;margin-top:5px;font-size:11.5px;color:var(--mut);border:1px dashed var(--rule);border-radius:5px;padding:3px 8px}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:8px 13px;font:600 13px var(--ui);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}.btn.bad{color:var(--bad)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.runbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--paper2);border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:13px}
+.runbar input{font:600 12.5px var(--mono);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;width:130px}
+.prog{flex:1;min-width:120px;height:7px;background:#e4e1d8;border-radius:9px;overflow:hidden}.prog i{display:block;height:100%;background:var(--ok);transition:width .4s}
+.rs{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:9px 8px;border-radius:7px;align-items:start;transition:background .3s}
+.rs.done{opacity:.6}.rs.done .num{background:var(--ok);color:#fff}
+.rs.now{background:color-mix(in srgb,var(--accent) 9%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+.rs.now .t{font-size:16px;font-weight:600}
+.rs textarea{width:100%;margin-top:6px;font:inherit;font-size:13px;border:1px solid var(--rule);border-radius:6px;padding:6px 8px;resize:vertical;min-height:34px;background:#fff}
+.back{background:#fbe9e5;border-radius:6px;padding:8px 10px;margin:8px 0;font-size:13px;color:#8a2c1a}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<div class="try"><b>Try:</b><button class="seg" data-m="write" aria-pressed="true">Write it</button><button class="seg" data-m="run" aria-pressed="false">Run it</button></div>
+<div class="paper" id="app"></div>
+<div class="toast" id="toast"></div>
+<script>
+const MOP={title:'Replace a UPS battery',purpose:'Swap the battery pack without dropping power to the rack.',checks:['Load on the UPS is under 60%','Bypass switch tested this month','Spare battery pack is on site'],
+steps:[{t:'Put the UPS into bypass mode',e:'Display shows BYPASS, rack stays on',pic:true},{t:'Open the front panel and unplug the battery connector',e:'Battery alarm sounds once'},{t:'Slide out the old pack and slide in the new one',e:'Pack clicks into place'},{t:'Reconnect, then take the UPS out of bypass',e:'Display shows ONLINE, battery charging',pic:true},{t:'Run a self-test from the menu',e:'Self-test passed'}],
+rollback:['Put the UPS back into bypass','Refit the old pack','Take it out of bypass and confirm the alarm clears']};
+let mode='write',at=0,rolled=false;const notes={};
+const $=id=>document.getElementById(id);
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function say(t){$('toast').textContent=t;$('toast').classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>$('toast').classList.remove('on'),2600)}
+function write(A){
+ A.append(el('span','lbl','MOP · Project: Server room · run 3 times, last Tue 30 Sep'),el('h2',null,MOP.title));
+ A.append(el('h3',null,'Why and what'),el('div','box',MOP.purpose));
+ A.append(el('h3',null,'Before you start'));MOP.checks.forEach(c=>A.append(el('div','box','☐ '+c)));
+ A.append(el('h3',null,'Steps'));
+ MOP.steps.forEach((s,i)=>{const r=el('div','step');const b=el('div');b.append(el('div',null,s.t));const e=el('div','exp');e.append(el('b',null,'Expect: '),document.createTextNode(s.e));b.append(e);if(s.pic)b.append(el('span','pic','📷 picture with arrows and boxes'));r.append(el('span','num',String(i+1)),b);A.append(r)});
+ const add=el('div','row');add.style.marginTop='6px';add.append(el('span','pic','+ step   ·   Enter adds the next step, Tab indents a sub-step'));A.append(add);
+ A.append(el('h3',null,'If it goes wrong (rollback)'));MOP.rollback.forEach((c,i)=>A.append(el('div','box',(i+1)+'. '+c)));
+ const row=el('div','row');row.style.marginTop='12px';const run=el('button','btn primary','Run it');run.onclick=()=>setMode('run');
+ const copy=el('button','btn','Copy as a new MOP');copy.onclick=()=>say('Copied. Handy when a new job is like an old one.');
+ const ex=el('button','btn','Export (Word or PDF)');ex.onclick=()=>say('Exports leave the encrypted file, so Shiftbook warns first.');
+ row.append(run,copy,ex);A.append(row)}
+function run(A){
+ const done=Math.min(at,MOP.steps.length);
+ const bar=el('div','runbar');bar.append(el('b',null,'Running'),document.createTextNode('Change'));const inp=el('input');inp.value='CHG0012399';bar.append(inp);
+ const p=el('span','prog');const i=el('i');i.style.width=(done/MOP.steps.length*100)+'%';p.append(i);bar.append(p,el('span',null,done+' of '+MOP.steps.length));A.append(bar);
+ A.append(el('h2',null,MOP.title));
+ if(rolled){A.append(el('div','back','Rolling back. Your notes so far are kept in the run record.'));MOP.rollback.forEach((c,k)=>{const r=el('div','rs now');r.append(el('span','num',String(k+1)),el('div','t',c));A.append(r)});
+  const row=el('div','row');const f=el('button','btn primary','Finish and save the run');f.onclick=finish;row.append(f);A.append(row);return}
+ MOP.steps.forEach((s,k)=>{const r=el('div','rs'+(k<at?' done':k===at?' now':''));r.append(el('span','num',k<at?'✓':String(k+1)));
+  const b=el('div');b.append(el('div','t',s.t));const e=el('div','exp');e.append(el('b',null,'Expect: '),document.createTextNode(s.e));b.append(e);
+  if(k===at){const ta=el('textarea');ta.placeholder='Anything odd? Type a note on this step (optional)';ta.value=notes[k]||'';ta.oninput=()=>notes[k]=ta.value;b.append(ta)}
+  else if(notes[k]){b.append(el('div','pic','Note: '+notes[k]))}
+  r.append(b);A.append(r)});
+ const row=el('div','row');row.style.marginTop='10px';
+ if(at<MOP.steps.length){const d=el('button','btn primary','Done, next step');d.onclick=()=>{at++;draw()};const bk=el('button','btn','Back a step');bk.onclick=()=>{at=Math.max(0,at-1);draw()};const rb=el('button','btn bad','Something went wrong');rb.onclick=()=>{rolled=true;draw()};row.append(d,bk,rb)}
+ else{const f=el('button','btn primary','Finish and save the run');f.onclick=finish;row.append(f)}
+ A.append(row)}
+function finish(){say('Run saved with today’s date, the change number and your notes. 30m logged to Server room.');at=0;rolled=false;for(const k in notes)delete notes[k];setMode('write')}
+function setMode(m){mode=m;document.querySelectorAll('.seg').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===m));draw()}
+function draw(){const A=$('app');A.innerHTML='';(mode==='write'?write:run)(A)}
+document.querySelectorAll('.seg').forEach(b=>b.onclick=()=>setMode(b.dataset.m));draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>

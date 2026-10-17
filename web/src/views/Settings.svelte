@@ -1,21 +1,23 @@
 <script lang="ts">
-  // Settings: Look, Your day, Projects, Timesheet, Fields, Backups and Security in one place.
+  // Settings: Look, Your day, Projects, Timesheet, Notes, Fields, Backups and Security in one place.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
   import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
+  import NotesSettings from './customize/NotesSettings.svelte';
   import Projects from './customize/Projects.svelte';
   import Security from './customize/Security.svelte';
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
   import YourDay from './customize/YourDay.svelte';
 
-  type Section = 'look' | 'day' | 'projects' | 'timesheet' | 'fields' | 'backups' | 'security';
+  type Section = 'look' | 'day' | 'projects' | 'timesheet' | 'notes' | 'fields' | 'backups' | 'security';
   const SECTIONS: { id: Section; label: string; icon: IconName }[] = [
     { id: 'look', label: 'Look', icon: 'palette' },
     { id: 'day', label: 'Your day', icon: 'clock' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
     { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
+    { id: 'notes', label: 'Notes', icon: 'note' },
     { id: 'fields', label: 'Fields', icon: 'sliders' },
     { id: 'backups', label: 'Backups', icon: 'archive' },
     { id: 'security', label: 'Security', icon: 'shield' },
@@ -44,6 +46,8 @@
           <Projects />
         {:else if section === 'timesheet'}
           <TimesheetSettings />
+        {:else if section === 'notes'}
+          <NotesSettings />
         {:else if section === 'fields'}
           <Fields />
         {:else if section === 'backups'}
