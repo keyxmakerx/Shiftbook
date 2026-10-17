@@ -70,6 +70,26 @@ export interface Prefs {
   textSize: number;
   /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
   wrapupAt: string | null;
+  /** The optional "Now doing" timer is turned on (off by default). */
+  timer: boolean;
+  /** A timer paused by locking, to pick up after unlock. */
+  pausedTimer: PausedTimer | null;
+}
+
+/** A timer paused by locking: the entry and what it had counted (never a start or end time). */
+export interface PausedTimer {
+  entryId: string;
+  seconds: number;
+  /** Quiet stretches noticed while it ran, in seconds. */
+  quiet: number[];
+}
+
+/** What Stop offers to add, rounded to 15 minutes. */
+export interface TimerOffer {
+  minutes: number;
+  /** Without the time away; only when that makes a difference. */
+  withoutAway: number | null;
+  awayMinutes: number;
 }
 
 /** Setting keys `savePref` accepts (see `shiftbook_core::prefs`). */
@@ -84,7 +104,9 @@ export type PrefKey =
   | 'security.auto_lock_minutes'
   | 'day.targets'
   | 'ui.text_size'
-  | 'day.wrapup_at';
+  | 'day.wrapup_at'
+  | 'day.timer'
+  | 'timer.paused';
 
 export interface Project {
   id: string;
@@ -311,6 +333,18 @@ export interface NextUpItem {
   done: boolean;
 }
 
+/** What brought the user back to Shiftbook. */
+export type ResumeTrigger = 'unlocked' | 'break' | 'new_day';
+
+/** The "Where was I?" card: the open wrap-up list (first item first), or else the last entry. */
+export interface ResumeCard {
+  trigger: ResumeTrigger;
+  list: NextUpItem[];
+  entry: Entry | null;
+  /** When that entry last changed (UTC, RFC 3339). */
+  changedAt: string | null;
+}
+
 /** What Find turned up, best first. */
 export interface SearchResult {
   entries: Entry[];
@@ -505,6 +539,18 @@ export interface DataApi {
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;
+  /**
+   * The "Where was I?" card for this return, or null when it shouldn't show (a short
+   * break) or there's nothing to pick up. Tauri: `where_was_i`.
+   */
+  whereWasI(today: IsoDate, trigger: ResumeTrigger, awayMinutes: number): Promise<ResumeCard | null>;
+
+  // ----- timer -----
+  /**
+   * What Stop offers to add for `seconds` counted, given the quiet stretches (seconds)
+   * noticed while it ran. Tauri: `timer_offer`.
+   */
+  timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer>;
 
   // ----- find -----
   /** Entries, Inbox scraps and the given command names that match `query`. */

@@ -7,6 +7,8 @@ import type {
   Entry,
   InboxItem,
   PrefKey,
+  ResumeCard,
+  ResumeTrigger,
   Prefs,
   Project,
   RibbonDay,
@@ -44,6 +46,10 @@ export const app = $state({
   wrapupClosed: '',
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
+  /** The "Where was I?" card on the Desk, while it's showing. */
+  resume: null as ResumeCard | null,
+  /** "Later" was pressed: no more "Where was I?" until the next unlock. */
+  resumeLater: false,
 });
 
 /** Run an API call; on failure show a plain message and resolve undefined. */
@@ -176,4 +182,22 @@ export function putEntry(entry: Entry): void {
 export function focusLog(text = ''): void {
   app.view = 'desk';
   app.logFocus = { serial: app.logFocus.serial + 1, text };
+}
+
+/** Ask whether "Where was I?" should show for this return, and show it. */
+export async function checkResume(trigger: ResumeTrigger, awayMinutes = 0): Promise<void> {
+  if (app.resumeLater) return;
+  const card = await api.whereWasI(app.today, trigger, awayMinutes).catch(() => null);
+  if (card && !app.resumeLater) app.resume = card;
+}
+
+/** Move to the new date when the day changes while Shiftbook is open. True if it changed. */
+export async function rollDay(): Promise<boolean> {
+  const now = toIso(new Date());
+  if (now === app.today) return false;
+  const wasToday = app.selected === app.today;
+  app.today = now;
+  if (wasToday) app.selected = now;
+  await refresh();
+  return true;
 }

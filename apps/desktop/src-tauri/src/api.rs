@@ -16,9 +16,13 @@ use shiftbook_core::ids::{
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
 use shiftbook_core::prefs::Prefs;
+use shiftbook_core::resume::{
+    resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
+};
 use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, RIBBON_WEEKS};
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
+use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
 use shiftbook_core::timesheet::CodeDefaults;
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
@@ -1067,6 +1071,83 @@ pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<
 pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) -> Res<()> {
     let (store, owner) = s.data().await?;
     Ok(store.tick_next_up(owner, id_arg(&id)?, done).await?)
+}
+
+// ---------- where was I? ----------
+
+/// What the "Where was I?" card shows: the open wrap-up list (first item first), or
+/// else the last entry logged.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResumeView {
+    trigger: ResumeTrigger,
+    list: Vec<NextUpView>,
+    entry: Option<EntryView>,
+    /// When that entry last changed (UTC, RFC 3339), for "last logged … ago".
+    changed_at: Option<String>,
+}
+
+/// Maps to `DataApi.whereWasI()`. `trigger` is `unlocked`, `break` or `new_day`;
+/// `away_minutes` is how long the quiet stretch lasted. `None` when the card shouldn't
+/// show (a short break) or there's nothing to pick up.
+#[tauri::command]
+pub async fn where_was_i(
+    s: State<'_, VaultSession>,
+    today: String,
+    trigger: String,
+    away_minutes: i64,
+) -> Res<Option<ResumeView>> {
+    let today = date_arg(&today)?;
+    let trigger = ResumeTrigger::parse(&trigger).ok_or(CommandError::InvalidInput)?;
+    if !resume_due(trigger, away_minutes) {
+        return Ok(None);
+    }
+    let (store, owner) = s.data().await?;
+    let list = store.next_up(owner).await?;
+    let records = store
+        .list_entries(owner, add_days(today, -LOOK_BACK_DAYS), today)
+        .await?;
+    let pairs: Vec<_> = records
+        .iter()
+        .map(|r| (r.entry.clone(), r.is_tray))
+        .collect();
+    let view = match resume_start(&list, &pairs) {
+        None => return Ok(None),
+        Some(ResumeStart::List(open)) => ResumeView {
+            trigger,
+            list: next_up_views(open.into_iter().cloned().collect()),
+            entry: None,
+            changed_at: None,
+        },
+        Some(ResumeStart::Entry(e)) => {
+            let id = e.id;
+            let changed_at = format_timestamp(e.updated_at);
+            let links = links_for(&store, owner).await?;
+            let rec = records
+                .into_iter()
+                .find(|r| r.entry.id == id)
+                .ok_or(CommandError::StorageError)?;
+            ResumeView {
+                trigger,
+                list: Vec::new(),
+                entry: Some(entry_view(rec, &links)),
+                changed_at: Some(changed_at),
+            }
+        }
+    };
+    Ok(Some(view))
+}
+
+// ---------- timer ----------
+
+/// Maps to `DataApi.timerOffer()`: what Stop offers to add for `seconds` counted, given
+/// the quiet stretches (seconds) noticed while it ran. Needs no data, only the rule.
+#[tauri::command]
+pub fn timer_offer(seconds: u64, quiet: Vec<u64>) -> Res<TimerOffer> {
+    if quiet.len() > MAX_QUIET_STRETCHES {
+        return Err(CommandError::InvalidInput);
+    }
+    Ok(shiftbook_core::timer::timer_offer(seconds, &quiet))
 }
 
 #[cfg(test)]

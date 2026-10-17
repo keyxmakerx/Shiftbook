@@ -56,6 +56,8 @@ fn main() {
             "next_up",
             "set_next_up",
             "tick_next_up",
+            "where_was_i",
+            "timer_offer",
             "backup_now",
             "list_backups",
             "pick_backup_file",

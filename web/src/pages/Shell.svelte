@@ -8,12 +8,15 @@
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
-  import { app, focusLog, loadAll, savePref, setView } from '../lib/store.svelte';
+  import { noticeReturn } from '../lib/resume';
+  import { restoreTimer, timerActivity } from '../lib/timer.svelte';
+  import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Capture from '../components/Capture.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import Ribbon from '../components/Ribbon.svelte';
+  import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
   import Settings from '../views/Settings.svelte';
@@ -24,8 +27,30 @@
   let problem = $state('');
 
   onMount(() => {
-    loadAll().catch((e: unknown) => (problem = errorMessage(e)));
+    loadAll()
+      .then(() => Promise.all([checkResume('unlocked'), restoreTimer()]))
+      .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
+  });
+
+  // "Where was I?" after a quiet stretch or when the day changes while open.
+  onMount(() => {
+    let last = Date.now();
+    const onActivity = () => {
+      timerActivity();
+      const seen = noticeReturn(last, Date.now());
+      last = seen.lastActivity;
+      if (seen.awayMinutes !== null && app.ready) void checkResume('break', seen.awayMinutes);
+    };
+    const events = ['keydown', 'pointerdown', 'pointermove', 'wheel'] as const;
+    for (const name of events) window.addEventListener(name, onActivity, { passive: true });
+    const timer = setInterval(async () => {
+      if (app.ready && (await rollDay())) void checkResume('new_day');
+    }, 60_000);
+    return () => {
+      clearInterval(timer);
+      for (const name of events) window.removeEventListener(name, onActivity);
+    };
   });
 
   function order(v: View): number {
@@ -101,6 +126,7 @@
 
 <div class="app">
   <Ribbon {onLock} onCapture={() => (app.captureOpen = true)} />
+  <TimerBar />
   <main class="stage">
     {#if problem}
       <p class="error pad" role="alert">{problem}</p>

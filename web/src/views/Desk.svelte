@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The Desk: today's card (date, hours ring, week total, Log work, entries) beside the
+  // The Desk: today's card (date, hours ring, week total, "Where was I?", Log work, entries) beside the
   // Done tickets tray and the Inbox.
   import { fmtHours, fromIso, longDay, relativeDay, weekdayLong } from '../lib/format';
   import { countTo } from '../lib/motion';
@@ -8,6 +8,7 @@
   import InboxCard from '../components/InboxCard.svelte';
   import LogWork from '../components/LogWork.svelte';
   import TrayCard from '../components/TrayCard.svelte';
+  import WhereWasI from '../components/WhereWasI.svelte';
   import WrapUp from '../components/WrapUp.svelte';
 
   const RING = 119.4;
@@ -63,6 +64,8 @@
       </div>
       <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
     </div>
+
+    <WhereWasI />
 
     <LogWork />
 

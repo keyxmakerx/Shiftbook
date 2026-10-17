@@ -17,6 +17,7 @@
   } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { fmtMinutes } from '../lib/format';
+  import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import TicketChip from './TicketChip.svelte';
 
   let { entry, index = 0 }: { entry: Entry; index?: number } = $props();
@@ -24,6 +25,9 @@
   let row: HTMLElement | undefined = $state();
   const project = $derived(projectById(entry.projectId));
   const color = $derived(projectColor(entry.projectId));
+  // The optional timer (Settings → Your day) runs on today's entries only.
+  const canTime = $derived(!!app.prefs?.timer && !entry.isTray && entry.date === app.today);
+  const timing = $derived(timer.running && timer.target?.entryId === entry.id);
 
   $effect(() => {
     if (app.flash.id !== entry.id || !row) return;
@@ -132,6 +136,13 @@
         { label: 'Add 1 hour', icon: 'hour', side: true, act: () => void addTime(60) },
       );
     }
+    if (canTime) {
+      main.push(
+        timing
+          ? { label: 'Stop the timer', icon: 'clock', top: true, act: () => void stopTimer() }
+          : { label: 'Start the timer', icon: 'clock', top: true, act: () => void startTimer(entry) },
+      );
+    }
     main.push(
       { label: 'Copy tickets', icon: 'copy', top: true, act: () => void copyTickets() },
       { label: 'Log again today (30 min)', icon: 'log', top: true, act: () => void logAgainToday() },
@@ -206,6 +217,15 @@
     {/each}
   </span>
   <span class="plus">
+    {#if canTime}
+      <button
+        type="button"
+        class="go"
+        class:on={timing}
+        aria-label={timing ? 'Stop the timer' : 'Start the timer'}
+        onclick={(e) => { e.stopPropagation(); void (timing ? stopTimer() : startTimer(entry)); }}
+      >{timing ? '■ Stop' : '▶ Start'}</button>
+    {/if}
     {#if !entry.isTray}
       <button type="button" onclick={(e) => { e.stopPropagation(); void addTime(15); }}>+15m</button>
       <button type="button" onclick={(e) => { e.stopPropagation(); void addTime(30); }}>+30m</button>
@@ -274,8 +294,14 @@
   }
 
   .row:hover .plus,
-  .row:focus-within .plus {
+  .row:focus-within .plus,
+  .plus:has(.on) {
     opacity: 1;
+  }
+
+  .go.on {
+    color: var(--accent);
+    font-weight: 650;
   }
 
   .plus button {
