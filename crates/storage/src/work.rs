@@ -201,7 +201,11 @@ fn tray_from_row(row: &SqliteRow) -> Result<TrayItem> {
     })
 }
 
-async fn project_exists(conn: &mut SqliteConnection, owner: OwnerId, id: ProjectId) -> Result<()> {
+pub(crate) async fn project_exists(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: ProjectId,
+) -> Result<()> {
     let n: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
     )
