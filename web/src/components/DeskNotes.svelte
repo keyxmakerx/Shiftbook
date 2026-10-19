@@ -145,7 +145,7 @@
     {/each}
   {:else if tab === 'today'}
     <textarea
-      class="text-in pad lined"
+      class="text-in pad"
       bind:value={daily}
       oninput={typed}
       rows="7"
@@ -221,11 +221,6 @@
     resize: vertical;
     min-height: 64px;
     font: 13.5px/1.55 var(--ui);
-  }
-
-  .lined {
-    background-image: repeating-linear-gradient(transparent 0 20px, color-mix(in srgb, var(--accent) 12%, transparent) 20px 21px);
-    background-attachment: local;
   }
 
   .row {

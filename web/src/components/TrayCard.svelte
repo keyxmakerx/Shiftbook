@@ -160,6 +160,7 @@
           <input
             class="note"
             value={item.note ?? ''}
+            title={item.note ?? ''}
             maxlength="300"
             placeholder="A few words…"
             autocomplete="off"

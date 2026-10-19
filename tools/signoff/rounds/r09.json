@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "round": 9,
+    "heading": "Round 9: notes on the Desk, ticket notes, and what the Canvas is",
+    "intro": "Real screenshots of what's built (sample data), plus the Canvas plan in one picture. Round 8 is in the Archive."
+  },
+  "cards": {
+    "r9-desk": {
+      "round": 9,
+      "order": 10,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: notes on the Desk, and a few words on each ticket",
+      "body": [
+        "**Notes on the Desk** (decided in round 4, now built): a Notes card under Done tickets with three tabs. **Jot** keeps a quick thought (Ctrl+Enter); your last few jots sit underneath. **Today** is the day's note; it saves as you type, and picking another day on the ribbon shows that day's note. **Meetings** lists recent meeting notes with a New meeting note button. All of it is in Notes and Find too.",
+        "**A few words on each ticket:** every ticket in the Done tickets tray has a box between the ticket and its minutes. Type, then click away or press Enter, and it's saved. Hover a long note to read all of it."
+      ],
+      "figures": [
+        {"src": "/_blob/6150d4d05bc65db89f647335f7205269", "caption": "The Desk: entries on the left; Done tickets with notes, then Notes, on the right."},
+        {"src": "/_blob/97d1ac0751692eebf7c5dbc4987d75f2", "caption": "Done tickets: a few words beside each ticket. The third one is being typed."},
+        {"src": "/_blob/1123c5cdbd97b5f150c490584bb86626", "caption": "Notes → **Today**: the day's note."},
+        {"src": "/_blob/b68b31d6567f217ad8f17bb19d6ba4c3", "caption": "Notes → **Meetings**: recent meeting notes and New meeting note."}
+      ],
+      "questions": [
+        {"id": "ok", "legend": "Looks right?", "options": [{"value": "Yes", "rec": true}, {"value": "Close", "why": "Say what to change in the note."}]},
+        {"id": "where", "legend": "Where should Notes sit on the Desk?", "options": [{"value": "Under Done tickets, as shown", "rec": true}, {"value": "Above Done tickets"}, {"value": "Under the entries on the left"}]}
+      ],
+      "pick": "Yes, as shown. Done tickets stays on top because you use it all day."
+    },
+    "r9-canvas": {
+      "round": 9,
+      "order": 20,
+      "area": "Canvas",
+      "version": 1,
+      "title": "Decided: the Canvas is the Desk's data, laid out freely",
+      "body": [
+        "The Canvas is not a separate place with separate things in it. It's another way to look at the same entries, tickets and notes as the Desk and the Notes view. Each one is a card. Change a card and the Desk, the Timesheet and Find all see the change.",
+        "Everything you do on the Desk works on the Canvas too: Log work, the Done tickets tray and Ctrl+Space capture put new cards on it; double-click a card to open its details; drag a card into a project's area and its project really changes (with Undo). The only new thing the Canvas saves is where you put each card.",
+        "On top of that sit the round 8 decisions: stacks, drawers, boards inside boards and the Archive."
+      ],
+      "figures": [
+        {"src": "/_blob/630d06c80c5e5caafc05fe08b9e24c01", "caption": "The round 8 mockup: the entry **Firewall rule cleanup** and the ticket **VLAN 40 trunk** are the same records you see on the Desk, piled together."},
+        {"src": "/_blob/695be5476ebfe8804ac425d9c46eeb32", "caption": "Boards: Meetings, Daily notes and Projects hold the same notes the Notes view lists."}
+      ],
+      "questions": [
+        {"id": "ok", "legend": "Is that the idea?", "options": [{"value": "Yes, build it next", "rec": true}, {"value": "Yes, but something else first", "why": "Say what in the note."}, {"value": "Not quite"}]}
+      ],
+      "pick": "Yes, build it next."
+    },
+    "r9-version": {
+      "round": 9,
+      "order": 30,
+      "area": "Releases",
+      "version": 1,
+      "title": "Releases: take the version from the tag you type",
+      "body": [
+        "The 0.3.0 downloads are named 0.2.0, because the app's own version number wasn't raised. The portable .exe doesn't care, but the Windows installer won't upgrade a 0.2.0 install to a build that also calls itself 0.2.0. Publishing a release also starts the build twice; one copy shows as failed although nothing broke.",
+        "The fix: the build reads the version from the tag you type on the Releases page (0.4.0 becomes 0.4.0 everywhere) and runs once per release."
+      ],
+      "questions": [
+        {"id": "ok", "legend": "Make that change?", "options": [{"value": "Yes", "rec": true}, {"value": "No, I'll bump versions myself"}]}
+      ],
+      "pick": "Yes. One less thing to remember when you release."
+    }
+  }
+}
