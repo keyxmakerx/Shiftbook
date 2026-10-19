@@ -44,6 +44,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "next up list",
         include_str!("../migrations/0003_next_up.sql"),
     ),
+    (
+        4,
+        "saved responses",
+        include_str!("../migrations/0004_saved_responses.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -252,6 +257,7 @@ mod tests {
                     "next_up_items",
                     "projects",
                     "recurring_tasks",
+                    "saved_responses",
                     "settings",
                     "task_checklist_items",
                     "tasks",

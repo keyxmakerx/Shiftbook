@@ -333,6 +333,21 @@ export interface NextUpItem {
   done: boolean;
 }
 
+/** A saved response: a message kept for pasting into tickets, copied from the tray. */
+export interface SavedResponse {
+  id: string;
+  /** Name shown in the menu. */
+  name: string;
+  /** The message that gets copied. */
+  text: string;
+}
+
+/** A saved response as typed in Settings (a blank name uses the message's first line). */
+export interface ResponseInput {
+  name: string;
+  text: string;
+}
+
 /** What brought the user back to Shiftbook. */
 export type ResumeTrigger = 'unlocked' | 'break' | 'new_day';
 
@@ -532,6 +547,12 @@ export interface DataApi {
   listInbox(): Promise<InboxItem[]>;
   addInbox(text: string): Promise<InboxItem>;
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
+
+  // ----- saved responses -----
+  /** Saved responses, in order. Tauri: `list_responses`. */
+  listResponses(): Promise<SavedResponse[]>;
+  /** Replace the list (rows with no message dropped, at most 30). Tauri: `save_responses`. */
+  saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 
   // ----- next up -----
   /** The "next up" list, in order. */

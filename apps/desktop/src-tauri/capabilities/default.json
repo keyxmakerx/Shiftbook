@@ -59,6 +59,8 @@
     "allow-next-up",
     "allow-set-next-up",
     "allow-tick-next-up",
+    "allow-list-responses",
+    "allow-save-responses",
     "allow-where-was-i",
     "allow-timer-offer",
     "allow-backup-now",

@@ -9,10 +9,10 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 - **Boards (proposed, awaiting sign-off):** any card can be a board with its own canvas, tinted
   in its colour, with breadcrumbs. Meetings, Daily notes and Projects are boards Shiftbook makes;
   the List view shows the same tree; an Archive sits at the bottom of the tree.
-- **Ticket sign-offs:** guessing from rules was rejected because Shiftbook only knows the
-  ticket number and what was logged. Take 2 (awaiting sign-off): a ✎ on every tray ticket opens
-  the user's own list of saved responses; Shiftbook fills only {ticket}, {date}, {title} and
-  {hours}. Matching on ticket prefix only orders the list and, optionally, marks a reminder.
+- **Ticket sign-offs:** rules and per-ticket matching were rejected: which tickets need a
+  closing message is random, and Shiftbook only knows the ticket number. Built instead: one copy
+  button on the Done tickets tray opens a quick menu of saved responses; picking one copies it.
+  No gaps, no matching. Responses are written in Settings → Responses (at most 30).
 - **Round 6** (prototype v2, timesheet crib sheet, spreadsheet lessons): approved and built in
   the alpha; codes are typed into Shiftbook by the user.
 

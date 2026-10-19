@@ -1089,6 +1089,60 @@ pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) ->
     Ok(store.tick_next_up(owner, id_arg(&id)?, done).await?)
 }
 
+// ---------- saved responses ----------
+
+/// One saved response.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResponseView {
+    id: shiftbook_core::ids::SavedResponseId,
+    name: String,
+    text: String,
+}
+
+/// One saved response as typed in Settings.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResponseInput {
+    name: String,
+    text: String,
+}
+
+fn response_views(items: Vec<shiftbook_core::model::SavedResponse>) -> Vec<ResponseView> {
+    items
+        .into_iter()
+        .map(|r| ResponseView {
+            id: r.id,
+            name: r.name,
+            text: r.text,
+        })
+        .collect()
+}
+
+/// Maps to `DataApi.listResponses()`.
+#[tauri::command]
+pub async fn list_responses(s: State<'_, VaultSession>) -> Res<Vec<ResponseView>> {
+    let (store, owner) = s.data().await?;
+    Ok(response_views(store.responses(owner).await?))
+}
+
+/// Maps to `DataApi.saveResponses()`: replace the list (an empty list clears it).
+#[tauri::command]
+pub async fn save_responses(
+    s: State<'_, VaultSession>,
+    items: Vec<ResponseInput>,
+) -> Res<Vec<ResponseView>> {
+    let (store, owner) = s.data().await?;
+    let drafts: Vec<shiftbook_core::responses::ResponseDraft> = items
+        .into_iter()
+        .map(|i| shiftbook_core::responses::ResponseDraft {
+            name: i.name,
+            text: i.text,
+        })
+        .collect();
+    Ok(response_views(store.set_responses(owner, &drafts).await?))
+}
+
 // ---------- where was I? ----------
 
 /// What the "Where was I?" card shows: the open wrap-up list (first item first), or

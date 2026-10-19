@@ -148,7 +148,8 @@
         }
       ],
       "pick": "Yes, with the yellow reminder as an option. It needs no access to your ticket system, so nothing leaves your computer.",
-      "reply": "Agreed. Take 2 drops the guessing: you pick from your own list of responses, and Shiftbook only fills in what it actually knows."
+      "reply": "Built your way: one copy button on the Done tickets tray opens a quick menu of your saved responses, and picking one copies it. No matching, no gaps to fill. You write the responses in Settings → Responses. It'll be in the next release.",
+      "archived": true
     },
     "r8-boards": {
       "round": 8,

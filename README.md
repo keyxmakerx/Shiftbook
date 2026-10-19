@@ -24,6 +24,9 @@ The alpha is a working app you can use day to day for logging time:
   entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
   can step up or down, and they roll up into one “Tickets” entry for the day); the entries list
   with +15m/+30m/+1h and ticket chips you click to copy; the Inbox.
+- **Saved responses:** the copy button on Done tickets lists messages you paste into tickets
+  again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
+  them in Settings → Responses.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
   day starts, the Desk shows what to pick up: the list from your wrap-up, or else the last
   thing you logged with its tickets and next step. **Carry on** puts it into Log work;
@@ -50,7 +53,7 @@ The alpha is a working app you can use day to day for logging time:
 - **Settings:** Look (theme, motion, accent, text size, project colours), Your day (targets,
   wrap-up, timer), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
-  grouping), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
+  grouping), Responses (saved messages for tickets), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
   such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
   (Back up now, the daily automatic backups, Restore from a backup or a file), Security (auto-lock, change password, and **Delete all
   data** to start again; the unlock screen offers it too if the recovery key is lost).

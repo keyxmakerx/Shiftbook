@@ -17,7 +17,7 @@ import type {
   TrayDay,
 } from './api';
 import { toIso } from './format';
-import type { View } from './keys';
+import type { SettingsSection, View } from './keys';
 import { errorMessage } from './messages';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
@@ -50,6 +50,8 @@ export const app = $state({
   resume: null as ResumeCard | null,
   /** "Later" was pressed: no more "Where was I?" until the next unlock. */
   resumeLater: false,
+  /** The Settings section to open next time Settings shows. */
+  settingsSection: 'look' as SettingsSection,
 });
 
 /** Run an API call; on failure show a plain message and resolve undefined. */

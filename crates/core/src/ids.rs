@@ -148,6 +148,10 @@ typed_id!(
     /// One thing on the "next up" list.
     NextUpItemId
 );
+typed_id!(
+    /// A saved response (a message kept for pasting into tickets).
+    SavedResponseId
+);
 
 #[cfg(test)]
 mod tests {
