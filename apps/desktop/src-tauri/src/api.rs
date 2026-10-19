@@ -403,19 +403,35 @@ fn capture_with(text: &str, today: Date, start: WeekStart, projects: &[Project])
 
 // ---------- preferences ----------
 
+/// Text size zooms the whole webview, like a browser's own zoom, so the layout
+/// still fills the window. (CSS `zoom` on the page shrank `100vh` with it and
+/// left a blank band at small sizes.) A failure only leaves the size as it was.
+fn apply_text_size(webview: &tauri::Webview, prefs: &Prefs) {
+    let _ = webview.set_zoom(f64::from(prefs.text_size) / 100.0);
+}
+
 /// Maps to `DataApi.loadPrefs()`.
 #[tauri::command]
-pub async fn load_prefs(s: State<'_, VaultSession>) -> Res<Prefs> {
+pub async fn load_prefs(webview: tauri::Webview, s: State<'_, VaultSession>) -> Res<Prefs> {
     let (store, owner) = s.data().await?;
-    Ok(store.prefs(owner).await?)
+    let prefs = store.prefs(owner).await?;
+    apply_text_size(&webview, &prefs);
+    Ok(prefs)
 }
 
 /// Maps to `DataApi.savePref()`. Returns all preferences after the change.
 #[tauri::command]
-pub async fn save_pref(s: State<'_, VaultSession>, key: String, value: String) -> Res<Prefs> {
+pub async fn save_pref(
+    webview: tauri::Webview,
+    s: State<'_, VaultSession>,
+    key: String,
+    value: String,
+) -> Res<Prefs> {
     let (store, owner) = s.data().await?;
     store.set_pref(owner, &key, &value).await?;
-    Ok(store.prefs(owner).await?)
+    let prefs = store.prefs(owner).await?;
+    apply_text_size(&webview, &prefs);
+    Ok(prefs)
 }
 
 // ---------- projects ----------
