@@ -242,7 +242,8 @@
           ]
         }
       ],
-      "pick": "Yes, with Meetings, Daily notes and Projects made for you, and daily notes archived after 2 weeks. You can change all of it in Settings."
+      "pick": "Yes, with Meetings, Daily notes and Projects made for you, and daily notes archived after 2 weeks. You can change all of it in Settings.",
+      "archived": true
     }
   }
 }
