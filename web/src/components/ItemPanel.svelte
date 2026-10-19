@@ -12,6 +12,7 @@
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { setTrayDone, setTrayProject } from '../lib/trayActions';
+  import { openWindow } from '../lib/windows.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
@@ -126,6 +127,15 @@
     });
   }
 
+  /** The notepad moves into a window; what's typed so far is saved first. */
+  async function popOut() {
+    if (saving) clearTimeout(saving);
+    await save();
+    if (entry) openWindow('entry', entry.id);
+    else if (tray) openWindow('tray', tray.id);
+    onclose();
+  }
+
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       e.stopPropagation();
@@ -146,6 +156,9 @@
   <label class="lbl" for="pad-{entry?.id ?? tray?.id}">
     Notepad
     <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>
+    <button type="button" class="pop" title="Open the notepad in a window you can move around" onclick={popOut}>
+      <Icon name="expand" size={12} /> Pop out
+    </button>
   </label>
   <textarea
     id="pad-{entry?.id ?? tray?.id}"
@@ -270,6 +283,21 @@
     text-transform: none;
     letter-spacing: 0;
     font-weight: 500;
+  }
+
+  .pop {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: 600 11.5px var(--ui);
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: pointer;
+    padding: 0;
   }
 
   .pad {

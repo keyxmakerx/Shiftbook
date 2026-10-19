@@ -50,7 +50,8 @@ the README for what it does.
   and otherwise Georgia, Segoe UI/system-ui and Consolas/monospace. Bundling the OFL fonts
   inside the app (no network) is a follow-up.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
-- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
+- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet (the bell
+  shows recurring tasks once they do); custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
   can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
   given a project rolls up under it); the Planner

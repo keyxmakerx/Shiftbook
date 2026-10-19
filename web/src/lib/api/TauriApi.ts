@@ -19,6 +19,10 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
+  MeetingSeries,
+  SeriesInput,
+  BellItem,
+  TrayItem,
   CardRef,
   DeskData,
   CardKind,
@@ -140,6 +144,9 @@ export class TauriApi implements DataApi {
   setEntryNotes(id: string, notes: string): Promise<Entry> {
     return call('set_entry_notes', { id, notes });
   }
+  getEntry(id: string): Promise<Entry> {
+    return call('get_entry', { id });
+  }
   addEntryMinutes(id: string, delta: number): Promise<Entry> {
     return call('add_entry_minutes', { id, delta });
   }
@@ -186,6 +193,24 @@ export class TauriApi implements DataApi {
   }
   trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
     return call('tray_carry', { id, date });
+  }
+  trayItem(id: string): Promise<TrayItem | null> {
+    return call('tray_item', { id });
+  }
+  meetingSeries(): Promise<MeetingSeries[]> {
+    return call('meeting_series');
+  }
+  saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries> {
+    return call('save_meeting_series', { id, input });
+  }
+  setMeetingSeriesDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('set_meeting_series_deleted', { id, deleted });
+  }
+  meetingNote(seriesId: string, date: IsoDate): Promise<Note> {
+    return call('meeting_note', { seriesId, date });
+  }
+  bell(today: IsoDate, now: number): Promise<BellItem[]> {
+    return call('bell', { today, now });
   }
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });

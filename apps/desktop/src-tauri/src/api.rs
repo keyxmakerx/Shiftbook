@@ -559,6 +559,25 @@ pub async fn add_entry_minutes(
     one_entry(&store, owner, rec).await
 }
 
+/// Maps to `DataApi.getEntry()`: one entry, for a window showing its notepad.
+#[tauri::command]
+pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let rec = store.get_entry(owner, id_arg(&id)?).await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// Maps to `DataApi.trayItem()`: one tray ticket, for a window showing its notepad.
+#[tauri::command]
+pub async fn tray_item(s: State<'_, VaultSession>, id: String) -> Res<Option<TrayItemView>> {
+    let (store, owner) = s.data().await?;
+    let links = links_for(&store, owner).await?;
+    Ok(store
+        .tray_item(owner, id_arg(&id)?)
+        .await?
+        .map(|i| tray_item_view(i, &links)))
+}
+
 /// Maps to `DataApi.setEntryNotes()`: the entry's notepad, saved as you type.
 #[tauri::command]
 pub async fn set_entry_notes(

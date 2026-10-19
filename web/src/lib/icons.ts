@@ -52,6 +52,12 @@ const ICONS = {
   ],
   more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
   play: ['M8 5l11 7-11 7z'],
+  up: ['M6 15l6-6 6 6'],
+  down: ['M6 9l6 6 6-6'],
+  expand: ['M14 4h6v6', 'M10 20H4v-6', 'M20 4l-7 7', 'M4 20l7-7'],
+  restore: ['M8 8h12v12H8z', 'M4 16V4h12'],
+  bell: ['M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
+  meeting: ['M4 6h16v14H4z', 'M4 10h16', 'M8 3v4', 'M16 3v4', 'M8 14h3', 'M13 14h3'],
 } as const;
 
 export type IconName = keyof typeof ICONS;

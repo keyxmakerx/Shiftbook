@@ -23,6 +23,7 @@ pub mod error;
 pub mod extras;
 mod fsutil;
 pub mod hex;
+pub mod meetings;
 pub mod notes;
 pub mod recovery;
 pub mod repo;

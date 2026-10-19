@@ -61,6 +61,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "open tickets, ticket projects, bring up",
         include_str!("../migrations/0008_tickets_open_and_bring_up.sql"),
     ),
+    (
+        9,
+        "meeting series",
+        include_str!("../migrations/0009_meeting_series.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -269,6 +274,7 @@ mod tests {
                     "frequencies",
                     "inbox_items",
                     "list_options",
+                    "meeting_series",
                     "next_up_items",
                     "notes",
                     "projects",

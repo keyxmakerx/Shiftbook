@@ -1,8 +1,11 @@
 <script lang="ts">
   // The unlocked app: the ribbon, one working view (Desk, Day, Timesheet, Notes or Settings) that
-  // slides in from the direction you move, and the overlays (capture, drawer, paper menu,
-  // toast). Also the keyboard shortcuts and the copy guard.
-  import { onMount } from 'svelte';
+  // slides in from the direction you move, the windows floating over it and the bottom bar
+  // with the bell, and the overlays (capture, drawer, paper menu, toast). Also the keyboard
+  // shortcuts and the copy guard.
+  import { onMount, untrack } from 'svelte';
+  import { refreshBell } from '../lib/bell.svelte';
+  import { loadWindows } from '../lib/windows.svelte';
   import { errorMessage } from '../lib/messages';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
@@ -12,7 +15,10 @@
   import { restoreTimer, timerActivity } from '../lib/timer.svelte';
   import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import BellPanel from '../components/BellPanel.svelte';
+  import BottomBar from '../components/BottomBar.svelte';
   import Capture from '../components/Capture.svelte';
+  import WindowLayer from '../components/WindowLayer.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import Ribbon from '../components/Ribbon.svelte';
@@ -30,7 +36,10 @@
 
   onMount(() => {
     loadAll()
-      .then(() => Promise.all([checkResume('unlocked'), restoreTimer()]))
+      .then(() => {
+        loadWindows();
+        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell()]);
+      })
       .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
   });
@@ -48,11 +57,19 @@
     for (const name of events) window.addEventListener(name, onActivity, { passive: true });
     const timer = setInterval(async () => {
       if (app.ready && (await rollDay())) void checkResume('new_day');
+      if (app.ready) void refreshBell();
     }, 60_000);
     return () => {
       clearInterval(timer);
       for (const name of events) window.removeEventListener(name, onActivity);
     };
+  });
+
+  // The bell follows the day's changes (a ticket ticked, something brought up).
+  $effect(() => {
+    void app.tray;
+    void app.entries;
+    if (app.ready) untrack(() => void refreshBell());
   });
 
   function order(v: View): number {
@@ -151,7 +168,12 @@
     {:else}
       <p class="pad lead">Opening your work log…</p>
     {/if}
+    {#if app.ready}
+      <WindowLayer />
+      <BellPanel />
+    {/if}
   </main>
+  {#if app.ready}<BottomBar />{/if}
 </div>
 
 <Capture {onLock} />
@@ -159,7 +181,6 @@
 <PaperMenu />
 <Toast />
 <ShortcutOverlay />
-<p class="hold-hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> to see shortcuts</p>
 
 <style>
   .app {
@@ -189,25 +210,5 @@
 
   .lead {
     color: var(--mut);
-  }
-
-  /* A quiet reminder that the shortcut overlay exists. */
-  .hold-hint {
-    position: fixed;
-    right: 14px;
-    bottom: 8px;
-    margin: 0;
-    font-size: 11.5px;
-    color: var(--mut);
-    pointer-events: none;
-    padding: 2px 8px;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--desk) 85%, transparent);
-  }
-
-  @media (max-width: 760px) {
-    .hold-hint {
-      display: none;
-    }
   }
 </style>

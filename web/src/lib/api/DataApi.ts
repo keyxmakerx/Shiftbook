@@ -76,6 +76,49 @@ export interface Prefs {
   pausedTimer: PausedTimer | null;
   /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
   notesAutoArchiveDays: number;
+  /** Open windows and where they are. */
+  windows: WindowSpot[];
+}
+
+/** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
+export type WindowMode = 'open' | 'rolled' | 'min' | 'full';
+
+/** A notepad or note popped out into a window (round 12). */
+export interface WindowSpot {
+  kind: CardKind;
+  id: string;
+  mode: WindowMode;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A meeting that repeats on set weekdays at a set time; the bell reminds about it. */
+export interface MeetingSeries {
+  id: string;
+  name: string;
+  /** Weekdays it meets, Monday first. */
+  days: boolean[];
+  /** Start, minutes after local midnight. */
+  at: number;
+  /** Minutes ahead the bell starts reminding. */
+  remindMinutes: number;
+}
+
+export type SeriesInput = Omit<MeetingSeries, 'id'>;
+
+/** Where today's meeting stands. Mirrors `shiftbook_core::meetings::MeetingToday`. */
+export type MeetingToday = { state: 'later' } | { state: 'soon'; minutes: number } | { state: 'started'; minutes: number };
+
+/** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
+export interface BellItem {
+  when: 'now' | 'today';
+  title: string;
+  about:
+    | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
+    | { kind: 'brought_up'; id: string; from: IsoDate }
+    | { kind: 'still_open'; tickets: string[] };
 }
 
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
@@ -109,7 +152,8 @@ export type PrefKey =
   | 'day.wrapup_at'
   | 'day.timer'
   | 'timer.paused'
-  | 'notes.auto_archive_days';
+  | 'notes.auto_archive_days'
+  | 'ui.windows';
 
 export interface Project {
   id: string;
@@ -610,6 +654,8 @@ export interface DataApi {
   addEntryMinutes(id: string, delta: number): Promise<Entry>;
   /** The entry's notepad, saved as you type (blank clears it). */
   setEntryNotes(id: string, notes: string): Promise<Entry>;
+  /** One entry (for a window showing its notepad). */
+  getEntry(id: string): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
@@ -635,6 +681,19 @@ export interface DataApi {
   traySetProject(id: string, projectId: string | null): Promise<TrayDay>;
   /** Work on a still-open ticket again on `date`: it joins that day's tray. */
   trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
+  /** One tray ticket, or null when it was taken out (for a window showing its notepad). */
+  trayItem(id: string): Promise<TrayItem | null>;
+
+  // ----- meetings and the bell -----
+  meetingSeries(): Promise<MeetingSeries[]>;
+  /** Add a series (`id` null) or change one. */
+  saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries>;
+  /** Remove a series, or with `deleted` false bring it back (Undo). Its notes stay. */
+  setMeetingSeriesDeleted(id: string, deleted: boolean): Promise<void>;
+  /** The series' meeting note for `date`, made the first time it's asked for. */
+  meetingNote(seriesId: string, date: IsoDate): Promise<Note>;
+  /** What's coming up at `now` (minutes after local midnight on `today`). */
+  bell(today: IsoDate, now: number): Promise<BellItem[]>;
   trayRemove(id: string): Promise<TrayDay>;
   trayRestore(id: string): Promise<TrayDay>;
 

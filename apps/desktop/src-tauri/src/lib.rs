@@ -8,6 +8,7 @@
 mod api;
 mod backoff;
 mod canvas;
+mod meetings;
 mod notes;
 mod protect;
 mod session;
@@ -305,6 +306,13 @@ pub fn run() {
             api::create_entry,
             api::update_entry,
             api::set_entry_notes,
+            api::get_entry,
+            api::tray_item,
+            meetings::meeting_series,
+            meetings::save_meeting_series,
+            meetings::set_meeting_series_deleted,
+            meetings::meeting_note,
+            meetings::bell,
             api::add_entry_minutes,
             api::delete_entry,
             api::restore_entry,

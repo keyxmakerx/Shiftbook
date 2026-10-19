@@ -39,6 +39,15 @@ The alpha is a working app you can use day to day for logging time:
   +15m/+30m/+1h and ticket chips you click to copy (click an entry for the same slide-out as on
   the Desk); **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes); the Inbox.
+- **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
+  a right-click menu) puts a notepad or a note in a window that floats over everything and
+  saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
+  to the title bar, – minimises it to the bottom bar, ⤢ fills the screen, ✕ closes it. Windows
+  come back where they were after you unlock. The thin **bottom bar** lines windows up from the
+  left (click to show or tuck away, right-click for more), with today's hours and the **bell** on
+  the right: its panel slides in with meetings about to start, things brought up for today and
+  tickets still open. Meetings that repeat are set in **Settings → Meetings** (days, time, how
+  early to remind); the bell opens that day's meeting note. All of it stays inside Shiftbook.
 - **Saved responses:** the copy button on the Tickets tray lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
   them in Settings → Responses.

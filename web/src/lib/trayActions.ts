@@ -9,6 +9,7 @@ import type { MenuItem, MenuSpec } from './menu.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
 import { toast } from './toast.svelte';
+import { openWindow } from './windows.svelte';
 
 /** Show a changed tray: the open day's tray updates, everything else reloads. */
 export async function applyTray(day: TrayDay | undefined): Promise<void> {
@@ -67,6 +68,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('tray', item.id, item.ticket) },
   ];
   if (notepad) main.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: notepad });
+  main.push({ label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('tray', item.id) });
   main.push(
     { label: 'Add 5 minutes', icon: 'plus', act: () => void stepTray(item, 5) },
     { label: 'Take away 5 minutes', icon: 'minus', act: () => void stepTray(item, -5) },

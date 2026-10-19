@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-meeting-note"
+description = "Enables the meeting_note command without any pre-configured scope."
+commands.allow = ["meeting_note"]
+
+[[permission]]
+identifier = "deny-meeting-note"
+description = "Denies the meeting_note command without any pre-configured scope."
+commands.deny = ["meeting_note"]

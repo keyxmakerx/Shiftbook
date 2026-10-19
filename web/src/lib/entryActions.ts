@@ -6,6 +6,7 @@ import type { Entry } from './api';
 import { bringUp } from './bringUp';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
+import { openWindow } from './windows.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, putEntry, refresh, refreshProjects } from './store.svelte';
 import { toast } from './toast.svelte';
@@ -114,6 +115,7 @@ export function entryMenu(entry: Entry): MenuSpec {
   const main: MenuItem[] = [
     { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
     { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
+    { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },
     { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('entry', entry.id, entry.description) },
   ];
   if (!entry.isTray) {

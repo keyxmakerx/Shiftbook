@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tray-item"
+description = "Enables the tray_item command without any pre-configured scope."
+commands.allow = ["tray_item"]
+
+[[permission]]
+identifier = "deny-tray-item"
+description = "Denies the tray_item command without any pre-configured scope."
+commands.deny = ["tray_item"]

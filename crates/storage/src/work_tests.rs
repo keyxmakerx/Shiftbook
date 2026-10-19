@@ -838,3 +838,66 @@ fn brought_up_things_stay_apart_from_the_wrapup_list() {
         assert_eq!(s.next_up_all(me).await.unwrap().len(), 1);
     });
 }
+
+#[test]
+fn meeting_series_are_kept_and_checked() {
+    let dir = TestDir::new("meetings");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mon_thu = [true, false, false, true, false, false, false];
+        let input = crate::meetings::SeriesInput {
+            name: " Weekly ops ".into(),
+            days: mon_thu,
+            at: 600,
+            remind_minutes: 15,
+        };
+        let ops = s.create_meeting_series(me, &input).await.unwrap();
+        assert_eq!(ops.name, "Weekly ops");
+        assert_eq!(ops.days, mon_thu);
+        let early = crate::meetings::SeriesInput {
+            name: "All-hands".into(),
+            at: 540,
+            ..input.clone()
+        };
+        s.create_meeting_series(me, &early).await.unwrap();
+        let names: Vec<String> = s
+            .meeting_series(me)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|m| m.name)
+            .collect();
+        assert_eq!(names, ["All-hands", "Weekly ops"]);
+        assert!(s.meeting_series(other).await.unwrap().is_empty());
+
+        let moved = crate::meetings::SeriesInput {
+            at: 630,
+            ..input.clone()
+        };
+        assert_eq!(
+            s.update_meeting_series(me, ops.id, &moved)
+                .await
+                .unwrap()
+                .at,
+            630
+        );
+        assert!(matches!(
+            s.update_meeting_series(other, ops.id, &moved).await,
+            Err(StorageError::NotFound)
+        ));
+        let no_days = crate::meetings::SeriesInput {
+            days: [false; 7],
+            ..input.clone()
+        };
+        assert!(s.create_meeting_series(me, &no_days).await.is_err());
+
+        s.set_meeting_series_deleted(me, ops.id, true)
+            .await
+            .unwrap();
+        assert_eq!(s.meeting_series(me).await.unwrap().len(), 1);
+        s.set_meeting_series_deleted(me, ops.id, false)
+            .await
+            .unwrap();
+        assert_eq!(s.meeting_series(me).await.unwrap().len(), 2);
+    });
+}

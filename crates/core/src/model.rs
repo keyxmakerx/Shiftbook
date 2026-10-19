@@ -14,8 +14,9 @@ use crate::dates::{iso_date, rfc3339};
 use crate::fields::{AppliesTo, FieldKind};
 use crate::ids::{
     CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId, InboxItemId,
-    ListOptionId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, SavedResponseId,
-    TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
+    ListOptionId, MeetingSeriesId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId,
+    SavedResponseId, TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetTickId,
+    TimesheetWeekId, TrayItemId,
 };
 use crate::minutes::Minutes;
 use crate::notes::NoteKind;
@@ -763,4 +764,31 @@ mod tests {
         assert_eq!(ListName::Category.as_str(), "category");
         assert_eq!(ListName::RecurringType.as_str(), "recurring_type");
     }
+}
+
+/// A meeting that repeats on set weekdays at a set time (see [`crate::meetings`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeetingSeries {
+    /// Id.
+    pub id: MeetingSeriesId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// Name, e.g. "Weekly ops".
+    pub name: String,
+    /// The weekdays it meets, Monday first.
+    pub days: [bool; 7],
+    /// Start time in minutes after local midnight.
+    pub at: u32,
+    /// Minutes ahead the bell starts reminding.
+    pub remind_minutes: u32,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
 }
