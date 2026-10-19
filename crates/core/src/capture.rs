@@ -136,8 +136,35 @@ pub fn parse_capture(
         rest.push(*word);
     }
     capture.description = rest.join(" ");
+    if capture.project_id.is_none() && capture.project_query.is_none() {
+        capture.project_id = project_named_in(&capture.description, projects);
+    }
     capture
 }
+
+/// The project whose name the words are, or start with (ignoring case, spaces and
+/// punctuation): "Huntsville closet" logs to the project "Huntsville Closet", and so does
+/// "Huntsville closet re-cabling". The longest matching name wins; names shorter than
+/// [`MIN_NAMED_PROJECT`] letters only match exactly.
+fn project_named_in(description: &str, projects: &[CaptureProject<'_>]) -> Option<ProjectId> {
+    let words = compact(description);
+    if words.is_empty() {
+        return None;
+    }
+    projects
+        .iter()
+        .filter(|p| {
+            let name = compact(p.name);
+            !name.is_empty()
+                && (name == words
+                    || (name.chars().count() >= MIN_NAMED_PROJECT && words.starts_with(&name)))
+        })
+        .max_by_key(|p| compact(p.name).chars().count())
+        .map(|p| p.id)
+}
+
+/// Shortest project name (letters and digits) that matches the start of a longer description.
+pub const MIN_NAMED_PROJECT: usize = 6;
 
 /// The first run of words that reads as a time: (start, word count, minutes).
 fn find_hours(words: &[&str]) -> Option<(usize, usize, Minutes)> {
@@ -321,6 +348,37 @@ mod tests {
         assert_eq!(c.date, date!(2026 - 10 - 14));
         assert_eq!(c.day_word.as_deref(), Some("yesterday"));
         assert_eq!(c.description, "firewall cleanup");
+    }
+
+    #[test]
+    fn a_line_that_is_a_project_name_logs_to_that_project() {
+        let list = vec![
+            (ProjectId::new(), "Branch Network Closet (Comms Room)"),
+            (ProjectId::new(), "Branch Network Closet"),
+            (ProjectId::new(), "Lab"),
+        ];
+        let c = parse_with("1h branch network closet (comms room)", &list);
+        assert_eq!(c.project_id, Some(list[0].0), "the exact name");
+        let c = parse_with("branch network closet re-cabling", &list);
+        assert_eq!(c.project_id, Some(list[1].0), "starts with a name");
+        assert_eq!(
+            c.description, "branch network closet re-cabling",
+            "the words stay"
+        );
+        assert_eq!(
+            parse_with("Lab", &list).project_id,
+            Some(list[2].0),
+            "short names match exactly"
+        );
+        assert_eq!(
+            parse_with("Labels printed", &list).project_id,
+            None,
+            "but not as a start"
+        );
+        assert_eq!(parse_with("fix printer", &list).project_id, None);
+        // A #tag still wins.
+        let c = parse_with("branch network closet #lab", &list);
+        assert_eq!(c.project_id, Some(list[2].0));
     }
 
     #[test]
