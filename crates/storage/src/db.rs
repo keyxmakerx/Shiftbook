@@ -50,6 +50,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "saved responses",
         include_str!("../migrations/0005_saved_responses.sql"),
     ),
+    (6, "canvas", include_str!("../migrations/0006_canvas.sql")),
 ];
 
 fn migrator() -> Migrator {
@@ -249,6 +250,7 @@ mod tests {
             assert_eq!(
                 tables,
                 [
+                    "canvas_cards",
                     "category_code_defaults",
                     "custom_fields",
                     "custom_values",

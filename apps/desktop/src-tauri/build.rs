@@ -64,6 +64,8 @@ fn main() {
             "list_notes",
             "get_note",
             "create_note",
+            "canvas",
+            "canvas_move",
             "daily_note",
             "save_daily_note",
             "update_note",

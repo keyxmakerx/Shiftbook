@@ -5,6 +5,7 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod canvas;
 pub mod capture;
 pub mod dates;
 pub mod error;

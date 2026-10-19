@@ -81,6 +81,10 @@
       copy.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
       copy.style.cssText = anchor.style.cssText;
       if (ghostColor) copy.style.setProperty('--c', ghostColor);
+      // The copy sits in the ghost's box, not where the original was placed (Desk cards are
+      // positioned on the board).
+      copy.style.position = 'static';
+      for (const side of ['left', 'top', 'right', 'bottom', 'z-index', 'transform']) copy.style.removeProperty(side);
       copy.style.margin = '0';
       copy.style.width = '100%';
       copy.style.height = '100%';

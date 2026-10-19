@@ -1137,6 +1137,39 @@ impl SqliteStore {
         Ok(day)
     }
 
+    /// Live Done tickets from `from` to `to` (inclusive), by date.
+    pub async fn tray_between(
+        &self,
+        owner: OwnerId,
+        from: Date,
+        to: Date,
+    ) -> Result<Vec<TrayItem>> {
+        let rows = sqlx::query(
+            "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
+             deleted_at FROM ticket_tray WHERE owner_id = $1 AND date >= $2 AND date <= $3 \
+             AND deleted_at IS NULL ORDER BY date, id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(tray_from_row).collect()
+    }
+
+    /// One live Done ticket, or None.
+    pub async fn tray_item(&self, owner: OwnerId, id: TrayItemId) -> Result<Option<TrayItem>> {
+        let row = sqlx::query(
+            "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
+             deleted_at FROM ticket_tray WHERE owner_id = $1 AND id = $2 AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .bind(id.to_string())
+        .fetch_optional(&self.pool)
+        .await?;
+        row.as_ref().map(tray_from_row).transpose()
+    }
+
     /// Change one tray ticket's minutes (0 to 480).
     pub async fn tray_set_minutes(
         &self,

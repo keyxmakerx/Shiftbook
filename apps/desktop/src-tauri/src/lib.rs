@@ -7,6 +7,7 @@
 
 mod api;
 mod backoff;
+mod canvas;
 mod notes;
 mod protect;
 mod session;
@@ -344,6 +345,8 @@ pub fn run() {
             notes::list_notes,
             notes::get_note,
             notes::create_note,
+            canvas::canvas,
+            canvas::canvas_move,
             notes::daily_note,
             notes::save_daily_note,
             notes::update_note,

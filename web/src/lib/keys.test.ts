@@ -13,9 +13,10 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('L', { ctrlKey: true, typing: true }))).toEqual({ kind: 'lock' });
     expect(shortcutFor(key('n'))).toEqual({ kind: 'focus-log' });
     expect(shortcutFor(key('1'))).toEqual({ kind: 'view', view: 'desk' });
-    expect(shortcutFor(key('2'))).toEqual({ kind: 'view', view: 'timesheet' });
-    expect(shortcutFor(key('3'))).toEqual({ kind: 'view', view: 'notes' });
-    expect(shortcutFor(key('4'))).toEqual({ kind: 'view', view: 'settings' });
+    expect(shortcutFor(key('2'))).toEqual({ kind: 'view', view: 'day' });
+    expect(shortcutFor(key('3'))).toEqual({ kind: 'view', view: 'timesheet' });
+    expect(shortcutFor(key('4'))).toEqual({ kind: 'view', view: 'notes' });
+    expect(shortcutFor(key('5'))).toEqual({ kind: 'view', view: 'settings' });
     expect(shortcutFor(key('Escape', { typing: true }))).toEqual({ kind: 'escape' });
     expect(shortcutFor(key('F10', { shiftKey: true }))).toEqual({ kind: 'menu-key' });
     expect(shortcutFor(key('ContextMenu'))).toEqual({ kind: 'menu-key' });
@@ -24,7 +25,7 @@ describe('keyboard shortcuts', () => {
   it('leaves typing alone', () => {
     expect(shortcutFor(key('n', { typing: true }))).toBeNull();
     expect(shortcutFor(key('2', { typing: true }))).toBeNull();
-    expect(shortcutFor(key('5'))).toBeNull();
+    expect(shortcutFor(key('6'))).toBeNull();
     expect(shortcutFor(key('0'))).toBeNull();
     expect(shortcutFor(key('n', { ctrlKey: true }))).toBeNull();
     expect(shortcutFor(key('l', { ctrlKey: true, altKey: true }))).toBeNull();

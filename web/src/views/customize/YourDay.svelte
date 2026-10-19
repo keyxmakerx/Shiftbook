@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Settings → Your day: the Desk ring's target for each weekday, the optional
+  // Settings → Your day: the Day ring's target for each weekday, the optional
   // end-of-day wrap-up (round 7) and the optional timer (off by default).
   import { app, savePref } from '../../lib/store.svelte';
 
@@ -29,7 +29,7 @@
 {#if prefs}
   <article class="paper cz-card">
     <h3>Daily target</h3>
-    <p class="sub">How many hours fill the ring on the Desk. Put 0 for days you don't work.</p>
+    <p class="sub">How many hours fill the ring on Day. Put 0 for days you don't work.</p>
     <div class="days">
       {#each DAYS as name, i (name)}
         <label class="day">
@@ -54,7 +54,7 @@
   <article class="paper cz-card">
     <h3>End-of-day wrap-up</h3>
     <p class="sub">
-      At this time the Desk shows a short wrap-up: what you logged, anything missing a timesheet
+      At this time Day and the Desk show a short wrap-up: what you logged, anything missing a timesheet
       code, and a few lines for what's next tomorrow. Off unless you turn it on.
     </p>
     <div class="cz-row">

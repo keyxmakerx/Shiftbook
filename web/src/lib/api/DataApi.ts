@@ -353,6 +353,24 @@ export interface ResponseInput {
   text: string;
 }
 
+/** What a card on the Desk (the Canvas) shows. Mirrors `CardKind` in crates/core/src/canvas.rs. */
+export type CardKind = 'entry' | 'tray' | 'note' | 'inbox';
+
+/** One card on the Desk: where it sits and the record it shows (exactly one is set). */
+export interface CanvasCard {
+  kind: CardKind;
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  /** The owner moved it; false means it was placed automatically this time. */
+  placed: boolean;
+  entry: Entry | null;
+  tray: { item: TrayItem; date: IsoDate } | null;
+  note: Note | null;
+  inbox: InboxItem | null;
+}
+
 /** What brought the user back to Shiftbook. */
 export type ResumeTrigger = 'unlocked' | 'break' | 'new_day';
 
@@ -592,6 +610,12 @@ export interface DataApi {
   listInbox(): Promise<InboxItem[]>;
   addInbox(text: string): Promise<InboxItem>;
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
+
+  // ----- the Desk (Canvas) -----
+  /** Every card on the Desk, bottom first. Tauri: `canvas`. */
+  canvas(today: IsoDate): Promise<CanvasCard[]>;
+  /** Put a card where it was dropped, on top. Tauri: `canvas_move`. */
+  canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void>;
 
   // ----- saved responses -----
   /** Saved responses, in order. Tauri: `list_responses`. */

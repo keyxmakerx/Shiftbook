@@ -188,7 +188,8 @@ export function putEntry(entry: Entry): void {
 }
 
 export function focusLog(text = ''): void {
-  app.view = 'desk';
+  // Log work is on the Desk (the Canvas) and on Day; stay on whichever is open.
+  if (app.view !== 'desk' && app.view !== 'day') setView('desk');
   app.logFocus = { serial: app.logFocus.serial + 1, text };
 }
 

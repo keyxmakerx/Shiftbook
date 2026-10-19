@@ -42,7 +42,7 @@ pub struct NoteView {
     updated_at: String,
 }
 
-fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
+pub(crate) fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
     let archive_in_days = match archive_outlook(facts(&n), now, after_days) {
         ArchiveOutlook::Soon { days_left } => Some(days_left),
         ArchiveOutlook::Stays | ArchiveOutlook::Due => None,

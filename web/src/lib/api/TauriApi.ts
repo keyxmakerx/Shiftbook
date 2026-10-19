@@ -19,6 +19,8 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
+  CanvasCard,
+  CardKind,
   Note,
   NoteInput,
   NoteKind,
@@ -229,6 +231,13 @@ export class TauriApi implements DataApi {
   }
   setInboxDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_inbox_deleted', { id, deleted });
+  }
+
+  canvas(today: IsoDate): Promise<CanvasCard[]> {
+    return call('canvas', { today });
+  }
+  canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void> {
+    return call('canvas_move', { kind, id, x, y });
   }
 
   listResponses(): Promise<SavedResponse[]> {

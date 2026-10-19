@@ -62,9 +62,14 @@ names the round it came from. Nothing here is optional unless it says so.
 - Pictures in notes with the markup editor (round 4).
 
 ## Build order
-1. **C1 Foundation:** the layout store; Desk shows entries, tray tickets, notes and scraps as
-   cards; drag, pan and zoom; double-click to open or to jot; paper menus; Log work, capture and
-   the tray work here; the tab rename.
+1. **C1 Foundation (built):** the layout store; Desk shows entries, tray tickets, notes and
+   scraps as cards; drag, pan and zoom, Fit everything; double-click to open or to jot; paper
+   menus; a side panel with today's hours, "Where was I?", Log work, Done tickets and the
+   wrap-up; the tab rename (Desk, Day, Timesheet, Notes, Settings on keys 1 to 5).
+   Which records show: entries and Done tickets from the last 7 days, plus older ones the owner
+   moved; every live note and Inbox scrap. The day's "Tickets" roll-up entry is not a card (its
+   tickets are). Cards nobody moved are placed newest first in rows from the top left, around
+   the moved ones.
 2. **C2 Meaning:** project areas, automatic and drawn links, timeline and back.
 3. **C3 Tidy:** stacks, Tidy into stacks, drawers.
 4. **C4 Boards:** boards inside boards with tint and breadcrumbs, the List view, the Archive.

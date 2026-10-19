@@ -67,6 +67,8 @@
     "allow-list-notes",
     "allow-get-note",
     "allow-create-note",
+    "allow-canvas",
+    "allow-canvas-move",
     "allow-daily-note",
     "allow-save-daily-note",
     "allow-update-note",

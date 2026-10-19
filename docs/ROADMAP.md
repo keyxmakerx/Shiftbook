@@ -33,7 +33,8 @@ M5, quick capture inside the app, the Done tickets tray, custom fields and the p
 the README for what it does.
 
 ### Known gaps in alpha
-- **Planner** (week/month/year) and **Canvas** views: hidden until they are built.
+- **Planner** (week/month/year): hidden until it is built. **Canvas:** step 1 of 5 is built
+  (it is the Desk); the rest is listed in `docs/CANVAS.md`.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
   Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
   imports (paste, MOP import with its check screen, OneNote sections), and the **notes map**.
@@ -51,8 +52,8 @@ the README for what it does.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
 - Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
-  can only be filled in on entries; the tray's roll-up entry starts with no project; Planner and
-  Canvas keyboard shortcuts (4, 5) are not assigned.
+  can only be filled in on entries; the tray's roll-up entry starts with no project; the Planner
+  has no keyboard shortcut yet (1 to 5 are Desk, Day, Timesheet, Notes, Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)
 - **S1** `apps/server` with Axum reusing core/storage; Postgres migrations verified in CI.
