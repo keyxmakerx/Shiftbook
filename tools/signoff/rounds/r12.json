@@ -2,7 +2,7 @@
   "meta": {
     "round": 12,
     "heading": "Round 12: click for options, notepad windows, a bottom bar and a bell",
-    "intro": "Pictures of everything from your last notes. Nothing here is built yet: pick, and I'll build in the order on the last card."
+    "intro": "Step 1 is built: the slide-out, notepads, still-open tickets, ticket projects and Bring up tomorrow. Your round 12 answers are recorded below."
   },
   "cards": {
     "r12-click": {
@@ -66,7 +66,9 @@
           "placeholder": "e.g. put Archive in the slide-out too"
         }
       ],
-      "pick": "Yes to both. It keeps the everyday things one click away and the rest out of sight."
+      "pick": "Yes to both. It keeps the everyday things one click away and the rest out of sight.",
+      "archived": true,
+      "reply": "Built in step 1 (see the first card). Start the timer shows in the slide-out only when the timer is turned on; +15m/+30m/+1h are plain buttons, not the timer."
     },
     "r12-windows": {
       "round": 12,
@@ -150,7 +152,9 @@
           "placeholder": "e.g. remind me 10 minutes before a meeting"
         }
       ],
-      "pick": "Yes, and keep the bell in-app for now."
+      "pick": "Yes, and keep the bell in-app for now.",
+      "archived": true,
+      "reply": "Next up, step 2. In-app bell only, with the four things you picked."
     },
     "r12-full": {
       "round": 12,
@@ -208,7 +212,9 @@
           "placeholder": "e.g. a checklist on the right"
         }
       ],
-      "pick": "Yes, for projects, meeting series and Daily notes."
+      "pick": "Yes, for projects, meeting series and Daily notes.",
+      "archived": true,
+      "reply": "Planned for step 5, with URL links in notes added to the list."
     },
     "r12-draw": {
       "round": 12,
@@ -247,7 +253,9 @@
           "placeholder": "e.g. a Draw a box button too"
         }
       ],
-      "pick": "Shift + drag, with Just a label as an option."
+      "pick": "Shift + drag, with Just a label as an option.",
+      "archived": true,
+      "reply": "Planned for step 3, with your extras recorded: the toolbox, a project's box moving everything in it (it already does), and collapsing a box to a coloured count."
     },
     "r12-order": {
       "round": 12,
@@ -285,7 +293,64 @@
           "placeholder": "e.g. windows first"
         }
       ],
-      "pick": "This order: the things you'll use every day first."
+      "pick": "This order: the things you'll use every day first.",
+      "archived": true,
+      "reply": "Working it all in the one open pull request, as you asked. Step 1 is pushed there now."
+    },
+    "r12-built1": {
+      "round": 12,
+      "order": 1,
+      "area": "Desk and Day",
+      "version": 1,
+      "title": "Built: step 1, the slide-out, notepads and tickets that aren't done",
+      "body": [
+        "**Click** an entry or a ticket (a Desk card, a row on Day, a ticket in the tray) and the slide-out opens underneath. It holds the **notepad**, which saves as you type; the entry's **tickets** with **+ Attach a ticket**; the **project**; **Bring up tomorrow**; **Done / Still open** for tickets; **+15m +30m +1h**; and **More** for the full menu. **Start the timer** shows there only when the timer is on. Click empty paper or press Esc to fold it away. Double-click still opens the details.",
+        "**Tickets tray:** it's called **Tickets** now. Each ticket has a tick. Untick it and it's **Still open**: its time still counts today, and it comes back under **Still open from before** each day until you tick it. **+ Today** works on it again. Pasting it again or ticking it finishes it everywhere.",
+        "**A ticket's project:** pick one in the slide-out or by right-click → Count its time under. Its minutes then go to that project's own \"Tickets\" entry for the day, so the timesheet shows them there.",
+        "**Bring up tomorrow** is in every slide-out and right-click menu. It comes up first in Where was I? on your next work day (Friday → Monday). It stays apart from the wrap-up list.",
+        "**Right-click on Day** has everything: notepad, Bring up tomorrow, time, copy, log again, project and Delete with Undo. **Archive** for entries comes with the Archive in step 5; notes already have it.",
+        "**One thing to know:** single-click on a Day row used to open the details. Now it opens the slide-out; double-click or Enter opens the details."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/48f9f2128dc2e9fcc373ff53d07d6d37",
+          "caption": "Desk: an entry clicked. Its notepad, ticket, project, Bring up tomorrow, time and More."
+        },
+        {
+          "src": "/_blob/ed781752147159fbf9fe5837933edf96",
+          "caption": "A still-open ticket with a project: on its card and in the side panel's Tickets tray."
+        },
+        {
+          "src": "/_blob/f0f4781245585c0f9c4d0e26021dab78",
+          "caption": "Day: the same slide-out under the row. Right: ticks, Still open, and Still open from before."
+        },
+        {
+          "src": "/_blob/29f0a94f69b65b394b86f90228c3679f",
+          "caption": "Right-click on Day: the full menu."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 1",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. make the notepad bigger"
+        }
+      ],
+      "pick": "Next: windows, the bottom bar and the bell."
     }
   }
 }
