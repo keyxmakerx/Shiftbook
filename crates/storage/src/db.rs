@@ -44,10 +44,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "next up list",
         include_str!("../migrations/0003_next_up.sql"),
     ),
+    (4, "notes", include_str!("../migrations/0004_notes.sql")),
     (
-        4,
+        5,
         "saved responses",
-        include_str!("../migrations/0004_saved_responses.sql"),
+        include_str!("../migrations/0005_saved_responses.sql"),
     ),
 ];
 
@@ -255,6 +256,7 @@ mod tests {
                     "inbox_items",
                     "list_options",
                     "next_up_items",
+                    "notes",
                     "projects",
                     "recurring_tasks",
                     "saved_responses",

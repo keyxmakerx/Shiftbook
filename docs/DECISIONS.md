@@ -10,12 +10,41 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   breadcrumbs. Shiftbook makes Meetings (a board per meeting series), Daily notes and Projects;
   the user makes any others. The List view shows the same tree. An Archive sits at the bottom of
   the tree; daily notes go there by themselves after 2 weeks; archived things stay in Find.
+  This replaces two Round 7 Notes choices: boards now organise notes alongside projects and
+  tags, and Daily notes auto-archive after 2 weeks (Jot and Meeting keep the 3-month default).
 - **Ticket sign-offs:** rules and per-ticket matching were rejected: which tickets need a
   closing message is random, and Shiftbook only knows the ticket number. Built instead: one copy
   button on the Done tickets tray opens a quick menu of saved responses; picking one copies it.
   No gaps, no matching. Responses are written in Settings → Responses (at most 30).
 - **Round 6** (prototype v2, timesheet crib sheet, spreadsheet lessons): approved and built in
   the alpha; codes are typed into Shiftbook by the user.
+
+## Round 7, Notes cards — 16 Oct 2026
+- **Notes and archive:** kinds Jot, Daily, Meeting, Page and MOP, organised by project and tags
+  (no notebooks). Archived notes leave the lists but search still finds them. Auto-archive is a
+  setting, with a soft warning on the note before it moves ("moves to the archive in N days",
+  with Keep). Notes search extends the Find box (r7-find), not a second search.
+- **MOPs:** fixed sections (why, checks, steps with expected results, rollback) and a Run mode
+  that saves a run record. Import and export must be easy and cope with varied documents without
+  an AI: rule-based import (numbered lines are steps, "Verify"/"Expected" lines attach to the
+  step above, headings sort lines into checks and rollback) with a check screen where each line
+  shows where it landed and can be moved; fixes are remembered per template. Export to Word,
+  PDF, text and a round-trip Shiftbook MOP file. Approved on the r7-import card.
+- **OneNote:** both ways (paste a page, then import sections exported as Word files);
+  `quick-xml` approved for reading Word files. Import should handle whatever the notebook holds.
+- **Meetings (approved on r7-meeting v5):** one big canvas. Each topic is a coloured area on one
+  sheet; topic tabs along the top glide the view to their area, and See all pulls back to the
+  whole meeting. Click empty paper to write there, drag blocks, a recent-topics strip, right-click
+  a line to make a todo, task, decision or question, a count at the top. Kept throughout: `#name`
+  to jump to or start a topic, `[]` `!` `?` marks, an optional agenda written beforehand, open
+  items carry to the next meeting in a series, one-click time log on wrap up. The canvas must be
+  easy to tidy (a Tidy up that lines blocks up, blocks that snap and don't overlap).
+  Earlier rejected tries: topic rail plus results panel (v1); running log, outline and topic
+  cards (v2); OneNote-style free page, trail, agenda zones and zoom board (v3).
+- **Build order (owner approved, 17 Oct):** notes core, then the meeting canvas, then MOPs, then
+  imports. Notes core built: a Notes view (key 3; Settings moves to 4), auto-archive after 3
+  months by default (Settings → Notes; 1, 2, 3, 6 or 12 months, or off) for Jot, Daily and
+  Meeting notes only, warning on the note for the last 7 days; editing or Keep stops it.
 
 ## Round 7 — 16 Oct 2026
 - **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.

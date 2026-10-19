@@ -101,7 +101,7 @@ typed_id!(
     ChecklistItemId
 );
 typed_id!(
-    /// A note (notes arrive in a later milestone; the id type is reserved now).
+    /// A note.
     NoteId
 );
 typed_id!(

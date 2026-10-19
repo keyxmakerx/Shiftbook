@@ -1,0 +1,292 @@
+{
+  "meta": {
+    "round": 7
+  },
+  "cards": {
+    "r7-meeting": {
+      "round": 7,
+      "order": 130,
+      "area": "Notes",
+      "version": 5,
+      "title": "Meetings: your picks, on a canvas",
+      "body": [
+        "Your picks were **tabs like OneNote sections**, **typing right where the topic is**, a **recent strip**, **right-click to make a task**, and **a count at the top**. These three versions keep all of that and put it on paper you can write anywhere on, with motion instead of a fixed grid.",
+        "On every page you **click empty paper to start writing there**, drag a block by its top edge, and right-click a line for a menu that folds out. When a line becomes a todo or task, a small label flies up into the count."
+      ],
+      "bullets": [
+        "**1 · Tabs over paper pages:** each tab is its own page, and switching slides the page left or right, so you can feel which way you went.",
+        "**2 · One big canvas:** every topic is a coloured area on one sheet. A tab glides the view across to its area, and **See all** pulls back to show the whole meeting.",
+        "**3 · Binder with divider tabs:** topics are sheets in a binder, and a tab lifts its sheet to the front.",
+        "`#name` still jumps to a tab or makes one, and the `[]` `!` `?` marks still work. Motion follows the Still / Calm / Lively setting from round 6."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-meeting5.html",
+          "height": 760,
+          "caption": "Live: switch between 1, 2 and 3. Click a tab, click empty paper and type, right-click a line and make it a task. In 2, try See all."
+        }
+      ],
+      "questions": [
+        {
+          "id": "shape",
+          "legend": "Which one?",
+          "options": [
+            {
+              "value": "1 · Tabs over paper pages",
+              "rec": true,
+              "why": "Closest to OneNote, and the slide tells you where you are."
+            },
+            {
+              "value": "2 · One big canvas"
+            },
+            {
+              "value": "3 · Binder with divider tabs"
+            },
+            {
+              "value": "Mix (say below)"
+            },
+            {
+              "value": "Still not it (say below)"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "legend": "Anything to change? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "1, with See all from 2 added so you can still see the whole meeting at once."
+    },
+    "r7-notes": {
+      "round": 7,
+      "order": 140,
+      "area": "Notes",
+      "version": 1,
+      "title": "Notes you can archive and still find years later",
+      "body": [
+        "Notes come in a few kinds: **Jot** (quick scraps), **Daily**, **Meeting**, **Page** (anything you want to keep, like how the guest Wi-Fi works) and **MOP** (next card). They all live in one Notes view with a search box at the top.",
+        "**Archive** moves a note out of the way: it leaves the strip and the lists, but search still finds it. Nothing is ever thrown away unless you delete it. This builds on the **Find** card above: the capture box will find notes too, and the Notes view adds filters for when you want only meetings or only MOPs."
+      ],
+      "bullets": [
+        "Search looks at every word in every note, including notes brought in from OneNote, with the match highlighted.",
+        "Archived notes are left out unless you tick **Include archived**. If only archived notes match, a line says so and one click shows them.",
+        "Each note shows what it's linked to: tasks, tickets, projects, meetings.",
+        "Everything stays inside the encrypted file, search included."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-notes.html",
+          "height": 520,
+          "caption": "Live: search for \"ups\", \"docks\" or \"vlan\", switch the filters, and try Archive on a note. Made-up data."
+        }
+      ],
+      "questions": [
+        {
+          "id": "organise",
+          "legend": "How should notes be organised?",
+          "options": [
+            {
+              "value": "By project and tags",
+              "rec": true,
+              "why": "Fewer places to decide between; search does the finding. OneNote sections become tags."
+            },
+            {
+              "value": "Notebooks and sections, like OneNote",
+              "why": "Familiar, but every note needs a home picked for it."
+            }
+          ]
+        },
+        {
+          "id": "archive",
+          "legend": "Archive and search work like this?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Also archive notes on their own after a while",
+              "why": "For example meetings older than 3 months."
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "legend": "Anything else? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "Projects and tags, archive by hand. It's the least to think about when saving a note."
+    },
+    "r7-mop": {
+      "round": 7,
+      "order": 150,
+      "area": "Notes",
+      "version": 1,
+      "title": "MOPs: write the steps once, run them as a checklist",
+      "body": [
+        "A MOP is a note with a fixed shape: why you're doing it, checks before you start, numbered steps with what you should see after each one, and how to undo it if it goes wrong. Steps can hold pictures, marked up with the picture editor from round 4 (boxes, arrows, numbered steps).",
+        "**Run it** turns the MOP into a checklist: one step at a time, the current step large, with a place for a note if something looks odd. **Something went wrong** jumps to the rollback steps. When you finish, Shiftbook saves a run record (date, change or ticket number, your notes) and logs the time, so later you can see when it was last done and what happened."
+      ],
+      "bullets": [
+        "**Copy as a new MOP** when a new job is like an old one.",
+        "A recurring task (for example a yearly battery swap) can link to its MOP, so **Mark done** offers to run it.",
+        "Export to Word or PDF for a change board, with the usual warning that exports aren't encrypted."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-mop.html",
+          "height": 640,
+          "caption": "Live: switch between Write it and Run it. In Run, step through, add a note, or press Something went wrong. Made-up example."
+        }
+      ],
+      "questions": [
+        {
+          "id": "run",
+          "legend": "Add Run mode with a saved run record?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "\"When did we last do this, and did anything go wrong?\" gets an answer."
+            },
+            {
+              "value": "Just the written MOP for now"
+            }
+          ]
+        },
+        {
+          "id": "shape",
+          "legend": "The MOP's sections",
+          "options": [
+            {
+              "value": "Why, checks, steps, rollback",
+              "rec": true
+            },
+            {
+              "value": "Let me add my own sections too"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "legend": "Anything your MOPs always have that's missing here? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "Yes to Run mode with the four fixed sections. Your own sections can come later if the four aren't enough."
+    },
+    "r7-onenote": {
+      "round": 7,
+      "order": 160,
+      "area": "Notes",
+      "version": 1,
+      "title": "Bring your OneNote notes in",
+      "body": [
+        "OneNote has no simple \"export everything\" button, and Shiftbook never goes online, so it can't sign in to Microsoft and fetch them. Two ways work without that:",
+        "**Paste a page.** Copy a page in OneNote and paste it into a new note. Headings, lists, tables, pictures and to-do boxes come with it. Good for a handful of pages, and it's needed anyway for normal note-taking.",
+        "**Import whole sections.** In OneNote (the desktop version), export each section as a Word file, then pick the files in Shiftbook. You see what will come in before anything is saved: each page becomes a note tagged with its section name, and you can send them straight to the archive."
+      ],
+      "bullets": [
+        "Handwriting and drawings come in as pictures, not text. Attached files, audio and video are listed but left out.",
+        "The exported Word files can be read by anyone, so Shiftbook offers to delete them when it's done.",
+        "Reading Word files needs one small extra building block (an XML reader called `quick-xml`). Paste needs nothing new.",
+        "Exact results depend on what OneNote puts in the Word file, so I'd test with one real section of yours before calling it done."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-onenote.html",
+          "height": 560,
+          "caption": "Live: pick a way, untick a section you don't want, choose where the pages go, and import. Made-up sections."
+        }
+      ],
+      "questions": [
+        {
+          "id": "how",
+          "legend": "Which ways should Shiftbook offer?",
+          "options": [
+            {
+              "value": "Both: paste, then section import",
+              "rec": true
+            },
+            {
+              "value": "Paste only"
+            },
+            {
+              "value": "Section import only"
+            }
+          ]
+        },
+        {
+          "id": "dep",
+          "legend": "Add quick-xml for reading Word files?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "Small, widely used, no network. Only needed for section import."
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "size",
+          "legend": "Roughly how much is in OneNote? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "Both, with paste first because it's useful every day and needs nothing new."
+    },
+    "r7-import": {
+      "round": 7,
+      "order": 170,
+      "area": "Notes",
+      "version": 1,
+      "title": "Bringing documents in without guesswork",
+      "body": [
+        "You asked for MOP import and export that copes with whatever's in the file, and for OneNote import that's as flexible as possible, without an AI to read things. The way to do it is plain rules plus a check screen.",
+        "Shiftbook reads the document line by line and sorts it with simple rules: numbered lines are steps, lines starting \"Verify\" or \"Expected\" go with the step above, anything under a heading like Prerequisites, Pre-checks or Before is a check, and anything under Rollback or Backout is the undo plan. Every line shows where it landed and why. If it got one wrong, you change it with one click, and Shiftbook remembers that fix for documents from the same template."
+      ],
+      "bullets": [
+        "**Export:** Word, PDF, plain text, and a Shiftbook MOP file that comes back in exactly as it went out.",
+        "**OneNote** gets the same check screen: whatever it finds (sections, pages, sub-pages, any kind of tag, tables, pictures) is listed, with a choice of what each becomes. Nothing is dropped without being shown.",
+        "Nothing leaves the computer. Exports show the usual warning that they aren't encrypted."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r07-import.html",
+          "height": 620,
+          "caption": "Live: change a line's place with its menu and watch the MOP on the right update. Made-up document."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Rules plus a check screen?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true,
+              "why": "Works offline and you always see what happened."
+            },
+            {
+              "value": "Yes, but skip the check screen when nothing looks unsure"
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "notes",
+          "legend": "Headings your MOPs use that I should know about? (optional)",
+          "type": "text"
+        }
+      ],
+      "pick": "Yes, always show the check screen the first time a new template comes in, and skip it after that unless a line doesn't match."
+    }
+  }
+}

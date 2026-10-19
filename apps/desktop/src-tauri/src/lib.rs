@@ -7,6 +7,7 @@
 
 mod api;
 mod backoff;
+mod notes;
 mod protect;
 mod session;
 
@@ -339,6 +340,13 @@ pub fn run() {
             api::save_responses,
             api::where_was_i,
             api::timer_offer,
+            notes::list_notes,
+            notes::get_note,
+            notes::create_note,
+            notes::update_note,
+            notes::set_note_archived,
+            notes::set_note_keep,
+            notes::set_note_deleted,
             backup_now,
             list_backups,
             pick_backup_file,

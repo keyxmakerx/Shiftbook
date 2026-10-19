@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Settings: Look, Your day, Projects, Timesheet, Fields, Responses, Backups and Security.
+  // Settings: Look, Your day, Projects, Timesheet, Notes, Fields, Responses, Backups and Security.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
   import type { SettingsSection } from '../lib/keys';
@@ -7,6 +7,7 @@
   import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
+  import NotesSettings from './customize/NotesSettings.svelte';
   import Projects from './customize/Projects.svelte';
   import Responses from './customize/Responses.svelte';
   import Security from './customize/Security.svelte';
@@ -18,6 +19,7 @@
     { id: 'day', label: 'Your day', icon: 'clock' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
     { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
+    { id: 'notes', label: 'Notes', icon: 'note' },
     { id: 'fields', label: 'Fields', icon: 'sliders' },
     { id: 'responses', label: 'Responses', icon: 'copy' },
     { id: 'backups', label: 'Backups', icon: 'archive' },
@@ -51,6 +53,8 @@
           <Projects />
         {:else if section === 'timesheet'}
           <TimesheetSettings />
+        {:else if section === 'notes'}
+          <NotesSettings />
         {:else if section === 'fields'}
           <Fields />
         {:else if section === 'responses'}

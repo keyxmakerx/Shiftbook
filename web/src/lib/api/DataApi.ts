@@ -74,6 +74,8 @@ export interface Prefs {
   timer: boolean;
   /** A timer paused by locking, to pick up after unlock. */
   pausedTimer: PausedTimer | null;
+  /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
+  notesAutoArchiveDays: number;
 }
 
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
@@ -106,7 +108,8 @@ export type PrefKey =
   | 'ui.text_size'
   | 'day.wrapup_at'
   | 'day.timer'
-  | 'timer.paused';
+  | 'timer.paused'
+  | 'notes.auto_archive_days';
 
 export interface Project {
   id: string;
@@ -360,10 +363,48 @@ export interface ResumeCard {
   changedAt: string | null;
 }
 
+/** Kinds of note. Mirrors `NoteKind` in crates/core/src/notes.rs. */
+export type NoteKind = 'jot' | 'daily' | 'meeting' | 'page' | 'mop';
+
+export interface Note {
+  id: string;
+  kind: NoteKind;
+  title: string;
+  body: string;
+  projectId: string | null;
+  tags: string[];
+  /** Kept out of auto-archive. */
+  keep: boolean;
+  archived: boolean;
+  /** Days until auto-archive moves it, when the warning should show; otherwise null. */
+  archiveInDays: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NoteInput {
+  kind: NoteKind;
+  /** Blank uses the first line of the body. */
+  title: string;
+  body: string;
+  projectId: string | null;
+  /** Tags as typed, comma-separated. */
+  tags: string;
+}
+
+export interface NoteList {
+  /** Best match first when searching, else most recently changed first. */
+  notes: Note[];
+  /** Archived notes that match but were left out because Include archived is off. */
+  hiddenArchived: number;
+}
+
 /** What Find turned up, best first. */
 export interface SearchResult {
   entries: Entry[];
   inbox: InboxItem[];
+  /** Notes, archived ones included. */
+  notes: Note[];
   /** Indexes into the command names passed to `search`. */
   commands: number[];
 }
@@ -573,7 +614,22 @@ export interface DataApi {
    */
   timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer>;
 
+  // ----- notes -----
+  /**
+   * Notes of one kind (null for all) that match `query` (blank for all). Moves notes that
+   * auto-archive says are due first.
+   */
+  listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList>;
+  getNote(id: string): Promise<Note>;
+  createNote(note: NoteInput): Promise<Note>;
+  updateNote(id: string, note: NoteInput): Promise<Note>;
+  /** Archive, or Bring back. */
+  setNoteArchived(id: string, archived: boolean): Promise<void>;
+  /** Keep out of auto-archive, or let it move again. */
+  setNoteKeep(id: string, keep: boolean): Promise<void>;
+  setNoteDeleted(id: string, deleted: boolean): Promise<void>;
+
   // ----- find -----
-  /** Entries, Inbox scraps and the given command names that match `query`. */
+  /** Entries, Inbox scraps, notes and the given command names that match `query`. */
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult>;
 }

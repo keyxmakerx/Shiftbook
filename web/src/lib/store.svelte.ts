@@ -50,6 +50,8 @@ export const app = $state({
   resume: null as ResumeCard | null,
   /** "Later" was pressed: no more "Where was I?" until the next unlock. */
   resumeLater: false,
+  /** A note for the Notes view to open (from Find or New note), bumped by `openNote`. */
+  noteOpen: { id: null as string | null, serial: 0 },
   /** The Settings section to open next time Settings shows. */
   settingsSection: 'look' as SettingsSection,
 });
@@ -157,6 +159,12 @@ export async function loadAll(): Promise<void> {
   app.inbox = inbox;
   await Promise.all([refreshDay(), refreshRibbon()]);
   app.ready = true;
+}
+
+/** Go to Notes and open a note there, or with `null` start a new one. */
+export function openNote(id: string | null): void {
+  app.noteOpen = { id, serial: app.noteOpen.serial + 1 };
+  setView('notes');
 }
 
 export function setView(view: View): void {

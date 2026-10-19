@@ -32,6 +32,7 @@ use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::Date;
 
+use crate::notes::{find_notes, NoteView};
 use crate::session::{CommandError, VaultSession};
 
 type Res<T> = Result<T, CommandError>;
@@ -951,6 +952,8 @@ const SEARCH_DAYS: i64 = 2 * 366;
 const SEARCH_ENTRIES: usize = 8;
 /// Most Inbox scraps Find returns.
 const SEARCH_SCRAPS: usize = 4;
+/// Most notes Find returns.
+const SEARCH_NOTES: usize = 5;
 
 /// What Find found.
 #[derive(Debug, Clone, Serialize)]
@@ -960,12 +963,14 @@ pub struct SearchView {
     entries: Vec<EntryView>,
     /// Inbox scraps, best first.
     inbox: Vec<InboxView>,
+    /// Notes (archived ones too), best first.
+    notes: Vec<NoteView>,
     /// Indexes into the `commands` that were passed in, best first.
     commands: Vec<usize>,
 }
 
 /// Maps to `DataApi.search()`: entries (title, notes, tickets, project) from the last
-/// two years, Inbox scraps and the UI's command names that match `query`, ranked by
+/// two years, Inbox scraps, notes and the UI's command names that match `query`, ranked by
 /// `shiftbook_core::search`.
 #[tauri::command]
 pub async fn search(
@@ -1019,10 +1024,12 @@ pub async fn search(
     .into_iter()
     .map(inbox_view)
     .collect();
+    let notes = find_notes(&store, owner, &query, SEARCH_NOTES).await?;
     let commands = rank(&query, commands.iter().cloned().enumerate(), commands.len());
     Ok(SearchView {
         entries,
         inbox,
+        notes,
         commands,
     })
 }
