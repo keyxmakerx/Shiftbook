@@ -8,6 +8,7 @@ use shiftbook_core::ids::{OwnerId, TimeEntryId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
 use shiftbook_core::prefs::{Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME};
+use shiftbook_core::responses::ResponseDraft;
 use shiftbook_core::week::WeekStart;
 use shiftbook_core::CoreError;
 use time::macros::date;
@@ -627,5 +628,40 @@ fn next_up_list() {
             "a bad list changes nothing"
         );
         assert!(s.set_next_up(me, &[]).await.unwrap().is_empty());
+    });
+}
+
+#[test]
+fn saved_responses() {
+    let dir = TestDir::new("responses");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        assert!(s.responses(me).await.unwrap().is_empty());
+        let d = |name: &str, text: &str| ResponseDraft {
+            name: name.into(),
+            text: text.into(),
+        };
+        let list = s
+            .set_responses(
+                me,
+                &[
+                    d("No reply", "No reply after 3 tries.\nClosing."),
+                    d("Empty", "  "),
+                    d("", "Fixed and confirmed with the user."),
+                ],
+            )
+            .await
+            .unwrap();
+        assert_eq!(list.len(), 2);
+        assert_eq!(list[0].text, "No reply after 3 tries.\nClosing.");
+        assert_eq!(list[1].name, "Fixed and confirmed with the user.");
+        assert_eq!(list[1].position, 1);
+        assert!(s.responses(other).await.unwrap().is_empty());
+
+        // A bad list changes nothing; an empty list clears it.
+        let long = "x".repeat(61);
+        assert!(s.set_responses(me, &[d(&long, "ok")]).await.is_err());
+        assert_eq!(s.responses(me).await.unwrap().len(), 2);
+        assert!(s.set_responses(me, &[]).await.unwrap().is_empty());
     });
 }

@@ -2,6 +2,23 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 8 — 19 Oct 2026
+- **Canvas tidying:** stacks (drop a card on a card; click to fan out) and drawers (one per
+  project plus the user's own folders), with a **Tidy into stacks** button. Filed things stay in
+  Find and still count on the timesheet.
+- **Boards:** any card can be a board with its own canvas, tinted in its colour, with
+  breadcrumbs. Shiftbook makes Meetings (a board per meeting series), Daily notes and Projects;
+  the user makes any others. The List view shows the same tree. An Archive sits at the bottom of
+  the tree; daily notes go there by themselves after 2 weeks; archived things stay in Find.
+  This replaces two Round 7 Notes choices: boards now organise notes alongside projects and
+  tags, and Daily notes auto-archive after 2 weeks (Jot and Meeting keep the 3-month default).
+- **Ticket sign-offs:** rules and per-ticket matching were rejected: which tickets need a
+  closing message is random, and Shiftbook only knows the ticket number. Built instead: one copy
+  button on the Done tickets tray opens a quick menu of saved responses; picking one copies it.
+  No gaps, no matching. Responses are written in Settings → Responses (at most 30).
+- **Round 6** (prototype v2, timesheet crib sheet, spreadsheet lessons): approved and built in
+  the alpha; codes are typed into Shiftbook by the user.
+
 ## Round 7, Notes cards — 16 Oct 2026
 - **Notes and archive:** kinds Jot, Daily, Meeting, Page and MOP, organised by project and tags
   (no notebooks). Archived notes leave the lists but search still finds them. Auto-archive is a

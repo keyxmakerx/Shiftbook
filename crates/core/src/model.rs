@@ -12,8 +12,8 @@ use crate::dates::{iso_date, rfc3339};
 use crate::fields::{AppliesTo, FieldKind};
 use crate::ids::{
     CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId, InboxItemId,
-    ListOptionId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, TaskId, TicketId,
-    TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
+    ListOptionId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, SavedResponseId,
+    TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
 };
 use crate::minutes::Minutes;
 use crate::notes::NoteKind;
@@ -636,6 +636,31 @@ pub struct NextUpItem {
     /// When ticked off (UTC), if it is.
     #[serde(with = "rfc3339::option")]
     pub done_at: Option<OffsetDateTime>,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
+}
+
+/// A saved response: a message kept for pasting into tickets (see `crate::responses`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SavedResponse {
+    /// Id.
+    pub id: SavedResponseId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// Place in the list, from 0.
+    pub position: u32,
+    /// Name shown in the menu.
+    pub name: String,
+    /// The message that gets copied.
+    pub text: String,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

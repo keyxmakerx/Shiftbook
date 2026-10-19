@@ -17,7 +17,7 @@ import type {
   TrayDay,
 } from './api';
 import { toIso } from './format';
-import type { View } from './keys';
+import type { SettingsSection, View } from './keys';
 import { errorMessage } from './messages';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
@@ -52,6 +52,8 @@ export const app = $state({
   resumeLater: false,
   /** A note for the Notes view to open (from Find or New note), bumped by `openNote`. */
   noteOpen: { id: null as string | null, serial: 0 },
+  /** The Settings section to open next time Settings shows. */
+  settingsSection: 'look' as SettingsSection,
 });
 
 /** Run an API call; on failure show a plain message and resolve undefined. */
@@ -101,9 +103,7 @@ export function applyPrefs(prefs: Prefs): void {
   root.style.setProperty('--m', prefs.motion === 'lively' ? '1.35' : '1');
   if (prefs.accent) root.style.setProperty('--accent', prefs.accent);
   else root.style.removeProperty('--accent');
-  // Text size scales the whole page; every size in the look is in px.
-  if (prefs.textSize && prefs.textSize !== 100) root.style.setProperty('zoom', String(prefs.textSize / 100));
-  else root.style.removeProperty('zoom');
+  // Text size is applied by the desktop app as webview zoom when prefs load or change.
   setMotion(prefs.motion);
 }
 

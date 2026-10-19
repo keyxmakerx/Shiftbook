@@ -7,6 +7,16 @@
 
 export type View = 'desk' | 'timesheet' | 'notes' | 'settings';
 export const VIEWS: readonly View[] = ['desk', 'timesheet', 'notes', 'settings'];
+export type SettingsSection =
+  | 'look'
+  | 'day'
+  | 'projects'
+  | 'timesheet'
+  | 'notes'
+  | 'fields'
+  | 'responses'
+  | 'backups'
+  | 'security';
 
 export type Shortcut =
   | { kind: 'capture' }

@@ -23,6 +23,8 @@ import type {
   NoteInput,
   NoteKind,
   NoteList,
+  ResponseInput,
+  SavedResponse,
   ResumeCard,
   ResumeTrigger,
   SearchResult,
@@ -224,6 +226,13 @@ export class TauriApi implements DataApi {
   }
   setInboxDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_inbox_deleted', { id, deleted });
+  }
+
+  listResponses(): Promise<SavedResponse[]> {
+    return call('list_responses');
+  }
+  saveResponses(items: ResponseInput[]): Promise<SavedResponse[]> {
+    return call('save_responses', { items });
   }
 
   nextUp(): Promise<NextUpItem[]> {

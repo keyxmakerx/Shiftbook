@@ -9,14 +9,15 @@ use shiftbook_core::fields::{
 };
 use shiftbook_core::ids::{
     CategoryCodeDefaultId, CustomFieldId, CustomValueId, InboxItemId, NextUpItemId, OwnerId,
-    TimesheetCodeId, TimesheetTickId,
+    SavedResponseId, TimesheetCodeId, TimesheetTickId,
 };
 use shiftbook_core::model::{
-    CategoryCodeDefault, CustomField, CustomValue, InboxItem, NextUpItem, TimesheetCode,
-    TimesheetTick,
+    CategoryCodeDefault, CustomField, CustomValue, InboxItem, NextUpItem, SavedResponse,
+    TimesheetCode, TimesheetTick,
 };
 use shiftbook_core::nextup::clean_next_up;
 use shiftbook_core::prefs::{prefs_from_settings, validate_pref, Prefs};
+use shiftbook_core::responses::{clean_responses, ResponseDraft};
 use shiftbook_core::validate::{
     validate_list_value, validate_required, validate_timesheet_code, MAX_LINE_CHARS,
 };
@@ -258,6 +259,19 @@ fn next_up_from_row(row: &SqliteRow) -> Result<NextUpItem> {
         position: u32::try_from(row.try_get::<i64, _>("position")?).unwrap_or(0),
         text: row.try_get("text")?,
         done_at: parse_opt_ts(row.try_get("done_at")?)?,
+        created_at: parse_ts(row.try_get("created_at")?)?,
+        updated_at: parse_ts(row.try_get("updated_at")?)?,
+        deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
+    })
+}
+
+fn response_from_row(row: &SqliteRow) -> Result<SavedResponse> {
+    Ok(SavedResponse {
+        id: SavedResponseId::from_uuid(parse_uuid(row.try_get("id")?)?),
+        owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
+        position: u32::try_from(row.try_get::<i64, _>("position")?).unwrap_or(0),
+        name: row.try_get("name")?,
+        text: row.try_get("text")?,
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
         deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
@@ -824,6 +838,56 @@ impl SqliteStore {
             .execute(&self.pool)
             .await?,
         )
+    }
+
+    // ---------- saved responses ----------
+
+    /// The saved responses, in order.
+    pub async fn responses(&self, owner: OwnerId) -> Result<Vec<SavedResponse>> {
+        let rows = sqlx::query(
+            "SELECT id, owner_id, position, name, text, created_at, updated_at, deleted_at \
+             FROM saved_responses WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY position",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(response_from_row).collect()
+    }
+
+    /// Replace the saved responses (rows with no message are dropped). An empty list clears them.
+    pub async fn set_responses(
+        &self,
+        owner: OwnerId,
+        drafts: &[ResponseDraft],
+    ) -> Result<Vec<SavedResponse>> {
+        let items = clean_responses(drafts)?;
+        let now = now_text();
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(
+            "UPDATE saved_responses SET deleted_at = $1, updated_at = $1 \
+             WHERE owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        for (position, item) in items.iter().enumerate() {
+            sqlx::query(
+                "INSERT INTO saved_responses \
+                 (id, owner_id, position, name, text, created_at, updated_at, deleted_at) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $6, NULL)",
+            )
+            .bind(SavedResponseId::new().to_string())
+            .bind(owner.to_string())
+            .bind(i64::try_from(position).unwrap_or(i64::MAX))
+            .bind(&item.name)
+            .bind(&item.text)
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        self.responses(owner).await
     }
 
     // ---------- preferences ----------

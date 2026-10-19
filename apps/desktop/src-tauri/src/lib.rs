@@ -336,6 +336,8 @@ pub fn run() {
             api::next_up,
             api::set_next_up,
             api::tick_next_up,
+            api::list_responses,
+            api::save_responses,
             api::where_was_i,
             api::timer_offer,
             notes::list_notes,

@@ -20,6 +20,7 @@ pub mod prefs;
 pub mod project;
 pub mod quicklog;
 pub mod recurring;
+pub mod responses;
 pub mod resume;
 pub mod ribbon;
 pub mod search;

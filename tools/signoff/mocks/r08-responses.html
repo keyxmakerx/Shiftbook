@@ -1,0 +1,94 @@
+<style>
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper-2:#f6f3ec;--ink:#1d2126;--ink-2:#4a525b;--mut:#5f6872;--rule:rgba(29,33,38,.1);--accent:#3d5bb0;--ok:#2e8a5a;--warn:#9f5a06;--warn-wash:#fcf1df;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35);--lift:0 2px 4px rgba(29,33,38,.08),0 22px 40px -18px rgba(29,33,38,.45);
+--display:Fraunces,Georgia,serif;--ui:"Instrument Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace;--spring:cubic-bezier(.2,.9,.25,1.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--desk);color:var(--ink);font:13.5px/1.45 var(--ui)}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #d7dadd;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.wrap{padding:14px;display:grid;gap:12px;max-width:820px;min-height:560px;align-content:start}
+.paper{background:var(--paper);border-radius:6px;box-shadow:var(--shadow);padding:14px 16px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700}
+h2{font:600 19px/1.2 var(--display);margin:2px 0 8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--mono);background:#fff;border:1px solid var(--rule);border-radius:14px;padding:3px 4px 3px 10px}
+.chip .m{font:600 11px var(--ui);color:var(--mut)}
+.chip .pen{border:0;background:var(--paper-2);border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:13px;color:var(--ink-2)}
+.chip .pen:hover,.chip .pen[aria-expanded=true]{background:var(--accent);color:#fff}
+.chip.ask{background:var(--warn-wash);border-color:#e7c48c}.chip.ask .pen{background:#f5dfb8;color:var(--warn)}
+.chip.done{background:#e8f5ee;border-color:#a9d6bd}.chip.done .pen{background:#cfeadb;color:var(--ok)}
+.pop{margin-top:10px;border-top:3px solid var(--accent);animation:pull .4s var(--spring);transform-origin:top;display:grid;grid-template-columns:230px 1fr;gap:14px}
+@media (max-width:640px){.pop{grid-template-columns:1fr}}
+@keyframes pull{from{opacity:0;transform:translateY(-8px) scaleY(.92)}}
+.pop h3{margin:0 0 4px;font:600 15px var(--display)}
+.search{width:100%;font:inherit;border:1px solid var(--rule);border-radius:7px;padding:6px 9px;background:#fff;margin-bottom:6px}
+.grp{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;margin:8px 0 3px}
+.resp{display:block;width:100%;text-align:left;border:1px solid var(--rule);background:#fff;border-radius:6px;padding:6px 8px;margin-bottom:5px;cursor:pointer;font:inherit}
+.resp b{display:block;font-size:12.5px}.resp span{display:block;color:var(--mut);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.resp[aria-pressed=true]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.resp.add{border-style:dashed;color:var(--mut);text-align:center}
+.msg{font-size:14px;line-height:1.9;background:#fffef9;border:1px solid var(--rule);border-radius:6px;padding:8px 10px;margin:6px 0 8px}
+.msg input{font:inherit;border:0;border-bottom:1.5px dashed var(--accent);background:#eef2fc;border-radius:3px 3px 0 0;padding:0 4px;color:var(--ink)}
+.msg .auto{background:#eef6f1;border-radius:3px;padding:0 3px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:600 13px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.mut{color:var(--mut);font-size:12px}
+.knows{font-size:12px;color:var(--ink-2);background:var(--paper-2);border-radius:6px;padding:6px 9px}
+.set{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12.5px}
+.set input{font:600 12px var(--mono);width:120px;border:1px solid var(--rule);border-radius:6px;padding:4px 7px;text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><span>press the ✎ on any ticket, pick a response, fill the blue gaps, Copy.</span></div>
+<div class="wrap">
+ <div class="paper">
+  <div class="lbl">Desk · Done tickets</div>
+  <h2>Today's tray</h2>
+  <div class="chips" id="chips"></div>
+  <div id="pop"></div>
+ </div>
+ <div class="paper set">
+  <span class="lbl" style="flex-basis:100%">Settings → Responses (optional)</span>
+  <span>Always ask for a response on tickets starting with</span><input id="ask" value="CHG"><span class="mut">They show in yellow and the wrap-up reminds you.</span>
+ </div>
+</div>
+<script>
+const R=[
+ {id:'chg',name:'Change done as planned',tpl:'Change {ticket} implemented as planned on {date}. Tested: {tests}. No user impact.',used:['CHG']},
+ {id:'chgb',name:'Change backed out',tpl:'Change {ticket} backed out on {date} because {reason}. Service restored; a new change will follow.',used:['CHG']},
+ {id:'fix',name:'Fixed, confirmed with user',tpl:'Resolved: {fix}. Confirmed working with the user on {date}. Closing.',used:['INC']},
+ {id:'nr',name:'No response from user',tpl:'No reply after 3 attempts ({date}). Closing; reply to reopen.',used:['INC','RITM']},
+ {id:'req',name:'Request delivered',tpl:'{title} delivered on {date}. {extra}',used:['RITM']},
+ {id:'dup',name:'Duplicate',tpl:'Duplicate of {other}. Closing this one; work continues there.',used:[]},
+];
+const tray=[{t:'INC0045678',title:'Printer jam on 3rd floor',min:15},{t:'CHG0012345',title:'Firewall rule cleanup',min:90},{t:'RITM0034567',title:'New shared mailbox',min:15},{t:'TASK0099812',title:'Renew portal cert',min:30}];
+let openT=null,pick=null,q='';const done={};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pre=t=>t.replace(/\d.*$/,'');
+function chips(){const asks=document.getElementById('ask').value.toUpperCase().split(/[ ,]+/).filter(Boolean);
+ const c=document.getElementById('chips');c.innerHTML='';
+ tray.forEach((x,i)=>{const s=document.createElement('span');s.className='chip'+(done[x.t]?' done':asks.includes(pre(x.t))?' ask':'');
+  s.innerHTML=`${x.t}<span class="m">${x.min}m</span><button class="pen" aria-label="Responses for ${x.t}" aria-expanded="${openT===i}" title="Responses">${done[x.t]?'✓':'✎'}</button>`;
+  s.querySelector('button').onclick=()=>{openT=openT===i?null:i;pick=null;q='';chips();pop()};c.appendChild(s)})}
+function pop(){const p=document.getElementById('pop');if(openT==null){p.innerHTML='';return}
+ const x=tray[openT],pf=pre(x.t),m=R.filter(r=>(r.name+' '+r.tpl).toLowerCase().includes(q.toLowerCase()));
+ const first=m.filter(r=>r.used.includes(pf)),rest=m.filter(r=>!r.used.includes(pf));
+ const btn=r=>`<button class="resp" data-r="${r.id}" aria-pressed="${pick===r.id}"><b>${esc(r.name)}</b><span>${esc(r.tpl)}</span></button>`;
+ p.innerHTML=`<div class="paper pop"><div><h3>Responses</h3><input class="search" id="q" placeholder="Search responses" value="${esc(q)}">
+  ${first.length?`<div class="grp">Used with ${pf} before</div>${first.map(btn).join('')}`:''}${rest.length?`<div class="grp">All responses</div>${rest.map(btn).join('')}`:''}
+  <button class="resp add" id="new">+ New response</button></div><div id="ed"></div></div>`;
+ const qi=document.getElementById('q');qi.oninput=()=>{q=qi.value;pop();const n=document.getElementById('q');n.focus();n.setSelectionRange(q.length,q.length)};
+ p.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{pick=b.dataset.r;pop()});
+ document.getElementById('new').onclick=()=>{document.getElementById('ed').innerHTML='<p class="mut">Write it once, with {gaps} for the parts that change. It\'s saved to your list for next time.</p>'};
+ editor(x);
+}
+function editor(x){const ed=document.getElementById('ed');
+ if(!pick){ed.innerHTML=`<div class="knows"><b>${x.t}</b> · ${esc(x.title)} · ${x.min} min<br>Shiftbook only knows the ticket number and what you logged against it. You pick the response; it fills in what it knows.</div>`;return}
+ const r=R.find(r=>r.id===pick),auto={ticket:x.t,date:'Oct 19',title:x.title,hours:x.min/60+'h'};
+ const html=esc(r.tpl).replace(/\{(\w+)\}/g,(m,k)=>auto[k]?`<span class="auto">${esc(auto[k])}</span>`:`<input data-k="${k}" placeholder="${k}" size="${k.length+3}">`);
+ ed.innerHTML=`<h3>${esc(r.name)}</h3><div class="msg">${html}</div><div class="row"><button class="btn primary" id="cp">Copy</button><span class="mut" id="ms"></span></div>`;
+ const ins=[...ed.querySelectorAll('input')];ins.forEach(i=>i.oninput=()=>{i.size=Math.max(i.dataset.k.length+3,i.value.length+1)});ins[0]&&ins[0].focus();
+ document.getElementById('cp').onclick=()=>{const e=ins.find(i=>!i.value.trim());if(e){e.focus();document.getElementById('ms').textContent=`Fill “${e.dataset.k}” first.`;return}
+  done[x.t]=1;if(!r.used.includes(pre(x.t)))r.used.push(pre(x.t));document.getElementById('ms').textContent='Copied, and kept with the ticket.';chips()};
+}
+document.getElementById('ask').oninput=chips;
+chips();
+</script>

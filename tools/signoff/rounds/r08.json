@@ -1,0 +1,249 @@
+{
+  "meta": {
+    "round": 8,
+    "heading": "Round 8: the canvas, and sign-offs for tickets",
+    "intro": "Two working mockups from your notes: the Canvas with stacks and a filing cabinet, and closing messages that some tickets need. Everything is made-up sample data. Round 7's decisions are already built into 0.2.0."
+  },
+  "cards": {
+    "r8-canvas": {
+      "round": 8,
+      "order": 10,
+      "area": "Canvas",
+      "version": 2,
+      "title": "The Canvas with stacks and drawers",
+      "body": [
+        "The free canvas you picked in round 4, with two ways to keep it from turning into a mess. **Stacks:** drop a card on another card and they become a pile with a count. Click a pile to fan it out; drag a card out to take it off. Double-click a pile's name to rename it. **Drawers:** the cabinet on the left. Drop a card or a whole pile on a drawer and it slides in, off the desk. Open the drawer to see what's inside or put something back.",
+        "Filing only tidies the desk. Filed things still show up in Find, and their hours still count on the timesheet.",
+        "Want to click around? [Open the interactive canvas](https://claude.ai/artifact/RgWr24Jb5WYJrb5BLBk56p)."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/630d06c80c5e5caafc05fe08b9e24c01",
+          "caption": "Two piles: **Network refresh** (dropped one card on another) and **SSL renewals**, fanned out by clicking it."
+        },
+        {
+          "src": "/_blob/9d24a4deeb8269cde136d7ad38d2dd41",
+          "caption": "The **Reference** drawer opened, after dropping the scrap onto it."
+        },
+        {
+          "src": "/_blob/1cc1f18d8c182bd7bed96f578b3a689b",
+          "caption": "After **Tidy into stacks** and **Arrange as timeline**: piles sit at their newest date."
+        }
+      ],
+      "bullets": [
+        "**Tidy into stacks** piles loose cards by project in one click. Cards with no project stay loose.",
+        "**Arrange as timeline** still works: piles sit at their newest date, and **Back to my layout** puts everything back.",
+        "Each project gets a drawer automatically. You can add plain drawers, like **Reference**, for things that aren't a project."
+      ],
+      "questions": [
+        {
+          "id": "tidy",
+          "legend": "Which ways of tidying?",
+          "options": [
+            {
+              "value": "Stacks and drawers",
+              "rec": true
+            },
+            {
+              "value": "Stacks only"
+            },
+            {
+              "value": "Drawers only"
+            }
+          ]
+        },
+        {
+          "id": "drawers",
+          "legend": "What is a drawer?",
+          "options": [
+            {
+              "value": "Every project, plus folders I make",
+              "rec": true,
+              "why": "Like Reference or Old stuff."
+            },
+            {
+              "value": "Projects only"
+            },
+            {
+              "value": "Only folders I make"
+            }
+          ]
+        },
+        {
+          "id": "auto",
+          "legend": "Tidy into stacks button",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "No, I'll stack things myself"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything missing or annoying?",
+          "placeholder": "e.g. colour the piles, zoom, a pile per week"
+        }
+      ],
+      "pick": "Stacks and drawers, with a drawer for every project plus your own folders, and the Tidy button. Piles keep today's work at hand; drawers keep the desk clear without hiding anything from Find.",
+      "archived": true
+    },
+    "r8-signoff": {
+      "round": 8,
+      "order": 20,
+      "area": "Tickets",
+      "version": 3,
+      "title": "Sign-offs, take 2: a list of your own responses on every ticket",
+      "body": [
+        "You're right: Shiftbook only knows the ticket number and what you logged against it, so it can't guess what a ticket needs. Instead, every ticket in the tray gets a small **✎**. Press it and your own list of saved responses opens. Pick one, fill the gaps, press **Copy**. Shiftbook fills in only what it really knows: the ticket number, the date, the title you logged and the hours.",
+        "Responses you've used with the same kind of ticket before (every **CHG**, say) float to the top, so the right one is usually first. **+ New response** saves a new one for next time. If you want, Settings can still mark certain kinds of ticket in yellow as a reminder; that part is optional.",
+        "Want to try it? [Open the interactive sign-offs](https://claude.ai/artifact/WrjjyPhuVGAHDoYgRYSPkj)."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/c12468dc34a80270d693a1577bd5288d",
+          "caption": "**✎** pressed on **CHG0012345**: the responses used with CHG before are on top; the chosen one is filled in except the part only you know."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Better?",
+          "options": [
+            {
+              "value": "Yes, this",
+              "rec": true
+            },
+            {
+              "value": "Close",
+              "why": "Say what's off in the note."
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "remind",
+          "legend": "Yellow reminder for certain kinds of ticket",
+          "options": [
+            {
+              "value": "Yes, optional in Settings",
+              "rec": true
+            },
+            {
+              "value": "No reminders"
+            }
+          ]
+        },
+        {
+          "id": "kinds",
+          "type": "text",
+          "legend": "A few kinds of response you'd add first? Describe them; don't paste real ones.",
+          "placeholder": "e.g. fixed and confirmed, no reply from user, change done"
+        }
+      ],
+      "pick": "Yes, with the yellow reminder as an option. It needs no access to your ticket system, so nothing leaves your computer.",
+      "reply": "Built your way: one copy button on the Done tickets tray opens a quick menu of your saved responses, and picking one copies it. No matching, no gaps to fill. You write the responses in Settings → Responses. It'll be in the next release.",
+      "archived": true
+    },
+    "r8-boards": {
+      "round": 8,
+      "order": 15,
+      "area": "Canvas",
+      "version": 1,
+      "title": "Boards inside boards, a List view of the same thing, and an Archive",
+      "body": [
+        "Your idea: any card can be a **board** you step into, with its own canvas. The background takes on that board's colour, so you always know you're inside something, and the breadcrumbs at the top show where (Desk › Meetings › Weekly ops). Double-click a folder card to go in; click a breadcrumb to come back out.",
+        "Boards aren't only projects. Shiftbook starts you with **Meetings** (a board per meeting series, holding each week's notes), **Daily notes** and **Projects**, and you can make a board out of anything, like **Reference**. Jots and loose notes can sit right on the Desk.",
+        "**Without the canvas:** the List view shows the same board as a list, sub-boards first, then notes newest first. The left side is the same tree in both views, so switching never loses your place.",
+        "**Archive** sits at the bottom of the tree. Archive anything by hand, or let old daily notes go there by themselves. Archived things still turn up in Find, and **Bring back** puts them where they were.",
+        "Want to click around? [Open the interactive boards](https://claude.ai/artifact/9dYUao8KyH3mvUD9YqbBd8)."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/695be5476ebfe8804ac425d9c46eeb32",
+          "caption": "The Desk: boards look like folders with a peek of what's inside; loose jots and daily notes sit beside them."
+        },
+        {
+          "src": "/_blob/2f0c2f2dbdd394d23db34e3295f36f07",
+          "caption": "Inside **Desk › Meetings › Weekly ops**: the amber tint tells you which board you're in."
+        },
+        {
+          "src": "/_blob/3c108fa2aad2833acad26fb6e347e38d",
+          "caption": "The same board in **List** view: newest meeting first."
+        },
+        {
+          "src": "/_blob/aa4cb4b745a8e4a3ee9116b3f54fa0fe",
+          "caption": "The **Archive**: one daily note archived automatically, one by hand, both with Bring back."
+        }
+      ],
+      "bullets": [
+        "Stacks and drawers from the card above still work inside any board. A drawer is simply a board kept in the tree instead of on the desk."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Is this the idea?",
+          "options": [
+            {
+              "value": "Yes, this",
+              "rec": true
+            },
+            {
+              "value": "Close",
+              "why": "Say what's off in the note."
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "start",
+          "legend": "Boards Shiftbook makes for you",
+          "type": "many",
+          "options": [
+            {
+              "value": "Meetings, with a board per series",
+              "on": true
+            },
+            {
+              "value": "Daily notes",
+              "on": true
+            },
+            {
+              "value": "Projects",
+              "on": true
+            },
+            {
+              "value": "Reference"
+            }
+          ]
+        },
+        {
+          "id": "auto",
+          "legend": "Daily notes go to the Archive by themselves after",
+          "options": [
+            {
+              "value": "2 weeks",
+              "rec": true
+            },
+            {
+              "value": "A month"
+            },
+            {
+              "value": "Never; I'll archive them myself"
+            }
+          ]
+        }
+      ],
+      "pick": "Yes, with Meetings, Daily notes and Projects made for you, and daily notes archived after 2 weeks. You can change all of it in Settings.",
+      "archived": true
+    }
+  }
+}

@@ -404,19 +404,35 @@ fn capture_with(text: &str, today: Date, start: WeekStart, projects: &[Project])
 
 // ---------- preferences ----------
 
+/// Text size zooms the whole webview, like a browser's own zoom, so the layout
+/// still fills the window. (CSS `zoom` on the page shrank `100vh` with it and
+/// left a blank band at small sizes.) A failure only leaves the size as it was.
+fn apply_text_size(webview: &tauri::Webview, prefs: &Prefs) {
+    let _ = webview.set_zoom(f64::from(prefs.text_size) / 100.0);
+}
+
 /// Maps to `DataApi.loadPrefs()`.
 #[tauri::command]
-pub async fn load_prefs(s: State<'_, VaultSession>) -> Res<Prefs> {
+pub async fn load_prefs(webview: tauri::Webview, s: State<'_, VaultSession>) -> Res<Prefs> {
     let (store, owner) = s.data().await?;
-    Ok(store.prefs(owner).await?)
+    let prefs = store.prefs(owner).await?;
+    apply_text_size(&webview, &prefs);
+    Ok(prefs)
 }
 
 /// Maps to `DataApi.savePref()`. Returns all preferences after the change.
 #[tauri::command]
-pub async fn save_pref(s: State<'_, VaultSession>, key: String, value: String) -> Res<Prefs> {
+pub async fn save_pref(
+    webview: tauri::Webview,
+    s: State<'_, VaultSession>,
+    key: String,
+    value: String,
+) -> Res<Prefs> {
     let (store, owner) = s.data().await?;
     store.set_pref(owner, &key, &value).await?;
-    Ok(store.prefs(owner).await?)
+    let prefs = store.prefs(owner).await?;
+    apply_text_size(&webview, &prefs);
+    Ok(prefs)
 }
 
 // ---------- projects ----------
@@ -1078,6 +1094,60 @@ pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<
 pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) -> Res<()> {
     let (store, owner) = s.data().await?;
     Ok(store.tick_next_up(owner, id_arg(&id)?, done).await?)
+}
+
+// ---------- saved responses ----------
+
+/// One saved response.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResponseView {
+    id: shiftbook_core::ids::SavedResponseId,
+    name: String,
+    text: String,
+}
+
+/// One saved response as typed in Settings.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResponseInput {
+    name: String,
+    text: String,
+}
+
+fn response_views(items: Vec<shiftbook_core::model::SavedResponse>) -> Vec<ResponseView> {
+    items
+        .into_iter()
+        .map(|r| ResponseView {
+            id: r.id,
+            name: r.name,
+            text: r.text,
+        })
+        .collect()
+}
+
+/// Maps to `DataApi.listResponses()`.
+#[tauri::command]
+pub async fn list_responses(s: State<'_, VaultSession>) -> Res<Vec<ResponseView>> {
+    let (store, owner) = s.data().await?;
+    Ok(response_views(store.responses(owner).await?))
+}
+
+/// Maps to `DataApi.saveResponses()`: replace the list (an empty list clears it).
+#[tauri::command]
+pub async fn save_responses(
+    s: State<'_, VaultSession>,
+    items: Vec<ResponseInput>,
+) -> Res<Vec<ResponseView>> {
+    let (store, owner) = s.data().await?;
+    let drafts: Vec<shiftbook_core::responses::ResponseDraft> = items
+        .into_iter()
+        .map(|i| shiftbook_core::responses::ResponseDraft {
+            name: i.name,
+            text: i.text,
+        })
+        .collect();
+    Ok(response_views(store.set_responses(owner, &drafts).await?))
 }
 
 // ---------- where was I? ----------

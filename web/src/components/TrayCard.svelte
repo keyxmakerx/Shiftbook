@@ -5,9 +5,9 @@
   import { api } from '../lib/api';
   import type { TrayDay, TrayItem } from '../lib/api';
   import { fmtMinutes } from '../lib/format';
-  import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { openMenu, paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, refresh } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, refresh, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import TicketChip from './TicketChip.svelte';
@@ -48,6 +48,31 @@
     });
   }
 
+  // Saved responses: a quick menu of messages to paste into tickets. Picking one copies it;
+  // nothing is matched to a ticket (owner's call, round 8).
+  function editResponses() {
+    app.settingsSection = 'responses';
+    setView('settings');
+  }
+
+  async function openResponses(anchor: HTMLElement) {
+    const list = await attempt(() => api.listResponses());
+    if (!list) return;
+    const copy = (name: string, text: string) =>
+      void copyText(text).then((ok) => toast(ok ? `Copied “${name}”` : "Couldn't copy here."));
+    openMenu(anchor, {
+      sections: [
+        list.length > 0
+          ? {
+              head: 'Copy a response',
+              items: list.map((r) => ({ label: r.name, icon: 'copy' as const, act: () => copy(r.name, r.text) })),
+            }
+          : { head: 'No saved responses yet', items: [{ label: 'Add your first response', icon: 'plus', act: editResponses }] },
+        { items: [{ label: 'Edit responses', icon: 'edit', top: true, act: editResponses }] },
+      ],
+    });
+  }
+
   function itemMenu(item: TrayItem): MenuSpec {
     return {
       sections: [
@@ -79,7 +104,18 @@
 <article class="paper card">
   <h3>
     <span class="title"><Icon name="tray" size={16} /> Done tickets</span>
-    <span class="total mono">{app.tray?.hours ?? '0'} h</span>
+    <span class="right">
+      <button
+        type="button"
+        class="resp-btn"
+        title="Copy a saved response"
+        aria-label="Copy a saved response"
+        onclick={(e) => void openResponses(e.currentTarget as HTMLElement)}
+      >
+        <Icon name="copy" size={15} />
+      </button>
+      <span class="total mono">{app.tray?.hours ?? '0'} h</span>
+    </span>
   </h3>
   <p class="hint">Paste tickets as you finish them. They add up to one “Tickets” entry for the day.</p>
   <input
@@ -156,6 +192,29 @@
     display: inline-flex;
     gap: 7px;
     align-items: center;
+  }
+
+  .right {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .resp-btn {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink-2);
+    width: 30px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .resp-btn:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   }
 
   .total {
