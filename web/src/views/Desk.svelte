@@ -7,6 +7,7 @@
   import EntryRow from '../components/EntryRow.svelte';
   import InboxCard from '../components/InboxCard.svelte';
   import LogWork from '../components/LogWork.svelte';
+  import DeskNotes from '../components/DeskNotes.svelte';
   import TrayCard from '../components/TrayCard.svelte';
   import WhereWasI from '../components/WhereWasI.svelte';
   import WrapUp from '../components/WrapUp.svelte';
@@ -84,7 +85,8 @@
   <div class="side">
     <WrapUp />
     <div class="rise" style:--i={1}><TrayCard /></div>
-    <div class="rise" style:--i={2}><InboxCard /></div>
+    <div class="rise" style:--i={2}><DeskNotes /></div>
+    <div class="rise" style:--i={3}><InboxCard /></div>
   </div>
 </div>
 

@@ -166,6 +166,8 @@ export interface TrayItem {
   id: string;
   ticket: string;
   minutes: number;
+  /** A few words about the ticket, if any. */
+  note: string | null;
   links: TicketLink[];
 }
 
@@ -558,6 +560,8 @@ export interface DataApi {
   trayDay(date: IsoDate): Promise<TrayDay>;
   trayAdd(date: IsoDate, text: string): Promise<TrayDay>;
   traySetMinutes(id: string, minutes: number): Promise<TrayDay>;
+  /** A few words about one tray ticket (blank clears them, at most 300 characters). */
+  traySetNote(id: string, note: string): Promise<TrayDay>;
   trayRemove(id: string): Promise<TrayDay>;
   trayRestore(id: string): Promise<TrayDay>;
 
@@ -622,6 +626,10 @@ export interface DataApi {
   listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList>;
   getNote(id: string): Promise<Note>;
   createNote(note: NoteInput): Promise<Note>;
+  /** The day's Daily note (titled "Daily · Mon 19 Oct 2026"), or null. Tauri: `daily_note`. */
+  dailyNote(date: IsoDate): Promise<Note | null>;
+  /** Write the day's Daily note, creating it once something is typed. Tauri: `save_daily_note`. */
+  saveDailyNote(date: IsoDate, body: string): Promise<Note | null>;
   updateNote(id: string, note: NoteInput): Promise<Note>;
   /** Archive, or Bring back. */
   setNoteArchived(id: string, archived: boolean): Promise<void>;

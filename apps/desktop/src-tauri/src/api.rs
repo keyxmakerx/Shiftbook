@@ -123,6 +123,7 @@ pub struct TrayItemView {
     id: TrayItemId,
     ticket: String,
     minutes: Minutes,
+    note: Option<String>,
     links: Vec<LinkView>,
 }
 
@@ -365,6 +366,7 @@ fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
         links: ticket_links(fields, &item.ticket_number),
         ticket: item.ticket_number,
         minutes: item.minutes,
+        note: item.note,
     }
 }
 
@@ -657,6 +659,18 @@ pub async fn tray_set_minutes(
 ) -> Res<TrayDayView> {
     let (store, owner) = s.data().await?;
     let day = store.tray_set_minutes(owner, id_arg(&id)?, minutes).await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.traySetNote()`: a few words about one tray ticket (blank clears them).
+#[tauri::command]
+pub async fn tray_set_note(
+    s: State<'_, VaultSession>,
+    id: String,
+    note: String,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store.tray_set_note(owner, id_arg(&id)?, &note).await?;
     tray_result(&store, owner, day).await
 }
 

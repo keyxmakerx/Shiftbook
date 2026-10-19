@@ -169,6 +169,9 @@ export class TauriApi implements DataApi {
   traySetMinutes(id: string, minutes: number): Promise<TrayDay> {
     return call('tray_set_minutes', { id, minutes });
   }
+  traySetNote(id: string, note: string): Promise<TrayDay> {
+    return call('tray_set_note', { id, note });
+  }
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });
   }
@@ -259,6 +262,12 @@ export class TauriApi implements DataApi {
   }
   createNote(note: NoteInput): Promise<Note> {
     return call('create_note', { note });
+  }
+  dailyNote(date: IsoDate): Promise<Note | null> {
+    return call('daily_note', { date });
+  }
+  saveDailyNote(date: IsoDate, body: string): Promise<Note | null> {
+    return call('save_daily_note', { date, body });
   }
   updateNote(id: string, note: NoteInput): Promise<Note> {
     return call('update_note', { id, note });

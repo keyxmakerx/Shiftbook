@@ -22,8 +22,10 @@ The alpha is a working app you can use day to day for logging time:
 - **Desk:** today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
   entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
-  can step up or down, and they roll up into one “Tickets” entry for the day); the entries list
-  with +15m/+30m/+1h and ticket chips you click to copy; the Inbox.
+  can step up or down, and they roll up into one “Tickets” entry for the day; a box beside each
+  ticket takes a few words about it); the entries list with +15m/+30m/+1h and ticket chips you
+  click to copy; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  meeting notes, all kept in Notes); the Inbox.
 - **Saved responses:** the copy button on Done tickets lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
   them in Settings → Responses.

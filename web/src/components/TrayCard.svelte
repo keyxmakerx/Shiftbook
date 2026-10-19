@@ -39,6 +39,13 @@
     await apply(await attempt(() => api.traySetMinutes(item.id, next)));
   }
 
+  // A few words about a ticket, saved when you leave the box or press Enter.
+  async function saveNote(item: TrayItem, text: string) {
+    if (text.trim() === (item.note ?? '')) return;
+    const result = await attempt(() => api.traySetNote(item.id, text));
+    if (result) app.tray = result;
+  }
+
   async function remove(item: TrayItem) {
     const result = await attempt(() => api.trayRemove(item.id));
     if (!result) return;
@@ -150,6 +157,18 @@
             onRemove={() => void remove(item)}
             removeLabel="Take out of the tray"
           />
+          <input
+            class="note"
+            value={item.note ?? ''}
+            maxlength="300"
+            placeholder="A few words…"
+            autocomplete="off"
+            aria-label="Note about {item.ticket}"
+            onchange={(e) => void saveNote(item, (e.currentTarget as HTMLInputElement).value)}
+            onkeydown={(e) => {
+              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+            }}
+          />
           <span class="added">+{fmtMinutes(item.minutes)}</span>
           <span class="stepper" role="group" aria-label="Minutes for {item.ticket}">
             <button type="button" aria-label="{STEP} minutes less" onclick={() => step(item, -STEP)} disabled={item.minutes === 0}>
@@ -239,7 +258,7 @@
 
   .item {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
     align-items: center;
     gap: 8px;
     padding: 5px 4px;
@@ -254,6 +273,31 @@
 
   .item :global(.chip) {
     justify-self: start;
+  }
+
+  .note {
+    min-width: 0;
+    font: 13px var(--ui);
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 7px;
+  }
+
+  .note::placeholder {
+    color: var(--mut);
+    opacity: 0.7;
+  }
+
+  .note:hover {
+    border-color: var(--rule);
+  }
+
+  .note:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+    background: var(--paper);
   }
 
   .added {
