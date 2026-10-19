@@ -19,6 +19,8 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
+  CanvasCard,
+  CardKind,
   Note,
   NoteInput,
   NoteKind,
@@ -169,6 +171,9 @@ export class TauriApi implements DataApi {
   traySetMinutes(id: string, minutes: number): Promise<TrayDay> {
     return call('tray_set_minutes', { id, minutes });
   }
+  traySetNote(id: string, note: string): Promise<TrayDay> {
+    return call('tray_set_note', { id, note });
+  }
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });
   }
@@ -228,6 +233,13 @@ export class TauriApi implements DataApi {
     return call('set_inbox_deleted', { id, deleted });
   }
 
+  canvas(today: IsoDate): Promise<CanvasCard[]> {
+    return call('canvas', { today });
+  }
+  canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void> {
+    return call('canvas_move', { kind, id, x, y });
+  }
+
   listResponses(): Promise<SavedResponse[]> {
     return call('list_responses');
   }
@@ -259,6 +271,12 @@ export class TauriApi implements DataApi {
   }
   createNote(note: NoteInput): Promise<Note> {
     return call('create_note', { note });
+  }
+  dailyNote(date: IsoDate): Promise<Note | null> {
+    return call('daily_note', { date });
+  }
+  saveDailyNote(date: IsoDate, body: string): Promise<Note | null> {
+    return call('save_daily_note', { date, body });
   }
   updateNote(id: string, note: NoteInput): Promise<Note> {
     return call('update_note', { id, note });

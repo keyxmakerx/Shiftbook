@@ -7,6 +7,7 @@
 
 mod api;
 mod backoff;
+mod canvas;
 mod notes;
 mod protect;
 mod session;
@@ -314,6 +315,7 @@ pub fn run() {
             api::tray_day,
             api::tray_add,
             api::tray_set_minutes,
+            api::tray_set_note,
             api::tray_remove,
             api::tray_restore,
             api::ribbon,
@@ -343,6 +345,10 @@ pub fn run() {
             notes::list_notes,
             notes::get_note,
             notes::create_note,
+            canvas::canvas,
+            canvas::canvas_move,
+            notes::daily_note,
+            notes::save_daily_note,
             notes::update_note,
             notes::set_note_archived,
             notes::set_note_keep,

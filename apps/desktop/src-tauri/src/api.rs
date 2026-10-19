@@ -37,7 +37,7 @@ use crate::session::{CommandError, VaultSession};
 
 type Res<T> = Result<T, CommandError>;
 
-fn date_arg(text: &str) -> Res<Date> {
+pub(crate) fn date_arg(text: &str) -> Res<Date> {
     parse_date(text).map_err(|_| CommandError::InvalidInput)
 }
 
@@ -123,6 +123,7 @@ pub struct TrayItemView {
     id: TrayItemId,
     ticket: String,
     minutes: Minutes,
+    note: Option<String>,
     links: Vec<LinkView>,
 }
 
@@ -331,7 +332,7 @@ fn ticket_links(fields: &[CustomField], ticket: &str) -> Vec<LinkView> {
         .collect()
 }
 
-fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
+pub(crate) fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
     let project_id = match rec.entry.target {
         EntryTarget::Project(p) => Some(p),
         _ => None,
@@ -359,12 +360,13 @@ fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
     }
 }
 
-fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
+pub(crate) fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
     TrayItemView {
         id: item.id,
         links: ticket_links(fields, &item.ticket_number),
         ticket: item.ticket_number,
         minutes: item.minutes,
+        note: item.note,
     }
 }
 
@@ -382,7 +384,7 @@ fn tray_view(day: TrayDay, fields: &[CustomField]) -> TrayDayView {
     }
 }
 
-async fn links_for(store: &SqliteStore, owner: OwnerId) -> Res<Vec<CustomField>> {
+pub(crate) async fn links_for(store: &SqliteStore, owner: OwnerId) -> Res<Vec<CustomField>> {
     Ok(link_fields(&store.list_custom_fields(owner).await?))
 }
 
@@ -657,6 +659,18 @@ pub async fn tray_set_minutes(
 ) -> Res<TrayDayView> {
     let (store, owner) = s.data().await?;
     let day = store.tray_set_minutes(owner, id_arg(&id)?, minutes).await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.traySetNote()`: a few words about one tray ticket (blank clears them).
+#[tauri::command]
+pub async fn tray_set_note(
+    s: State<'_, VaultSession>,
+    id: String,
+    note: String,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store.tray_set_note(owner, id_arg(&id)?, &note).await?;
     tray_result(&store, owner, day).await
 }
 
@@ -938,7 +952,7 @@ pub async fn set_custom_value(
 
 // ---------- inbox ----------
 
-fn inbox_view(i: shiftbook_core::model::InboxItem) -> InboxView {
+pub(crate) fn inbox_view(i: shiftbook_core::model::InboxItem) -> InboxView {
     InboxView {
         id: i.id,
         text: i.text,

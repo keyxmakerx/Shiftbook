@@ -13,12 +13,14 @@
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
 
-  // Planner and Canvas join this list, in their places, once they're built (round 7).
+  // Desk is the Canvas, where the day happens; Day is for starting and ending it (round 9).
+  // The Planner joins this list once it's built.
   const VIEW_LIST: { id: View; label: string; key: string }[] = [
     { id: 'desk', label: 'Desk', key: '1' },
-    { id: 'timesheet', label: 'Timesheet', key: '2' },
-    { id: 'notes', label: 'Notes', key: '3' },
-    { id: 'settings', label: 'Settings', key: '4' },
+    { id: 'day', label: 'Day', key: '2' },
+    { id: 'timesheet', label: 'Timesheet', key: '3' },
+    { id: 'notes', label: 'Notes', key: '4' },
+    { id: 'settings', label: 'Settings', key: '5' },
   ];
 
   let viewsEl: HTMLElement | undefined = $state();
@@ -108,7 +110,7 @@
   }
 
   function openDay(date: string, gap = false) {
-    setView('desk');
+    setView('day');
     // A day with nothing logged opens with Log work ready to type into.
     void selectDay(date).then(() => gap && focusLog());
   }

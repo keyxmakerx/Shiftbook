@@ -21,6 +21,24 @@ pub const MAX_TRAY_MINUTES: u32 = 8 * 60;
 /// Title of the roll-up entry.
 pub const TRAY_ENTRY_TITLE: &str = "Tickets";
 
+/// Longest note on a tray ticket: a few words about it.
+pub const MAX_TRAY_NOTE_CHARS: usize = 300;
+
+/// Clean a tray ticket's note: trimmed, blank means no note, at most 300 characters.
+pub fn clean_tray_note(note: &str) -> Result<Option<String>, CoreError> {
+    let trimmed = note.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if trimmed.chars().count() > MAX_TRAY_NOTE_CHARS {
+        return Err(CoreError::TooLong {
+            field: "The note",
+            max: MAX_TRAY_NOTE_CHARS,
+        });
+    }
+    Ok(Some(trimmed.to_string()))
+}
+
 /// Check a tray ticket's minutes: 0 to 480.
 pub fn validate_tray_minutes(minutes: u32) -> Result<Minutes, CoreError> {
     if minutes > MAX_TRAY_MINUTES {
@@ -115,6 +133,20 @@ pub fn plan_rollup<S: AsRef<str>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tray_notes_are_trimmed_and_limited() {
+        assert_eq!(
+            clean_tray_note("  printer on 3rd floor "),
+            Ok(Some("printer on 3rd floor".into()))
+        );
+        assert_eq!(clean_tray_note("   "), Ok(None));
+        assert!(clean_tray_note(&"x".repeat(MAX_TRAY_NOTE_CHARS)).is_ok());
+        assert!(matches!(
+            clean_tray_note(&"x".repeat(MAX_TRAY_NOTE_CHARS + 1)),
+            Err(CoreError::TooLong { .. })
+        ));
+    }
 
     #[test]
     fn minutes_rules() {

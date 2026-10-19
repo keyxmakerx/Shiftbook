@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The unlocked app: the ribbon, one working view (Desk, Timesheet, Notes or Settings) that
+  // The unlocked app: the ribbon, one working view (Desk, Day, Timesheet, Notes or Settings) that
   // slides in from the direction you move, and the overlays (capture, drawer, paper menu,
   // toast). Also the keyboard shortcuts and the copy guard.
   import { onMount } from 'svelte';
@@ -20,7 +20,8 @@
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
   import Settings from '../views/Settings.svelte';
-  import Desk from '../views/Desk.svelte';
+  import Canvas from '../views/Canvas.svelte';
+  import Day from '../views/Day.svelte';
   import Timesheet from '../views/Timesheet.svelte';
   import Notes from '../views/Notes.svelte';
 
@@ -58,7 +59,7 @@
     return VIEWS.indexOf(v);
   }
 
-  /** The views slide in the direction you move (Desk → Timesheet → Notes → Settings). */
+  /** The views slide in the direction you move (Desk → Day → Timesheet → Notes → Settings). */
   function slide(_node: Element, { out }: { out: boolean }) {
     const k = scale();
     const dir = order(app.view) > order(app.previousView) ? 1 : -1;
@@ -135,7 +136,9 @@
       {#key app.view}
         <section class="view" in:slide={{ out: false }} out:slide={{ out: true }} aria-label={app.view}>
           {#if app.view === 'desk'}
-            <Desk />
+            <Canvas />
+          {:else if app.view === 'day'}
+            <Day />
           {:else if app.view === 'timesheet'}
             <Timesheet />
           {:else if app.view === 'notes'}

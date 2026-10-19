@@ -224,11 +224,57 @@ pub fn search_text(title: &str, tags: &[String], project: Option<&str>, body: &s
     text
 }
 
+/// The title of a day's Daily note, e.g. "Daily · Mon 19 Oct 2026". The Desk's Today tab
+/// finds and writes the day's Daily note by this title.
+pub fn daily_note_title(date: time::Date) -> String {
+    const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let day = DAYS[usize::from(date.weekday().number_days_from_monday())];
+    let month = MONTHS[usize::from(u8::from(date.month()) - 1)];
+    format!("Daily · {day} {} {month} {}", date.day(), date.year())
+}
+
+/// True when `note` is the Daily note for `date`.
+pub fn is_daily_note_for(kind: NoteKind, title: &str, date: time::Date) -> bool {
+    kind == NoteKind::Daily && title == daily_note_title(date)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use time::macros::datetime;
     use time::Duration;
+
+    #[test]
+    fn daily_note_titles() {
+        use time::macros::date;
+        assert_eq!(
+            daily_note_title(date!(2026 - 10 - 19)),
+            "Daily · Mon 19 Oct 2026"
+        );
+        assert_eq!(
+            daily_note_title(date!(2027 - 01 - 03)),
+            "Daily · Sun 3 Jan 2027"
+        );
+        let d = date!(2026 - 10 - 19);
+        assert!(is_daily_note_for(
+            NoteKind::Daily,
+            "Daily · Mon 19 Oct 2026",
+            d
+        ));
+        assert!(!is_daily_note_for(
+            NoteKind::Jot,
+            "Daily · Mon 19 Oct 2026",
+            d
+        ));
+        assert!(!is_daily_note_for(
+            NoteKind::Daily,
+            "Daily · Tue 20 Oct 2026",
+            d
+        ));
+    }
 
     #[test]
     fn kinds_round_trip_and_reject_unknown() {

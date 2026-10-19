@@ -1,12 +1,13 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space opens capture, 1–4 switch views, Ctrl+L locks, Ctrl +/−/0
+// N focuses Log work, Ctrl+Space opens capture, 1–5 switch views, Ctrl+L locks, Ctrl +/−/0
 // change the text size, Esc closes
 // the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
-export type View = 'desk' | 'timesheet' | 'notes' | 'settings';
-export const VIEWS: readonly View[] = ['desk', 'timesheet', 'notes', 'settings'];
+/** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
+export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'settings';
+export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'settings'];
 export type SettingsSection =
   | 'look'
   | 'day'
@@ -62,7 +63,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Ctrl Space', what: 'Log, note or find anything' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
-  { keys: '1  2  3  4', what: 'Desk, Timesheet, Notes, Settings' },
+  { keys: '1  2  3  4  5', what: 'Desk, Day, Timesheet, Notes, Settings' },
   { keys: '↑  ↓', what: 'Move between entries' },
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },

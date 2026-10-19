@@ -3,9 +3,13 @@
 
 use serde::{Deserialize, Serialize};
 use shiftbook_core::dates::format_timestamp;
+use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
 use shiftbook_core::model::{Note, Project};
-use shiftbook_core::notes::{archive_outlook, search_text, ArchiveOutlook, NoteKind};
+use shiftbook_core::notes::{
+    archive_outlook, daily_note_title, is_daily_note_for, join_tags, search_text, ArchiveOutlook,
+    NoteKind,
+};
 use shiftbook_core::search::rank;
 use shiftbook_storage::notes::{facts, NoteInput};
 use shiftbook_storage::SqliteStore;
@@ -38,7 +42,7 @@ pub struct NoteView {
     updated_at: String,
 }
 
-fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
+pub(crate) fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
     let archive_in_days = match archive_outlook(facts(&n), now, after_days) {
         ArchiveOutlook::Soon { days_left } => Some(days_left),
         ArchiveOutlook::Stays | ArchiveOutlook::Due => None,
@@ -204,6 +208,65 @@ pub async fn update_note(s: State<'_, VaultSession>, id: String, note: NoteArgs)
         .update_note(owner, id_arg(&id)?, &note.input()?)
         .await?;
     Ok(note_view(note, OffsetDateTime::now_utc(), after))
+}
+
+/// The Daily note for `date`, archived or not, if there is one.
+async fn find_daily(store: &SqliteStore, owner: OwnerId, date: time::Date) -> Res<Option<Note>> {
+    Ok(store
+        .list_notes(owner, true)
+        .await?
+        .into_iter()
+        .find(|n| is_daily_note_for(n.kind, &n.title, date)))
+}
+
+/// Maps to `DataApi.dailyNote()`: the day's Daily note for the Desk's Today tab, or null.
+#[tauri::command]
+pub async fn daily_note(s: State<'_, VaultSession>, date: String) -> Res<Option<NoteView>> {
+    let (store, owner) = s.data().await?;
+    let date = parse_date(&date).map_err(|_| CommandError::InvalidInput)?;
+    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let now = OffsetDateTime::now_utc();
+    Ok(find_daily(&store, owner, date)
+        .await?
+        .map(|n| note_view(n, now, after)))
+}
+
+/// Maps to `DataApi.saveDailyNote()`: write the day's Daily note, creating it the first time
+/// something is typed. Its project and tags stay as they are.
+#[tauri::command]
+pub async fn save_daily_note(
+    s: State<'_, VaultSession>,
+    date: String,
+    body: String,
+) -> Res<Option<NoteView>> {
+    let (store, owner) = s.data().await?;
+    let date = parse_date(&date).map_err(|_| CommandError::InvalidInput)?;
+    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let note = match find_daily(&store, owner, date).await? {
+        Some(n) => {
+            let input = NoteInput {
+                kind: NoteKind::Daily,
+                title: n.title.clone(),
+                body,
+                project: n.project_id,
+                tags: join_tags(&n.tags),
+            };
+            Some(store.update_note(owner, n.id, &input).await?)
+        }
+        None if body.trim().is_empty() => None,
+        None => {
+            let input = NoteInput {
+                kind: NoteKind::Daily,
+                title: daily_note_title(date),
+                body,
+                project: None,
+                tags: String::new(),
+            };
+            Some(store.create_note(owner, &input).await?)
+        }
+    };
+    let now = OffsetDateTime::now_utc();
+    Ok(note.map(|n| note_view(n, now, after)))
 }
 
 /// Maps to `DataApi.setNoteArchived()` (Archive, or Bring back).

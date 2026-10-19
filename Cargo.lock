@@ -3206,7 +3206,7 @@ dependencies = [
 
 [[package]]
 name = "shiftbook-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3217,7 +3217,7 @@ dependencies = [
 
 [[package]]
 name = "shiftbook-desktop"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -3234,7 +3234,7 @@ dependencies = [
 
 [[package]]
 name = "shiftbook-storage"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "argon2",
  "chacha20poly1305",

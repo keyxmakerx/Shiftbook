@@ -8,6 +8,7 @@
 //! - [`db`]: open the encrypted database with the DEK and run migrations.
 //! - [`repo`]: repository traits and the SQLite implementation.
 //! - [`notes`]: notes, the archive and auto-archive.
+//! - [`canvas`]: where the owner put each card on the Canvas.
 //! - [`wipe`]: delete all local data to start again.
 //!
 //! Secrets live only in `secrecy`/`zeroize` types and never implement `Debug`
@@ -16,6 +17,7 @@
 #![warn(missing_docs)]
 
 pub mod backup;
+pub mod canvas;
 pub mod db;
 pub mod error;
 pub mod extras;
@@ -55,6 +57,8 @@ pub(crate) mod test_rt {
     }
 }
 
+#[cfg(test)]
+mod canvas_tests;
 #[cfg(test)]
 mod notes_tests;
 #[cfg(test)]

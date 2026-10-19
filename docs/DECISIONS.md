@@ -2,6 +2,16 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 9 — 19 Oct 2026
+- **Desk notes and ticket notes:** built as shown (Notes card under Done tickets with Jot, Today
+  and Meetings; a few words beside each tray ticket).
+- **The Canvas becomes Desk:** the owner works there most of the day, so the Canvas is the home
+  view and is called Desk. The structured day view is for starting and ending the day and gets
+  a new name (asked on r9-full). The Canvas keeps every capability decided so far; the full
+  list and build order are in `docs/CANVAS.md`. It shows the same records as the day view; it
+  only adds layout.
+- **Releases:** the app's version comes from the release tag, and a release builds once.
+
 ## Round 8 — 19 Oct 2026
 - **Canvas tidying:** stacks (drop a card on a card; click to fan out) and drawers (one per
   project plus the user's own folders), with a **Tidy into stacks** button. Filed things stay in

@@ -36,9 +36,10 @@
 
   const COMMANDS: Command[] = [
     { label: 'Go to Desk', keys: '1', run: () => setView('desk') },
-    { label: 'Go to Timesheet', keys: '2', run: () => setView('timesheet') },
-    { label: 'Go to Notes', keys: '3', run: () => setView('notes') },
-    { label: 'Go to Settings', keys: '4', run: () => setView('settings') },
+    { label: 'Go to Day', keys: '2', run: () => setView('day') },
+    { label: 'Go to Timesheet', keys: '3', run: () => setView('timesheet') },
+    { label: 'Go to Notes', keys: '4', run: () => setView('notes') },
+    { label: 'Go to Settings', keys: '5', run: () => setView('settings') },
     { label: 'New note', run: () => openNote(null) },
     { label: 'Lock now', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book today as holiday (8 h)', run: () => holiday() },
@@ -118,7 +119,7 @@
       ),
     );
     if (!entry) return;
-    setView('desk');
+    setView('day');
     await selectDay(date);
     await refresh();
     flashEntry(entry.id);
@@ -144,7 +145,7 @@
     } else if (hit.kind === 'note') {
       openNote(hit.note.id);
     } else if (hit.kind === 'entry') {
-      setView('desk');
+      setView('day');
       await selectDay(hit.entry.date);
       flashEntry(hit.entry.id);
       app.drawer = hit.entry.id;
@@ -171,7 +172,7 @@
     const entry = await attempt(() => api.captureLog(line, app.today));
     if (!entry) return;
     close();
-    if (app.view !== 'desk') setView('desk');
+    if (app.view !== 'desk' && app.view !== 'day') setView('desk');
     await selectDay(entry.date);
     await refresh();
     flashEntry(entry.id);

@@ -290,6 +290,24 @@ fn tray_rolls_up_into_one_entry_per_day() {
             Err(StorageError::NotFound)
         ));
 
+        // A few words on a ticket; blank clears them; minutes are untouched.
+        let day = s
+            .tray_set_note(me, day.items[1].id, "  reset the printer ")
+            .await
+            .unwrap();
+        assert_eq!(day.items[1].note.as_deref(), Some("reset the printer"));
+        assert_eq!(day.minutes, Minutes(75));
+        let day = s.tray_set_note(me, day.items[1].id, " ").await.unwrap();
+        assert_eq!(day.items[1].note, None);
+        assert!(s
+            .tray_set_note(me, day.items[1].id, &"x".repeat(301))
+            .await
+            .is_err());
+        assert!(matches!(
+            s.tray_set_note(other, day.items[1].id, "hi").await,
+            Err(StorageError::NotFound)
+        ));
+
         // The roll-up keeps the user's title but not their minutes.
         let mut edit = input(DAY, 999, "Ticket queue");
         edit.date = date!(2026 - 10 - 01);

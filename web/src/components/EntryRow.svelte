@@ -1,22 +1,12 @@
 <script lang="ts">
-  // One entry on the Desk: hours, title, project, tickets and quick +time buttons.
+  // One entry on Day: hours, title, project, tickets and quick +time buttons.
   // Click opens the details drawer; right-click opens its paper menu.
   import { api } from '../lib/api';
   import type { Entry } from '../lib/api';
-  import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
-  import { copyText } from '../lib/protection.svelte';
-  import {
-    app,
-    attempt,
-    flashEntry,
-    projectById,
-    projectColor,
-    putEntry,
-    refresh,
-    refreshProjects,
-  } from '../lib/store.svelte';
+  import { addEntryTime, canTime as canTimeEntry, entryMenu } from '../lib/entryActions';
+  import { paperMenu } from '../lib/menu.svelte';
+  import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { fmtMinutes } from '../lib/format';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import TicketChip from './TicketChip.svelte';
 
@@ -26,7 +16,7 @@
   const project = $derived(projectById(entry.projectId));
   const color = $derived(projectColor(entry.projectId));
   // The optional timer (Settings → Your day) runs on today's entries only.
-  const canTime = $derived(!!app.prefs?.timer && !entry.isTray && entry.date === app.today);
+  const canTime = $derived(canTimeEntry(entry));
   const timing = $derived(timer.running && timer.target?.entryId === entry.id);
 
   $effect(() => {
@@ -37,134 +27,8 @@
     row.classList.add('flash');
   });
 
-  function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
-    return {
-      date: e.date,
-      minutes: e.minutes,
-      description: e.description,
-      projectId: changes.projectId !== undefined ? changes.projectId : e.projectId,
-      category: e.category,
-      notes: e.notes,
-      timesheetCodeId: e.timesheetCodeId,
-    };
-  }
-
-  export async function addTime(minutes: number) {
-    if (entry.isTray) {
-      toast('The Tickets entry adds up the Done tickets tray. Change minutes there.');
-      return;
-    }
-    const updated = await attempt(() => api.addEntryMinutes(entry.id, minutes));
-    if (!updated) return;
-    putEntry(updated);
-    flashEntry(updated.id);
-    void refresh();
-    toast(`Added ${fmtMinutes(minutes)} to ${updated.description || 'the entry'}`, 'Undo', () => {
-      void attempt(() => api.addEntryMinutes(updated.id, -minutes)).then(refresh);
-    });
-  }
-
-  async function moveTo(projectId: string | null) {
-    const before = entry.projectId;
-    const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId })));
-    if (!updated) return;
-    putEntry(updated);
-    void refresh();
-    toast(`Moved to ${projectById(projectId)?.name ?? 'No project'}`, 'Undo', () => {
-      void attempt(() => api.updateEntry(updated.id, input(updated, { projectId: before }))).then(refresh);
-    });
-  }
-
-  async function setColor(c: string) {
-    const p = project;
-    if (!p) return;
-    const before = p.color;
-    const saved = await attempt(() =>
-      api.updateProject(p.id, { name: p.name, color: c, defaultTimesheetCodeId: p.defaultTimesheetCodeId, archived: p.archived }),
-    );
-    if (!saved) return;
-    await refreshProjects();
-    toast(`${p.name} is now this colour everywhere`, 'Undo', () => {
-      void attempt(() =>
-        api.updateProject(p.id, { name: p.name, color: before, defaultTimesheetCodeId: p.defaultTimesheetCodeId, archived: p.archived }),
-      ).then(refreshProjects);
-    });
-  }
-
-  async function remove() {
-    const id = entry.id;
-    const title = entry.description || 'the entry';
-    const ok = await attempt(async () => {
-      await api.deleteEntry(id);
-      return true;
-    });
-    if (!ok) return;
-    app.drawer = app.drawer === id ? null : app.drawer;
-    await refresh();
-    toast(`Deleted “${title}”`, 'Undo', () => {
-      void attempt(() => api.restoreEntry(id)).then(refresh);
-    });
-  }
-
-  async function logAgainToday() {
-    const created = await attempt(() =>
-      api.createEntry(
-        { ...input(entry, {}), date: app.today, minutes: 30 },
-        entry.tickets.map((t) => t.number).join('\n'),
-      ),
-    );
-    if (!created) return;
-    await refresh();
-    flashEntry(created.id);
-    toast(`Logged 0.5 h of “${created.description}” today`, 'Undo', () => {
-      void attempt(() => api.deleteEntry(created.id)).then(refresh);
-    });
-  }
-
-  async function copyTickets() {
-    const text = entry.tickets.map((t) => t.number).join(', ') || entry.description;
-    toast((await copyText(text)) ? 'Copied' : "Couldn't copy here.");
-  }
-
-  function menu(): MenuSpec {
-    const main: MenuItem[] = [
-      { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
-    ];
-    if (!entry.isTray) {
-      main.push(
-        { label: 'Add 15 minutes', icon: 'clock', side: true, act: () => void addTime(15) },
-        { label: 'Add 1 hour', icon: 'hour', side: true, act: () => void addTime(60) },
-      );
-    }
-    if (canTime) {
-      main.push(
-        timing
-          ? { label: 'Stop the timer', icon: 'clock', top: true, act: () => void stopTimer() }
-          : { label: 'Start the timer', icon: 'clock', top: true, act: () => void startTimer(entry) },
-      );
-    }
-    main.push(
-      { label: 'Copy tickets', icon: 'copy', top: true, act: () => void copyTickets() },
-      { label: 'Log again today (30 min)', icon: 'log', top: true, act: () => void logAgainToday() },
-    );
-    const choices = [
-      ...app.projects
-        .filter((p) => !p.archived)
-        .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveTo(p.id) })),
-      { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveTo(null) },
-    ];
-    const sections: MenuSpec['sections'] = [
-      { head: entry.description || 'Untitled', items: main },
-      { head: 'Project', choices },
-    ];
-    if (project) {
-      sections.push({ head: `Colour for ${project.name}`, swatches: { current: project.color, pick: (c) => void setColor(c) } });
-    }
-    sections.push({
-      items: [{ label: entry.isTray ? 'Delete (empties the tray)' : 'Delete', icon: 'trash', danger: true, top: true, act: () => void remove() }],
-    });
-    return { sections };
-  }
+  const addTime = (minutes: number) => addEntryTime(entry, minutes);
+  const menu = () => entryMenu(entry);
 
   async function removeTicket(ticketId: string, number: string) {
     const updated = await attempt(() => api.removeTicket(ticketId));
