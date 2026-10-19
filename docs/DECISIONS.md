@@ -2,6 +2,19 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Rounds 10 and 11 — 19 Oct 2026
+- **Desk step 2** (project areas, links, timeline): approved as built; keep going.
+- **A notepad under each entry and ticket**, on the Desk cards and on Day, saved as you type.
+- **Bring up tomorrow** in every right-click menu; tomorrow "Where was I?" shows it first.
+- **Tickets that aren't done:** the tray becomes **Tickets** with a done tick on each. Unticked
+  is **Still open**: its time still counts today and it comes back in tomorrow's tray.
+- **Asked for more** (pictured in round 12): a click opens a slide-out under the card or row with
+  the everyday options and right-click keeps the full menu (archive, delete, …); the notepad pops
+  out into a movable window; a thin bottom bar holds minimised windows on the left and a
+  notification bell on the right (to-dos, meeting reminders) whose panel slides in from the right;
+  tickets can be attached to projects; a project's full screen holds several notes and pictures;
+  boxes on the Desk can be drawn.
+
 ## Round 9 — 19 Oct 2026
 - **Desk notes and ticket notes:** built as shown (Notes card under Done tickets with Jot, Today
   and Meetings; a few words beside each tray ticket).

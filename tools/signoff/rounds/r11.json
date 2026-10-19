@@ -67,7 +67,9 @@
           "placeholder": "e.g. open tickets should also show on the Desk until done"
         }
       ],
-      "pick": "All three as described. They're small, and I'll build them right after step 2."
+      "pick": "All three as described. They're small, and I'll build them right after step 2.",
+      "archived": true,
+      "reply": "All three are in. Your extra ideas (the slide-out, notepad windows, the bottom bar and the bell) are pictured in round 12."
     },
     "r11-built": {
       "round": 11,
@@ -116,7 +118,9 @@
           "placeholder": "e.g. links are too busy"
         }
       ],
-      "pick": "Next: your three asks below, then step 3 (stacks and drawers)."
+      "pick": "Next: your three asks below, then step 3 (stacks and drawers).",
+      "archived": true,
+      "reply": "Yes: each box is a project area. You can't draw one freehand yet; round 12 shows how drawing would work."
     }
   }
 }
