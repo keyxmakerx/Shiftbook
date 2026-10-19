@@ -7,6 +7,7 @@ use serde::{Serialize, Serializer};
 use time::Weekday;
 
 use crate::error::{preview, CoreError};
+use crate::notes::{AUTO_ARCHIVE_CHOICES, DEFAULT_AUTO_ARCHIVE_DAYS};
 use crate::sheet::{CommentFormat, GroupBy};
 use crate::timer::PausedTimer;
 use crate::validate::validate_color;
@@ -40,6 +41,9 @@ pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 pub const KEY_TIMER: &str = "day.timer";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
+/// Days without a change before a note moves to the archive, one of
+/// [`AUTO_ARCHIVE_CHOICES`] (`0` = off).
+pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -163,6 +167,8 @@ pub struct Prefs {
     pub timer: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
+    /// Days without a change before a note moves to the archive (0 = off).
+    pub notes_auto_archive_days: u32,
 }
 
 impl Prefs {
@@ -187,6 +193,7 @@ impl Default for Prefs {
             wrapup_at: None,
             timer: false,
             paused_timer: None,
+            notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
         }
     }
 }
@@ -266,6 +273,10 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
             Ok(n) if TEXT_SIZES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
         },
+        KEY_NOTES_AUTO_ARCHIVE => match v.parse::<u32>() {
+            Ok(n) if AUTO_ARCHIVE_CHOICES.contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_WRAPUP_AT => {
             if v.is_empty() {
                 Ok(String::new())
@@ -332,6 +343,9 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
+            KEY_NOTES_AUTO_ARCHIVE => {
+                prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
+            }
             _ => {}
         }
     }
@@ -352,6 +366,7 @@ mod tests {
         assert!(p.comment.include_tickets);
         assert!(!p.timer, "the timer is off unless turned on");
         assert_eq!(p.paused_timer, None);
+        assert_eq!(p.notes_auto_archive_days, 90);
         assert_eq!(p.comment.separator, "; ");
         assert_eq!(p.group_by, GroupBy::Code);
         assert_eq!(p.week_start, WeekStart(Weekday::Monday));
@@ -466,6 +481,19 @@ mod tests {
         assert_eq!(p.day_target(time::macros::date!(2026 - 10 - 18)), 0); // Sunday
         let broken = prefs_from_settings(&[("day.targets", "lots")]);
         assert_eq!(broken.day_targets, DEFAULT_DAY_TARGETS);
+    }
+
+    #[test]
+    fn notes_auto_archive() {
+        let p = prefs_from_settings(&[("notes.auto_archive_days", "0")]);
+        assert_eq!(p.notes_auto_archive_days, 0, "off");
+        let p = prefs_from_settings(&[("notes.auto_archive_days", "45")]);
+        assert_eq!(p.notes_auto_archive_days, 90, "not a choice: default");
+        assert_eq!(
+            validate_pref(KEY_NOTES_AUTO_ARCHIVE, " 180 ").unwrap(),
+            "180"
+        );
+        assert!(validate_pref(KEY_NOTES_AUTO_ARCHIVE, "7").is_err());
     }
 
     #[test]

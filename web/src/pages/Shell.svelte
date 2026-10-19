@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The unlocked app: the ribbon, one working view (Desk, Timesheet or Settings) that
+  // The unlocked app: the ribbon, one working view (Desk, Timesheet, Notes or Settings) that
   // slides in from the direction you move, and the overlays (capture, drawer, paper menu,
   // toast). Also the keyboard shortcuts and the copy guard.
   import { onMount } from 'svelte';
@@ -22,6 +22,7 @@
   import Settings from '../views/Settings.svelte';
   import Desk from '../views/Desk.svelte';
   import Timesheet from '../views/Timesheet.svelte';
+  import Notes from '../views/Notes.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
@@ -57,7 +58,7 @@
     return VIEWS.indexOf(v);
   }
 
-  /** The views slide in the direction you move (Desk → Timesheet → Settings). */
+  /** The views slide in the direction you move (Desk → Timesheet → Notes → Settings). */
   function slide(_node: Element, { out }: { out: boolean }) {
     const k = scale();
     const dir = order(app.view) > order(app.previousView) ? 1 : -1;
@@ -137,6 +138,8 @@
             <Desk />
           {:else if app.view === 'timesheet'}
             <Timesheet />
+          {:else if app.view === 'notes'}
+            <Notes />
           {:else}
             <Settings />
           {/if}

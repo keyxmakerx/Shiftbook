@@ -1,0 +1,81 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--plum:#8C4F7A;--teal:#178F7C;--coral:#E0573A;--amber:#E9A23B;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:12px 14px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+h2{font:600 18px/1.2 var(--display);margin:2px 0 8px}
+.grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:700px){.grid{grid-template-columns:1fr}}
+.src{font:13px/1.4 var(--ui)}
+.row{display:flex;gap:8px;align-items:center;padding:3px 4px;border-radius:5px;border-left:3px solid var(--c)}
+.row:hover{background:var(--paper2)}
+.row .t{flex:1;min-width:0}
+.row.head .t{font-weight:700;color:var(--ink2)}
+.row.skip{opacity:.5}.row.skip .t{text-decoration:line-through}
+.pick{font:600 11px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:99px;padding:1px 4px;color:var(--ink2);max-width:118px}
+.why{font-size:10.5px;color:var(--mut);white-space:nowrap}
+.out h3{font-size:12.5px;margin:10px 0 3px;color:var(--ink2);display:flex;gap:6px;align-items:center}
+.out ol,.out ul{margin:0;padding-left:20px;font-size:13px}
+.out li{margin:2px 0}.exp{color:var(--ok);font-size:12px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:7px 12px;font:600 13px var(--ui);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.note{font-size:12px;color:var(--mut);margin:6px 0 0}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.on{opacity:1}
+</style></head><body>
+<div class="grid">
+ <div class="paper"><span class="lbl">ups-battery-swap.docx · how Shiftbook read it</span><h2>Check each line's place</h2>
+  <div class="src" id="src"></div>
+  <p class="note">Change any line's place with its little menu. Shiftbook remembers your fixes, so the next document from the same template comes in right.</p></div>
+ <div class="paper out"><span class="lbl">Becomes this MOP</span><h2 id="ttl"></h2><div id="out"></div>
+  <div class="bar"><button class="btn primary" id="save">Save MOP</button><button class="btn" id="exp">Export…</button></div>
+  <p class="note">Export as Word, PDF, plain text or a Shiftbook MOP file that comes back in exactly as it went out.</p></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const SEC={title:['Title','var(--ink)'],why:['Why and what','var(--accent)'],check:['Before you start','var(--amber)'],step:['Step','var(--teal)'],exp:['Expect','var(--ok)'],back:['Rollback','var(--coral)'],keep:['Extra notes','var(--plum)'],hdr:['Section heading','#9aa0a6'],skip:['Leave out','#cfcfcf']};
+// [text, section, why it was guessed]
+let D=[
+ ['Replace a UPS battery','title','first heading'],
+ ['Purpose','hdr','heading word "Purpose"'],
+ ['Swap the battery pack without dropping power to the rack.','why','under "Purpose"'],
+ ['Prerequisites','hdr','heading word "Prerequisites"'],
+ ['• Load under 60%','check','list under "Prerequisites"'],
+ ['• Spare pack on site','check','list under "Prerequisites"'],
+ ['Procedure','hdr','heading word "Procedure"'],
+ ['1. Put the UPS into bypass mode','step','numbered line'],
+ ['Verify: display shows BYPASS','exp','starts with "Verify"'],
+ ['2. Swap the battery pack','step','numbered line'],
+ ['3. Take the UPS out of bypass','step','numbered line'],
+ ['Expected result: display shows ONLINE','exp','starts with "Expected"'],
+ ['Contact facilities if the alarm keeps going','keep','no rule matched'],
+ ['Backout plan','hdr','heading word "Backout"'],
+ ['Put the old pack back','back','under "Backout"'],
+];
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function say(t){$('toast').textContent=t;$('toast').classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>$('toast').classList.remove('on'),2400)}
+function draw(){
+ const S=$('src');S.innerHTML='';
+ D.forEach((d,i)=>{const r=el('div','row'+(d[1]==='skip'?' skip':'')+(d[1]==='hdr'?' head':''));r.style.setProperty('--c',SEC[d[1]][1]);
+  r.append(el('span','t',d[0]));const s=el('select','pick');Object.keys(SEC).forEach(k=>{const o=el('option',null,SEC[k][0]);o.value=k;o.selected=k===d[1];s.append(o)});
+  s.onchange=()=>{d[1]=s.value;d[2]='you chose';draw();say('Moved. Shiftbook will remember this for this template.')};r.append(s,el('span','why',d[2]));S.append(r)});
+ const O=$('out');O.innerHTML='';$('ttl').textContent=(D.find(d=>d[1]==='title')||['Untitled'])[0];
+ const clean=t=>t.replace(/^(\d+\.|•)\s*/,'').replace(/^(Verify|Expected result):\s*/i,'');
+ function sec(k,h,list){const it=D.filter(d=>d[1]===k);if(!it.length)return;const hh=el('h3');const dt=el('span','dot');dt.style.setProperty('--c',SEC[k][1]);hh.append(dt,document.createTextNode(h));O.append(hh);const l=el(list);it.forEach(d=>l.append(el('li',null,clean(d[0]))));O.append(l)}
+ sec('why','Why and what','ul');sec('check','Before you start','ul');
+ const steps=[];D.forEach(d=>{if(d[1]==='step')steps.push([clean(d[0]),[]]);else if(d[1]==='exp'&&steps.length)steps[steps.length-1][1].push(clean(d[0]))});
+ if(steps.length){const hh=el('h3');const dt=el('span','dot');dt.style.setProperty('--c',SEC.step[1]);hh.append(dt,document.createTextNode('Steps'));O.append(hh);const ol=el('ol');steps.forEach(([t,e])=>{const li=el('li',null,t);e.forEach(x=>{li.append(el('br'));li.append(el('span','exp','Expect: '+x))});ol.append(li)});O.append(ol)}
+ sec('back','If it goes wrong','ol');sec('keep','Extra notes','ul');
+}
+$('save').onclick=()=>say('Saved as a MOP. Run it whenever you like.');
+$('exp').onclick=()=>say('Word, PDF, text or .shiftmop. Exports are not encrypted, so Shiftbook warns first.');
+draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>

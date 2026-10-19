@@ -44,6 +44,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "next up list",
         include_str!("../migrations/0003_next_up.sql"),
     ),
+    (4, "notes", include_str!("../migrations/0004_notes.sql")),
 ];
 
 fn migrator() -> Migrator {
@@ -250,6 +251,7 @@ mod tests {
                     "inbox_items",
                     "list_options",
                     "next_up_items",
+                    "notes",
                     "projects",
                     "recurring_tasks",
                     "settings",

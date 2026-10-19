@@ -1,0 +1,93 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:10px;align-items:start}
+@media (max-width:720px){.grid{grid-template-columns:1fr}}
+.search{padding:10px 12px}
+.search input{width:100%;font:inherit;font-size:15px;border:1px solid var(--rule);border-radius:8px;padding:9px 11px;background:#fffef9;outline:0}
+.search input:focus{box-shadow:0 0 0 2px var(--accent)}
+.filters{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;align-items:center}
+.f{border:1px solid var(--rule);background:#fff;border-radius:99px;padding:2px 10px;font:600 12px var(--ui);cursor:pointer;color:var(--ink2)}
+.f[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.arch{margin-left:auto;font-size:12px;color:var(--ink2);display:flex;gap:5px;align-items:center;white-space:nowrap}
+.list{padding:4px}
+.it{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:6px;padding:8px 9px;font:inherit;color:inherit;cursor:pointer;border-left:3px solid var(--c)}
+.it:hover{background:var(--paper2)}.it[aria-current=true]{background:color-mix(in srgb,var(--c) 12%,transparent)}
+.it b{font-weight:600}.it .meta{font-size:11.5px;color:var(--mut)}
+.it .snip{font-size:12.5px;color:var(--ink2);margin-top:2px}
+mark{background:color-mix(in srgb,var(--amber) 45%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+.kind{font:600 10.5px var(--ui);border-radius:99px;padding:0 7px;background:var(--paper2);color:var(--ink2);margin-left:4px}
+.archived{opacity:.75}.archived .kind.a{background:#ececec}
+.view{padding:14px 16px}
+.view h2{font:600 20px/1.2 var(--display);margin:2px 0 4px}
+.view .body{font-size:14px}
+.view .body p{margin:6px 0}
+.links{border-top:1px solid var(--rule);margin-top:12px;padding-top:8px}
+.links span{display:inline-block;font-size:12px;background:var(--paper2);border-radius:99px;padding:1px 9px;margin:3px 4px 0 0}
+.chip{font:600 11.5px var(--mono);background:var(--paper2);border:1px solid var(--rule);border-radius:12px;padding:0 7px}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 11px;font:600 12.5px var(--ui);color:var(--ink);cursor:pointer}
+.row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.empty{padding:12px;color:var(--mut);font-size:13px}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<div class="grid">
+ <div style="display:grid;gap:10px">
+  <div class="paper search">
+   <input id="q" placeholder="Search every note: try “ups”, “docks” or “vlan”" autocomplete="off" value="ups">
+   <div class="filters" id="filters"></div>
+  </div>
+  <div class="paper list" id="list" aria-label="Notes"></div>
+ </div>
+ <div class="paper view" id="view"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const KINDS=['All','Meetings','MOPs','Pages','Daily','From OneNote'];
+const N=[
+ {id:1,k:'Meetings',c:'var(--teal)',t:'Weekly ops sync',d:'Fri 16 Oct',body:['Patching moves to Tuesday nights.','Decision: two-person check on every reboot.','From last time: check UPS battery dates.'],links:['☐ Check UPS battery dates','→ Swap printer drum (task)','INC0045678']},
+ {id:2,k:'MOPs',c:'var(--plum)',t:'Replace a UPS battery',d:'Edited 2 Oct · run 3 times',body:['Purpose: swap the battery pack without dropping the rack.','Pre-check: load under 60%, bypass works.','Rollback: put the old pack back, check the alarm clears.'],links:['Last run Tue 30 Sep · CHG0012345','Project: Server room']},
+ {id:3,k:'Pages',c:'var(--accent)',t:'Guest Wi-Fi notes',d:'Edited 8 Oct',body:['Guest VLAN 40 is isolated from staff.','Password changes on the 1st of each month.'],links:['Project: Network tidy-up']},
+ {id:4,k:'Daily',c:'var(--amber)',t:'Daily note',d:'Thu 15 Oct',body:['Morning: printer tickets. Afternoon: docks for new starters.','Remember the UPS alarm in the comms room beeped twice.'],links:['INC0045690']},
+ {id:5,k:'From OneNote',c:'var(--coral)',t:'Comms room checklist',d:'Imported · OneNote section "Server room"',body:['Check UPS display, aircon temperature and the fire panel.','Old note from 2024, kept as it was.'],links:['Tag: Server room']},
+ {id:6,k:'Meetings',c:'var(--teal)',t:'Weekly ops sync',d:'Fri 2 Oct',archived:true,body:['New starter docks ordered (two short).','Question: who signs off dock orders?'],links:['? Who signs off dock orders']},
+ {id:7,k:'From OneNote',c:'var(--coral)',t:'Old VLAN plan',d:'Imported · archived',archived:true,body:['VLAN 40 was guest, VLAN 41 was cameras.'],links:['Tag: Network']}
+];
+let kind='All',showArch=false,sel=2;
+const $=id=>document.getElementById(id);
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function say(t){$('toast').textContent=t;$('toast').classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>$('toast').classList.remove('on'),2400)}
+function hl(parent,text,q){if(!q){parent.append(text);return}const lo=text.toLowerCase();let i=0,p;while((p=lo.indexOf(q,i))>=0){parent.append(text.slice(i,p));parent.append(el('mark',null,text.slice(p,p+q.length)));i=p+q.length}parent.append(text.slice(i))}
+function drawFilters(){const f=$('filters');f.innerHTML='';KINDS.forEach(k=>{const b=el('button','f',k);b.setAttribute('aria-pressed',k===kind);b.onclick=()=>{kind=k;draw()};f.append(b)});
+ const lab=el('label','arch');const cb=el('input');cb.type='checkbox';cb.checked=showArch;cb.onchange=()=>{showArch=cb.checked;draw()};lab.append(cb,document.createTextNode('Include archived'));f.append(lab)}
+function draw(){
+ drawFilters();const q=$('q').value.toLowerCase().trim();const L=$('list');L.innerHTML='';
+ const hits=N.filter(n=>(kind==='All'||n.k===kind)&&(showArch||!n.archived)&&(!q||(n.t+' '+n.body.join(' ')+' '+n.links.join(' ')).toLowerCase().includes(q)));
+ const hidden=q?N.filter(n=>n.archived&&!showArch&&(kind==='All'||n.k===kind)&&(n.t+' '+n.body.join(' ')).toLowerCase().includes(q)).length:0;
+ if(!hits.length)L.append(el('p','empty','No notes match. '+(hidden?'':'Enter saves it to the Inbox.')));
+ hits.forEach(n=>{const b=el('button','it'+(n.archived?' archived':''));b.style.setProperty('--c',n.c);b.setAttribute('aria-current',n.id===sel);
+  const h=el('div');const bt=el('b');hl(bt,n.t,q);h.append(bt,el('span','kind',n.k));if(n.archived)h.append(el('span','kind a','Archived'));
+  b.append(h,el('div','meta',n.d));
+  if(q){const line=n.body.find(x=>x.toLowerCase().includes(q))||n.links.find(x=>x.toLowerCase().includes(q));if(line){const s=el('div','snip');hl(s,line,q);b.append(s)}}
+  b.onclick=()=>{sel=n.id;draw()};L.append(b)});
+ if(hidden){const p=el('button','f',hidden+' more in archived notes · show');p.style.margin='6px 9px';p.onclick=()=>{showArch=true;draw()};L.append(p)}
+ drawView(q)}
+function drawView(q){const n=N.find(x=>x.id===sel),V=$('view');V.innerHTML='';
+ V.append(el('span','lbl',n.k+' · '+n.d));const h=el('h2');hl(h,n.t,q);V.append(h);
+ const body=el('div','body');n.body.forEach(t=>{const p=el('p');hl(p,t,q);body.append(p)});V.append(body);
+ const lk=el('div','links');lk.append(el('div','lbl','Linked'));n.links.forEach(t=>lk.append(el('span',null,t)));V.append(lk);
+ const row=el('div','row');
+ if(n.k==='MOPs'){const r=el('button','btn','Run it');r.onclick=()=>say('Opens the MOP in Run mode (see the MOP card).');row.append(r)}
+ const a=el('button','btn',n.archived?'Bring back':'Archive');a.onclick=()=>{n.archived=!n.archived;say(n.archived?'Archived. It is out of the way, and Search still finds it.':'Back with your notes.');draw()};row.append(a);
+ const t=el('button','btn','Make a task from this');t.onclick=()=>say('Task made and linked to this note.');row.append(t);
+ V.append(row)}
+$('q').addEventListener('input',draw);draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>

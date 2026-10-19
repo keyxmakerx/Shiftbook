@@ -1,0 +1,84 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--coral:#E0573A;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:14px 16px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+h2{font:600 20px/1.2 var(--display);margin:2px 0 10px}
+.steps{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.steps span{font:600 12px var(--ui);padding:3px 10px;border-radius:99px;background:#fff;color:var(--mut);border:1px solid var(--rule)}
+.steps span.on{background:var(--ink);color:#fff;border-color:var(--ink)}.steps span.ok{color:var(--ok)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media (max-width:640px){.two{grid-template-columns:1fr}}
+.way{border:1px solid var(--rule);border-radius:8px;padding:12px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.way:hover{box-shadow:0 0 0 2px var(--accent)}
+.way b{display:block;font-size:15px;margin-bottom:4px}
+.way p{margin:4px 0;font-size:13px;color:var(--ink2)}
+.how{font-size:12.5px;background:var(--paper2);border-radius:6px;padding:7px 9px;margin-top:6px}
+.tree{border:1px solid var(--rule);border-radius:8px;background:#fff;padding:6px 10px}
+.sec{padding:6px 0;border-top:1px solid var(--rule)}.sec:first-child{border-top:0}
+.sec>div{display:flex;gap:8px;align-items:center}
+.sec label{display:flex;gap:6px;align-items:center;font-weight:600;flex:1}
+.sec small{color:var(--mut);font-size:12px}
+.pages{font-size:12.5px;color:var(--ink2);padding:2px 0 0 26px}
+.facts{display:grid;gap:4px;margin:10px 0;font-size:13px}
+.facts div{display:flex;gap:8px}.facts .ok{color:var(--ok);font-weight:700;width:16px}.facts .no{color:var(--warn);font-weight:700;width:16px}
+.opt{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0;font-size:13px}
+.seg{border:1px solid var(--rule);background:#fff;border-radius:8px;padding:5px 11px;font:600 12.5px var(--ui);cursor:pointer}
+.seg[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:8px 13px;font:600 13px var(--ui);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.paste{border:2px dashed var(--rule);border-radius:8px;padding:12px;background:#fff}
+.paste h4{margin:0 0 4px;font:600 16px var(--display)}
+.todo{display:flex;gap:6px;align-items:center;font-size:13.5px}
+.done{background:#e8f4ee;border-radius:8px;padding:12px;font-size:14px}
+.mut{color:var(--mut);font-size:12.5px}
+</style></head><body>
+<div class="steps" id="steps"></div>
+<div class="paper" id="app"></div>
+<script>
+let step=0,way='word',where='active';
+const SECS=[{n:'Server room',p:['Comms room checklist','UPS battery swap (old)','Aircon contacts'],pics:4,todos:3,on:true},{n:'Network',p:['Old VLAN plan','Guest Wi-Fi','Switch labels','Firewall rules 2024'],pics:6,todos:1,on:true},{n:'Meetings 2024',p:['Ops sync Jan','Ops sync Feb','… 38 more'],count:40,pics:2,todos:22,on:true},{n:'Personal',p:['Shopping','Gift ideas'],pics:0,todos:5,on:false}];
+const $=id=>document.getElementById(id);
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function steps(){const s=$('steps');s.innerHTML='';['1 Choose how','2 Check what comes in','3 Done'].forEach((t,i)=>s.append(el('span',i===step?'on':i<step?'ok':'',(i<step?'✓ ':'')+t)))}
+function s0(A){
+ A.append(el('span','lbl','Bring in notes from OneNote'),el('h2',null,'How do you want to bring them in?'));
+ const two=el('div','two');
+ const a=el('button','way');a.append(el('b',null,'Paste a page'),el('p',null,'Best for a few pages. Copy a page in OneNote and paste it into a new note.'),el('p',null,'Headings, lists, tables, pictures and OneNote to-do boxes come with it.'));a.onclick=()=>{way='paste';step=1;draw()};
+ const b=el('button','way');b.append(el('b',null,'Import whole sections'),el('p',null,'Best for moving everything. In OneNote, export each section as a Word file, then pick the files here.'));
+ const how=el('div','how','In OneNote: File → Export → Section → Word Document (.docx). Do one section at a time, save them in one folder.');b.append(how);b.onclick=()=>{way='word';step=1;draw()};
+ two.append(a,b);A.append(two);
+ A.append(el('p','mut','Everything stays on this computer. Shiftbook never signs in to Microsoft. The exported Word files are readable by anyone, so Shiftbook offers to delete them once imported.'))}
+function s1(A){
+ if(way==='paste'){
+  A.append(el('span','lbl','Paste a page'),el('h2',null,'This is how a pasted page looks'));
+  const p=el('div','paste');p.append(el('h4',null,'Comms room checklist'),el('p','mut','Pasted from OneNote · 16 Oct'));
+  ['Check UPS display','Aircon below 24°C','Fire panel shows normal'].forEach((t,i)=>{const d=el('div','todo');const c=el('input');c.type='checkbox';c.checked=i===0;d.append(c,document.createTextNode(t));p.append(d)});
+  p.append(el('p','mut','📷 floorplan.png kept as a picture you can mark up'));A.append(p);
+  const r=el('div','row');const ok=el('button','btn primary','Keep it');ok.onclick=()=>{step=2;draw()};const bk=el('button','btn','Back');bk.onclick=()=>{step=0;draw()};r.append(ok,bk);A.append(r);return}
+ A.append(el('span','lbl','4 Word files picked'),el('h2',null,'Here’s what will come in'));
+ const t=el('div','tree');
+ SECS.forEach(s=>{const d=el('div','sec');const top=el('div');const lab=el('label');const c=el('input');c.type='checkbox';c.checked=s.on;c.onchange=()=>{s.on=c.checked;draw()};lab.append(c,document.createTextNode(s.n));
+  top.append(lab,el('small',null,(s.count||s.p.length)+' pages · '+s.pics+' pictures · '+s.todos+(s.todos===1?' to-do':' to-dos')));d.append(top,el('div','pages',s.p.join(' · ')));t.append(d)});
+ A.append(t);
+ const on=SECS.filter(s=>s.on);
+ const f=el('div','facts');
+ [['ok','Each page becomes its own note, tagged with its section name ("'+(on[0]?on[0].n:'…')+'")'],['ok','Headings, lists, tables and pictures are kept'],['ok','OneNote to-do boxes become todos you can tick or turn into tasks'],['ok','Ticket numbers become chips, so they link to your logged work'],['no','Handwriting and drawings come in as pictures, not text'],['no','Attached files, audio and video are left out (listed so you can save them)']].forEach(([k,txt])=>{const d=el('div');d.append(el('span',k,k==='ok'?'✓':'!'),el('span',null,txt));f.append(d)});
+ A.append(f);
+ const o=el('div','opt');o.append(el('b',null,'Put them'));
+ [['active','With my notes'],['archive','Straight into the archive']].forEach(([v,l])=>{const b=el('button','seg',l);b.setAttribute('aria-pressed',where===v);b.onclick=()=>{where=v;draw()};o.append(b)});
+ A.append(o,el('p','mut','Either way, search finds every word.'));
+ const r=el('div','row');const go=el('button','btn primary','Import '+on.reduce((n,s)=>n+(s.count||s.p.length),0)+' pages');go.disabled=!on.length;go.onclick=()=>{step=2;draw()};const bk=el('button','btn','Back');bk.onclick=()=>{step=0;draw()};r.append(go,bk);A.append(r)}
+function s2(A){
+ A.append(el('span','lbl','Done'),el('h2',null,way==='paste'?'Page saved as a note':'Your OneNote sections are in'));
+ const d=el('div','done');d.textContent=way==='paste'?'Saved in Notes. Search finds it, and its to-dos show with your other todos.':(where==='archive'?'Imported into the archive. They stay out of the way, and search still finds every word.':'Imported into Notes. Each page is tagged with its section, so "Network" shows all the old network pages.');A.append(d);
+ if(way==='word'){const r=el('div','row');const del=el('button','btn','Delete the exported Word files');const keep=el('button','btn','Keep them');r.append(del,keep);del.onclick=keep.onclick=()=>{step=0;draw()};A.append(r)}
+ else{const r=el('div','row');const again=el('button','btn','Paste another');again.onclick=()=>{step=1;draw()};r.append(again);A.append(r)}}
+function draw(){steps();const A=$('app');A.innerHTML='';[s0,s1,s2][step](A)}
+draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>

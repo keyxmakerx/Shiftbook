@@ -1,0 +1,150 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#69727c;--rule:rgba(29,33,38,.1);
+--accent:#3d5bb0;--warn:#9f5a06;--wash:#fcf1df;--ok:#2e8a5a;--teal:#178F7C;--coral:#E0573A;--plum:#8C4F7A;--amber:#E9A23B;
+--display:Fraunces,Georgia,serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,monospace;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35)}
+html,body{margin:0}body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:12px}
+.try{display:flex;gap:6px;align-items:center;margin-bottom:10px;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.seg{border:1px solid var(--rule);background:#fff;border-radius:8px;padding:6px 12px;font:600 13px var(--ui);cursor:pointer}
+.seg[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.seg small{font-weight:500;opacity:.75}
+.paper{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule)}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.head{display:flex;align-items:center;gap:10px;padding:10px 14px;flex-wrap:wrap;margin-bottom:10px}
+.head h1{font:600 19px/1.2 var(--display);margin:0;flex:1;min-width:150px}
+.pill{font:600 12px var(--ui);background:var(--paper2);border-radius:99px;padding:3px 10px;color:var(--ink2);border:0;cursor:pointer}
+.btn{border:1px solid var(--rule);background:var(--paper);border-radius:8px;padding:6px 12px;font:600 13px var(--ui);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.why{font-size:12.5px;color:var(--ink2);margin:0 0 10px;background:#fff;border-radius:7px;padding:8px 11px;border:1px solid var(--rule)}
+.why b{color:var(--ink)}
+.in{width:100%;font:inherit;font-size:15px;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:#fffef9;outline:0}
+.in:focus{box-shadow:0 0 0 2px var(--accent)}
+.hint{font-size:11.5px;color:var(--mut);margin-top:5px}
+.kbd{font:500 10.5px var(--mono);border:1px solid var(--rule);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink2);background:#fff}
+.tag{display:inline-block;font:600 11px var(--ui);border-radius:99px;padding:0 8px;margin-left:6px;vertical-align:1px}
+.t-todo{background:#e6eefc;color:#2b4a9a}.t-task{background:#e3f4ee;color:#1d6b4d}.t-dec{background:#f3e6f0;color:#7a3c68}.t-q{background:var(--wash);color:var(--warn)}
+.chip{font:600 11.5px var(--mono);background:var(--paper2);border:1px solid var(--rule);border-radius:12px;padding:0 7px}
+.ln{display:flex;gap:8px;align-items:flex-start;padding:3px 6px;border-radius:6px}
+.ln:hover{background:var(--paper2)}
+.ln .mk{width:16px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--mut)}
+.ln .tx{flex:1;min-width:0}
+.ln .acts{display:none;gap:3px}.ln:hover .acts{display:flex}
+.ln .acts button{border:1px solid var(--rule);background:#fff;border-radius:6px;font:600 11px var(--ui);padding:1px 6px;cursor:pointer;color:var(--ink2)}
+.ln.new{animation:nw .9s}@keyframes nw{from{background:color-mix(in srgb,var(--amber) 35%,transparent)}to{background:transparent}}
+.time{font:500 11px var(--mono);color:var(--mut);width:38px;flex:0 0 auto;padding-top:2px}
+.sw{display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--c);flex:0 0 auto}
+/* stream */
+.topicbar{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.tb{border:1px solid var(--rule);background:#fff;border-radius:99px;padding:2px 10px 2px 8px;font:600 12px var(--ui);cursor:pointer;display:inline-flex;gap:6px;align-items:center;color:var(--ink2)}
+.tb[aria-pressed=true]{background:color-mix(in srgb,var(--c) 18%,#fff);border-color:var(--c);color:var(--ink)}
+.stream{padding:10px 12px;display:flex;flex-direction:column;min-height:330px}
+.stream .log{flex:1;display:flex;flex-direction:column;gap:1px;margin-bottom:8px}
+.stream .ln{border-left:3px solid var(--c)}
+.gh{font:600 13px var(--display);margin:8px 0 2px;display:flex;gap:6px;align-items:center}
+.cur{display:flex;gap:6px;align-items:center}
+.cur .now{font:600 12px var(--ui);background:color-mix(in srgb,var(--c) 18%,#fff);border-radius:99px;padding:4px 10px;white-space:nowrap;display:inline-flex;gap:5px;align-items:center}
+/* outline */
+.outline{padding:10px 14px;min-height:330px}
+.blk{margin:2px 0 6px}
+.bh{display:flex;align-items:center;gap:6px;padding:3px 4px;border-radius:6px;cursor:pointer;font-weight:600}
+.bh:hover{background:var(--paper2)}
+.tw{width:16px;color:var(--mut);font-size:11px;text-align:center;transition:transform .2s}
+.blk.shut .tw{transform:rotate(-90deg)}
+.blk.shut .kids{display:none}
+.kids{margin-left:22px;border-left:1px solid var(--rule);padding-left:6px}
+.blk.on>.bh{background:color-mix(in srgb,var(--c) 14%,transparent)}
+.cnt{font:500 11px var(--mono);color:var(--mut);font-weight:500}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;align-items:start}
+.card{background:var(--paper);border-radius:7px;box-shadow:var(--shadow),inset 0 0 0 1px var(--rule);padding:10px 12px;border-top:4px solid var(--c);cursor:pointer;transition:transform .25s,box-shadow .25s}
+.card:hover{transform:translateY(-2px)}
+.card.on{grid-column:1/-1;cursor:default;transform:none}
+.card h3{font:600 15px var(--display);margin:0 0 4px;display:flex;justify-content:space-between;gap:8px}
+.card .more{font-size:12px;color:var(--mut)}
+.card.add{display:flex;align-items:center;justify-content:center;min-height:90px;color:var(--mut);border-top-color:var(--rule);font-weight:600}
+.sum{position:fixed;inset:0;background:rgba(29,33,38,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.sum.on{display:flex}.sum .paper{max-width:500px;width:100%;padding:16px 18px;max-height:90vh;overflow:auto}
+.sum h2{font:600 19px var(--display);margin:2px 0 8px}.sum h3{font-size:12.5px;margin:10px 0 3px;color:var(--ink2)}
+.sum ul{margin:0;padding-left:18px}.sum li{cursor:pointer}.sum li:hover{text-decoration:underline}
+.toast{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:6}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style></head><body>
+<div class="try"><b>Compare:</b>
+<button class="seg" data-v="stream" aria-pressed="true">A · Running log <small>like a chat</small></button>
+<button class="seg" data-v="outline" aria-pressed="false">B · Outline <small>like Logseq</small></button>
+<button class="seg" data-v="cards" aria-pressed="false">C · Topic cards <small>like sticky notes</small></button>
+</div>
+<p class="why" id="why"></p>
+<div class="paper head">
+  <h1>Weekly ops sync</h1>
+  <button class="pill" id="count" title="What came out of it so far"></button>
+  <span class="pill" style="cursor:default">⏱ 0:24</span>
+  <button class="btn primary" id="wrap">Wrap up</button>
+</div>
+<div id="main"></div>
+<div class="sum" id="sum"><div class="paper" role="dialog"><span class="lbl">What came out of it</span><h2>Weekly ops sync</h2><div id="sumb"></div>
+<div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap"><button class="btn primary" id="logit">Log 30m to Meetings</button><button class="btn" id="close">Back</button></div>
+<p class="hint">Click any item to jump back to where it was said. Open todos and questions show at the start of the next Weekly ops sync.</p></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const WHY={
+ stream:'<b>A · Running log.</b> One box at the bottom, lines stack up like a chat, each stamped with the time. Whatever topic is lit is where the line goes. Type <code>#</code> and a name to switch topics (new or old), or click a topic. Flip to <b>By topic</b> afterwards to read it tidy. Closest to how scattered meetings really go; seen in chat apps and "interstitial journaling".',
+ outline:'<b>B · Outline.</b> One page of bullets, like Logseq, Workflowy or OneNote outlines. Each topic is a heading bullet you can fold away. Click a topic (or <span class="kbd">Alt ↑</span> <span class="kbd">Alt ↓</span>) and the typing box moves under it. Reads like a normal document afterwards.',
+ cards:'<b>C · Topic cards.</b> Each topic is a coloured paper card on the desk, like sticky notes or Heptabase. The one you are in opens wide; the rest shrink to their last lines. Click a card to go back to it. Matches the Canvas you already chose, and a meeting can be dropped onto the Canvas later.'};
+const COL=['var(--teal)','var(--coral)','var(--plum)','var(--accent)','var(--amber)','#4f8a2e'];
+const KIND={todo:['☐','t-todo','Todo'],task:['→','t-task','Task'],dec:['!','t-dec','Decision'],q:['?','t-q','Question'],note:['•','','']};
+let T=[{n:'Patching window'},{n:'New starter laptops'},{n:'Printer tickets'}];
+let L=[{tp:0,k:'note',t:'Patching moves to Tuesday nights next month',at:'10:02'},{tp:0,k:'dec',t:'Two-person check on every reboot',at:'10:04'},{tp:1,k:'note',t:'Five laptops next week, two docks missing',at:'10:07'},{tp:1,k:'q',t:'Who signs off the dock order?',at:'10:08'},{tp:0,k:'todo',t:'Update the patching MOP',at:'10:11'},{tp:2,k:'note',t:'INC0045678 and INC0045690 same printer model',at:'10:14'},{tp:2,k:'task',t:'Swap the 2nd floor printer drum',at:'10:15',due:'Tue'}];
+let view='stream',cur=2,grouped=false,clock=16,lastNew=-1;const shut={};
+const $=id=>document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e}
+function say(t){$('toast').textContent=t;$('toast').classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>$('toast').classList.remove('on'),2400)}
+function chips(p,s){s.split(/(\b(?:INC|CHG|REQ|RITM)\d{5,}\b)/).forEach((x,i)=>p.append(i%2?el('span','chip',x):document.createTextNode(x)))}
+function sw(i){const s=el('span','sw');s.style.setProperty('--c',COL[i%COL.length]);return s}
+function line(i,withTime){const l=L[i],r=el('div','ln'+(i===lastNew?' new':''));r.dataset.i=i;r.style.setProperty('--c',COL[l.tp%COL.length]);
+ if(withTime)r.append(el('span','time',l.at));r.append(el('span','mk',KIND[l.k][0]));const tx=el('span','tx');chips(tx,l.t);
+ if(l.k!=='note')tx.append(el('span','tag '+KIND[l.k][1],KIND[l.k][2]+(l.due?' · '+l.due:'')));r.append(tx);
+ const a=el('span','acts');[['todo','Todo'],['task','Task'],['dec','Decision'],['note','Plain']].forEach(([k,lab])=>{if(l.k===k)return;const b=el('button',null,lab);b.onclick=e=>{e.stopPropagation();l.k=k;if(k==='task'){l.due='Fri';say('Task made, due Friday. It shows on the Desk.')}lastNew=i;draw()};a.append(b)});r.append(a);return r}
+function parse(v){v=v.trim();if(!v)return null;
+ if(v.startsWith('#')){const name=v.replace(/^#+\s*/,'');if(!name)return null;let i=T.findIndex(t=>t.n.toLowerCase().startsWith(name.toLowerCase()));
+  if(i<0){T.push({n:name});i=T.length-1;say('New topic: '+name)}else say('Back to '+T[i].n);cur=i;return 'switch'}
+ let k='note';if(/^\[\s?\]/.test(v)){k='todo';v=v.replace(/^\[\s?\]\s*/,'')}else if(v.startsWith('!')){k='dec';v=v.slice(1).trim()}else if(v.startsWith('?')){k='q';v=v.slice(1).trim()}else if(/\?$/.test(v))k='q';
+ clock++;L.push({tp:cur,k,t:v,at:'10:'+String(clock).padStart(2,'0')});lastNew=L.length-1;return 'line'}
+function box(ph){const w=el('div');const i=el('input','in');i.id='box';i.autocomplete='off';i.placeholder=ph;
+ i.onkeydown=e=>{if(e.key==='Enter'){const r=parse(i.value);i.value='';if(r){draw();$('box').focus()}e.preventDefault()}};
+ const h=el('div','hint');h.innerHTML='<b>#name</b> switch or start a topic · <b>[]</b> todo · <b>!</b> decision · <b>?</b> question · point at a line to change it';w.append(i,h);return w}
+function stream(M){const p=el('div','paper stream');
+ const bar=el('div','topicbar');T.forEach((t,i)=>{const b=el('button','tb');b.style.setProperty('--c',COL[i%COL.length]);b.setAttribute('aria-pressed',i===cur);b.append(sw(i),document.createTextNode(t.n));b.onclick=()=>{cur=i;draw();$('box').focus()};bar.append(b)});
+ const g=el('button','tb',grouped?'As it happened':'By topic');g.style.marginLeft='auto';g.onclick=()=>{grouped=!grouped;draw()};bar.append(g);p.append(bar);
+ const log=el('div','log');
+ if(grouped)T.forEach((t,ti)=>{const h=el('div','gh');h.append(sw(ti),document.createTextNode(t.n));log.append(h);L.forEach((l,i)=>{if(l.tp===ti)log.append(line(i,true))})});
+ else L.forEach((l,i)=>log.append(line(i,true)));
+ p.append(log);const c=el('div','cur');const now=el('span','now');now.style.setProperty('--c',COL[cur%COL.length]);now.append(sw(cur),document.createTextNode(T[cur].n));
+ const b=box('Type a note, Enter to add');b.style.flex='1';c.append(now,b);c.style.alignItems='flex-start';p.append(c);M.append(p)}
+function outline(M){const p=el('div','paper outline');
+ T.forEach((t,ti)=>{const b=el('div','blk'+(shut[ti]?' shut':'')+(ti===cur?' on':''));b.style.setProperty('--c',COL[ti%COL.length]);
+  const h=el('div','bh');const tw=el('span','tw','▾');tw.onclick=e=>{e.stopPropagation();shut[ti]=!shut[ti];draw()};
+  const n=L.filter(l=>l.tp===ti).length;h.append(tw,sw(ti),document.createTextNode(t.n),el('span','cnt',shut[ti]?' · '+n+' lines':''));h.onclick=()=>{cur=ti;shut[ti]=false;draw();$('box').focus()};
+  const k=el('div','kids');L.forEach((l,i)=>{if(l.tp===ti)k.append(line(i,false))});if(ti===cur)k.append(box('Type under "'+t.n+'", Enter to add'));
+  b.append(h,k);p.append(b)});
+ const add=el('button','btn','+ Topic');add.onclick=()=>{T.push({n:'New topic'});cur=T.length-1;draw();$('box').focus()};p.append(add);M.append(p)}
+function cards(M){const g=el('div','cards');
+ const order=T.map((_,i)=>i).sort((a,b)=>(a===cur?-1:b===cur?1:0));
+ order.forEach(ti=>{const c=el('div','card'+(ti===cur?' on':''));c.style.setProperty('--c',COL[ti%COL.length]);const ls=L.map((l,i)=>[l,i]).filter(([l])=>l.tp===ti);
+  const h=el('h3');h.append(document.createTextNode(T[ti].n),el('span','cnt',ls.length+''));c.append(h);
+  const show=ti===cur?ls:ls.slice(-2);if(ti!==cur&&ls.length>2)c.append(el('div','more','… '+(ls.length-2)+' earlier'));
+  show.forEach(([,i])=>c.append(line(i,false)));
+  if(ti===cur)c.append(box('Type into this card, Enter to add'));else c.onclick=()=>{cur=ti;draw();$('box').focus()};g.append(c)});
+ const a=el('div','card add','+ New topic card');a.onclick=()=>{T.push({n:'New topic'});cur=T.length-1;draw();$('box').focus()};g.append(a);M.append(g)}
+function draw(){const M=$('main');M.innerHTML='';({stream,outline,cards})[view](M);$('why').innerHTML=WHY[view];
+ const c={todo:0,task:0,dec:0,q:0};L.forEach(l=>{if(l.k in c)c[l.k]++});$('count').textContent=c.todo+' todos · '+c.task+' task · '+c.dec+' decision · '+c.q+' question';
+ document.querySelectorAll('.seg').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===view))}
+function summary(){const s=$('sumb');s.innerHTML='';[['todo','Todos'],['task','Tasks'],['dec','Decisions'],['q','Still open']].forEach(([k,h])=>{const it=L.map((l,i)=>[l,i]).filter(([l])=>l.k===k);if(!it.length)return;s.append(el('h3',null,h));const ul=el('ul');it.forEach(([l])=>{const li=el('li',null,l.t+' ('+T[l.tp].n+')');li.onclick=()=>{cur=l.tp;$('sum').classList.remove('on');draw()};ul.append(li)});s.append(ul)});$('sum').classList.add('on')}
+$('count').onclick=summary;$('wrap').onclick=summary;$('close').onclick=()=>$('sum').classList.remove('on');$('logit').onclick=()=>{$('sum').classList.remove('on');say('Logged 30m to Meetings.')};
+document.querySelectorAll('.seg').forEach(b=>b.onclick=()=>{view=b.dataset.v;lastNew=-1;draw()});
+document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowUp'){cur=Math.max(0,cur-1);draw();$('box').focus();e.preventDefault()}if(e.altKey&&e.key==='ArrowDown'){cur=Math.min(T.length-1,cur+1);draw();$('box').focus();e.preventDefault()}});
+draw();
+;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()
+</script></body></html>
