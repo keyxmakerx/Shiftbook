@@ -2,9 +2,11 @@
 //!
 //! The card shows after an unlock, after a break of [`BREAK_MINUTES`] or more, or when
 //! the day changes while Shiftbook is open; never in the middle of work. It offers the
-//! open "next up" list from the wrap-up first, and otherwise the last thing logged.
+//! open "next up" list first (things brought up for today, then the wrap-up list), and
+//! otherwise the last thing logged.
 
 use serde::Serialize;
+use time::Date;
 
 use crate::model::{NextUpItem, TimeEntry};
 
@@ -49,7 +51,8 @@ pub fn resume_due(trigger: ResumeTrigger, away_minutes: i64) -> bool {
 /// What to pick up.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResumeStart<'a> {
-    /// The open items of the wrap-up list, in order; the first is where to start.
+    /// The open items brought up for today, then the wrap-up list's; the first is where
+    /// to start.
     List(Vec<&'a NextUpItem>),
     /// The last entry logged.
     Entry(&'a TimeEntry),
@@ -57,18 +60,22 @@ pub enum ResumeStart<'a> {
 
 /// The open "next up" items when there are any, otherwise the most recently logged
 /// live entry that isn't the tray's roll-up (latest day first, then latest change).
+/// Things brought up from a card count from their day on (`show_from` on or before
+/// `today`), oldest first, ahead of the wrap-up list in its order.
 /// `entries` pairs each entry with whether it is the tray's roll-up. `None` when there
 /// is nothing to pick up, so the card stays away.
 pub fn resume_start<'a>(
     next_up: &'a [NextUpItem],
+    today: Date,
     entries: &'a [(TimeEntry, bool)],
 ) -> Option<ResumeStart<'a>> {
     let mut open: Vec<&NextUpItem> = next_up
         .iter()
         .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
+        .filter(|i| i.show_from.is_none_or(|d| d <= today))
         .collect();
     if !open.is_empty() {
-        open.sort_by_key(|i| i.position);
+        open.sort_by_key(|i| (i.show_from.is_none(), i.show_from, i.position, i.created_at));
         return Some(ResumeStart::List(open));
     }
     entries
@@ -94,6 +101,8 @@ mod tests {
             owner_id: OwnerId::new(),
             position,
             text: text.into(),
+            show_from: None,
+            about: None,
             done_at: done.then_some(datetime!(2026-10-16 09:00 UTC)),
             created_at: datetime!(2026-10-15 17:00 UTC),
             updated_at: datetime!(2026-10-15 17:00 UTC),
@@ -146,13 +155,43 @@ mod tests {
             ),
             false,
         )];
-        match resume_start(&list, &entries) {
+        match resume_start(&list, date!(2026 - 10 - 16), &entries) {
             Some(ResumeStart::List(open)) => {
                 let texts: Vec<&str> = open.iter().map(|i| i.text.as_str()).collect();
                 assert_eq!(texts, ["Chase the printer tickets", "Renew certs"]);
             }
             other => panic!("expected the list, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn things_brought_up_come_first_from_their_day() {
+        let mut friday = item(0, "call vendor about the spare PSU", false);
+        friday.show_from = Some(date!(2026 - 10 - 16));
+        let mut monday = item(0, "renew wildcard cert", false);
+        monday.show_from = Some(date!(2026 - 10 - 19));
+        let list = [item(0, "Chase the printer tickets", false), monday, friday];
+        let texts = |today| -> Vec<String> {
+            match resume_start(&list, today, &[]) {
+                Some(ResumeStart::List(open)) => open.iter().map(|i| i.text.clone()).collect(),
+                other => panic!("expected the list, got {other:?}"),
+            }
+        };
+        assert_eq!(
+            texts(date!(2026 - 10 - 16)),
+            [
+                "call vendor about the spare PSU",
+                "Chase the printer tickets"
+            ]
+        );
+        assert_eq!(
+            texts(date!(2026 - 10 - 19)),
+            [
+                "call vendor about the spare PSU",
+                "renew wildcard cert",
+                "Chase the printer tickets"
+            ]
+        );
     }
 
     #[test]
@@ -199,7 +238,7 @@ mod tests {
             ),
             (deleted, false),
         ];
-        match resume_start(&done, &entries) {
+        match resume_start(&done, date!(2026 - 10 - 16), &entries) {
             Some(ResumeStart::Entry(e)) => assert_eq!(e.description, "Latest today"),
             other => panic!("expected an entry, got {other:?}"),
         }
@@ -207,7 +246,7 @@ mod tests {
 
     #[test]
     fn nothing_to_pick_up_means_no_card() {
-        assert_eq!(resume_start(&[], &[]), None);
+        assert_eq!(resume_start(&[], date!(2026 - 10 - 16), &[]), None);
         let tray_only = [(
             entry(
                 date!(2026 - 10 - 16),
@@ -216,6 +255,6 @@ mod tests {
             ),
             true,
         )];
-        assert_eq!(resume_start(&[], &tray_only), None);
+        assert_eq!(resume_start(&[], date!(2026 - 10 - 16), &tray_only), None);
     }
 }

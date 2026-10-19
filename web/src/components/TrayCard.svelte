@@ -1,26 +1,24 @@
 <script lang="ts">
-  // The Done tickets tray: paste tickets as you finish them through the day. Each one adds
-  // its minutes (15 by default, change with the stepper) and they all roll up into the
-  // day's "Tickets" entry (the rule lives in crates/core/src/tray.rs).
+  // The Tickets tray: paste tickets as you work on them through the day. Each one adds its
+  // minutes (15 by default, change with the stepper). A tick means done; untick one to keep
+  // it open and it comes back each day until it is ticked. Tickets without a project roll up
+  // into the day's "Tickets" entry, the others into their project's (rules in
+  // crates/core/src/tray.rs). Click a ticket for its notepad and options.
   import { api } from '../lib/api';
-  import type { TrayDay, TrayItem } from '../lib/api';
-  import { fmtMinutes } from '../lib/format';
-  import { openMenu, paperMenu, type MenuSpec } from '../lib/menu.svelte';
+  import type { TrayItem } from '../lib/api';
+  import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
+  import { openMenu, paperMenu } from '../lib/menu.svelte';
+  import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, refresh, setView } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
+  import ItemPanel from './ItemPanel.svelte';
   import TicketChip from './TicketChip.svelte';
 
   const STEP = 5;
   let text = $state('');
-
-  async function apply(result: TrayDay | undefined) {
-    if (!result) return;
-    app.tray = result;
-    await refresh();
-    if (result.entryId) flashEntry(result.entryId);
-  }
 
   async function add(pasted: string) {
     if (!pasted.trim()) return;
@@ -29,30 +27,33 @@
     if (!result) return;
     text = '';
     const added = result.items.length - before;
-    await apply(result);
+    await applyTray(result);
     toast(added > 0 ? `Added ${added} ticket${added === 1 ? '' : 's'} to the tray` : 'Those tickets are already in the tray.');
   }
 
   async function step(item: TrayItem, by: number) {
     const next = Math.max(0, Math.min(480, item.minutes + by));
     if (next === item.minutes) return;
-    await apply(await attempt(() => api.traySetMinutes(item.id, next)));
+    await applyTray(await attempt(() => api.traySetMinutes(item.id, next)));
   }
 
-  // A few words about a ticket, saved when you leave the box or press Enter.
+  // A one-line note is typed right in the row and saved when you leave the box or press
+  // Enter; a longer one lives in the notepad under the ticket.
   async function saveNote(item: TrayItem, text: string) {
     if (text.trim() === (item.note ?? '')) return;
     const result = await attempt(() => api.traySetNote(item.id, text));
     if (result) app.tray = result;
   }
 
-  async function remove(item: TrayItem) {
-    const result = await attempt(() => api.trayRemove(item.id));
-    if (!result) return;
-    await apply(result);
-    toast(`Took ${item.ticket} out of the tray`, 'Undo', () => {
-      void attempt(() => api.trayRestore(item.id)).then(apply);
-    });
+  const oneLine = (note: string | null) => !note || !note.includes('\n');
+
+  const keyOf = (item: TrayItem) => `tray:${item.id}`;
+  const isOpen = (item: TrayItem) => panel.open === keyOf(item);
+  const toggle = (item: TrayItem, focus = false) => togglePanel(keyOf(item), focus);
+
+  function rowClick(e: MouseEvent, item: TrayItem) {
+    if ((e.target as HTMLElement).closest('input, button, a')) return;
+    toggle(item);
   }
 
   // Saved responses: a quick menu of messages to paste into tickets. Picking one copies it;
@@ -80,37 +81,12 @@
     });
   }
 
-  function itemMenu(item: TrayItem): MenuSpec {
-    return {
-      sections: [
-        {
-          head: `${item.ticket} · ${fmtMinutes(item.minutes)}`,
-          items: [
-            { label: `Add ${STEP} minutes`, icon: 'plus', side: true, act: () => void step(item, STEP) },
-            { label: `Take away ${STEP} minutes`, icon: 'minus', side: true, act: () => void step(item, -STEP) },
-            {
-              label: 'Copy ticket number',
-              icon: 'copy',
-              top: true,
-              act: () => void copyText(item.ticket).then((ok) => toast(ok ? `Copied ${item.ticket}` : "Couldn't copy here.")),
-            },
-            ...item.links.map((l) => ({
-              label: `Copy ${l.fieldName} link`,
-              icon: 'link' as const,
-              top: true,
-              act: () => void copyText(l.url).then((ok) => toast(ok ? 'Copied the link' : "Couldn't copy here.")),
-            })),
-          ],
-        },
-        { items: [{ label: 'Take out of the tray', icon: 'trash', danger: true, side: true, act: () => void remove(item) }] },
-      ],
-    };
-  }
+  const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item)));
 </script>
 
 <article class="paper card">
   <h3>
-    <span class="title"><Icon name="tray" size={16} /> Done tickets</span>
+    <span class="title"><Icon name="tray" size={16} /> Tickets</span>
     <span class="right">
       <button
         type="button"
@@ -124,14 +100,14 @@
       <span class="total mono">{app.tray?.hours ?? '0'} h</span>
     </span>
   </h3>
-  <p class="hint">Paste tickets as you finish them. They add up to one “Tickets” entry for the day.</p>
+  <p class="hint">Paste tickets as you work on them. Untick one that isn't finished: it comes back tomorrow.</p>
   <input
     class="text-in"
     bind:value={text}
     placeholder="Paste one or many tickets, then Enter"
     autocomplete="off"
     spellcheck="false"
-    aria-label="Add finished tickets"
+    aria-label="Add tickets"
     onkeydown={(e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -149,27 +125,53 @@
   {#if app.tray && app.tray.items.length > 0}
     <ul class="items">
       {#each app.tray.items as item, i (item.id)}
-        <li class="item rise" style:--i={i} use:paperMenu={() => itemMenu(item)} tabindex="-1">
+        {@const project = projectById(item.projectId)}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+        <li
+          class="item rise"
+          class:still={!item.done}
+          class:opened={isOpen(item)}
+          style:--i={i}
+          use:paperMenu={() => menuFor(item)}
+          tabindex="-1"
+          onclick={(e) => rowClick(e, item)}
+        >
+          <button
+            type="button"
+            class="tick"
+            class:done={item.done}
+            title={item.done ? 'Done. Click if it is still open.' : 'Still open. Click when it is done.'}
+            aria-label={item.done ? `${item.ticket} is done; mark it still open` : `${item.ticket} is still open; mark it done`}
+            aria-pressed={item.done}
+            onclick={() => void setTrayDone(item, !item.done)}
+          >
+            {#if item.done}<Icon name="check" size={12} />{/if}
+          </button>
           <TicketChip
             number={item.ticket}
             links={item.links}
-            color="var(--accent)"
-            onRemove={() => void remove(item)}
+            color={project ? projectColor(item.projectId) : 'var(--accent)'}
+            onRemove={() => void removeTray(item)}
             removeLabel="Take out of the tray"
           />
-          <input
-            class="note"
-            value={item.note ?? ''}
-            title={item.note ?? ''}
-            maxlength="300"
-            placeholder="A few words…"
-            autocomplete="off"
-            aria-label="Note about {item.ticket}"
-            onchange={(e) => void saveNote(item, (e.currentTarget as HTMLInputElement).value)}
-            onkeydown={(e) => {
-              if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
-            }}
-          />
+          {#if oneLine(item.note)}
+            <input
+              class="note"
+              value={item.note ?? ''}
+              title={item.note ?? ''}
+              placeholder={item.done ? 'A few words…' : 'Still open: what is left?'}
+              autocomplete="off"
+              aria-label="Note about {item.ticket}"
+              onchange={(e) => void saveNote(item, (e.currentTarget as HTMLInputElement).value)}
+              onkeydown={(e) => {
+                if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur();
+              }}
+            />
+          {:else}
+            <button type="button" class="note more" title="Open the notepad" onclick={() => toggle(item, true)}>
+              {item.note?.split('\n')[0]} …
+            </button>
+          {/if}
           <span class="added">+{fmtMinutes(item.minutes)}</span>
           <span class="stepper" role="group" aria-label="Minutes for {item.ticket}">
             <button type="button" aria-label="{STEP} minutes less" onclick={() => step(item, -STEP)} disabled={item.minutes === 0}>
@@ -180,19 +182,62 @@
               <Icon name="plus" size={13} />
             </button>
           </span>
-          <button type="button" class="x" aria-label="Take {item.ticket} out of the tray" onclick={() => remove(item)}>
-            <Icon name="x" size={14} />
+          <button type="button" class="x" aria-label="Notepad and options for {item.ticket}" aria-expanded={isOpen(item)} onclick={() => toggle(item)}>
+            <Icon name="more" size={14} />
           </button>
+          {#if !item.done || project}
+            <span class="tags">
+              {#if !item.done}<span class="tag open">Still open</span>{/if}
+              {#if project}<span class="tag" style:--c={projectColor(item.projectId)}>{project.name}</span>{/if}
+            </span>
+          {/if}
         </li>
+        {#if isOpen(item)}
+          <li class="under">
+            <ItemPanel tray={item} menu={() => menuFor(item)} focusPad={panel.focusPad} onclose={closePanel} />
+          </li>
+        {/if}
       {/each}
     </ul>
   {:else}
     <p class="empty-note">Nothing in the tray yet for this day.</p>
   {/if}
+  {#if app.tray && app.tray.carried.length > 0}
+    <div class="carried">
+      <span class="lbl">Still open from before</span>
+      <ul class="items">
+        {#each app.tray.carried as item (item.id)}
+          <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+          <li class="item still" class:opened={isOpen(item)} use:paperMenu={() => menuFor(item)} tabindex="-1" onclick={(e) => rowClick(e, item)}>
+            <button
+              type="button"
+              class="tick"
+              title="Still open. Click when it is done."
+              aria-label="{item.ticket} is still open; mark it done"
+              aria-pressed="false"
+              onclick={() => void setTrayDone(item, true)}
+            ></button>
+            <TicketChip number={item.ticket} links={item.links} color="var(--warn)" />
+            <span class="note faint" title={item.note ?? ''}>{item.note?.split('\n')[0] ?? ''}</span>
+            <span class="since">{weekdayShort(item.date)} {dayMonth(item.date)}</span>
+            <button type="button" class="today" title="Worked on it again: add it to this day with 15 minutes" onclick={() => void carryTray(item)}>
+              <Icon name="plus" size={12} /> {app.selected === app.today ? 'Today' : 'This day'}
+            </button>
+          </li>
+          {#if isOpen(item)}
+            <li class="under">
+              <ItemPanel tray={item} menu={() => menuFor(item)} focusPad={panel.focusPad} onclose={closePanel} />
+            </li>
+          {/if}
+        {/each}
+      </ul>
+    </div>
+  {/if}
 </article>
 
 <style>
   .card {
+    container-type: inline-size;
     padding: 14px 16px;
     display: flex;
     flex-direction: column;
@@ -259,7 +304,8 @@
 
   .item {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto auto;
+    cursor: pointer;
     align-items: center;
     gap: 8px;
     padding: 5px 4px;
@@ -270,6 +316,147 @@
 
   .item:first-child {
     border-top: 0;
+  }
+
+  .item.opened {
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    border-radius: 6px 6px 0 0;
+  }
+
+  .under {
+    margin: -2px 0 6px;
+  }
+
+  .tick {
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 50%;
+    border: 2px dashed var(--warn);
+    background: none;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  .tick.done {
+    border: 2px solid var(--ok);
+    background: var(--ok);
+  }
+
+  .tick:hover {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent);
+  }
+
+  .tags {
+    grid-column: 3 / -1;
+    display: flex;
+    gap: 6px;
+    margin-top: -2px;
+  }
+
+  .tag {
+    white-space: nowrap;
+    font: 700 10px var(--ui);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 5px;
+    color: var(--c, var(--ink-2));
+    background: color-mix(in srgb, var(--c, var(--ink)) 10%, transparent);
+  }
+
+  .tag.open {
+    color: var(--warn);
+    background: var(--warn-wash);
+  }
+
+  .note.more {
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+  }
+
+  .note.faint {
+    color: var(--mut);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .carried {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 6px;
+    border-top: 1px dashed color-mix(in srgb, var(--warn) 45%, transparent);
+  }
+
+  .carried .item {
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  }
+
+  .lbl {
+    font: 700 10px var(--ui);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--warn);
+  }
+
+  .since {
+    font-size: 11.5px;
+    color: var(--mut);
+    white-space: nowrap;
+  }
+
+  /* In the Desk's side panel: tick, ticket, stepper and options on one line, the note under them. */
+  @container (max-width: 380px) {
+    .added,
+    .since {
+      display: none;
+    }
+
+    .item,
+    .carried .item {
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+      gap: 2px 6px;
+    }
+
+    .item :global(.chip) {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .note {
+      grid-column: 2 / -1;
+      grid-row: 2;
+      padding: 2px 7px;
+    }
+
+    .tags {
+      grid-column: 2 / -1;
+      grid-row: 3;
+    }
+  }
+
+  .today {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: 600 12px var(--ui);
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 7px;
+    padding: 3px 8px;
+    cursor: pointer;
+  }
+
+  .today:hover {
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
   }
 
   .item :global(.chip) {

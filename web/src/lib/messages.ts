@@ -14,7 +14,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   not_found: 'That item no longer exists. It may have been removed.',
   duplicate: 'That name is already used. Pick a different one.',
   tray_managed:
-    "This entry's time and tickets come from the Done tickets tray. Change them in the tray.",
+    "This entry's time and tickets come from the Tickets tray. Change them in the tray.",
   not_allowed: "That isn't allowed right now.",
   backup_invalid: "That isn't a Shiftbook backup, or the file is damaged. Try another backup.",
   backup_needs_secret:

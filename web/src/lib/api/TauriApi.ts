@@ -137,6 +137,9 @@ export class TauriApi implements DataApi {
   updateEntry(id: string, input: EntryInput): Promise<Entry> {
     return call('update_entry', { id, input });
   }
+  setEntryNotes(id: string, notes: string): Promise<Entry> {
+    return call('set_entry_notes', { id, notes });
+  }
   addEntryMinutes(id: string, delta: number): Promise<Entry> {
     return call('add_entry_minutes', { id, delta });
   }
@@ -174,6 +177,15 @@ export class TauriApi implements DataApi {
   }
   traySetNote(id: string, note: string): Promise<TrayDay> {
     return call('tray_set_note', { id, note });
+  }
+  traySetDone(id: string, done: boolean): Promise<TrayDay> {
+    return call('tray_set_done', { id, done });
+  }
+  traySetProject(id: string, projectId: string | null): Promise<TrayDay> {
+    return call('tray_set_project', { id, projectId });
+  }
+  trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
+    return call('tray_carry', { id, date });
   }
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });
@@ -265,6 +277,9 @@ export class TauriApi implements DataApi {
   }
   setNextUp(items: string[]): Promise<NextUpItem[]> {
     return call('set_next_up', { items });
+  }
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem> {
+    return call('bring_up', { today, kind, id, title });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });

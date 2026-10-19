@@ -50,6 +50,8 @@ const ICONS = {
     'M4.9 19.1l1.4-1.4',
     'M17.7 6.3l1.4-1.4',
   ],
+  more: ['M5 12h.01', 'M12 12h.01', 'M19 12h.01'],
+  play: ['M8 5l11 7-11 7z'],
 } as const;
 
 export type IconName = keyof typeof ICONS;

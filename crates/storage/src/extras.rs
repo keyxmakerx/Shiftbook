@@ -3,6 +3,7 @@
 //!
 //! Owner-scoped, bound parameters only, soft deletes.
 
+use shiftbook_core::canvas::CardKind;
 use shiftbook_core::dates::{format_date, parse_date};
 use shiftbook_core::fields::{
     join_options, parse_options, validate_field, validate_value, AppliesTo, FieldKind,
@@ -15,7 +16,7 @@ use shiftbook_core::model::{
     CategoryCodeDefault, CustomField, CustomValue, InboxItem, NextUpItem, SavedResponse,
     TimesheetCode, TimesheetTick,
 };
-use shiftbook_core::nextup::clean_next_up;
+use shiftbook_core::nextup::{bring_up_text, clean_next_up};
 use shiftbook_core::prefs::{prefs_from_settings, validate_pref, Prefs};
 use shiftbook_core::responses::{clean_responses, ResponseDraft};
 use shiftbook_core::validate::{
@@ -258,6 +259,22 @@ fn next_up_from_row(row: &SqliteRow) -> Result<NextUpItem> {
         owner_id: OwnerId::from_uuid(parse_uuid(row.try_get("owner_id")?)?),
         position: u32::try_from(row.try_get::<i64, _>("position")?).unwrap_or(0),
         text: row.try_get("text")?,
+        show_from: row
+            .try_get::<Option<String>, _>("show_from")?
+            .as_deref()
+            .map(|d| parse_date(d).map_err(|_| StorageError::Corrupt("date")))
+            .transpose()?,
+        about: match (
+            row.try_get::<Option<String>, _>("about_kind")?,
+            row.try_get::<Option<String>, _>("about_id")?,
+        ) {
+            (Some(kind), Some(id)) => Some((
+                kind.parse()
+                    .map_err(|_| StorageError::Corrupt("card kind"))?,
+                parse_uuid(&id)?,
+            )),
+            _ => None,
+        },
         done_at: parse_opt_ts(row.try_get("done_at")?)?,
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
@@ -780,16 +797,75 @@ impl SqliteStore {
 
     // ---------- next up ----------
 
-    /// The live "next up" list, in order.
+    /// The live wrap-up list, in order (without the things brought up from cards).
     pub async fn next_up(&self, owner: OwnerId) -> Result<Vec<NextUpItem>> {
+        Ok(self
+            .next_up_all(owner)
+            .await?
+            .into_iter()
+            .filter(|i| i.show_from.is_none())
+            .collect())
+    }
+
+    /// Everything live on the list: the wrap-up's and the things brought up from cards
+    /// (see `shiftbook_core::resume::resume_start` for which show when).
+    pub async fn next_up_all(&self, owner: OwnerId) -> Result<Vec<NextUpItem>> {
         let rows = sqlx::query(
-            "SELECT id, owner_id, position, text, done_at, created_at, updated_at, deleted_at \
-             FROM next_up_items WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY position",
+            "SELECT id, owner_id, position, text, show_from, about_kind, about_id, done_at, \
+             created_at, updated_at, deleted_at \
+             FROM next_up_items WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY position, id",
         )
         .bind(owner.to_string())
         .fetch_all(&self.pool)
         .await?;
         rows.iter().map(next_up_from_row).collect()
+    }
+
+    /// Bring a card up on `show_from` ("Bring up tomorrow"): one line from its title.
+    /// Bringing the same card up again moves it to the new day instead of adding a twin.
+    pub async fn bring_up(
+        &self,
+        owner: OwnerId,
+        title: &str,
+        show_from: Date,
+        about: Option<(CardKind, Uuid)>,
+    ) -> Result<NextUpItem> {
+        let text = bring_up_text(title)?;
+        let now = now_text();
+        let mut tx = self.pool.begin().await?;
+        if let Some((kind, id)) = about {
+            sqlx::query(
+                "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
+                 AND about_kind = $3 AND about_id = $4 AND done_at IS NULL AND deleted_at IS NULL",
+            )
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(kind.as_str())
+            .bind(id.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        let id = NextUpItemId::new();
+        sqlx::query(
+            "INSERT INTO next_up_items (id, owner_id, position, text, show_from, about_kind, \
+             about_id, done_at, created_at, updated_at, deleted_at) \
+             VALUES ($1, $2, 0, $3, $4, $5, $6, NULL, $7, $7, NULL)",
+        )
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .bind(&text)
+        .bind(format_date(show_from))
+        .bind(about.map(|(k, _)| k.as_str()))
+        .bind(about.map(|(_, u)| u.to_string()))
+        .bind(&now)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        self.next_up_all(owner)
+            .await?
+            .into_iter()
+            .find(|i| i.id == id)
+            .ok_or(StorageError::NotFound)
     }
 
     /// Replace the "next up" list (blank lines dropped). An empty list clears it.
@@ -799,7 +875,7 @@ impl SqliteStore {
         let mut tx = self.pool.begin().await?;
         sqlx::query(
             "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 \
-             WHERE owner_id = $2 AND deleted_at IS NULL",
+             WHERE owner_id = $2 AND deleted_at IS NULL AND show_from IS NULL",
         )
         .bind(&now)
         .bind(owner.to_string())

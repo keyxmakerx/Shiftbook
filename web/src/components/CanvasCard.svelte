@@ -1,16 +1,20 @@
 <script lang="ts">
-  // One card on the Desk (the Canvas): an entry, a Done ticket, a note or an Inbox scrap.
-  // Drag to move it (saved when you let go); double-click to open it; right-click for its
-  // paper menu. The card is the record itself: changes show everywhere else too.
+  // One card on the Desk (the Canvas): an entry, a ticket, a note or an Inbox scrap.
+  // Drag to move it (saved when you let go); click an entry or a ticket for its notepad and
+  // options underneath (round 12); double-click to open it; right-click for its paper menu.
+  // The card is the record itself: changes show everywhere else too.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
+  import { bringUp } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
   import { fmtMinutes, relativeDay } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
-  import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, focusLog, openNote, projectById, projectColor, refresh, refreshInbox } from '../lib/store.svelte';
+  import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
+  import { app, attempt, focusLog, openNote, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { trayMenu } from '../lib/trayActions';
+  import ItemPanel from './ItemPanel.svelte';
 
   let {
     card,
@@ -45,8 +49,25 @@
 
   let el: HTMLElement | undefined = $state();
   let drag = $state<{ dx: number; dy: number } | null>(null);
-  let editing = $state(false);
-  let noteText = $state('');
+  let height = $state(0);
+
+  const key = $derived(`${card.kind}:${card.id}`);
+  const open = $derived(panel.open === key);
+  // Entries and tickets have the slide-out; notes open in Notes, scraps get logged.
+  const hasPanel = $derived(!!card.entry || !!card.tray);
+  let openedAt = 0;
+
+  /** A click opens the slide-out; a later click folds it (a double-click's second click doesn't). */
+  function clicked() {
+    if (!hasPanel) return;
+    if (!open) {
+      panel.focusPad = false;
+      panel.open = key;
+      openedAt = Date.now();
+    } else if (Date.now() - openedAt > 400) {
+      closePanel();
+    }
+  }
 
   const NOTE_COLOR: Record<string, string> = {
     jot: '#de9930',
@@ -60,7 +81,9 @@
     card.entry
       ? projectColor(card.entry.projectId)
       : card.tray
-        ? 'var(--accent)'
+        ? card.tray.item.projectId
+          ? projectColor(card.tray.item.projectId)
+          : 'var(--accent)'
         : card.note
           ? card.note.projectId
             ? projectColor(card.note.projectId)
@@ -72,14 +95,17 @@
 
   // ----- moving -----
   function down(e: PointerEvent) {
-    if (e.button !== 0 || editing) return;
+    if (e.button !== 0) return;
     if (linking) {
       e.stopPropagation();
       onpick?.();
       return;
     }
-    if (locked) return;
     if ((e.target as HTMLElement).closest('input, textarea, button')) return;
+    if (locked) {
+      clicked();
+      return;
+    }
     e.stopPropagation();
     const start = { x: e.clientX, y: e.clientY };
     let moved = false;
@@ -96,6 +122,7 @@
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
       if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy));
+      else clicked();
       drag = null;
     };
     el?.addEventListener('pointermove', move);
@@ -113,33 +140,16 @@
     }
   }
 
-  function open() {
-    if (card.entry) app.drawer = card.entry.id;
-    else if (card.note) openNote(card.note.id);
+  function openCard() {
+    if (card.entry) {
+      closePanel();
+      app.drawer = card.entry.id;
+    } else if (card.note) openNote(card.note.id);
     else if (card.inbox) void logScrap();
-    else if (card.tray) {
-      noteText = card.tray.item.note ?? '';
-      editing = true;
-    }
-  }
-
-  async function saveTrayNote() {
-    editing = false;
-    if (!card.tray || noteText.trim() === (card.tray.item.note ?? '')) return;
-    const day = await attempt(() => api.traySetNote(card.tray!.item.id, noteText));
-    if (day) onchanged();
-  }
-
-  /** Focus a box as soon as it appears (after the double-click that opened it settles). */
-  function focusNow(node: HTMLInputElement) {
-    requestAnimationFrame(() => node.focus());
+    else if (card.tray) openNotepad(key);
   }
 
   // ----- menus -----
-  async function copy(text: string, what: string) {
-    toast((await copyText(text)) ? `Copied ${what}` : "Couldn't copy here.");
-  }
-
   /** The card's own menu, plus the Desk's options for it. */
   function menu(): MenuSpec | null {
     const own = cardMenu();
@@ -154,38 +164,7 @@
 
   function cardMenu(): MenuSpec | null {
     if (card.entry) return entryMenu(card.entry);
-    if (card.tray) {
-      const { item } = card.tray;
-      return {
-        sections: [
-          {
-            head: `${item.ticket} · ${fmtMinutes(item.minutes)}`,
-            items: [
-              { label: 'Copy ticket number', icon: 'copy', side: true, act: () => void copy(item.ticket, item.ticket) },
-              { label: item.note ? 'Change the few words' : 'Add a few words', icon: 'edit', side: true, act: open },
-            ],
-          },
-          {
-            items: [
-              {
-                label: 'Take out of the tray',
-                icon: 'trash',
-                danger: true,
-                top: true,
-                act: () =>
-                  void attempt(() => api.trayRemove(item.id)).then((d) => {
-                    if (!d) return;
-                    void refresh();
-                    toast(`Took ${item.ticket} out of the tray`, 'Undo', () => {
-                      void attempt(() => api.trayRestore(item.id)).then(refresh);
-                    });
-                  }),
-              },
-            ],
-          },
-        ],
-      };
-    }
+    if (card.tray) return trayMenu(card.tray.item, () => openNotepad(key));
     if (card.note) {
       const note = card.note;
       return {
@@ -194,6 +173,7 @@
             head: note.title,
             items: [
               { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
+              { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
               {
                 label: 'Archive',
                 icon: 'archive',
@@ -250,21 +230,31 @@
   class:lifted={!!drag}
   class:locked
   class:picking={linking}
+  class:opened={open}
   bind:this={el}
+  bind:offsetHeight={height}
   style:--c={color}
   style:left="{x + (drag?.dx ?? 0)}px"
   style:top="{y + (drag?.dy ?? 0)}px"
-  style:z-index={drag ? 99999 : card.z}
+  style:z-index={drag ? 99999 : open ? 99998 : card.z}
   role="button"
   tabindex="0"
-  title="Drag to move · double-click to open · right-click for options"
+  aria-expanded={hasPanel ? open : undefined}
+  title={hasPanel
+    ? 'Drag to move · click for the notepad and options · double-click to open · right-click for everything'
+    : 'Drag to move · double-click to open · right-click for options'}
   onpointerdown={down}
   ondblclick={(e) => {
     e.stopPropagation();
-    open();
+    openCard();
   }}
   onkeydown={(e) => {
-    if (e.target === el && e.key === 'Enter') open();
+    if (e.target !== el) return;
+    if (e.key === 'Enter') openCard();
+    else if (e.key === ' ' && hasPanel) {
+      e.preventDefault();
+      clicked();
+    }
   }}
   use:paperMenu={menu}
 >
@@ -276,30 +266,16 @@
     {#if e.tickets.length}
       <span class="tickets">{e.tickets.map((t) => t.number).join(' · ')}</span>
     {/if}
+    {#if e.notes}<span class="padline">✎ {e.notes.split('\n')[0]}</span>{/if}
   {:else if card.tray}
     {@const t = card.tray}
-    <span class="kind">Done ticket · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}</span>
+    <span class="kind">
+      {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
+    </span>
     <span class="title mono">{t.item.ticket}</span>
-    {#if editing}
-      <input
-        class="text-in few"
-        use:focusNow
-        bind:value={noteText}
-        maxlength="300"
-        placeholder="A few words…"
-        aria-label="A few words about {t.item.ticket}"
-        onblur={saveTrayNote}
-        onkeydown={(ev) => {
-          if (ev.key === 'Enter') (ev.currentTarget as HTMLInputElement).blur();
-          if (ev.key === 'Escape') {
-            ev.stopPropagation();
-            editing = false;
-          }
-        }}
-      />
-    {:else}
-      <span class="sub" class:muted={!t.item.note}>{t.item.note ?? 'Double-click to add a few words'}</span>
-    {/if}
+    <span class="sub" class:muted={!t.item.note}>
+      {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}
+    </span>
   {:else if card.note}
     {@const n = card.note}
     <span class="kind">{KIND_LABEL[n.kind]} note</span>
@@ -310,6 +286,18 @@
     <span class="title">{card.inbox.text}</span>
   {/if}
 </div>
+{#if open && (card.entry || card.tray)}
+  <div class="under" style:left="{x}px" style:top="{y + height}px">
+    <ItemPanel
+      entry={card.entry}
+      tray={card.tray?.item}
+      menu={() => menu() ?? { sections: [] }}
+      focusPad={panel.focusPad}
+      onclose={closePanel}
+      onsaved={onchanged}
+    />
+  </div>
+{/if}
 
 <style>
   .card {
@@ -413,9 +401,29 @@
     text-overflow: ellipsis;
   }
 
-  .few {
-    font-size: 12.5px;
-    padding: 4px 7px;
+  .card.opened {
+    box-shadow:
+      0 0 0 2px var(--accent),
+      var(--lift);
+    border-radius: 5px 5px 0 0;
+  }
+
+  .under {
+    position: absolute;
+    width: 300px;
+    z-index: 99997;
+  }
+
+  .padline {
+    font-size: 11.5px;
+    color: var(--mut);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .open {
+    color: var(--warn);
   }
 
   @media (prefers-reduced-motion: reduce) {

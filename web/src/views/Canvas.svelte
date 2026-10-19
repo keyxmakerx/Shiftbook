@@ -20,6 +20,7 @@
   import { moveEntryTo } from '../lib/entryActions';
   import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { closePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import CanvasAreaBox from '../components/CanvasArea.svelte';
@@ -321,6 +322,7 @@
   function panStart(e: PointerEvent) {
     if (e.button !== 0 || !board) return;
     if ((e.target as HTMLElement).closest('.tools, .jot')) return;
+    closePanel();
     const startView = view;
     const start = { x: e.clientX, y: e.clientY };
     panning = true;

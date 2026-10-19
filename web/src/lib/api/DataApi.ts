@@ -148,7 +148,7 @@ export interface Entry {
   notes: string | null;
   timesheetCodeId: string | null;
   tickets: Ticket[];
-  /** The day's roll-up of the Done tickets tray. */
+  /** A roll-up of the Tickets tray (the day's plain one, or a project's). */
   isTray: boolean;
 }
 
@@ -164,16 +164,25 @@ export interface EntryInput {
 
 export interface TrayItem {
   id: string;
+  /** The day it was worked on. */
+  date: IsoDate;
   ticket: string;
   minutes: number;
-  /** A few words about the ticket, if any. */
+  /** The ticket's notepad, if anything is written in it. */
   note: string | null;
+  /** False while it is still open: worked on, not finished. */
+  done: boolean;
+  /** The project its minutes count under; null = the day's "Tickets" entry. */
+  projectId: string | null;
   links: TicketLink[];
 }
 
 export interface TrayDay {
   date: IsoDate;
   items: TrayItem[];
+  /** Still-open tickets from earlier days, back until they are ticked. */
+  carried: TrayItem[];
+  /** The plain "Tickets" roll-up entry (tickets without a project), if any. */
   entryId: string | null;
   minutes: number;
   hours: string;
@@ -336,6 +345,8 @@ export interface NextUpItem {
   id: string;
   text: string;
   done: boolean;
+  /** For a thing brought up from a card: the day it comes up. */
+  from: IsoDate | null;
 }
 
 /** A saved response: a message kept for pasting into tickets, copied from the tray. */
@@ -597,6 +608,8 @@ export interface DataApi {
   updateEntry(id: string, input: EntryInput): Promise<Entry>;
   /** Add (or with a negative number take away) minutes. */
   addEntryMinutes(id: string, delta: number): Promise<Entry>;
+  /** The entry's notepad, saved as you type (blank clears it). */
+  setEntryNotes(id: string, notes: string): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
@@ -610,12 +623,18 @@ export interface DataApi {
   /** Log a capture line; it must contain hours. */
   captureLog(text: string, today: IsoDate): Promise<Entry>;
 
-  // ----- Done tickets tray -----
+  // ----- Tickets tray -----
   trayDay(date: IsoDate): Promise<TrayDay>;
   trayAdd(date: IsoDate, text: string): Promise<TrayDay>;
   traySetMinutes(id: string, minutes: number): Promise<TrayDay>;
-  /** A few words about one tray ticket (blank clears them, at most 300 characters). */
+  /** A tray ticket's notepad (blank clears it). */
   traySetNote(id: string, note: string): Promise<TrayDay>;
+  /** Tick a ticket done (also on the earlier days it came back on), or untick it: still open. */
+  traySetDone(id: string, done: boolean): Promise<TrayDay>;
+  /** The project a ticket's minutes count under (null = the day's "Tickets" entry). */
+  traySetProject(id: string, projectId: string | null): Promise<TrayDay>;
+  /** Work on a still-open ticket again on `date`: it joins that day's tray. */
+  trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
   trayRemove(id: string): Promise<TrayDay>;
   trayRestore(id: string): Promise<TrayDay>;
 
@@ -668,8 +687,10 @@ export interface DataApi {
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 
   // ----- next up -----
-  /** The "next up" list, in order. */
+  /** The wrap-up's "next up" list, in order. */
   nextUp(): Promise<NextUpItem[]>;
+  /** "Bring up tomorrow": the card comes up first on the next work day after `today`. */
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;

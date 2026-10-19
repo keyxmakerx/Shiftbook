@@ -52,7 +52,8 @@ the README for what it does.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
 - Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
-  can only be filled in on entries; the tray's roll-up entry starts with no project; the Planner
+  can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
+  given a project rolls up under it); the Planner
   has no keyboard shortcut yet (1 to 5 are Desk, Day, Timesheet, Notes, Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)

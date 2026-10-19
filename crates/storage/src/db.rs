@@ -56,6 +56,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "canvas areas and links",
         include_str!("../migrations/0007_canvas_areas_links.sql"),
     ),
+    (
+        8,
+        "open tickets, ticket projects, bring up",
+        include_str!("../migrations/0008_tickets_open_and_bring_up.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {

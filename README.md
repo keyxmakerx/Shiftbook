@@ -19,27 +19,33 @@ The alpha is a working app you can use day to day for logging time:
   Ctrl+L and auto-lock after idle (minutes are set in Settings → Security). After unlocking with
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
-- **Desk (the Canvas, home):** your entries, Done tickets, notes and Inbox scraps as paper cards
+- **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
   you arrange. Drag to move (it's remembered), drag empty paper or scroll to pan, Ctrl + scroll
-  to zoom, Fit everything. Double-click a card to open it (a Done ticket takes a few words);
-  double-click empty paper to jot. Right-click anything for its paper menu. The side panel has
-  today's hours, Where was I?, Log work, Done tickets and the wrap-up. **Project areas**
+  to zoom, Fit everything. Click an entry or a ticket and its **slide-out** opens underneath:
+  the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
+  open, more time and More. Double-click a card to open it; double-click empty paper to jot.
+  Right-click anything for its paper menu with everything. The side panel has today's hours,
+  Where was I?, Log work, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
   that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
   Desk out by day and Back to my layout puts it back. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
-  entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
+  entry); the **Tickets** tray (paste tickets as you work on them, each adds 15 minutes you
   can step up or down, and they roll up into one “Tickets” entry for the day; a box beside each
-  ticket takes a few words about it); the entries list with +15m/+30m/+1h and ticket chips you
-  click to copy; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  ticket takes a few words, and its slide-out holds a full notepad; **untick** a ticket that
+  isn't finished and it stays **Still open**, coming back each day until you tick it; give a
+  ticket a project and its minutes count under that project instead); the entries list with
+  +15m/+30m/+1h and ticket chips you click to copy (click an entry for the same slide-out as on
+  the Desk); **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes); the Inbox.
-- **Saved responses:** the copy button on Done tickets lists messages you paste into tickets
+- **Saved responses:** the copy button on the Tickets tray lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
   them in Settings → Responses.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
-  day starts, the Desk shows what to pick up: the list from your wrap-up, or else the last
-  thing you logged with its tickets and next step. **Carry on** puts it into Log work;
+  day starts, the Desk shows what to pick up: things you brought up for today (**Bring up
+  tomorrow** in any slide-out or right-click menu picks the next work day), then the list from
+  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** puts it into Log work;
   **Later** hides it until the next unlock.
 - **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
   today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded

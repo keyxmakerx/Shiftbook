@@ -1,7 +1,7 @@
 <script lang="ts">
   // "Where was I?": after an unlock, a break or a new day, the Desk offers a way back in.
-  // The wrap-up list comes first (the first item, then the rest as a checklist); otherwise
-  // the last entry with its tickets and next step. When it shows and what it holds is
+  // Things brought up for today and the wrap-up list come first (the first item, then the
+  // rest as a checklist); otherwise the last entry with its tickets and notepad. When it shows and what it holds is
   // decided by the app (crates/core/src/resume.rs).
   import { api } from '../lib/api';
   import { cardLead, cardTitle, carryOnText, lastLogged } from '../lib/resume';
@@ -46,7 +46,7 @@
   <section class="resume" style:--c={entry ? color : 'var(--accent)'} aria-labelledby="resume-h">
     <div class="top">
       <span class="lbl">Where was I? · {cardLead(card)}</span>
-      <span class="ago">{entry ? lastLogged(card.changedAt, new Date()) : 'From your wrap-up'}</span>
+      <span class="ago">{entry ? lastLogged(card.changedAt, new Date()) : card.list[0]?.from ? 'You brought this up for today' : 'From your wrap-up'}</span>
     </div>
     <h3 id="resume-h">{cardTitle(card)}</h3>
 
@@ -57,7 +57,7 @@
           {#each entry.tickets as t (t.id)}<TicketChip number={t.number} links={t.links} {color} />{/each}
         </div>
       {/if}
-      {#if entry.notes}<p class="next"><b>Next step:</b> {entry.notes}</p>{/if}
+      {#if entry.notes}<p class="next"><b>Notepad:</b> {entry.notes.split('\n')[0]}</p>{/if}
     {:else if rest.length}
       <ul class="then" aria-label="Then">
         {#each rest as item (item.id)}

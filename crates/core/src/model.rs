@@ -7,7 +7,9 @@
 
 use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime};
+use uuid::Uuid;
 
+use crate::canvas::CardKind;
 use crate::dates::{iso_date, rfc3339};
 use crate::fields::{AppliesTo, FieldKind};
 use crate::ids::{
@@ -498,8 +500,13 @@ pub struct TrayItem {
     pub ticket_number: String,
     /// Minutes it adds to the day's roll-up entry.
     pub minutes: Minutes,
-    /// Optional note.
+    /// Optional note (the ticket's notepad).
     pub note: Option<String>,
+    /// False while the ticket is still open: worked on today but not finished. It comes
+    /// back in later trays until it is ticked (see [`crate::tray::carried_open`]).
+    pub done: bool,
+    /// The project its minutes count under; `None` puts them in the day's "Tickets" entry.
+    pub project_id: Option<ProjectId>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,
@@ -633,6 +640,12 @@ pub struct NextUpItem {
     pub position: u32,
     /// What to do.
     pub text: String,
+    /// For a thing brought up from a card ("Bring up tomorrow"): the day it comes up.
+    /// `None` for the wrap-up list.
+    #[serde(with = "iso_date::option")]
+    pub show_from: Option<Date>,
+    /// The card it was brought up from, if any.
+    pub about: Option<(CardKind, Uuid)>,
     /// When ticked off (UTC), if it is.
     #[serde(with = "rfc3339::option")]
     pub done_at: Option<OffsetDateTime>,
