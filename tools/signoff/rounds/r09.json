@@ -16,16 +16,58 @@
         "**A few words on each ticket:** every ticket in the Done tickets tray has a box between the ticket and its minutes. Type, then click away or press Enter, and it's saved. Hover a long note to read all of it."
       ],
       "figures": [
-        {"src": "/_blob/6150d4d05bc65db89f647335f7205269", "caption": "The Desk: entries on the left; Done tickets with notes, then Notes, on the right."},
-        {"src": "/_blob/97d1ac0751692eebf7c5dbc4987d75f2", "caption": "Done tickets: a few words beside each ticket. The third one is being typed."},
-        {"src": "/_blob/1123c5cdbd97b5f150c490584bb86626", "caption": "Notes → **Today**: the day's note."},
-        {"src": "/_blob/b68b31d6567f217ad8f17bb19d6ba4c3", "caption": "Notes → **Meetings**: recent meeting notes and New meeting note."}
+        {
+          "src": "/_blob/6150d4d05bc65db89f647335f7205269",
+          "caption": "The Desk: entries on the left; Done tickets with notes, then Notes, on the right."
+        },
+        {
+          "src": "/_blob/97d1ac0751692eebf7c5dbc4987d75f2",
+          "caption": "Done tickets: a few words beside each ticket. The third one is being typed."
+        },
+        {
+          "src": "/_blob/1123c5cdbd97b5f150c490584bb86626",
+          "caption": "Notes → **Today**: the day's note."
+        },
+        {
+          "src": "/_blob/b68b31d6567f217ad8f17bb19d6ba4c3",
+          "caption": "Notes → **Meetings**: recent meeting notes and New meeting note."
+        }
       ],
       "questions": [
-        {"id": "ok", "legend": "Looks right?", "options": [{"value": "Yes", "rec": true}, {"value": "Close", "why": "Say what to change in the note."}]},
-        {"id": "where", "legend": "Where should Notes sit on the Desk?", "options": [{"value": "Under Done tickets, as shown", "rec": true}, {"value": "Above Done tickets"}, {"value": "Under the entries on the left"}]}
+        {
+          "id": "ok",
+          "legend": "Looks right?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Close",
+              "why": "Say what to change in the note."
+            }
+          ]
+        },
+        {
+          "id": "where",
+          "legend": "Where should Notes sit on the Desk?",
+          "options": [
+            {
+              "value": "Under Done tickets, as shown",
+              "rec": true
+            },
+            {
+              "value": "Above Done tickets"
+            },
+            {
+              "value": "Under the entries on the left"
+            }
+          ]
+        }
       ],
-      "pick": "Yes, as shown. Done tickets stays on top because you use it all day."
+      "pick": "Yes, as shown. Done tickets stays on top because you use it all day.",
+      "archived": true,
+      "reply": "Yes. The Canvas becomes Desk, the home view you open on. This day view gets a new name; pick one on the new card."
     },
     "r9-canvas": {
       "round": 9,
@@ -39,13 +81,36 @@
         "On top of that sit the round 8 decisions: stacks, drawers, boards inside boards and the Archive."
       ],
       "figures": [
-        {"src": "/_blob/630d06c80c5e5caafc05fe08b9e24c01", "caption": "The round 8 mockup: the entry **Firewall rule cleanup** and the ticket **VLAN 40 trunk** are the same records you see on the Desk, piled together."},
-        {"src": "/_blob/695be5476ebfe8804ac425d9c46eeb32", "caption": "Boards: Meetings, Daily notes and Projects hold the same notes the Notes view lists."}
+        {
+          "src": "/_blob/630d06c80c5e5caafc05fe08b9e24c01",
+          "caption": "The round 8 mockup: the entry **Firewall rule cleanup** and the ticket **VLAN 40 trunk** are the same records you see on the Desk, piled together."
+        },
+        {
+          "src": "/_blob/695be5476ebfe8804ac425d9c46eeb32",
+          "caption": "Boards: Meetings, Daily notes and Projects hold the same notes the Notes view lists."
+        }
       ],
       "questions": [
-        {"id": "ok", "legend": "Is that the idea?", "options": [{"value": "Yes, build it next", "rec": true}, {"value": "Yes, but something else first", "why": "Say what in the note."}, {"value": "Not quite"}]}
+        {
+          "id": "ok",
+          "legend": "Is that the idea?",
+          "options": [
+            {
+              "value": "Yes, build it next",
+              "rec": true
+            },
+            {
+              "value": "Yes, but something else first",
+              "why": "Say what in the note."
+            },
+            {
+              "value": "Not quite"
+            }
+          ]
+        }
       ],
-      "pick": "Yes, build it next."
+      "pick": "Yes, build it next.",
+      "archived": true
     },
     "r9-version": {
       "round": 9,
@@ -58,9 +123,143 @@
         "The fix: the build reads the version from the tag you type on the Releases page (0.4.0 becomes 0.4.0 everywhere) and runs once per release."
       ],
       "questions": [
-        {"id": "ok", "legend": "Make that change?", "options": [{"value": "Yes", "rec": true}, {"value": "No, I'll bump versions myself"}]}
+        {
+          "id": "ok",
+          "legend": "Make that change?",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "No, I'll bump versions myself"
+            }
+          ]
+        }
       ],
-      "pick": "Yes. One less thing to remember when you release."
+      "pick": "Yes. One less thing to remember when you release.",
+      "archived": true
+    },
+    "r9-full": {
+      "round": 9,
+      "order": 5,
+      "area": "Canvas",
+      "version": 1,
+      "title": "Everything the Canvas will do, so nothing gets lost",
+      "body": [
+        "You'll be in the Canvas 90% of the time, so it becomes **Desk**, the home view Shiftbook opens on. The structured day view (ring, Log work, entries, Done tickets, Notes) is for starting and ending the day and gets a new name.",
+        "This is every Canvas decision from rounds 2 to 9 in one list, written down in the project as docs/CANVAS.md. Untick anything you don't want, and add anything missing in the note."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/630d06c80c5e5caafc05fe08b9e24c01",
+          "caption": "Piles and fanning out (round 8)."
+        },
+        {
+          "src": "/_blob/9d24a4deeb8269cde136d7ad38d2dd41",
+          "caption": "Drawers (round 8)."
+        },
+        {
+          "src": "/_blob/2f0c2f2dbdd394d23db34e3295f36f07",
+          "caption": "Inside a board, tinted, with breadcrumbs (round 8)."
+        },
+        {
+          "src": "/_blob/1cc1f18d8c182bd7bed96f578b3a689b",
+          "caption": "Timeline and back (round 4)."
+        }
+      ],
+      "questions": [
+        {
+          "id": "all",
+          "type": "many",
+          "legend": "The Canvas will:",
+          "options": [
+            {
+              "value": "Show your real entries, tickets, notes and Inbox scraps as cards",
+              "on": true
+            },
+            {
+              "value": "Let you Log work, capture (Ctrl+Space) and use the tray right there",
+              "on": true
+            },
+            {
+              "value": "Open a card's details on double-click; start a jot on double-click of empty paper",
+              "on": true
+            },
+            {
+              "value": "Pan, zoom and Fit everything",
+              "on": true
+            },
+            {
+              "value": "Right-click paper menus with the fold-out animation",
+              "on": true
+            },
+            {
+              "value": "Project areas: drag in or out to change the project, with Undo",
+              "on": true
+            },
+            {
+              "value": "Links drawn automatically (shared tickets, projects, words), removable, plus your own",
+              "on": true
+            },
+            {
+              "value": "Timeline and Back to my layout, without disturbing your arrangement",
+              "on": true
+            },
+            {
+              "value": "Stacks, fan out, rename, Tidy into stacks",
+              "on": true
+            },
+            {
+              "value": "Drawers: one per project plus your own folders",
+              "on": true
+            },
+            {
+              "value": "Boards inside boards, tinted, with breadcrumbs, and a List view",
+              "on": true
+            },
+            {
+              "value": "Archive with Bring back; Daily notes archive after 2 weeks",
+              "on": true
+            },
+            {
+              "value": "Find flies to the card; today's hours always in view",
+              "on": true
+            },
+            {
+              "value": "Later: the meeting canvas and pictures in notes",
+              "on": true
+            }
+          ]
+        },
+        {
+          "id": "name",
+          "legend": "New name for the day view (the current Desk tab)",
+          "options": [
+            {
+              "value": "Day",
+              "rec": true,
+              "why": "Start and end the day here."
+            },
+            {
+              "value": "Today"
+            },
+            {
+              "value": "Plan"
+            },
+            {
+              "value": "Daybook"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything missing?",
+          "placeholder": "e.g. colour a card by hand, a minimap"
+        }
+      ],
+      "pick": "All of it, built in five steps (foundation; project areas, links and timeline; stacks and drawers; boards and archive; the meeting canvas). Name: Day."
     }
   }
 }
