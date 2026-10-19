@@ -33,8 +33,7 @@ M5, quick capture inside the app, the Done tickets tray, custom fields and the p
 the README for what it does.
 
 ### Known gaps in alpha
-- **Planner** (week/month/year) and **Canvas** views: shown in the view switcher but disabled
-  ("coming in a later version").
+- **Planner** (week/month/year) and **Canvas** views: hidden until they are built.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
   Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
   imports (paste, MOP import with its check screen, OneNote sections). Also the always-available

@@ -18,6 +18,12 @@
   let copied = $state<'no' | 'yes' | 'failed'>('no');
   let working = $state(false);
   let error = $state('');
+  let checkInputs: HTMLInputElement[] = $state([]);
+
+  // When the check boxes appear, move to the first one (focusing also brings it into view).
+  $effect(() => {
+    checkInputs[0]?.focus();
+  });
 
   const allMatch = $derived(
     checkAt.length === 2 && checkAt.every((at, i) => groupMatches(groups[at] ?? '', typed[i] ?? '')),
@@ -79,22 +85,25 @@
     </label>
 
     {#if saved && checkAt.length === 2}
-      <fieldset class="stack">
+      <fieldset>
         <legend>Quick check: type two groups from your copy</legend>
-        {#each checkAt as at, i (at)}
-          <div class="field short">
-            <label for="check-{i}">Group {at + 1}</label>
-            <input
-              id="check-{i}"
-              class="mono"
-              bind:value={typed[i]}
-              maxlength="9"
-              autocomplete="off"
-              spellcheck="false"
-              autocapitalize="characters"
-            />
-          </div>
-        {/each}
+        <div class="checks">
+          {#each checkAt as at, i (at)}
+            <div class="field short">
+              <label for="check-{i}">Group {at + 1}</label>
+              <input
+                bind:this={checkInputs[i]}
+                id="check-{i}"
+                class="mono"
+                bind:value={typed[i]}
+                maxlength="9"
+                autocomplete="off"
+                spellcheck="false"
+                autocapitalize="characters"
+              />
+            </div>
+          {/each}
+        </div>
         {#if typed.every((t) => t.length >= 4) && !allMatch}
           <p class="help problem">That doesn't match. Check your copy of the key.</p>
         {/if}
@@ -112,45 +121,57 @@
 <style>
   .key {
     list-style: none;
-    margin: 1.5rem 0 1rem;
-    padding: 1rem;
+    margin: 0 0 10px;
+    padding: 10px 12px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
-    gap: 0.5rem 1rem;
-    border: 2px dashed var(--line-strong);
-    border-radius: 0.5rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px 8px;
+    background: var(--paper-2);
+    border-radius: 8px;
+  }
+
+  @media (max-width: 460px) {
+    .key {
+      grid-template-columns: repeat(3, 1fr);
+    }
   }
 
   .key li {
     display: flex;
     align-items: baseline;
-    gap: 0.4rem;
+    justify-content: center;
+    gap: 4px;
+    padding: 4px 0;
   }
 
   .num {
-    color: var(--muted);
-    font-size: 0.8rem;
-    min-width: 1.4rem;
+    color: var(--mut);
+    font: 500 10px var(--mono);
+    min-width: 1.2rem;
     text-align: right;
   }
 
   code {
-    font-family: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, 'DejaVu Sans Mono',
-      monospace;
-    font-size: 1.35rem;
-    letter-spacing: 0.08em;
+    font: 600 14.5px var(--mono);
+    letter-spacing: 0.06em;
   }
 
   .copy-row {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 12px;
     flex-wrap: wrap;
-    margin-bottom: 1.5rem;
+    margin-bottom: 14px;
   }
 
   .copy-row .help {
-    flex: 1 1 16rem;
+    flex: 1 1 14rem;
     margin: 0;
+  }
+
+  .checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
   }
 </style>

@@ -36,29 +36,37 @@ The alpha is a working app you can use day to day for logging time:
   (paste several at once), notes and your own custom fields.
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as
   `1.5h firewall cleanup CHG0012345 #network yesterday`. Enter logs it; Ctrl+Enter (or a line
-  without hours) saves it to the Inbox.
+  without hours) saves it to the Inbox. Type without a time to **Find**: the same box searches
+  your entries, Inbox scraps, notes and commands.
 - **Notes:** Jot, Daily, Meeting, Page and MOP notes, each with an optional project and tags,
   saved as you type. Search every note with the match highlighted, filter by kind, and
   **Archive** notes to get them out of the way (Include archived, or Find, still shows them).
   Auto-archive (Settings → Notes, 3 months by default, can be off) moves Jot, Daily and Meeting
   notes that haven't changed for that long, after a week of warning on the note with a Keep
   button. Capture's Find shows notes too, archived ones included.
-- **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it.
+- **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
+  in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
+  entries that need a code, the tray and a short “Tomorrow I start with…” list.
+- **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
+  with nothing logged gets a dot, and clicking it opens Log work for that day.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
-- **Settings:** Look (theme, motion, accent, project colours), Projects (add, rename, colour,
+- **Settings:** Look (theme, motion, accent, text size, project colours), Your day (targets,
+  wrap-up, timer), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
   such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
-  (Back up now, the daily automatic backups, Restore from a backup or a file), Security.
+  (Back up now, the daily automatic backups, Restore from a backup or a file), Security (auto-lock, change password, and **Delete all
+  data** to start again; the unlock screen offers it too if the recovery key is lost).
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1/2/3/4 switch views (Desk, Timesheet, Notes, Settings), Ctrl+L lock, Esc closes
-  menus, capture and the drawer.
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1/2/3/4 switch views (Desk, Timesheet, Notes, Settings), Ctrl+L lock, Ctrl + / − / 0
+  text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
+  Ctrl to see every shortcut.
 
 Not in the alpha yet: Planner, Canvas, the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
