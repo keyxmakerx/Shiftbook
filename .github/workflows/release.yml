@@ -1,21 +1,19 @@
 name: Release
 
 # Builds installers and no-install builds for Windows, macOS and Linux and attaches them to a
-# GitHub release. Start it any of three ways: publish a release on GitHub's Releases page, push a
-# version tag (v0.1.0-alpha.1 or 0.1.0), or use "Run workflow" on the Actions tab.
-# Builds are unsigned until code signing is set up (see docs/SECURITY.md).
+# GitHub release. Start it by publishing a release on GitHub's Releases page, or with "Run
+# workflow" on the Actions tab. (Not on a tag push too: publishing a release pushes its tag, and
+# that used to start a second, clashing build.) The app's version comes from the tag: 0.4.0 or
+# v0.4.0 builds version 0.4.0. Builds are unsigned until code signing is set up (see SECURITY.md).
 
 on:
-  push:
-    tags: ['v*', '[0-9]*']
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to create, e.g. v0.1.0-alpha.1'
+        description: 'Release tag to create, e.g. 0.4.0'
         required: true
-        default: 'v0.1.0-alpha.1'
 
 permissions:
   contents: write
@@ -26,7 +24,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event_name == 'push' && github.ref_name || inputs.tag }}
+  TAG: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
 
 jobs:
   build:
@@ -88,6 +86,26 @@ jobs:
       - name: npm ci
         working-directory: web
         run: npm ci
+
+      # The Windows installer only takes plain numbers (0.4.0), so a suffix such as
+      # "-beta.1" is left out of the app's own version; the release keeps its full tag.
+      - name: Use the release tag as the app version
+        shell: bash
+        run: |
+          version="${TAG#v}"
+          version="${version%%-*}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::The tag '$TAG' doesn't start with a version like 0.4.0 or v0.4.0."
+            exit 1
+          fi
+          node -e '
+            const fs = require("fs");
+            const path = "apps/desktop/src-tauri/tauri.conf.json";
+            const conf = JSON.parse(fs.readFileSync(path, "utf8"));
+            conf.version = process.argv[1];
+            fs.writeFileSync(path, JSON.stringify(conf, null, 2) + "\n");
+          ' "$version"
+          echo "Building version $version"
 
       - name: Build and publish
         uses: tauri-apps/tauri-action@v0
