@@ -1,0 +1,121 @@
+{
+  "meta": {
+    "round": 8,
+    "heading": "Round 8: the canvas, and sign-offs for tickets",
+    "intro": "Two working mockups from your notes: the Canvas with stacks and a filing cabinet, and closing messages that some tickets need. Everything is made-up sample data. Round 7's decisions are already built into 0.2.0."
+  },
+  "cards": {
+    "r8-canvas": {
+      "round": 8,
+      "order": 10,
+      "area": "Canvas",
+      "version": 1,
+      "title": "The Canvas with stacks and drawers",
+      "body": [
+        "The free canvas you picked in round 4, with two ways to keep it from turning into a mess. **Stacks:** drop a card on another card and they become a pile with a count. Click a pile to fan it out; drag a card out to take it off. Double-click a pile's name to rename it. **Drawers:** the cabinet on the left. Drop a card or a whole pile on a drawer and it slides in, off the desk. Open the drawer to see what's inside or put something back.",
+        "Filing only tidies the desk. Filed things still show up in Find, and their hours still count on the timesheet."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r08-canvas.html",
+          "caption": "Live: drag **Firewall rule cleanup** onto **VLAN 40 trunk**, click the **SSL renewals** pile, drop the scrap on **Reference**, then try **Tidy into stacks** and **Arrange as timeline**."
+        }
+      ],
+      "bullets": [
+        "**Tidy into stacks** piles loose cards by project in one click. Cards with no project stay loose.",
+        "**Arrange as timeline** still works: piles sit at their newest date, and **Back to my layout** puts everything back.",
+        "Each project gets a drawer automatically. You can add plain drawers, like **Reference**, for things that aren't a project."
+      ],
+      "questions": [
+        {
+          "id": "tidy",
+          "legend": "Which ways of tidying?",
+          "options": [
+            {"value": "Stacks and drawers", "rec": true},
+            {"value": "Stacks only"},
+            {"value": "Drawers only"}
+          ]
+        },
+        {
+          "id": "drawers",
+          "legend": "What is a drawer?",
+          "options": [
+            {"value": "Every project, plus folders I make", "rec": true, "why": "Like Reference or Old stuff."},
+            {"value": "Projects only"},
+            {"value": "Only folders I make"}
+          ]
+        },
+        {
+          "id": "auto",
+          "legend": "Tidy into stacks button",
+          "options": [
+            {"value": "Yes", "rec": true},
+            {"value": "No, I'll stack things myself"}
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything missing or annoying?",
+          "placeholder": "e.g. colour the piles, zoom, a pile per week"
+        }
+      ],
+      "pick": "Stacks and drawers, with a drawer for every project plus your own folders, and the Tidy button. Piles keep today's work at hand; drawers keep the desk clear without hiding anything from Find."
+    },
+    "r8-signoff": {
+      "round": 8,
+      "order": 20,
+      "area": "Tickets",
+      "version": 1,
+      "title": "Sign-offs: the closing message some tickets need",
+      "body": [
+        "**How Shiftbook knows:** you write a few rules once, in Settings → Sign-offs. A rule matches on how the ticket number starts (every **CHG**, every **RITM**) or on the project the entry is in. Each rule has a message with gaps in {braces}. Shiftbook fills {ticket}, {date}, {title} and {hours} itself; you fill the rest. You can also mark any single ticket as needing a sign-off from its right-click menu.",
+        "**How it looks:** a ticket that needs a sign-off has a yellow ✎ in the tray. Click it, and the message pulls out with the blanks ready. Copy it into the ticket and the ✎ turns into a green ✓. The wrap-up reminds you about any you haven't done."
+      ],
+      "figures": [
+        {
+          "html_file": "mocks/r08-signoff.html",
+          "caption": "Live: click **CHG0012345**, type what you tested, press **Copy sign-off**. Then add a rule for **INC** on the left and watch the tray."
+        }
+      ],
+      "questions": [
+        {
+          "id": "match",
+          "type": "many",
+          "legend": "How should Shiftbook know a ticket needs one?",
+          "options": [
+            {"value": "How the ticket number starts", "on": true},
+            {"value": "The entry's project", "on": true},
+            {"value": "I mark it myself from the right-click menu", "on": true},
+            {"value": "A word in the entry, e.g. \"outage\"", "why": "Handy, but it can guess wrong."}
+          ]
+        },
+        {
+          "id": "remind",
+          "type": "many",
+          "legend": "Where should it remind you?",
+          "options": [
+            {"value": "Yellow ✎ on the ticket", "on": true},
+            {"value": "The end-of-day wrap-up", "on": true},
+            {"value": "A warning on the Timesheet"}
+          ]
+        },
+        {
+          "id": "keep",
+          "legend": "Keep the message you copied?",
+          "options": [
+            {"value": "Yes, with the ticket", "rec": true, "why": "Find can search it later, and it's encrypted like everything else."},
+            {"value": "No, just copy it"}
+          ]
+        },
+        {
+          "id": "kinds",
+          "type": "text",
+          "legend": "What kinds of sign-off do you write today? Describe them; don't paste real ones.",
+          "placeholder": "e.g. changes need what I tested and the impact; requests need what I delivered"
+        }
+      ],
+      "pick": "Ticket start, project and marking it yourself; remind on the ticket and in the wrap-up; keep the message. Matching on words in the entry can guess wrong, so leave it out at first."
+    }
+  }
+}

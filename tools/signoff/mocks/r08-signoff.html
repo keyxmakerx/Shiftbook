@@ -1,0 +1,117 @@
+<style>
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper-2:#f6f3ec;--ink:#1d2126;--ink-2:#4a525b;--mut:#5f6872;--rule:rgba(29,33,38,.1);--accent:#3d5bb0;--ok:#2e8a5a;--warn:#9f5a06;--warn-wash:#fcf1df;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35);--lift:0 2px 4px rgba(29,33,38,.08),0 22px 40px -18px rgba(29,33,38,.45);
+--display:Fraunces,Georgia,serif;--ui:"Instrument Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace;--spring:cubic-bezier(.2,.9,.25,1.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--desk);color:var(--ink);font:13.5px/1.45 var(--ui)}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #d7dadd;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:14px;padding:14px;align-items:start}
+@media (max-width:700px){.wrap{grid-template-columns:1fr}}
+.paper{background:var(--paper);border-radius:6px;box-shadow:var(--shadow);padding:14px 16px}
+.lbl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700}
+h2{font:600 19px/1.2 var(--display);margin:2px 0 10px}
+.rule{border:1px solid var(--rule);border-radius:6px;padding:8px 10px;margin-bottom:8px;background:var(--paper-2)}
+.rule .when{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12.5px;color:var(--ink-2)}
+.rule .when b{color:var(--ink)}
+.rule .tpl{font-size:12.5px;margin-top:5px;color:var(--ink)}
+.rule .tpl i{font-style:normal;background:#e6ecfb;color:var(--accent);border-radius:4px;padding:0 4px;font-weight:600}
+.rule input,.rule textarea,.rule select{font:inherit;border:1px solid var(--rule);border-radius:6px;padding:4px 7px;background:#fff}
+.rule input{width:80px;font-family:var(--mono);text-transform:uppercase}
+.rule textarea{width:100%;margin-top:6px;resize:vertical;min-height:52px}
+.rule.new{border-style:dashed;background:transparent}
+.mut{color:var(--mut);font-size:12px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 10px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--mono);background:#fff;border:1px solid var(--rule);border-radius:14px;padding:4px 10px;cursor:default;transition:box-shadow .2s,background .2s}
+.chip .m{font:600 11px var(--ui);color:var(--mut)}
+.chip.need{border-color:#e7c48c;background:var(--warn-wash);cursor:pointer}
+.chip.need::before{content:'✎';color:var(--warn)}
+.chip.done{border-color:#a9d6bd;background:#e8f5ee}
+.chip.done::before{content:'✓';color:var(--ok);font-weight:700}
+.chip.need:hover,.chip.sel{box-shadow:0 0 0 2px var(--warn)}
+.sheet{margin-top:4px;border-top:3px solid var(--warn);transform-origin:top;animation:pull .45s var(--spring);position:relative}
+@keyframes pull{from{opacity:0;transform:translateY(-10px) scaleY(.9)}}
+.sheet h3{margin:0 0 2px;font:600 16px var(--display)}
+.msg{font-size:14px;line-height:1.9;background:#fffef9;border:1px solid var(--rule);border-radius:6px;padding:8px 10px;margin:8px 0}
+.msg input{font:inherit;border:0;border-bottom:1.5px dashed var(--accent);background:#eef2fc;border-radius:3px 3px 0 0;padding:0 4px;min-width:60px;color:var(--ink)}
+.msg .auto{background:#eef6f1;border-radius:3px;padding:0 3px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{font:600 13px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:8px;padding:7px 12px;cursor:pointer}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.stamp{position:absolute;right:14px;top:10px;font:700 15px var(--display);color:var(--ok);border:2.5px solid var(--ok);border-radius:6px;padding:1px 8px;transform:rotate(-6deg) scale(1.6);opacity:0;transition:transform .35s var(--spring),opacity .2s}
+.stamp.on{opacity:.9;transform:rotate(-6deg) scale(1)}
+.wrapup{margin-top:10px;font-size:12.5px;background:var(--warn-wash);color:var(--warn);border-radius:6px;padding:6px 10px}
+.wrapup.ok{background:#e8f5ee;color:var(--ok)}
+.legend{display:flex;gap:12px;font-size:11.5px;color:var(--mut);margin-top:4px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><span>click a yellow ticket in the tray, fill the blue gaps, press Copy. Then add a rule on the left (for example <code>INC</code>) and watch the tray.</span></div>
+<div class="wrap">
+ <div class="paper">
+  <div class="lbl">Settings → Sign-offs</div>
+  <h2>Closing messages</h2>
+  <div id="rules"></div>
+  <div class="rule new">
+   <div class="when">When a ticket starts with <input id="np" placeholder="INC" maxlength="8"> <span class="mut">or is in project</span>
+    <select id="nproj"><option value="">any</option><option>Network refresh</option><option>SSL renewals</option></select></div>
+   <textarea id="nt">Resolved: {what}. Root cause: {cause}. Confirmed with the user on {date}.</textarea>
+   <div class="row" style="margin-top:6px"><button class="btn" id="add">Add rule</button><span class="mut">Words in {braces} become gaps. {ticket}, {date}, {title} and {hours} fill themselves.</span></div>
+  </div>
+ </div>
+ <div class="paper">
+  <div class="lbl">Desk · Done tickets</div>
+  <h2>Today's tray</h2>
+  <div class="chips" id="chips"></div>
+  <div class="legend"><span>✎ needs a sign-off</span><span>✓ signed off</span><span>plain: no rule, nothing to do</span></div>
+  <div id="sheet"></div>
+  <div class="wrapup" id="wrap"></div>
+ </div>
+</div>
+<script>
+const rules=[
+ {prefix:'CHG',proj:'',tpl:'Change {ticket} implemented as planned on {date}. Tested: {tests}. No user impact.'},
+ {prefix:'RITM',proj:'',tpl:'Request {ticket} fulfilled: {title}. {extra}. Closing; reopen if anything is missing.'},
+ {prefix:'',proj:'SSL renewals',tpl:'Certificate renewed for {title}. New expiry {expiry}. Installed on {where}.'},
+];
+const tray=[
+ {t:'INC0045678',title:'Printer jam on 3rd floor',proj:'',min:15},
+ {t:'CHG0012345',title:'Firewall rule cleanup',proj:'Network refresh',min:90},
+ {t:'RITM0034567',title:'New shared mailbox',proj:'',min:15},
+ {t:'TASK0099812',title:'Renew portal cert',proj:'SSL renewals',min:30},
+ {t:'INC0045690',title:'VPN drops at home',proj:'',min:30},
+];
+let sel=null;const signed={};
+const ruleFor=x=>rules.find(r=>r.prefix&&x.t.startsWith(r.prefix))||rules.find(r=>r.proj&&r.proj===x.proj);
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderRules(){
+ document.getElementById('rules').innerHTML=rules.map(r=>`<div class="rule"><div class="when">When ${r.prefix?`a ticket starts with <b>${esc(r.prefix)}</b>`:`the entry is in <b>${esc(r.proj)}</b>`}</div>
+ <div class="tpl">${esc(r.tpl).replace(/\{(\w+)\}/g,'<i>$1</i>')}</div></div>`).join('');
+}
+function renderTray(){
+ const c=document.getElementById('chips');c.innerHTML='';
+ tray.forEach((x,i)=>{const r=ruleFor(x);const b=document.createElement('span');
+  b.className='chip'+(r?(signed[x.t]?' done':' need'):'')+(sel===i?' sel':'');
+  b.innerHTML=`${x.t}<span class="m">${x.min}m</span>`;if(r){b.tabIndex=0;b.onclick=()=>{sel=i;renderTray();renderSheet()};b.onkeydown=e=>{if(e.key==='Enter')b.click()}}
+  c.appendChild(b)});
+ const left=tray.filter(x=>ruleFor(x)&&!signed[x.t]).length;const w=document.getElementById('wrap');
+ w.className='wrapup'+(left?'':' ok');w.textContent=left?`Wrap-up: ${left} ticket${left>1?'s':''} still need${left>1?'':'s'} a sign-off before you finish.`:'Wrap-up: every sign-off is done.';
+}
+function renderSheet(){
+ const s=document.getElementById('sheet');if(sel==null){s.innerHTML='';return}
+ const x=tray[sel],r=ruleFor(x);if(!r){s.innerHTML='';return}
+ const auto={ticket:x.t,date:new Date().toLocaleDateString('en',{month:'short',day:'numeric'}),title:x.title,hours:(x.min/60).toFixed(2).replace(/\.?0+$/,'')+'h'};
+ const html=esc(r.tpl).replace(/\{(\w+)\}/g,(m,k)=>auto[k]?`<span class="auto">${esc(auto[k])}</span>`:`<input data-k="${k}" placeholder="${k}" size="${Math.max(6,k.length+2)}">`);
+ s.innerHTML=`<div class="paper sheet"><div class="stamp${signed[x.t]?' on':''}" id="st">SIGNED</div><h3>Sign-off for ${x.t}</h3><div class="mut">${esc(x.title)} · rule: ${r.prefix?r.prefix+'…':r.proj}</div>
+ <div class="msg">${html}</div><div class="row"><button class="btn primary" id="cp">Copy sign-off</button><button class="btn" id="sk">Not needed this time</button><span class="mut" id="msg"></span></div></div>`;
+ const ins=[...s.querySelectorAll('input')];ins.forEach(i=>{if(signed[x.t])i.value=signed[x.t][i.dataset.k]||'';i.oninput=()=>{i.size=Math.max(6,i.value.length+1)}});ins[0]&&!signed[x.t]&&ins[0].focus();
+ document.getElementById('cp').onclick=()=>{const empty=ins.filter(i=>!i.value.trim());
+  if(empty.length){empty[0].focus();document.getElementById('msg').textContent=`Fill “${empty[0].dataset.k}” first.`;return}
+  signed[x.t]=Object.fromEntries(ins.map(i=>[i.dataset.k,i.value]));document.getElementById('st').classList.add('on');
+  document.getElementById('msg').textContent='Copied. Paste it into the ticket.';renderTray()};
+ document.getElementById('sk').onclick=()=>{signed[x.t]={};sel=null;renderTray();renderSheet()};
+}
+document.getElementById('add').onclick=()=>{
+ const p=document.getElementById('np').value.trim().toUpperCase(),pr=document.getElementById('nproj').value,t=document.getElementById('nt').value.trim();
+ if(!p&&!pr||!t){document.getElementById('np').focus();return}
+ rules.push({prefix:p,proj:p?'':pr,tpl:t});document.getElementById('np').value='';renderRules();renderTray();
+};
+renderRules();renderTray();
+</script>
