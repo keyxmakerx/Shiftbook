@@ -19,7 +19,8 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
-  CanvasCard,
+  CardRef,
+  DeskData,
   CardKind,
   Note,
   NoteInput,
@@ -233,11 +234,23 @@ export class TauriApi implements DataApi {
     return call('set_inbox_deleted', { id, deleted });
   }
 
-  canvas(today: IsoDate): Promise<CanvasCard[]> {
+  canvas(today: IsoDate): Promise<DeskData> {
     return call('canvas', { today });
   }
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void> {
     return call('canvas_move', { kind, id, x, y });
+  }
+  canvasArea(projectId: string, x: number, y: number, w: number, h: number): Promise<void> {
+    return call('canvas_area', { projectId, x, y, w, h });
+  }
+  canvasAreaRemove(projectId: string): Promise<void> {
+    return call('canvas_area_remove', { projectId });
+  }
+  canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void> {
+    return call('canvas_link', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id, drawn });
+  }
+  canvasLinkReset(a: CardRef, b: CardRef): Promise<void> {
+    return call('canvas_link_reset', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id });
   }
 
   listResponses(): Promise<SavedResponse[]> {

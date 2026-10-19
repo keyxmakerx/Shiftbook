@@ -43,3 +43,26 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
     y: (height - (bottom - top) * zoom) / 2 - top * zoom,
   };
 }
+
+/** A new project area's size; matches `new_area` in crates/core/src/canvas.rs. */
+export const NEW_AREA = { w: 2 * (CARD_W + 24) + 24, h: 2 * (CARD_H + 24) + 48 };
+/** Smallest area; matches `MIN_AREA` in crates/core/src/canvas.rs. */
+export const MIN_AREA = { w: CARD_W + 48, h: CARD_H + 72 };
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** The index of the area holding a card's centre (the last one wins), as `area_at` in core. */
+export function areaAt(areas: Rect[], x: number, y: number): number {
+  const cx = x + CARD_W / 2;
+  const cy = y + CARD_H / 2;
+  for (let i = areas.length - 1; i >= 0; i--) {
+    const a = areas[i]!;
+    if (cx >= a.x && cx < a.x + a.w && cy >= a.y && cy < a.y + a.h) return i;
+  }
+  return -1;
+}

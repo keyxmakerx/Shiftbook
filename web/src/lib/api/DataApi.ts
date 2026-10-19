@@ -365,10 +365,46 @@ export interface CanvasCard {
   z: number;
   /** The owner moved it; false means it was placed automatically this time. */
   placed: boolean;
+  /** Its spot when the Desk is laid out as a timeline. */
+  timelineX: number;
+  timelineY: number;
   entry: Entry | null;
   tray: { item: TrayItem; date: IsoDate } | null;
   note: Note | null;
   inbox: InboxItem | null;
+}
+
+/** A project's area on the Desk: cards dropped inside get its project. */
+export interface CanvasArea {
+  projectId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** One card, by what it shows and the record's id. */
+export interface CardRef {
+  kind: CardKind;
+  id: string;
+}
+
+/** A line between two cards: automatic (with why) or drawn by hand. */
+export interface CanvasLink {
+  a: CardRef;
+  b: CardRef;
+  reason: { kind: 'ticket' | 'word'; text: string } | null;
+  drawn: boolean;
+}
+
+/** Everything on the Desk. */
+export interface DeskData {
+  /** Bottom first. */
+  cards: CanvasCard[];
+  areas: CanvasArea[];
+  links: CanvasLink[];
+  /** The timeline's days, oldest first, with where each column starts. */
+  axis: { date: IsoDate; x: number }[];
 }
 
 /** What brought the user back to Shiftbook. */
@@ -612,10 +648,18 @@ export interface DataApi {
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
 
   // ----- the Desk (Canvas) -----
-  /** Every card on the Desk, bottom first. Tauri: `canvas`. */
-  canvas(today: IsoDate): Promise<CanvasCard[]>;
+  /** Everything on the Desk: cards (bottom first), project areas, links and the timeline. Tauri: `canvas`. */
+  canvas(today: IsoDate): Promise<DeskData>;
   /** Put a card where it was dropped, on top. Tauri: `canvas_move`. */
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void>;
+  /** Put a project's area here, making it the first time. Tauri: `canvas_area`. */
+  canvasArea(projectId: string, x: number, y: number, w: number, h: number): Promise<void>;
+  /** Take a project's area off the Desk (the project and its cards stay). Tauri: `canvas_area_remove`. */
+  canvasAreaRemove(projectId: string): Promise<void>;
+  /** Draw a link (`drawn`) or hide an automatic one. Tauri: `canvas_link`. */
+  canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void>;
+  /** Undo a drawn or hidden link. Tauri: `canvas_link_reset`. */
+  canvasLinkReset(a: CardRef, b: CardRef): Promise<void>;
 
   // ----- saved responses -----
   /** Saved responses, in order. Tauri: `list_responses`. */

@@ -23,7 +23,10 @@ The alpha is a working app you can use day to day for logging time:
   you arrange. Drag to move (it's remembered), drag empty paper or scroll to pan, Ctrl + scroll
   to zoom, Fit everything. Double-click a card to open it (a Done ticket takes a few words);
   double-click empty paper to jot. Right-click anything for its paper menu. The side panel has
-  today's hours, Where was I?, Log work, Done tickets and the wrap-up. See `docs/CANVAS.md`.
+  today's hours, Where was I?, Log work, Done tickets and the wrap-up. **Project areas**
+  (right-click empty paper) give cards dropped into them that project; **links** join cards
+  that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
+  Desk out by day and Back to my layout puts it back. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
   entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
@@ -78,7 +81,7 @@ The alpha is a working app you can use day to day for logging time:
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 
-Not in the alpha yet: Planner, the rest of the Canvas (project areas, links, timeline, stacks, drawers, boards; see `docs/CANVAS.md`), the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
+Not in the alpha yet: Planner, the rest of the Canvas (stacks, drawers, boards; see `docs/CANVAS.md`), the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 

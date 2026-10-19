@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CARD_H, CARD_W, fitAll, HOME, MAX_ZOOM, MIN_ZOOM, toCanvas, zoomAt } from './canvasView';
+import { areaAt, CARD_H, CARD_W, fitAll, HOME, MAX_ZOOM, MIN_ZOOM, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -32,5 +32,14 @@ describe('canvas view', () => {
     expect(wide.zoom).toBeLessThan(1);
     // The right edge of the far card lands inside the margin.
     expect(2000 * wide.zoom + CARD_W * wide.zoom + wide.x).toBeLessThanOrEqual(800 - 40 + 0.01);
+  });
+
+  it('finds the area holding a card by its centre, top area first', () => {
+    const a = { x: 0, y: 0, w: 600, h: 400 };
+    const b = { x: 300, y: 0, w: 600, h: 400 };
+    expect(areaAt([a, b], 0, 0)).toBe(0);
+    expect(areaAt([a, b], 400, 10)).toBe(1);
+    expect(areaAt([a], 520, 0)).toBe(-1);
+    expect(areaAt([], 0, 0)).toBe(-1);
   });
 });

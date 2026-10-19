@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-area-remove"
+description = "Enables the canvas_area_remove command without any pre-configured scope."
+commands.allow = ["canvas_area_remove"]
+
+[[permission]]
+identifier = "deny-canvas-area-remove"
+description = "Denies the canvas_area_remove command without any pre-configured scope."
+commands.deny = ["canvas_area_remove"]

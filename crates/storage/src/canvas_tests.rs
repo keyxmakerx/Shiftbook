@@ -1,10 +1,11 @@
 //! Tests for the Canvas layout against a real encrypted database.
 
-use shiftbook_core::canvas::{CardKind, MAX_COORD};
+use shiftbook_core::canvas::{Area, CardKind, MAX_COORD, MIN_AREA};
 use shiftbook_core::ids::OwnerId;
 use time::macros::date;
 use uuid::Uuid;
 
+use crate::canvas::pair;
 use crate::db::{database_path, open_encrypted, test_dek};
 use crate::fsutil::test_dir::TestDir;
 use crate::test_rt::block_on;
@@ -94,5 +95,76 @@ fn tray_between_and_tray_item() {
         assert!(s.tray_item(other, id).await.unwrap().is_none());
         s.tray_remove(me, id).await.unwrap();
         assert!(s.tray_item(me, id).await.unwrap().is_none());
+    });
+}
+
+#[test]
+fn project_areas_are_saved_per_project() {
+    let dir = TestDir::new("canvas-areas");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let p = s
+            .create_project(me, "Network refresh", None)
+            .await
+            .unwrap()
+            .id;
+        assert!(s.canvas_areas(me).await.unwrap().is_empty());
+        let area = Area {
+            x: 10,
+            y: 20,
+            w: 600,
+            h: 400,
+        };
+        s.set_area(me, p, area).await.unwrap();
+        // Moving again updates the same area; tiny sizes are kept sane.
+        let small = s
+            .set_area(
+                me,
+                p,
+                Area {
+                    x: 50,
+                    y: 60,
+                    w: 1,
+                    h: 1,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!((small.area.w, small.area.h), MIN_AREA);
+        let all = s.canvas_areas(me).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!((all[0].area.x, all[0].area.y), (50, 60));
+        assert!(s.canvas_areas(other).await.unwrap().is_empty());
+        // Someone else's project, or one that doesn't exist, has no area.
+        assert!(s.set_area(other, p, area).await.is_err());
+        s.remove_area(me, p).await.unwrap();
+        assert!(s.canvas_areas(me).await.unwrap().is_empty());
+        // And it can come back.
+        s.set_area(me, p, area).await.unwrap();
+        assert_eq!(s.canvas_areas(me).await.unwrap().len(), 1);
+    });
+}
+
+#[test]
+fn links_are_drawn_hidden_and_reset_in_either_order() {
+    let dir = TestDir::new("canvas-links");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let a = (CardKind::Note, Uuid::now_v7());
+        let b = (CardKind::Entry, Uuid::now_v7());
+        s.set_link(me, a, b, true).await.unwrap();
+        let links = s.canvas_links(me).await.unwrap();
+        assert_eq!(links.len(), 1);
+        assert!(links[0].drawn);
+        assert_eq!((links[0].a, links[0].b), pair(a, b));
+        // The same pair the other way round is the same link.
+        s.set_link(me, b, a, false).await.unwrap();
+        let links = s.canvas_links(me).await.unwrap();
+        assert_eq!(links.len(), 1);
+        assert!(!links[0].drawn);
+        assert!(s.canvas_links(other).await.unwrap().is_empty());
+        assert!(s.set_link(me, a, a, true).await.is_err(), "not to itself");
+        s.reset_link(me, b, a).await.unwrap();
+        assert!(s.canvas_links(me).await.unwrap().is_empty());
     });
 }

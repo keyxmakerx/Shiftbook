@@ -1,0 +1,28 @@
+{
+  "meta": {
+    "round": 11,
+    "heading": "Round 11: a notepad under each item, bring it up tomorrow, and tickets that aren't done",
+    "intro": "Your three questions as proposals. Step 2 of the Canvas (project areas, links, timeline) is being built meanwhile."
+  },
+  "cards": {
+    "r11-asks": {
+      "round": 11,
+      "order": 10,
+      "area": "Desk and Day",
+      "version": 1,
+      "title": "Three things you asked for",
+      "body": [
+        "**A notepad under each ticket or entry.** Every entry already has a Notes field, but it's hidden in the details panel. Proposal: a small **Notes** fold under each entry and each Done ticket, on the Desk cards and on Day. Click it and a notepad opens right there, saved as you type. A Done ticket's notepad grows from \"a few words\" to a full note.",
+        "**Bring up tomorrow.** There is a \"Tomorrow I start with…\" list, but only inside the end-of-day wrap-up, and that's off unless you turn it on in Settings → Your day. So you probably never saw it. Proposal: **Bring up tomorrow** in the right-click menu of every card and row. It goes on tomorrow's list, and tomorrow \"Where was I?\" shows it first when you open Shiftbook. No wrap-up needed.",
+        "**A ticket you worked on but haven't finished.** The tray says \"Done\", which is wrong for those. Proposal: rename it **Tickets** and give each one a tick, on by default. Untick it and it's **Still open**: its time still counts today, it gets an open ring, and it comes back in tomorrow's tray until you tick it."
+      ],
+      "questions": [
+        {"id": "pad", "legend": "Notepad under each entry and ticket", "options": [{"value": "Yes, as described", "rec": true}, {"value": "Only on the Desk cards"}, {"value": "Only on Day"}]},
+        {"id": "tomorrow", "legend": "Bring up tomorrow", "options": [{"value": "Yes, in every right-click menu", "rec": true}, {"value": "Also a button on each card", "why": "One click, no menu."}]},
+        {"id": "open", "legend": "Tickets that aren't done", "options": [{"value": "Rename to Tickets, with a done tick", "rec": true}, {"value": "Keep Done tickets, add a separate \"Working on\" list"}]},
+        {"id": "more", "type": "text", "legend": "Anything to add?", "placeholder": "e.g. open tickets should also show on the Desk until done"}
+      ],
+      "pick": "All three as described. They're small, and I'll build them right after step 2."
+    }
+  }
+}

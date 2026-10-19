@@ -70,7 +70,14 @@ names the round it came from. Nothing here is optional unless it says so.
    moved; every live note and Inbox scrap. The day's "Tickets" roll-up entry is not a card (its
    tickets are). Cards nobody moved are placed newest first in rows from the top left, around
    the moved ones.
-2. **C2 Meaning:** project areas, automatic and drawn links, timeline and back.
+2. **C2 Meaning (built):** project areas (right-click empty paper → Project area here; drag
+   the name to move the area with its cards, the corner to resize; drop a card in to give it the
+   project, drag it out of its own project's area to take the project away, both with Undo);
+   links (automatic for a shared ticket, also one written in a note, and for an uncommon word
+   only two cards use, at most two word links per card; dashed for words, solid for tickets;
+   click a line to remove it; "Link to another card" on any card draws one; the Links button
+   hides them all); the timeline (a column per day, oldest left, wrapping after 5 cards; Back
+   to my layout restores the view; cards can't be dragged while it shows).
 3. **C3 Tidy:** stacks, Tidy into stacks, drawers.
 4. **C4 Boards:** boards inside boards with tint and breadcrumbs, the List view, the Archive.
 5. **C5:** the meeting canvas.

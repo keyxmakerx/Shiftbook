@@ -14,9 +14,15 @@
 
   let {
     card,
+    x = card.x,
+    y = card.y,
     zoom,
+    locked = false,
+    linking = false,
     onmove,
     onchanged,
+    onlink,
+    onpick,
   }: {
     card: CanvasCard;
     zoom: number;
@@ -24,6 +30,17 @@
     onmove: (x: number, y: number) => void;
     /** Something about the record changed; reload the Desk. */
     onchanged: () => void;
+    /** Shown where (the timeline puts cards elsewhere); defaults to the card's own spot. */
+    x?: number;
+    y?: number;
+    /** Can't be dragged (the timeline). */
+    locked?: boolean;
+    /** Picking the other end of a new link: a click picks this card. */
+    linking?: boolean;
+    /** "Link to another card" was chosen on this card. */
+    onlink?: () => void;
+    /** This card was picked as the other end of a link. */
+    onpick?: () => void;
   } = $props();
 
   let el: HTMLElement | undefined = $state();
@@ -56,6 +73,12 @@
   // ----- moving -----
   function down(e: PointerEvent) {
     if (e.button !== 0 || editing) return;
+    if (linking) {
+      e.stopPropagation();
+      onpick?.();
+      return;
+    }
+    if (locked) return;
     if ((e.target as HTMLElement).closest('input, textarea, button')) return;
     e.stopPropagation();
     const start = { x: e.clientX, y: e.clientY };
@@ -72,7 +95,7 @@
       el?.removeEventListener('pointermove', move);
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
-      if (moved && drag) onmove(Math.round(card.x + drag.dx), Math.round(card.y + drag.dy));
+      if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy));
       drag = null;
     };
     el?.addEventListener('pointermove', move);
@@ -117,7 +140,19 @@
     toast((await copyText(text)) ? `Copied ${what}` : "Couldn't copy here.");
   }
 
+  /** The card's own menu, plus the Desk's options for it. */
   function menu(): MenuSpec | null {
+    const own = cardMenu();
+    if (!own) return null;
+    if (onlink) {
+      own.sections.splice(1, 0, {
+        items: [{ label: 'Link to another card', icon: 'link', top: true, act: () => onlink?.() }],
+      });
+    }
+    return own;
+  }
+
+  function cardMenu(): MenuSpec | null {
     if (card.entry) return entryMenu(card.entry);
     if (card.tray) {
       const { item } = card.tray;
@@ -213,10 +248,12 @@
   class="card paper"
   class:scrap={!!card.inbox}
   class:lifted={!!drag}
+  class:locked
+  class:picking={linking}
   bind:this={el}
   style:--c={color}
-  style:left="{card.x + (drag?.dx ?? 0)}px"
-  style:top="{card.y + (drag?.dy ?? 0)}px"
+  style:left="{x + (drag?.dx ?? 0)}px"
+  style:top="{y + (drag?.dy ?? 0)}px"
   style:z-index={drag ? 99999 : card.z}
   role="button"
   tabindex="0"
@@ -289,9 +326,12 @@
     cursor: grab;
     user-select: none;
     touch-action: none;
+    /* Cards glide to and from the timeline. */
     transition:
       box-shadow 0.2s,
-      transform 0.25s var(--spring);
+      transform 0.25s var(--spring),
+      left calc(0.55s * var(--m)) var(--ease),
+      top calc(0.55s * var(--m)) var(--ease);
   }
 
   .card:hover {
@@ -301,6 +341,17 @@
   .card:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .card.locked {
+    cursor: default;
+  }
+
+  .card.picking {
+    cursor: crosshair;
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
+      var(--shadow);
   }
 
   .card.lifted {
