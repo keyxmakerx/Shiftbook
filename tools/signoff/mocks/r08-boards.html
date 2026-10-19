@@ -1,0 +1,171 @@
+<style>
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper-2:#f6f3ec;--ink:#1d2126;--ink-2:#4a525b;--mut:#5f6872;--rule:rgba(29,33,38,.1);--accent:#3d5bb0;
+--shadow:0 1px 1px rgba(29,33,38,.06),0 10px 24px -14px rgba(29,33,38,.35);--lift:0 2px 4px rgba(29,33,38,.08),0 22px 40px -18px rgba(29,33,38,.45);
+--display:Fraunces,Georgia,serif;--ui:"Instrument Sans","Segoe UI",system-ui,sans-serif;--mono:"JetBrains Mono",Consolas,monospace;
+--indigo:#3e5ba9;--teal:#178f7c;--amber:#c98a22;--plum:#8c4f7a;--coral:#e0573a;--slate:#6b7682;--spring:cubic-bezier(.2,.9,.25,1.08)}
+*{box-sizing:border-box}body{margin:0;background:var(--desk);color:var(--ink);font:13px/1.4 var(--ui)}
+.try{display:flex;gap:6px;align-items:center;padding:8px 10px;background:#fff;border-bottom:1px solid #d7dadd;font-size:12px;flex-wrap:wrap}.try b{color:var(--mut)}
+.app{position:relative;height:560px;display:grid;grid-template-columns:170px 1fr;overflow:hidden}
+.paper{background-color:var(--paper);border-radius:4px;box-shadow:0 0 0 1px rgba(29,33,38,.07),0 1px 2px rgba(29,33,38,.08),0 8px 18px -12px rgba(29,33,38,.35)}
+
+/* the cabinet: one tree for both views */
+.tree{background:#f1f3f4;border-right:1px solid var(--rule);padding:10px 6px;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.tree .lbl{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--mut);font-weight:700;padding:2px 8px 4px}
+.node{display:flex;align-items:center;gap:7px;border:0;background:none;font:inherit;color:var(--ink);text-align:left;padding:5px 8px;border-radius:6px;cursor:pointer;width:100%}
+.node:hover{background:rgba(29,33,38,.05)}
+.node.on{background:#fff;box-shadow:var(--shadow);font-weight:600}
+.node .sw{width:9px;height:9px;border-radius:3px;background:var(--c);flex:none}
+.node .n{margin-left:auto;font:600 10.5px var(--mono);color:var(--mut)}
+.node.d1{padding-left:24px}.node.d2{padding-left:40px}
+.node.arch{margin-top:auto;border-top:1px solid var(--rule);border-radius:0;padding-top:9px}
+.node.hot{box-shadow:0 0 0 2px var(--c);background:#fff}
+
+/* main */
+.main{position:relative;display:flex;flex-direction:column;min-width:0;background:var(--tint,var(--desk));transition:background-color .45s}
+.top{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--rule);background:rgba(255,255,255,.55);flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;font-size:13px}
+.crumbs button{border:0;background:none;font:inherit;color:var(--mut);cursor:pointer;padding:2px 4px;border-radius:4px}
+.crumbs button:hover{background:rgba(29,33,38,.06);color:var(--ink)}
+.crumbs .here{font:600 16px var(--display);color:var(--ink)}
+.crumbs .sep{color:#a3aab1}
+.seg{margin-left:auto;display:flex;background:#e3e6e9;border-radius:7px;padding:2px}
+.seg button{border:0;background:none;font:600 12px var(--ui);padding:4px 10px;border-radius:5px;cursor:pointer;color:var(--ink-2)}
+.seg button[aria-pressed=true]{background:#fff;box-shadow:var(--shadow);color:var(--ink)}
+.stage{position:relative;flex:1;min-height:0;overflow:hidden}
+.board{position:absolute;inset:0;transform-origin:var(--ox,50%) var(--oy,50%)}
+.board.enter{animation:zin .45s var(--spring)}
+.board.leave{animation:zout .4s var(--spring)}
+@keyframes zin{from{opacity:0;transform:scale(.35)}}
+@keyframes zout{from{opacity:0;transform:scale(1.6)}}
+
+.c{position:absolute;width:156px;padding:7px 9px 8px;border-top:3px solid var(--c);cursor:pointer;user-select:none;transition:box-shadow .2s,transform .2s}
+.c:hover{transform:translateY(-2px)}
+.c .kind{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;display:block}
+.c .ti{display:block;font-weight:600;font-size:12.5px;line-height:1.25}
+.c small{display:block;color:var(--mut);font-size:11px;margin-top:2px}
+/* a board card: tabbed folder with a peek of what's inside */
+.c.bd{border-top:0;padding-top:12px;background:color-mix(in srgb,var(--c) 7%,var(--paper))}
+.c.bd::before{content:'';position:absolute;left:-0px;top:-9px;width:62px;height:10px;border-radius:5px 5px 0 0;background:var(--c)}
+.c.bd .peek{display:flex;gap:3px;margin-top:6px}.c.bd .peek i{height:16px;flex:1;border-radius:2px;background:#fff;box-shadow:0 0 0 1px var(--rule);border-top:2px solid var(--c)}
+.c.bd .open{position:absolute;right:6px;top:6px;font:600 10.5px var(--ui);color:var(--c)}
+.c.sel{box-shadow:0 0 0 2px var(--accent),var(--lift)}
+
+/* list view */
+.list{position:absolute;inset:0;overflow:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;background:var(--paper);box-shadow:var(--shadow);cursor:pointer;border-left:3px solid var(--c)}
+.row .ti{font-weight:600}.row small{color:var(--mut)}.row .d{margin-left:auto;font:600 11px var(--mono);color:var(--mut);white-space:nowrap}
+.row.bd{background:color-mix(in srgb,var(--c) 8%,var(--paper))}
+.row .ic{width:18px;text-align:center;color:var(--c)}
+.group{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;margin:6px 2px 0}
+
+.bar{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:6px;background:var(--ink);color:#fff;border-radius:9px;padding:5px;box-shadow:var(--lift);z-index:5;align-items:center}
+.bar[hidden]{display:none}
+.bar span{padding:0 6px;font-size:12px;opacity:.8}
+.bar button{font:600 12px var(--ui);background:#343a41;color:#fff;border:0;border-radius:6px;padding:5px 10px;cursor:pointer}
+.bar button:hover{background:#454c54}
+.hint{position:absolute;right:12px;bottom:10px;color:var(--mut);font-size:11.5px}
+.empty{color:var(--mut);padding:30px;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<div class="try"><b>Try it:</b><span>double-click a folder card to go inside it (or pick it on the left) · switch Canvas / List · click a card, then Archive · breadcrumbs take you back out</span></div>
+<div class="app">
+ <nav class="tree" id="tree"></nav>
+ <section class="main" id="main">
+  <div class="top"><div class="crumbs" id="crumbs"></div>
+   <div class="seg" role="group" aria-label="View"><button id="vc" aria-pressed="true">Canvas</button><button id="vl" aria-pressed="false">List</button></div></div>
+  <div class="stage" id="stage"></div>
+  <div class="bar" id="bar" hidden><span id="bt"></span><button id="bopen">Open</button><button id="barch">Archive</button><button id="bx">✕</button></div>
+ </section>
+</div>
+<script>
+// One tree. A board is any card that holds other cards; it can be a project, a meeting series,
+// daily notes or just a folder. Canvas and List are two views of the same board.
+const C={desk:'#9aa3ab',meet:'var(--amber)',ops:'var(--amber)',one:'#b0761c',daily:'var(--slate)',proj:'var(--indigo)',net:'var(--indigo)',ssl:'var(--teal)',ref:'var(--plum)',arch:'#8a919a',note:'#9aa3ab'};
+const T={desk:null,meet:'#f3ead9',ops:'#f4ecdc',one:'#f3e9d8',daily:'#e6e9ec',proj:'#e3e7f2',net:'#e2e7f3',ssl:'#ddefeb',ref:'#efe5ec',arch:'#e4e6e8'};
+const N={
+ desk:{t:'Desk',k:'board',p:null},
+ meet:{t:'Meetings',k:'board',p:'desk',x:30,y:30,sub:'every meeting series'},
+ daily:{t:'Daily notes',k:'board',p:'desk',x:230,y:30,sub:'one card per day'},
+ proj:{t:'Projects',k:'board',p:'desk',x:430,y:30,sub:'one board per project'},
+ ref:{t:'Reference',k:'board',p:'desk',x:30,y:190,sub:'how-tos, numbers'},
+ j1:{t:'ask Sam about the spare optics',k:'Jot',p:'desk',x:250,y:200,d:'Oct 16'},
+ j2:{t:'Thursday plan',k:'Daily note',p:'desk',x:430,y:200,d:'Oct 16',sub:'cutover 2pm, then patching'},
+ ops:{t:'Weekly ops',k:'board',p:'meet',x:30,y:30,sub:'Thursdays 9:00'},
+ one:{t:'1:1 with lead',k:'board',p:'meet',x:230,y:30,sub:'every other Monday'},
+ m3:{t:'All-hands Q4',k:'Meeting note',p:'meet',x:430,y:40,d:'Oct 08'},
+ o1:{t:'Oct 02',k:'Meeting note',p:'ops',x:30,y:30,d:'Oct 02',sub:'Patch window agreed'},
+ o2:{t:'Oct 09',k:'Meeting note',p:'ops',x:220,y:60,d:'Oct 09',sub:'New monitoring alerts'},
+ o3:{t:'Oct 16',k:'Meeting note',p:'ops',x:410,y:30,d:'Oct 16',sub:'Patch window moved to Thu'},
+ o4:{t:'Action items',k:'Note',p:'ops',x:120,y:200,sub:'3 open, 5 done'},
+ n1:{t:'Oct 13 · Mon',k:'Daily note',p:'daily',x:30,y:30,d:'Oct 13'},
+ n2:{t:'Oct 14 · Tue',k:'Daily note',p:'daily',x:210,y:30,d:'Oct 14'},
+ n3:{t:'Oct 15 · Wed',k:'Daily note',p:'daily',x:390,y:30,d:'Oct 15'},
+ net:{t:'Network refresh',k:'board',p:'proj',x:30,y:30,sub:'cutover this week'},
+ ssl:{t:'SSL renewals',k:'board',p:'proj',x:230,y:30,sub:'5 certs left'},
+ a1:{t:'Core switch cutover plan',k:'Note',p:'net',x:30,y:30,d:'Oct 13'},
+ a2:{t:'Firewall rule cleanup',k:'Entry · 1.5h',p:'net',x:220,y:60,d:'Oct 14'},
+ a3:{t:'Rollback steps',k:'Note',p:'net',x:410,y:30,d:'Oct 12'},
+ s1:{t:'CSR steps for the load balancer',k:'Note',p:'ssl',x:30,y:30,d:'Oct 12'},
+ r1:{t:'Vendor support numbers',k:'Note',p:'ref',x:30,y:30,d:'Sep 02'},
+ r2:{t:'How to reset a stuck AP',k:'Note',p:'ref',x:220,y:40,d:'Aug 21'},
+ x1:{t:'Sep 29 · Mon',k:'Daily note',p:'daily',arch:1,d:'Sep 29',why:'auto, after 2 weeks'},
+ x2:{t:'Old VPN notes',k:'Note',p:'ref',arch:1,d:'Jul 14',why:'archived by you'},
+};
+let here='desk',view='canvas',sel=null;
+const kids=b=>Object.keys(N).filter(k=>N[k].p===b&&!N[k].arch);
+const isB=k=>N[k].k==='board';
+const count=b=>kids(b).reduce((t,k)=>t+(isB(k)?count(k):1),0);
+const colr=k=>C[k]||C[N[k].p]||C.note;
+const path=b=>{const out=[];for(let k=b;k;k=N[k].p)out.unshift(k);return out};
+function tree(){
+ const t=document.getElementById('tree');t.innerHTML='<div class="lbl">Boards</div>';
+ const add=(k,d)=>{const b=document.createElement('button');b.className='node d'+d+(here===k?' on':'');b.style.setProperty('--c',colr(k));
+  b.innerHTML=`<span class="sw"></span>${N[k].t}<span class="n">${count(k)}</span>`;b.onclick=()=>go(k);b.dataset.k=k;t.appendChild(b);
+  kids(k).filter(isB).forEach(c=>add(c,Math.min(d+1,2)))};
+ add('desk',0);
+ const ar=Object.keys(N).filter(k=>N[k].arch).length;const a=document.createElement('button');a.className='node arch'+(here==='arch'?' on':'');a.style.setProperty('--c',C.arch);a.dataset.k='arch';
+ a.innerHTML=`<span class="sw"></span>Archive<span class="n">${ar}</span>`;a.onclick=()=>go('arch');t.appendChild(a);
+}
+function crumbs(){
+ const c=document.getElementById('crumbs');c.innerHTML='';const p=here==='arch'?['arch']:path(here);
+ p.forEach((k,i)=>{if(i){const s=document.createElement('span');s.className='sep';s.textContent='›';c.appendChild(s)}
+  if(i===p.length-1){const h=document.createElement('span');h.className='here';h.textContent=k==='arch'?'Archive':N[k].t;c.appendChild(h)}
+  else{const b=document.createElement('button');b.textContent=N[k].t;b.onclick=()=>go(k,true);c.appendChild(b)}});
+}
+function cardHTML(k){const n=N[k];
+ if(isB(k))return `<span class="open">${count(k)} inside</span><span class="kind">${k==='meet'||N[k].p==='meet'?'Meetings':k==='daily'?'Daily notes':N[k].p==='proj'?'Project':'Board'}</span><span class="ti">${n.t}</span><small>${n.sub||''}</small><div class="peek">${'<i></i>'.repeat(Math.min(4,Math.max(1,kids(k).length)))}</div>`;
+ return `<span class="kind">${n.k}${n.d?' · '+n.d:''}</span><span class="ti">${n.t}</span>${n.sub?`<small>${n.sub}</small>`:''}`}
+function draw(anim,origin){
+ const st=document.getElementById('stage');st.innerHTML='';
+ document.getElementById('main').style.setProperty('--tint',T[here]||'var(--desk)');
+ const bd=document.createElement('div');bd.className='board'+(anim?' '+anim:'');if(origin){bd.style.setProperty('--ox',origin[0]+'px');bd.style.setProperty('--oy',origin[1]+'px')}
+ st.appendChild(bd);
+ const items=here==='arch'?Object.keys(N).filter(k=>N[k].arch):kids(here);
+ if(view==='canvas'&&here!=='arch'){
+  if(!items.length)bd.innerHTML='<div class="empty">Nothing here yet.</div>';
+  items.forEach(k=>{const e=document.createElement('div');e.className='c paper'+(isB(k)?' bd':'')+(sel===k?' sel':'');e.style.setProperty('--c',colr(k));
+   e.style.left=N[k].x+'px';e.style.top=N[k].y+'px';e.innerHTML=cardHTML(k);
+   e.onclick=()=>{sel=k;draw();bar()};e.ondblclick=()=>{if(isB(k))go(k,false,[N[k].x+78,N[k].y+40])};bd.appendChild(e)});
+  const h=document.createElement('div');h.className='hint';h.textContent=here==='desk'?'Your desk: boards and loose notes':'Inside '+N[here].t+' · the colour tells you where you are';bd.appendChild(h);
+ }else{
+  const l=document.createElement('div');l.className='list';bd.appendChild(l);
+  if(here==='arch'){l.innerHTML='<div class="group">Archived · still found by Find</div>'+items.map(k=>`<div class="row" style="--c:${colr(k)}"><span class="ic">▤</span><div><div class="ti">${N[k].t}</div><small>from ${N[N[k].p].t} · ${N[k].why}</small></div><span class="d">${N[k].d}</span><button data-back="${k}" style="font:600 11px var(--ui);border:1px solid var(--rule);background:#fff;border-radius:6px;padding:3px 8px;cursor:pointer">Bring back</button></div>`).join('')||'<div class="empty">Nothing archived.</div>';
+   l.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{delete N[b.dataset.back].arch;N[b.dataset.back].x=N[b.dataset.back].x??60;N[b.dataset.back].y=N[b.dataset.back].y??280;refresh()});return}
+  const bs=items.filter(isB),ns=items.filter(k=>!isB(k)).sort((a,b)=>(N[b].d||'').localeCompare(N[a].d||''));
+  if(bs.length)l.insertAdjacentHTML('beforeend','<div class="group">Boards</div>');
+  bs.forEach(k=>{const r=document.createElement('div');r.className='row bd';r.style.setProperty('--c',colr(k));r.innerHTML=`<span class="ic">▸</span><div><div class="ti">${N[k].t}</div><small>${N[k].sub||''}</small></div><span class="d">${count(k)} inside</span>`;r.onclick=()=>go(k);l.appendChild(r)});
+  if(ns.length)l.insertAdjacentHTML('beforeend','<div class="group">Notes and entries · newest first</div>');
+  ns.forEach(k=>{const r=document.createElement('div');r.className='row';r.style.setProperty('--c',colr(k));r.innerHTML=`<span class="ic">▤</span><div><div class="ti">${N[k].t}</div><small>${N[k].k}${N[k].sub?' · '+N[k].sub:''}</small></div><span class="d">${N[k].d||''}</span>`;r.onclick=()=>{sel=k;bar()};l.appendChild(r)});
+ }
+}
+function bar(){const b=document.getElementById('bar');if(!sel||N[sel].arch){b.hidden=true;return}b.hidden=false;
+ document.getElementById('bt').textContent=N[sel].t;document.getElementById('bopen').hidden=!isB(sel)}
+document.getElementById('bopen').onclick=()=>go(sel);
+document.getElementById('barch').onclick=()=>{N[sel].arch=1;N[sel].why='archived by you';N[sel].d=N[sel].d||'Oct 19';sel=null;refresh()};
+document.getElementById('bx').onclick=()=>{sel=null;draw();bar()};
+function go(k,out,origin){const prev=here;here=k;sel=null;tree();crumbs();bar();draw(out||(k!=='arch'&&prev!=='arch'&&path(prev).includes(k))?'leave':'enter',origin)}
+function refresh(){tree();crumbs();draw();bar()}
+const setView=v=>{view=v;document.getElementById('vc').setAttribute('aria-pressed',v==='canvas');document.getElementById('vl').setAttribute('aria-pressed',v==='list');draw()};
+document.getElementById('vc').onclick=()=>setView('canvas');document.getElementById('vl').onclick=()=>setView('list');
+refresh();
+</script>

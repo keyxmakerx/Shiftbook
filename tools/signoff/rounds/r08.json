@@ -89,89 +89,159 @@
           "placeholder": "e.g. colour the piles, zoom, a pile per week"
         }
       ],
-      "pick": "Stacks and drawers, with a drawer for every project plus your own folders, and the Tidy button. Piles keep today's work at hand; drawers keep the desk clear without hiding anything from Find."
+      "pick": "Stacks and drawers, with a drawer for every project plus your own folders, and the Tidy button. Piles keep today's work at hand; drawers keep the desk clear without hiding anything from Find.",
+      "archived": true
     },
     "r8-signoff": {
       "round": 8,
       "order": 20,
       "area": "Tickets",
-      "version": 2,
-      "title": "Sign-offs: the closing message some tickets need",
+      "version": 3,
+      "title": "Sign-offs, take 2: a list of your own responses on every ticket",
       "body": [
-        "**How Shiftbook knows:** you write a few rules once, in Settings → Sign-offs. A rule matches on how the ticket number starts (every **CHG**, every **RITM**) or on the project the entry is in. Each rule has a message with gaps in {braces}. Shiftbook fills {ticket}, {date}, {title} and {hours} itself; you fill the rest. You can also mark any single ticket as needing a sign-off from its right-click menu.",
-        "**How it looks:** a ticket that needs a sign-off has a yellow ✎ in the tray. Click it, and the message pulls out with the blanks ready. Copy it into the ticket and the ✎ turns into a green ✓. The wrap-up reminds you about any you haven't done.",
+        "You're right: Shiftbook only knows the ticket number and what you logged against it, so it can't guess what a ticket needs. Instead, every ticket in the tray gets a small **✎**. Press it and your own list of saved responses opens. Pick one, fill the gaps, press **Copy**. Shiftbook fills in only what it really knows: the ticket number, the date, the title you logged and the hours.",
+        "Responses you've used with the same kind of ticket before (every **CHG**, say) float to the top, so the right one is usually first. **+ New response** saves a new one for next time. If you want, Settings can still mark certain kinds of ticket in yellow as a reminder; that part is optional.",
         "Want to try it? [Open the interactive sign-offs](https://claude.ai/artifact/WrjjyPhuVGAHDoYgRYSPkj)."
       ],
       "figures": [
         {
-          "src": "/_blob/cb2dbdfe411d92c3f3d67c7aea6f99ad",
-          "caption": "Rules on the left; the tray on the right. **CHG0012345** is signed off (✓), the **RITM** one is open with its gap to fill, and the new **INC** rule turned both INC tickets yellow."
+          "src": "/_blob/c12468dc34a80270d693a1577bd5288d",
+          "caption": "**✎** pressed on **CHG0012345**: the responses used with CHG before are on top; the chosen one is filled in except the part only you know."
         }
       ],
       "questions": [
         {
-          "id": "match",
-          "type": "many",
-          "legend": "How should Shiftbook know a ticket needs one?",
+          "id": "ok",
+          "legend": "Better?",
           "options": [
             {
-              "value": "How the ticket number starts",
-              "on": true
+              "value": "Yes, this",
+              "rec": true
             },
             {
-              "value": "The entry's project",
-              "on": true
+              "value": "Close",
+              "why": "Say what's off in the note."
             },
             {
-              "value": "I mark it myself from the right-click menu",
-              "on": true
-            },
-            {
-              "value": "A word in the entry, e.g. \"outage\"",
-              "why": "Handy, but it can guess wrong."
+              "value": "No"
             }
           ]
         },
         {
           "id": "remind",
-          "type": "many",
-          "legend": "Where should it remind you?",
+          "legend": "Yellow reminder for certain kinds of ticket",
           "options": [
             {
-              "value": "Yellow ✎ on the ticket",
-              "on": true
+              "value": "Yes, optional in Settings",
+              "rec": true
             },
             {
-              "value": "The end-of-day wrap-up",
-              "on": true
-            },
-            {
-              "value": "A warning on the Timesheet"
-            }
-          ]
-        },
-        {
-          "id": "keep",
-          "legend": "Keep the message you copied?",
-          "options": [
-            {
-              "value": "Yes, with the ticket",
-              "rec": true,
-              "why": "Find can search it later, and it's encrypted like everything else."
-            },
-            {
-              "value": "No, just copy it"
+              "value": "No reminders"
             }
           ]
         },
         {
           "id": "kinds",
           "type": "text",
-          "legend": "What kinds of sign-off do you write today? Describe them; don't paste real ones.",
-          "placeholder": "e.g. changes need what I tested and the impact; requests need what I delivered"
+          "legend": "A few kinds of response you'd add first? Describe them; don't paste real ones.",
+          "placeholder": "e.g. fixed and confirmed, no reply from user, change done"
         }
       ],
-      "pick": "Ticket start, project and marking it yourself; remind on the ticket and in the wrap-up; keep the message. Matching on words in the entry can guess wrong, so leave it out at first."
+      "pick": "Yes, with the yellow reminder as an option. It needs no access to your ticket system, so nothing leaves your computer.",
+      "reply": "Agreed. Take 2 drops the guessing: you pick from your own list of responses, and Shiftbook only fills in what it actually knows."
+    },
+    "r8-boards": {
+      "round": 8,
+      "order": 15,
+      "area": "Canvas",
+      "version": 1,
+      "title": "Boards inside boards, a List view of the same thing, and an Archive",
+      "body": [
+        "Your idea: any card can be a **board** you step into, with its own canvas. The background takes on that board's colour, so you always know you're inside something, and the breadcrumbs at the top show where (Desk › Meetings › Weekly ops). Double-click a folder card to go in; click a breadcrumb to come back out.",
+        "Boards aren't only projects. Shiftbook starts you with **Meetings** (a board per meeting series, holding each week's notes), **Daily notes** and **Projects**, and you can make a board out of anything, like **Reference**. Jots and loose notes can sit right on the Desk.",
+        "**Without the canvas:** the List view shows the same board as a list, sub-boards first, then notes newest first. The left side is the same tree in both views, so switching never loses your place.",
+        "**Archive** sits at the bottom of the tree. Archive anything by hand, or let old daily notes go there by themselves. Archived things still turn up in Find, and **Bring back** puts them where they were.",
+        "Want to click around? [Open the interactive boards](https://claude.ai/artifact/9dYUao8KyH3mvUD9YqbBd8)."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/695be5476ebfe8804ac425d9c46eeb32",
+          "caption": "The Desk: boards look like folders with a peek of what's inside; loose jots and daily notes sit beside them."
+        },
+        {
+          "src": "/_blob/2f0c2f2dbdd394d23db34e3295f36f07",
+          "caption": "Inside **Desk › Meetings › Weekly ops**: the amber tint tells you which board you're in."
+        },
+        {
+          "src": "/_blob/3c108fa2aad2833acad26fb6e347e38d",
+          "caption": "The same board in **List** view: newest meeting first."
+        },
+        {
+          "src": "/_blob/aa4cb4b745a8e4a3ee9116b3f54fa0fe",
+          "caption": "The **Archive**: one daily note archived automatically, one by hand, both with Bring back."
+        }
+      ],
+      "bullets": [
+        "Stacks and drawers from the card above still work inside any board. A drawer is simply a board kept in the tree instead of on the desk."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Is this the idea?",
+          "options": [
+            {
+              "value": "Yes, this",
+              "rec": true
+            },
+            {
+              "value": "Close",
+              "why": "Say what's off in the note."
+            },
+            {
+              "value": "No"
+            }
+          ]
+        },
+        {
+          "id": "start",
+          "legend": "Boards Shiftbook makes for you",
+          "type": "many",
+          "options": [
+            {
+              "value": "Meetings, with a board per series",
+              "on": true
+            },
+            {
+              "value": "Daily notes",
+              "on": true
+            },
+            {
+              "value": "Projects",
+              "on": true
+            },
+            {
+              "value": "Reference"
+            }
+          ]
+        },
+        {
+          "id": "auto",
+          "legend": "Daily notes go to the Archive by themselves after",
+          "options": [
+            {
+              "value": "2 weeks",
+              "rec": true
+            },
+            {
+              "value": "A month"
+            },
+            {
+              "value": "Never; I'll archive them myself"
+            }
+          ]
+        }
+      ],
+      "pick": "Yes, with Meetings, Daily notes and Projects made for you, and daily notes archived after 2 weeks. You can change all of it in Settings."
     }
   }
 }

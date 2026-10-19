@@ -2,6 +2,20 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 8 — 19 Oct 2026
+- **Canvas tidying:** stacks (drop a card on a card; click to fan out) and drawers (one per
+  project plus the user's own folders), with a **Tidy into stacks** button. Filed things stay in
+  Find and still count on the timesheet.
+- **Boards (proposed, awaiting sign-off):** any card can be a board with its own canvas, tinted
+  in its colour, with breadcrumbs. Meetings, Daily notes and Projects are boards Shiftbook makes;
+  the List view shows the same tree; an Archive sits at the bottom of the tree.
+- **Ticket sign-offs:** guessing from rules was rejected because Shiftbook only knows the
+  ticket number and what was logged. Take 2 (awaiting sign-off): a ✎ on every tray ticket opens
+  the user's own list of saved responses; Shiftbook fills only {ticket}, {date}, {title} and
+  {hours}. Matching on ticket prefix only orders the list and, optionally, marks a reminder.
+- **Round 6** (prototype v2, timesheet crib sheet, spreadsheet lessons): approved and built in
+  the alpha; codes are typed into Shiftbook by the user.
+
 ## Round 7 — 16 Oct 2026
 - **Week start:** a "My week starts on" setting (any day, Monday by default); approved and merged.
 - **"Where was I?":** approved. After a lock, a break of 30 minutes or more, or a new day, the Desk
