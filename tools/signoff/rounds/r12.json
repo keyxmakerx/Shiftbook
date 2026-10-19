@@ -2,7 +2,7 @@
   "meta": {
     "round": 12,
     "heading": "Round 12: click for options, notepad windows, a bottom bar and a bell",
-    "intro": "Step 1 is built: the slide-out, notepads, still-open tickets, ticket projects and Bring up tomorrow. Your round 12 answers are recorded below."
+    "intro": "Steps 1 and 2 are built: the slide-out and tickets that aren't done, then windows, the bottom bar and the bell."
   },
   "cards": {
     "r12-click": {
@@ -351,6 +351,60 @@
         }
       ],
       "pick": "Next: windows, the bottom bar and the bell."
+    },
+    "r12-built2": {
+      "round": 12,
+      "order": 0,
+      "area": "Whole app",
+      "version": 1,
+      "title": "Built: step 2, windows, the bottom bar and the bell",
+      "body": [
+        "**Windows.** **Pop out** in a slide-out, or **Open in a window** on a right-click menu, puts a notepad or a note in a window over everything. It saves as you type. Drag the title bar to move it and the corner to resize it. **▴** rolls it up to the title bar, **–** minimises it to the bottom bar, **⤢** fills the screen (double-clicking the title does too) and **✕** closes it. Windows come back where you left them after you unlock.",
+        "**The bottom bar.** It's thin and light, along the bottom of every view. Windows line up from the left like the Windows taskbar, with a blue line under open ones and a short grey one under minimised ones. Click to show one or tuck it away; right-click for roll up, full screen or close. Today's hours and the **bell** are on the right.",
+        "**The bell.** The number shows how many things are waiting, and the bell wiggles when a meeting is about to start. Its panel slides in from the right. **Now** has meetings about to start; **Today** has later meetings, things you brought up for today and tickets still open. Each has a button: **Open note** opens that day's meeting note in a window, **Done** ticks off a brought-up thing, and **Show** goes to the tray. It checks every minute and stays inside Shiftbook, with no Windows pop-ups.",
+        "**Settings → Meetings.** Add the meetings that repeat: a name, the days, a time and how early to remind (from at the start to an hour before). Removing one has Undo, and its notes stay.",
+        "**Not yet:** recurring tasks show in the bell once they have screens; that's a later milestone."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/5f6d91f8f044e6b667b29f84bdfb57f4",
+          "caption": "A notepad window, a rolled-up page note, and three windows in the bottom bar (the ticket one minimised)."
+        },
+        {
+          "src": "/_blob/d3964d0dfab16780a16ba0a05dea552e",
+          "caption": "The bell's panel: Now, then Today."
+        },
+        {
+          "src": "/_blob/7272f7e08f63f6854787565fdf0cd3d6",
+          "caption": "Open note on a meeting: that day's meeting note, here full screen."
+        },
+        {
+          "src": "/_blob/7f135a3d8a34cf7ae4289f7bff57d630",
+          "caption": "Settings → Meetings."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 2",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. a snooze button on meeting reminders"
+        }
+      ],
+      "pick": "Next: step 3, drawing boxes with the toolbox and collapsing project boxes."
     }
   }
 }
