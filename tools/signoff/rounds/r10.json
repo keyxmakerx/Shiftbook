@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "round": 10,
+    "heading": "Round 10: Canvas step 1 is built",
+    "intro": "The Desk is now the Canvas, and the old Desk is Day. Real screenshots with sample data. Steps 2 to 5 (project areas, links, timeline; stacks and drawers; boards and the Archive; the meeting canvas) come next, in that order."
+  },
+  "cards": {
+    "r10-c1": {
+      "round": 10,
+      "order": 10,
+      "area": "Canvas",
+      "version": 1,
+      "title": "Built: the Desk is a canvas of your real work",
+      "body": [
+        "Shiftbook now opens on the **Desk**: your entries, Done tickets, notes and Inbox scraps from the last week as paper cards. Drag a card anywhere and it stays there, even after the week is over. Drag empty paper or scroll to move around, Ctrl + scroll to zoom, and **Fit everything** brings it all into view.",
+        "**Double-click a card to open it:** an entry opens its details, a note opens in Notes, a scrap goes into Log work, and a Done ticket takes a few words right on the card. **Double-click empty paper to jot** something; Enter keeps it. **Right-click** any card for its paper menu, the same options as on Day.",
+        "The panel on the right has what you need while working: today's hours, Where was I?, Log work, Done tickets and the wrap-up. Anything you log appears as a card straight away. The **>** button folds the panel away.",
+        "**Day** (key 2) is the old Desk, for starting and ending the day. Keys 1 to 5 are now Desk, Day, Timesheet, Notes and Settings."
+      ],
+      "figures": [
+        {"src": "/_blob/93dc191bc2fa287614fd17ae82c9f87a", "caption": "The Desk: cards on the left, the panel on the right. The cards in the middle were moved by hand; the rest were placed automatically."},
+        {"src": "/_blob/3fa5307387c088f2e0d0fec16c409220", "caption": "Right-click an entry card: the same paper menu as on Day."},
+        {"src": "/_blob/adc8aff9b92d0cd222f75e54282c9c34", "caption": "Double-click empty paper and type: a jot, kept where you wrote it."},
+        {"src": "/_blob/561797b96bd11c615df9792c0cb4543f", "caption": "Day: the structured view for starting and ending the day."}
+      ],
+      "questions": [
+        {"id": "ok", "legend": "Feel right so far?", "options": [{"value": "Yes, keep going", "rec": true}, {"value": "Close", "why": "Say what to change in the note."}]},
+        {"id": "week", "legend": "Entries and Done tickets leave the Desk after a week unless you moved them. Is a week right?", "options": [{"value": "A week", "rec": true}, {"value": "Just today"}, {"value": "Two weeks"}, {"value": "Never; I'll tidy them myself"}]}
+      ],
+      "pick": "Yes, keep going, with a week. Notes and scraps stay until you archive them, so nothing you wrote disappears."
+    }
+  }
+}
