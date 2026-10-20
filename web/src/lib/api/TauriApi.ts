@@ -26,6 +26,7 @@ import type {
   CardRef,
   BoardData,
   DeskData,
+  PinItem,
   CardKind,
   CanvasCard,
   TidyResult,
@@ -215,6 +216,16 @@ export class TauriApi implements DataApi {
   bell(today: IsoDate, now: number): Promise<BellItem[]> {
     return call('bell', { today, now });
   }
+  pins(today: IsoDate): Promise<PinItem[]> {
+    return call('pins', { today });
+  }
+  pin(kind: CardKind, id: string, chaseOn: IsoDate | null): Promise<void> {
+    return call('pin', { kind, id, chaseOn });
+  }
+  unpin(kind: CardKind, id: string): Promise<void> {
+    return call('unpin', { kind, id });
+  }
+
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });
   }

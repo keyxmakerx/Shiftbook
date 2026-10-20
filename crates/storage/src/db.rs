@@ -81,6 +81,7 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "board spots",
         include_str!("../migrations/0012_board_spots.sql"),
     ),
+    (13, "pins", include_str!("../migrations/0013_pins.sql")),
 ];
 
 fn migrator() -> Migrator {
@@ -296,6 +297,7 @@ mod tests {
                     "meeting_series",
                     "next_up_items",
                     "notes",
+                    "pins",
                     "projects",
                     "recurring_tasks",
                     "saved_responses",

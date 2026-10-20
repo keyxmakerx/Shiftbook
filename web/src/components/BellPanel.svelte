@@ -1,12 +1,14 @@
 <script lang="ts">
   // The bell's panel (round 12): slides in from the right over the work area. Now first
-  // (meetings about to start), then Today (later meetings, things brought up for today,
-  // tickets still open). Each line has the button that does the obvious thing. Click outside
+  // (meetings about to start), then Today (later meetings, things brought up for today, pins
+  // due to chase, tickets still open). Each line has the button that does the obvious thing. Click outside
   // or press Esc to close it.
   import { fly } from 'svelte/transition';
   import { api } from '../lib/api';
-  import type { BellItem } from '../lib/api';
+  import type { BellItem, CardKind } from '../lib/api';
   import { bell, refreshBell } from '../lib/bell.svelte';
+  import { addDays, relativeDay } from '../lib/format';
+  import { chaseOn } from '../lib/pins.svelte';
   import { app, attempt, setView } from '../lib/store.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
@@ -47,6 +49,8 @@
         return i.about.state.state === 'later' ? 'Your meeting note opens from here' : 'Open your meeting note';
       case 'brought_up':
         return 'You brought this up for today';
+      case 'chase':
+        return i.about.on === app.today ? 'Pinned · chase it today' : `Pinned · to chase since ${relativeDay(i.about.on, app.today)}`;
       case 'still_open':
         return i.about.tickets.join(' · ');
     }
@@ -77,7 +81,7 @@
           {#each list as BellItem[] as i, n (i.title + n)}
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} style:--i={n}>
               <span class="ico" aria-hidden="true">
-                <Icon name={i.about.kind === 'meeting' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : 'clock'} size={16} />
+                <Icon name={i.about.kind === 'meeting' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : 'clock'} size={16} />
               </span>
               <span class="txt"><b>{i.title}</b><small>{detail(i)}</small></span>
               <span class="btns">
@@ -87,6 +91,10 @@
                 {:else if i.about.kind === 'brought_up'}
                   {@const id = i.about.id}
                   <button type="button" class="btn" onclick={() => void done(id)}>Done</button>
+                {:else if i.about.kind === 'chase'}
+                  {@const [kind, id] = i.about.card.split(':') as [CardKind, string]}
+                  <button type="button" class="btn primary" onclick={() => openWindow(kind, id)}>Open</button>
+                  <button type="button" class="btn" title="Chase it again tomorrow" onclick={() => void chaseOn(kind, id, addDays(app.today, 1))}>Tomorrow</button>
                 {:else}
                   <button type="button" class="btn" onclick={showDay}>Show</button>
                 {/if}

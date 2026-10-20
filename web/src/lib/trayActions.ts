@@ -6,6 +6,7 @@ import type { TrayDay, TrayItem } from './api';
 import { bringUp } from './bringUp';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
 import { toast } from './toast.svelte';
@@ -66,6 +67,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
       ? { label: 'Not done yet (keep it open)', icon: 'clock', side: true, act: () => void setTrayDone(item, false) }
       : { label: 'Done', icon: 'check', side: true, act: () => void setTrayDone(item, true) },
     { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('tray', item.id, item.ticket) },
+    pinMenuItem('tray', item.id),
   ];
   if (notepad) main.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: notepad });
   main.push({ label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('tray', item.id) });

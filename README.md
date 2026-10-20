@@ -32,7 +32,9 @@ The alpha is a working app you can use day to day for logging time:
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag) and
   make it a project's area, a new project or just a label. Any box **folds up** to a count
   coloured grey (nothing waiting), blue (from today) or orange (still open or brought up).
-  Tickets ticked done today gather in a **Done today** pile and leave the Desk at the end of
+  **Pin** an entry, ticket or note (right-click → Pin to the bottom bar) to keep it in view as
+  a chip on the bottom bar; right-click the chip to pick a day to chase it, and from that day
+  it turns orange and shows in the bell. Tickets ticked done today gather in a **Done today** pile and leave the Desk at the end of
   the day (find them on the Done tickets board or with Find). Drop a card on a card to make a
   **pile** (click it to fan out); **Tidy into stacks** piles
   loose cards by project. The **drawers** (one per project plus your folders) slide out when

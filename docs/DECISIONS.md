@@ -7,6 +7,11 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets
   stay loose. Old ones are found on the **Done tickets** board (newest first, with a filter)
   and in **Find**, which now searches tickets by number, notepad and project.
+- **Pins** (asked in chat, no mockup needed): Pin to the bottom bar on any entry, ticket or
+  note's right-click menu. Chips sit on the bottom bar (12 at most); click one to open it in a
+  window, right-click to set a day to chase it (Today, Tomorrow, In 3 days, Next week) or
+  unpin. From the chase day the chip turns orange and the bell lists it with Open and
+  Tomorrow.
 - **Scroll wheel:** on the Desk it zooms around the pointer (was Ctrl + scroll; round 4).
   Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
   slide-out, the wheel scrolls that instead.

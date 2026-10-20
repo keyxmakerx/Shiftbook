@@ -165,9 +165,18 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
             .filter(|i| !i.done)
             .map(|i| i.ticket_number),
     );
+    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(&store, owner, today)
+        .await?
+        .into_iter()
+        .filter_map(|(p, title)| {
+            p.chase_on
+                .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
+        })
+        .collect();
     Ok(bell_items(
         &meetings,
         &next_up,
+        &chase,
         &open,
         today,
         now.min(24 * 60 - 1),

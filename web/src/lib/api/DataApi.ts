@@ -120,7 +120,19 @@ export interface BellItem {
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
     | { kind: 'brought_up'; id: string; from: IsoDate }
+    | { kind: 'chase'; card: string; on: IsoDate }
     | { kind: 'still_open'; tickets: string[] };
+}
+
+/** A chip on the bottom bar: an entry, a ticket or a note kept in view (round 14). */
+export interface PinItem {
+  kind: CardKind;
+  id: string;
+  title: string;
+  /** The day to chase it, if any. */
+  chaseOn: IsoDate | null;
+  /** Its chase date has come: the chip is orange and the bell lists it. */
+  due: boolean;
 }
 
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
@@ -797,6 +809,12 @@ export interface DataApi {
   meetingNote(seriesId: string, date: IsoDate): Promise<Note>;
   /** What's coming up at `now` (minutes after local midnight on `today`). */
   bell(today: IsoDate, now: number): Promise<BellItem[]>;
+  /** The pinned chips for the bottom bar, ones due to chase first. Tauri: `pins`. */
+  pins(today: IsoDate): Promise<PinItem[]>;
+  /** Pin an entry, ticket or note, or change its chase date (null clears it). Tauri: `pin`. */
+  pin(kind: CardKind, id: string, chaseOn: IsoDate | null): Promise<void>;
+  /** Take a chip off the bottom bar. Tauri: `unpin`. */
+  unpin(kind: CardKind, id: string): Promise<void>;
   trayRemove(id: string): Promise<TrayDay>;
   trayRestore(id: string): Promise<TrayDay>;
 

@@ -1,13 +1,15 @@
 <script lang="ts">
   // The bottom bar (round 12): thin and out of the way. Windows line up from the left like
-  // the Windows taskbar (a line under each: accent when open, grey when minimised); today's
-  // hours and the bell sit on the right. The shortcut hint lives here too.
+  // the Windows taskbar (a line under each: accent when open, grey when minimised); pinned
+  // chips (round 14) come next, orange once their chase date comes; today's hours and the
+  // bell sit on the right. The shortcut hint lives here too.
   import { bell } from '../lib/bell.svelte';
-  import { fmtHours } from '../lib/format';
+  import { fmtHours, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
+  import { chipMenu, pins } from '../lib/pins.svelte';
   import { app, ribbonDay } from '../lib/store.svelte';
-  import { closeWindow, setWindowMode, toggleFromBar, windows, winKey } from '../lib/windows.svelte';
-  import type { WindowSpot } from '../lib/api';
+  import { closeWindow, openWindow, setWindowMode, toggleFromBar, windows, winKey } from '../lib/windows.svelte';
+  import type { PinItem, WindowSpot } from '../lib/api';
   import Icon from './Icon.svelte';
 
   // Titles come from the windows once they have loaded; until then a short kind name.
@@ -16,6 +18,17 @@
   const today = $derived(ribbonDay(app.today)?.minutes ?? 0);
   const count = $derived(bell.items.length);
   const urgent = $derived(bell.items.some((i) => i.when === 'now'));
+
+  function pinTip(p: PinItem): string {
+    const when = !p.chaseOn
+      ? 'no chase date'
+      : p.chaseOn === app.today
+        ? 'chase it today'
+        : p.due
+          ? `to chase since ${relativeDay(p.chaseOn, app.today)}`
+          : `chase ${relativeDay(p.chaseOn, app.today)}`;
+    return `${p.title} · ${when} · click to open, right-click to chase or unpin`;
+  }
 
   function menu(e: MouseEvent, w: WindowSpot) {
     e.preventDefault();
@@ -53,6 +66,26 @@
       </button>
     {/each}
   </div>
+  {#if pins.list.length}
+    <div class="pins" role="toolbar" aria-label="Pinned">
+      {#each pins.list as p (p.kind + p.id)}
+        <button
+          type="button"
+          class="pin"
+          class:due={p.due}
+          title={pinTip(p)}
+          onclick={() => openWindow(p.kind, p.id)}
+          oncontextmenu={(e) => {
+            e.preventDefault();
+            openMenu(e.currentTarget as HTMLElement, chipMenu(p));
+          }}
+        >
+          <Icon name="pin" size={12} />
+          <span class="label">{p.title}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
   <span class="hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> for shortcuts</span>
   <span class="hours mono" title="Logged today">{fmtHours(today)} h today</span>
   <button
@@ -162,6 +195,42 @@
     background: var(--ok);
   }
 
+  .pins {
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+    max-width: 55%;
+    overflow: hidden;
+    flex-shrink: 1;
+  }
+
+  .pin {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    max-width: 190px;
+    min-width: 60px;
+    padding: 0 10px 0 8px;
+    border: 1px solid var(--rule);
+    border-radius: 13px;
+    background: var(--paper);
+    color: var(--ink);
+    font: 550 12px var(--ui);
+    cursor: pointer;
+    animation: slidein calc(0.25s * var(--m)) var(--spring);
+  }
+
+  .pin:hover {
+    border-color: color-mix(in srgb, var(--ink) 25%, transparent);
+  }
+
+  .pin.due {
+    background: #e07b1a;
+    border-color: #e07b1a;
+    color: #fff;
+  }
+
   .hint {
     font-size: 11.5px;
     color: var(--mut);
@@ -226,7 +295,7 @@
     font: 700 10px/15px var(--ui);
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 1100px) {
     .hint {
       display: none;
     }
@@ -234,6 +303,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .tb,
+    .pin,
     .bell.urgent :global(svg) {
       animation: none;
     }

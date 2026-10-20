@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pins"
+description = "Enables the pins command without any pre-configured scope."
+commands.allow = ["pins"]
+
+[[permission]]
+identifier = "deny-pins"
+description = "Denies the pins command without any pre-configured scope."
+commands.deny = ["pins"]
