@@ -20,7 +20,7 @@ The alpha is a working app you can use day to day for logging time:
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
 - **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
-  you arrange. Drag to move (it's remembered), drag empty paper or scroll to pan, Ctrl + scroll
+  you arrange. Drag to move (it's remembered), drag empty paper or Shift + scroll to pan, scroll
   to zoom, Fit everything. Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
   open, more time and More. Double-click a card to open it; double-click empty paper to jot.

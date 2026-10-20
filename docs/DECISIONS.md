@@ -7,6 +7,9 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets
   stay loose. Old ones are found on the **Done tickets** board (newest first, with a filter)
   and in **Find**, which now searches tickets by number, notepad and project.
+- **Scroll wheel:** on the Desk it zooms around the pointer (was Ctrl + scroll; round 4).
+  Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
+  slide-out, the wheel scrolls that instead.
 
 ## Round 12 — 19 Oct 2026
 - **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)
