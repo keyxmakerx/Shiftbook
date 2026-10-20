@@ -24,6 +24,8 @@
     zoom,
     locked = false,
     linking = false,
+    selected = false,
+    ondrag,
     onmove,
     onchanged,
     onlink,
@@ -42,6 +44,10 @@
     locked?: boolean;
     /** Picking the other end of a new link: a click picks this card. */
     linking?: boolean;
+    /** Part of the selection (they move together). */
+    selected?: boolean;
+    /** Being dragged this far (canvas units), so selected cards can follow. */
+    ondrag?: (dx: number, dy: number) => void;
     /** "Link to another card" was chosen on this card. */
     onlink?: () => void;
     /** This card was picked as the other end of a link. */
@@ -117,6 +123,7 @@
       if (!moved && Math.hypot(m.clientX - start.x, m.clientY - start.y) < 4) return;
       moved = true;
       drag = { dx, dy };
+      ondrag?.(dx, dy);
     };
     const up = () => {
       el?.removeEventListener('pointermove', move);
@@ -232,6 +239,7 @@
   class:lifted={!!drag}
   class:locked
   class:picking={linking}
+  class:selected
   class:opened={open}
   bind:this={el}
   bind:offsetHeight={height}
@@ -401,6 +409,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .card.selected {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent),
+      var(--shadow);
   }
 
   .card.opened {

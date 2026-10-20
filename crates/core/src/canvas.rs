@@ -365,6 +365,49 @@ pub fn timeline(dates: &[Date]) -> (Vec<Spot>, Vec<(Date, i32)>) {
     (spots, axis)
 }
 
+/// Longest name on a plain labelled box.
+pub const MAX_LABEL_CHARS: usize = 60;
+
+/// Clean a labelled box's name: trimmed, required, at most [`MAX_LABEL_CHARS`].
+pub fn clean_label(label: &str) -> Result<String, CoreError> {
+    crate::validate::validate_required("The box name", label, MAX_LABEL_CHARS)
+}
+
+/// How a box's cards stand, for the colour of its count when it is folded up (round 12).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BoxStatus {
+    /// Nothing waiting: grey.
+    Quiet,
+    /// Something from today: the accent colour.
+    Today,
+    /// A ticket still open or something brought up: orange.
+    Waiting,
+}
+
+/// What matters about one card in a box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MemberState {
+    /// A ticket that is still open.
+    pub open: bool,
+    /// Brought up for a day and not ticked off yet.
+    pub brought_up: bool,
+    /// Dated today (an entry or a ticket) or made today (a note or a scrap).
+    pub today: bool,
+}
+
+/// A box's status: waiting when any card is still open or brought up, otherwise today when
+/// any card is from today, otherwise quiet (also when it's empty).
+pub fn box_status(members: &[MemberState]) -> BoxStatus {
+    if members.iter().any(|m| m.open || m.brought_up) {
+        BoxStatus::Waiting
+    } else if members.iter().any(|m| m.today) {
+        BoxStatus::Today
+    } else {
+        BoxStatus::Quiet
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -551,5 +594,37 @@ mod tests {
             "the next day starts after both columns"
         );
         assert_eq!(spots[TIMELINE_ROWS + 2].0, axis[1].1);
+    }
+
+    #[test]
+    fn boxes_show_whether_anything_is_waiting() {
+        let quiet = MemberState::default();
+        let today = MemberState {
+            today: true,
+            ..quiet
+        };
+        let open = MemberState {
+            open: true,
+            ..quiet
+        };
+        let brought = MemberState {
+            brought_up: true,
+            ..quiet
+        };
+        assert_eq!(box_status(&[]), BoxStatus::Quiet);
+        assert_eq!(box_status(&[quiet, quiet]), BoxStatus::Quiet);
+        assert_eq!(box_status(&[quiet, today]), BoxStatus::Today);
+        assert_eq!(box_status(&[today, open]), BoxStatus::Waiting);
+        assert_eq!(box_status(&[brought]), BoxStatus::Waiting);
+    }
+
+    #[test]
+    fn labelled_boxes_need_a_short_name() {
+        assert_eq!(
+            clean_label("  Waiting on vendors "),
+            Ok("Waiting on vendors".into())
+        );
+        assert!(clean_label("   ").is_err());
+        assert!(clean_label(&"x".repeat(MAX_LABEL_CHARS + 1)).is_err());
     }
 }

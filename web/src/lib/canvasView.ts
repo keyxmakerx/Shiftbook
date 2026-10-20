@@ -49,6 +49,8 @@ export const NEW_AREA = { w: 2 * (CARD_W + 24) + 24, h: 2 * (CARD_H + 24) + 48 }
 /** Smallest area; matches `MIN_AREA` in crates/core/src/canvas.rs. */
 export const MIN_AREA = { w: CARD_W + 48, h: CARD_H + 72 };
 
+import type { BoxStatus, CanvasArea, CanvasLabel } from './api';
+
 export interface Rect {
   x: number;
   y: number;
@@ -65,4 +67,51 @@ export function areaAt(areas: Rect[], x: number, y: number): number {
     if (cx >= a.x && cx < a.x + a.w && cy >= a.y && cy < a.y + a.h) return i;
   }
   return -1;
+}
+
+/** A box on the Desk: a project's area or a plain labelled box (round 12). */
+export interface DeskBox extends Rect {
+  /** "project:<id>" or "label:<id>", as cards' `inBox`. */
+  key: string;
+  projectId: string | null;
+  labelId: string | null;
+  /** The label of a labelled box (a project box shows the project's name). */
+  label: string;
+  collapsed: boolean;
+  count: number;
+  status: BoxStatus;
+}
+
+/** Every box, project areas first then labelled boxes: the order core counts cards in. */
+export function deskBoxes(areas: CanvasArea[], labels: CanvasLabel[]): DeskBox[] {
+  return [
+    ...areas.map((a) => ({ ...a, key: `project:${a.projectId}`, labelId: null, label: '' })),
+    ...labels.map((l) => ({ ...l, key: `label:${l.id}`, projectId: null, labelId: l.id })),
+  ];
+}
+
+/** A rectangle from two corners, in either order. */
+export function rectFrom(a: { x: number; y: number }, b: { x: number; y: number }): Rect {
+  return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) };
+}
+
+/** True when a card at (x, y) has its centre inside `r` (how boxes and selections pick cards). */
+export function cardIn(r: Rect, x: number, y: number): boolean {
+  const cx = x + CARD_W / 2;
+  const cy = y + CARD_H / 2;
+  return cx >= r.x && cx < r.x + r.w && cy >= r.y && cy < r.y + r.h;
+}
+
+/** A box just big enough around some cards, with room for its name tab. */
+export function boxAround(spots: { x: number; y: number }[], pad = 24): Rect {
+  const xs = spots.map((s) => s.x);
+  const ys = spots.map((s) => s.y);
+  const x = Math.min(...xs) - pad;
+  const y = Math.min(...ys) - pad - 12;
+  return {
+    x,
+    y,
+    w: Math.max(MIN_AREA.w, Math.max(...xs) + CARD_W + pad - x),
+    h: Math.max(MIN_AREA.h, Math.max(...ys) + CARD_H + pad - y),
+  };
 }

@@ -1,10 +1,13 @@
 <script module lang="ts">
   import { HOME, type CanvasView } from '../lib/canvasView';
 
-  // Where you left the view, the panel and the links switch, kept while the app is open.
+  // Where you left the view, the panel, the links switch and the toolbox, kept while the app
+  // is open.
   let lastView: CanvasView = HOME;
   let panelOpen = true;
   let linksShown = true;
+  let lastTool: 'hand' | 'select' | 'box' = 'hand';
+  let toolboxOpen = true;
 </script>
 
 <script lang="ts">
@@ -12,17 +15,36 @@
   // and Inbox scraps as cards you arrange; only where they sit is new. The panel holds what
   // Day has for logging: today's hours, "Where was I?", Log work, Done tickets and the wrap-up.
   // Step 2 adds project areas (drop a card in to give it the project), links between cards
-  // (automatic and drawn) and the timeline. The full plan is docs/CANVAS.md.
+  // (automatic and drawn) and the timeline. Step 3 (round 12) adds the toolbox: the hand
+  // pans, Select rubber-bands cards that then move together, Box (or Shift + drag anywhere)
+  // draws a box that becomes a project's area or a plain labelled box; boxes fold up to a
+  // coloured count. The full plan is docs/CANVAS.md.
   import { onMount, tick, untrack } from 'svelte';
   import { api } from '../lib/api';
-  import type { CanvasArea, CanvasCard as Card, CanvasLink, CardKind, CardRef } from '../lib/api';
-  import { areaAt, CARD_H, CARD_W, fitAll, NEW_AREA, toCanvas, zoomAt } from '../lib/canvasView';
-  import { moveEntryTo } from '../lib/entryActions';
+  import type { CanvasArea, CanvasCard as Card, CanvasLabel, CanvasLink, CardKind, CardRef } from '../lib/api';
+  import {
+    areaAt,
+    boxAround,
+    cardIn,
+    CARD_H,
+    CARD_W,
+    deskBoxes,
+    fitAll,
+    MIN_AREA,
+    NEW_AREA,
+    rectFrom,
+    toCanvas,
+    zoomAt,
+    type DeskBox,
+    type Rect,
+  } from '../lib/canvasView';
+  import { input as entryInput, moveEntryTo } from '../lib/entryActions';
   import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { closePanel } from '../lib/panel.svelte';
-  import { app, attempt, projectById, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
+  import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import BoxPrompt from '../components/BoxPrompt.svelte';
   import CanvasAreaBox from '../components/CanvasArea.svelte';
   import CanvasCard from '../components/CanvasCard.svelte';
   import Icon from '../components/Icon.svelte';
@@ -33,6 +55,7 @@
 
   let cards = $state<Card[]>([]);
   let areas = $state<CanvasArea[]>([]);
+  let labels = $state<CanvasLabel[]>([]);
   let links = $state<CanvasLink[]>([]);
   let axis = $state<{ date: string; x: number }[]>([]);
   let mode = $state<'free' | 'timeline'>('free');
@@ -40,6 +63,17 @@
   let showLinks = $state(linksShown);
   let linkFrom = $state<Card | null>(null);
   let areaDrag = $state<{ index: number; dx: number; dy: number; members: Set<string> } | null>(null);
+  let tool = $state(lastTool);
+  let toolbox = $state(toolboxOpen);
+  /** Cards picked with Select; dragging one moves them all. */
+  let selected = $state(new Set<string>());
+  /** The selected card being dragged and how far, so the others follow. */
+  let groupDrag = $state<{ key: string; dx: number; dy: number } | null>(null);
+  /** A rubber band (Select) or a box being drawn (Box / Shift), in board pixels. */
+  let band = $state<{ x0: number; y0: number; x1: number; y1: number; drawing: boolean } | null>(null);
+  /** A box just drawn, waiting for "What is this box?". */
+  let drawn = $state<{ rect: Rect; sx: number; sy: number } | null>(null);
+  let renaming = $state<string | null>(null);
   let loaded = $state(false);
   let view = $state<CanvasView>(lastView);
   let panel = $state(panelOpen);
@@ -58,6 +92,10 @@
   $effect(() => {
     linksShown = showLinks;
   });
+  $effect(() => {
+    lastTool = tool;
+    toolboxOpen = toolbox;
+  });
 
   // N (or anything that asks for Log work) opens the panel if it was folded away.
   $effect(() => {
@@ -72,6 +110,7 @@
     if (desk) {
       cards = desk.cards;
       areas = desk.areas;
+      labels = desk.labels;
       links = desk.links;
       axis = desk.axis;
     }
@@ -81,12 +120,22 @@
   const keyOf = (c: { kind: CardKind; id: string }) => `${c.kind}:${c.id}`;
   const refOf = (c: Card): CardRef => ({ kind: c.kind, id: c.id });
 
-  /** Where a card shows: its own spot, its timeline spot, and moved along with an area being dragged. */
+  /** Where a card shows: its own spot, its timeline spot, and moved along with an area being
+   *  dragged or the selected card being dragged. */
   function pos(c: Card): { x: number; y: number } {
     if (mode === 'timeline') return { x: c.timelineX, y: c.timelineY };
     if (areaDrag?.members.has(keyOf(c))) return { x: c.x + areaDrag.dx, y: c.y + areaDrag.dy };
+    const k = keyOf(c);
+    if (groupDrag && groupDrag.key !== k && selected.has(k)) return { x: c.x + groupDrag.dx, y: c.y + groupDrag.dy };
     return { x: c.x, y: c.y };
   }
+
+  // ----- boxes -----
+  const boxes = $derived(deskBoxes(areas, labels));
+  /** The box a card sits in now (as it shows, so moves count straight away). */
+  const boxOf = (c: Card): DeskBox | undefined => boxes[areaAt(boxes, c.x, c.y)];
+  /** Cards in a folded box don't show (the timeline shows everything). */
+  const shown = $derived(mode === 'timeline' ? cards : cards.filter((c) => !boxOf(c)?.collapsed));
 
   function titleOf(c: Card): string {
     return c.entry?.description || c.tray?.item.ticket || c.note?.title || c.inbox?.text || 'this card';
@@ -106,15 +155,24 @@
 
   // ----- moving cards -----
   async function move(card: Card, x: number, y: number) {
+    const dx = x - card.x;
+    const dy = y - card.y;
+    groupDrag = null;
+    // A selected card brings the rest of the selection along.
+    const group = selected.has(keyOf(card)) ? cards.filter((c) => c !== card && selected.has(keyOf(c))) : [];
+    await place(card, x, y);
+    for (const c of group) await place(c, c.x + dx, c.y + dy);
+  }
+
+  async function place(card: Card, x: number, y: number) {
     const top = Math.max(0, ...cards.map((c) => c.z)) + 1;
     const before = { x: card.x, y: card.y };
-    cards = cards.map((c) => (c === card ? { ...c, x, y, z: top, placed: true } : c));
+    cards = cards.map((c) => (keyOf(c) === keyOf(card) ? { ...c, x, y, z: top, placed: true } : c));
     await attempt(() => api.canvasMove(card.kind, card.id, x, y));
     // Into a project's area gives the card that project; out of its own area takes it away.
-    const to = areaAt(areas, x, y);
-    const from = areaAt(areas, before.x, before.y);
-    const toProject = to >= 0 ? areas[to]!.projectId : null;
-    const fromProject = from >= 0 ? areas[from]!.projectId : null;
+    // Labelled boxes only group cards.
+    const toProject = boxes[areaAt(boxes, x, y)]?.projectId ?? null;
+    const fromProject = boxes[areaAt(boxes, before.x, before.y)]?.projectId ?? null;
     if (toProject === fromProject) return;
     const current = card.entry ? card.entry.projectId : card.note ? card.note.projectId : undefined;
     if (current === undefined) return;
@@ -138,22 +196,35 @@
     });
   }
 
-  // ----- project areas -----
+  // ----- boxes: project areas and labelled boxes -----
+  /** Save a box where it is now (a project's area or a labelled box). */
+  function saveBox(b: DeskBox) {
+    return b.projectId
+      ? api.canvasArea(b.projectId, b.x, b.y, b.w, b.h)
+      : api.canvasLabelSave(b.labelId, b.label, b.x, b.y, b.w, b.h, b.collapsed).then(() => undefined);
+  }
+
+  /** Show a box's change at once, before the Desk reloads. */
+  function putBox(b: DeskBox) {
+    if (b.projectId) areas = areas.map((a) => (a.projectId === b.projectId ? { ...a, x: b.x, y: b.y, w: b.w, h: b.h, collapsed: b.collapsed } : a));
+    else labels = labels.map((l) => (l.id === b.labelId ? { ...l, label: b.label, x: b.x, y: b.y, w: b.w, h: b.h, collapsed: b.collapsed } : l));
+  }
+
   function areaMove(index: number, dx: number, dy: number, done: boolean) {
     if (!areaDrag) {
-      const members = new Set(cards.filter((c) => areaAt(areas, c.x, c.y) === index).map(keyOf));
+      const members = new Set(cards.filter((c) => areaAt(boxes, c.x, c.y) === index).map(keyOf));
       areaDrag = { index, dx, dy, members };
     } else areaDrag = { ...areaDrag, dx, dy };
     if (!done) return;
     const drag = areaDrag;
     areaDrag = null;
-    const a = areas[index]!;
+    const b = boxes[index]!;
     if (drag.dx === 0 && drag.dy === 0) return;
-    const moved = { ...a, x: a.x + drag.dx, y: a.y + drag.dy };
-    areas = areas.map((x, i) => (i === index ? moved : x));
+    const moved = { ...b, x: b.x + drag.dx, y: b.y + drag.dy };
+    putBox(moved);
     cards = cards.map((c) => (drag.members.has(keyOf(c)) ? { ...c, x: c.x + drag.dx, y: c.y + drag.dy, placed: true } : c));
     void (async () => {
-      await attempt(() => api.canvasArea(moved.projectId, moved.x, moved.y, moved.w, moved.h));
+      await attempt(() => saveBox(moved));
       for (const c of cards.filter((c) => drag.members.has(keyOf(c)))) {
         await attempt(() => api.canvasMove(c.kind, c.id, c.x, c.y));
       }
@@ -161,9 +232,32 @@
   }
 
   async function areaResize(index: number, w: number, h: number) {
-    const a = areas[index]!;
-    areas = areas.map((x, i) => (i === index ? { ...a, w, h } : x));
-    await attempt(() => api.canvasArea(a.projectId, a.x, a.y, w, h));
+    const b = { ...boxes[index]!, w, h };
+    putBox(b);
+    await attempt(() => saveBox(b));
+  }
+
+  async function toggleBox(b: DeskBox) {
+    const next = { ...b, collapsed: !b.collapsed };
+    putBox(next);
+    if (b.projectId) await attempt(() => api.canvasAreaCollapse(b.projectId!, next.collapsed));
+    else await attempt(() => saveBox(next));
+    await load();
+  }
+
+  async function renameBox(b: DeskBox, label: string) {
+    const next = { ...b, label };
+    putBox(next);
+    if (await attempt(() => saveBox(next).then(() => true))) await load();
+  }
+
+  async function removeLabel(b: DeskBox) {
+    const id = b.labelId!;
+    if (!(await attempt(() => api.canvasLabelRemove(id, true).then(() => true)))) return;
+    await load();
+    toast(`Took “${b.label}” off the Desk. Its cards stay.`, 'Undo', () => {
+      void attempt(() => api.canvasLabelRemove(id, false)).then(load);
+    });
   }
 
   async function addArea(projectId: string, x: number, y: number) {
@@ -172,13 +266,30 @@
     toast(`Drop cards into ${projectById(projectId)?.name ?? 'the area'} to give them that project.`);
   }
 
-  function areaMenu(a: CanvasArea): MenuSpec {
+  function boxMenu(b: DeskBox): MenuSpec {
+    const fold = { label: b.collapsed ? 'Open it out' : 'Fold it up', icon: b.collapsed ? ('down' as const) : ('up' as const), side: true, act: () => void toggleBox(b) };
+    if (!b.projectId) {
+      return {
+        sections: [
+          {
+            head: b.label,
+            items: [
+              fold,
+              { label: 'Rename', icon: 'edit', side: true, act: () => (renaming = b.key) },
+              { label: 'Take the box off the Desk', icon: 'trash', danger: true, top: true, act: () => void removeLabel(b) },
+            ],
+          },
+        ],
+      };
+    }
+    const a = areas.find((x) => x.projectId === b.projectId)!;
     const p = projectById(a.projectId);
     return {
       sections: [
         {
           head: `${p?.name ?? 'Project'} area`,
           items: [
+            fold,
             {
               label: 'Take the area off the Desk',
               icon: 'trash',
@@ -214,8 +325,9 @@
   }
 
   // ----- links -----
+  // Only cards that show have lines (a folded box hides its cards' lines too).
   const centres = $derived(
-    new Map(cards.map((c) => {
+    new Map(shown.map((c) => {
       const p = pos(c);
       return [keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 }] as const;
     })),
@@ -321,8 +433,13 @@
 
   function panStart(e: PointerEvent) {
     if (e.button !== 0 || !board) return;
-    if ((e.target as HTMLElement).closest('.tools, .jot')) return;
+    if ((e.target as HTMLElement).closest('.tools, .jot, .toolbox, .selbar')) return;
     closePanel();
+    if (mode === 'free' && (tool === 'box' || tool === 'select' || e.shiftKey)) {
+      bandStart(e, tool === 'box' || e.shiftKey);
+      return;
+    }
+    if (selected.size) selected = new Set();
     const startView = view;
     const start = { x: e.clientX, y: e.clientY };
     panning = true;
@@ -340,6 +457,131 @@
     board.addEventListener('pointerup', up);
     board.addEventListener('pointercancel', up);
   }
+
+  // ----- Select and Box: a rubber band on empty paper -----
+  function bandStart(e: PointerEvent, drawing: boolean) {
+    // Shift + drag would otherwise select text on the page.
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    const { sx, sy } = boardPoint(e);
+    band = { x0: sx, y0: sy, x1: sx, y1: sy, drawing };
+    board!.setPointerCapture(e.pointerId);
+    const moveFn = (m: PointerEvent) => {
+      const p = boardPoint(m);
+      if (band) band = { ...band, x1: p.sx, y1: p.sy };
+    };
+    const up = () => {
+      board?.removeEventListener('pointermove', moveFn);
+      board?.removeEventListener('pointerup', up);
+      board?.removeEventListener('pointercancel', up);
+      const b = band;
+      band = null;
+      if (b) bandDone(b);
+    };
+    board!.addEventListener('pointermove', moveFn);
+    board!.addEventListener('pointerup', up);
+    board!.addEventListener('pointercancel', up);
+  }
+
+  function bandDone(b: { x0: number; y0: number; x1: number; y1: number; drawing: boolean }) {
+    const rect = rectFrom(toCanvas(view, b.x0, b.y0), toCanvas(view, b.x1, b.y1));
+    if (!b.drawing) {
+      selected = new Set(shown.filter((c) => cardIn(rect, c.x, c.y)).map(keyOf));
+      return;
+    }
+    // Too small to be meant as a box: a click, not a drag.
+    if (rect.w * view.zoom < 40 || rect.h * view.zoom < 40) return;
+    const sized = { ...rect, w: Math.max(MIN_AREA.w, Math.round(rect.w)), h: Math.max(MIN_AREA.h, Math.round(rect.h)), x: Math.round(rect.x), y: Math.round(rect.y) };
+    askBox(sized, Math.max(b.x0, b.x1) + 8, Math.min(b.y0, b.y1));
+  }
+
+  function askBox(rect: Rect, sx: number, sy: number) {
+    const w = board?.clientWidth ?? 800;
+    const h = board?.clientHeight ?? 600;
+    drawn = { rect, sx: Math.min(Math.max(8, sx), w - 310), sy: Math.min(Math.max(8, sy), h - 260) };
+  }
+
+  /** "Box these": a box just around the selected cards. */
+  function boxSelection() {
+    const picked = cards.filter((c) => selected.has(keyOf(c)));
+    if (!picked.length) return;
+    const rect = boxAround(picked);
+    const corner = { x: (rect.x + rect.w) * view.zoom + view.x, y: rect.y * view.zoom + view.y };
+    askBox(rect, corner.x + 8, corner.y);
+  }
+
+  const insideDrawn = $derived(drawn ? cards.filter((c) => cardIn(drawn!.rect, c.x, c.y)) : []);
+
+  /** Give cards a project together, with one Undo for all of them. */
+  async function giveProject(list: Card[], projectId: string) {
+    const undo: (() => Promise<unknown>)[] = [];
+    for (const c of list) {
+      if (c.entry && c.entry.projectId !== projectId && !c.entry.isTray) {
+        const e = c.entry;
+        if (await attempt(() => api.updateEntry(e.id, entryInput(e, { projectId })))) {
+          undo.push(() => api.updateEntry(e.id, entryInput(e, {})));
+        }
+      } else if (c.note && c.note.projectId !== projectId) {
+        const n = c.note;
+        const write = (pid: string | null) =>
+          api.updateNote(n.id, { kind: n.kind, title: n.title, body: n.body, projectId: pid, tags: n.tags.join(', ') });
+        if (await attempt(() => write(projectId))) undo.push(() => write(n.projectId));
+      } else if (c.tray && c.tray.item.projectId !== projectId) {
+        const t = c.tray.item;
+        if (await attempt(() => api.traySetProject(t.id, projectId))) undo.push(() => api.traySetProject(t.id, t.projectId));
+      }
+    }
+    return undo;
+  }
+
+  async function boxForProject(projectId: string) {
+    const d = drawn;
+    if (!d) return;
+    const inside = cards.filter((c) => cardIn(d.rect, c.x, c.y));
+    drawn = null;
+    if (!(await attempt(() => api.canvasArea(projectId, d.rect.x, d.rect.y, d.rect.w, d.rect.h).then(() => true)))) return;
+    const undo = await giveProject(inside, projectId);
+    selected = new Set();
+    await refresh();
+    await load();
+    const name = projectById(projectId)?.name ?? 'the project';
+    toast(undo.length ? `${undo.length} card${undo.length === 1 ? '' : 's'} now in ${name}` : `Box for ${name}`, undo.length ? 'Undo' : undefined, undo.length
+      ? () => void (async () => {
+          for (const u of undo) await attempt(u);
+          await refresh();
+          await load();
+        })()
+      : undefined);
+  }
+
+  async function boxForNewProject(name: string) {
+    const made = await attempt(() => api.createProject(name, null));
+    if (!made) return;
+    await refreshProjects();
+    await boxForProject(made.id);
+  }
+
+  async function boxWithLabel(label: string) {
+    const d = drawn;
+    drawn = null;
+    if (!d) return;
+    if (!(await attempt(() => api.canvasLabelSave(null, label, d.rect.x, d.rect.y, d.rect.w, d.rect.h, false)))) return;
+    selected = new Set();
+    await load();
+    toast(`Box “${label}”. Drag its name to move it with its cards; ▴ folds it up.`);
+  }
+
+  $effect(() => {
+    if (!selected.size) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !drawn) {
+        e.stopPropagation();
+        selected = new Set();
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
 
   // Wheel pans; Ctrl + wheel (or a pinch) zooms around the pointer.
   $effect(() => {
@@ -366,7 +608,7 @@
 
   function fit() {
     if (!board) return;
-    const spots = [...cards.map(pos), ...(mode === 'free' ? areas.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
+    const spots = [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
     view = fitAll(spots, board.clientWidth, board.clientHeight);
   }
 
@@ -403,6 +645,9 @@
           { label: 'Fit everything', icon: 'open', side: true, act: fit },
           { label: mode === 'free' ? 'Lay out as a timeline' : 'Back to my layout', icon: 'calendar', top: true, act: () => void toggleTimeline() },
           { label: showLinks ? 'Hide links' : 'Show links', icon: 'link', top: true, act: () => (showLinks = !showLinks) },
+          ...(mode === 'free'
+            ? [{ label: 'Draw a box (or Shift + drag)', icon: 'folder' as const, top: true, act: () => (tool = 'box') }]
+            : []),
         ],
       },
     ];
@@ -421,6 +666,7 @@
   <div
     class="board"
     class:panning
+    class:drawing={mode === 'free' && tool !== 'hand'}
     bind:this={board}
     onpointerdown={panStart}
     ondblclick={(e) => {
@@ -438,13 +684,16 @@
   >
     <div class="world" class:moving={!!areaDrag} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
       {#if mode === 'free'}
-        {#each areas as area, i (area.projectId)}
+        {#each boxes as b, i (b.key)}
           <CanvasAreaBox
-            area={areaDrag?.index === i ? { ...area, x: area.x + areaDrag.dx, y: area.y + areaDrag.dy } : area}
+            box={areaDrag?.index === i ? { ...b, x: b.x + areaDrag.dx, y: b.y + areaDrag.dy } : b}
             zoom={view.zoom}
             onmove={(dx, dy, done) => areaMove(i, dx, dy, done)}
             onresize={(w, h) => void areaResize(i, w, h)}
-            menu={() => areaMenu(area)}
+            ontoggle={() => void toggleBox(b)}
+            onrename={(label) => void renameBox(b, label)}
+            bind:renaming={() => renaming === b.key, (v) => (renaming = v ? b.key : null)}
+            menu={() => boxMenu(b)}
           />
         {/each}
       {:else}
@@ -465,7 +714,7 @@
           {/each}
         </svg>
       {/if}
-      {#each cards as card (card.kind + card.id)}
+      {#each shown as card (card.kind + card.id)}
         {@const p = pos(card)}
         <CanvasCard
           {card}
@@ -474,6 +723,10 @@
           zoom={view.zoom}
           locked={mode === 'timeline'}
           linking={!!linkFrom}
+          selected={selected.has(keyOf(card))}
+          ondrag={(dx, dy) => {
+            if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
+          }}
           onmove={(x, y) => void move(card, x, y)}
           onchanged={() => void load()}
           onlink={() => (linkFrom = card)}
@@ -507,6 +760,56 @@
       {/if}
     </div>
     <span class="anchor" bind:this={menuAnchor} style:left="{anchorAt.x}px" style:top="{anchorAt.y}px"></span>
+    {#if band}
+      {@const r = rectFrom({ x: band.x0, y: band.y0 }, { x: band.x1, y: band.y1 })}
+      <span class="band" class:drawing={band.drawing} style:left="{r.x}px" style:top="{r.y}px" style:width="{r.w}px" style:height="{r.h}px"></span>
+    {/if}
+    {#if drawn}
+      {@const r = drawn.rect}
+      <span
+        class="band drawing held"
+        style:left="{r.x * view.zoom + view.x}px"
+        style:top="{r.y * view.zoom + view.y}px"
+        style:width="{r.w * view.zoom}px"
+        style:height="{r.h * view.zoom}px"
+      ></span>
+      <BoxPrompt
+        x={drawn.sx}
+        y={drawn.sy}
+        inside={insideDrawn.length}
+        boxed={new Set(areas.map((a) => a.projectId))}
+        onproject={(id) => void boxForProject(id)}
+        onnew={(name) => void boxForNewProject(name)}
+        onlabel={(label) => void boxWithLabel(label)}
+        oncancel={() => (drawn = null)}
+      />
+    {/if}
+
+    {#if mode === 'free'}
+      <div class="toolbox" class:shut={!toolbox} role="toolbar" aria-label="Desk tools" aria-orientation="vertical">
+        <button type="button" class="tb fold" title={toolbox ? 'Fold the toolbox away' : 'Open the toolbox'} aria-expanded={toolbox} onclick={() => (toolbox = !toolbox)}>
+          <Icon name={toolbox ? 'left' : 'right'} size={13} />
+        </button>
+        {#if toolbox}
+          <button type="button" class="tb" aria-pressed={tool === 'hand'} title="Move around: drag empty paper to pan" onclick={() => (tool = 'hand')}>
+            <Icon name="hand" size={16} /><span>Move</span>
+          </button>
+          <button type="button" class="tb" aria-pressed={tool === 'select'} title="Select: drag around cards, then move them together" onclick={() => (tool = 'select')}>
+            <Icon name="select" size={16} /><span>Select</span>
+          </button>
+          <button type="button" class="tb" aria-pressed={tool === 'box'} title="Box: drag to draw a box for a project or a label (Shift + drag works with any tool)" onclick={() => (tool = 'box')}>
+            <Icon name="box" size={16} /><span>Box</span>
+          </button>
+        {/if}
+      </div>
+    {/if}
+    {#if selected.size}
+      <div class="selbar" role="toolbar" aria-label="Selection">
+        <span>{selected.size} selected · drag one to move them all</span>
+        <button type="button" class="btn" onclick={boxSelection}><Icon name="box" size={13} /> Box these</button>
+        <button type="button" class="btn" onclick={() => (selected = new Set())}>Clear</button>
+      </div>
+    {/if}
 
     {#if loaded && cards.length === 0 && !jot}
       <div class="empty">
@@ -533,7 +836,7 @@
     {:else if mode === 'timeline'}
       <p class="banner" role="status">The timeline: your layout is kept. Back to my layout puts every card where it was.</p>
     {/if}
-    <p class="hint">Drag cards · right-click paper for a project area · double-click to jot · Ctrl + scroll to zoom</p>
+    <p class="hint">Drag cards · Shift + drag to draw a box · double-click to jot · Ctrl + scroll to zoom</p>
   </div>
 
   <aside class="panel" aria-label="Today">
@@ -587,6 +890,99 @@
 
   .board.panning {
     cursor: grabbing;
+  }
+
+  .board.drawing {
+    cursor: crosshair;
+    user-select: none;
+  }
+
+  .band {
+    position: absolute;
+    border: 1.5px dashed var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 3;
+  }
+
+  .band.drawing {
+    border-radius: 14px;
+    border-width: 2px;
+  }
+
+  .toolbox {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 11px;
+    background: var(--glass);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(6px);
+    z-index: 4;
+  }
+
+  .toolbox .tb {
+    border: 0;
+    background: none;
+    color: var(--ink-2);
+    width: 52px;
+    padding: 6px 0 4px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font: 600 10.5px var(--ui);
+    cursor: pointer;
+  }
+
+  .toolbox .tb.fold {
+    padding: 3px 0;
+  }
+
+  .toolbox.shut .tb.fold {
+    width: 26px;
+  }
+
+  .toolbox .tb:hover {
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+  }
+
+  .toolbox .tb[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--accent) 15%, transparent);
+    color: var(--accent);
+  }
+
+  .selbar {
+    position: absolute;
+    left: 50%;
+    bottom: 56px;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px 6px 14px;
+    border-radius: 11px;
+    background: var(--paper);
+    box-shadow: var(--lift);
+    font-size: 13px;
+    z-index: 5;
+    white-space: nowrap;
+  }
+
+  .selbar .btn {
+    padding: 4px 10px;
+    font-size: 12.5px;
+    display: inline-flex;
+    gap: 5px;
+    align-items: center;
   }
 
   .world {

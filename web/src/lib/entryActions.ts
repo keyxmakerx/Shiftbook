@@ -13,7 +13,8 @@ import { toast } from './toast.svelte';
 import { fmtMinutes } from './format';
 import { startTimer, stopTimer, timer } from './timer.svelte';
 
-function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
+/** The entry as an update with these changes (the project, so far). */
+export function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
   return {
     date: e.date,
     minutes: e.minutes,

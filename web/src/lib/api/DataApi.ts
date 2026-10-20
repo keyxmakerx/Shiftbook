@@ -423,6 +423,8 @@ export interface CanvasCard {
   /** Its spot when the Desk is laid out as a timeline. */
   timelineX: number;
   timelineY: number;
+  /** The box it sits in ("project:<id>" or "label:<id>"), if any. */
+  inBox: string | null;
   entry: Entry | null;
   tray: { item: TrayItem; date: IsoDate } | null;
   note: Note | null;
@@ -436,6 +438,27 @@ export interface CanvasArea {
   y: number;
   w: number;
   h: number;
+  /** Folded up to its name and a count. */
+  collapsed: boolean;
+  /** Cards inside it. */
+  count: number;
+  status: BoxStatus;
+}
+
+/** How a box's cards stand. Mirrors `shiftbook_core::canvas::BoxStatus`. */
+export type BoxStatus = 'quiet' | 'today' | 'waiting';
+
+/** A plain labelled box on the Desk: it only groups cards. */
+export interface CanvasLabel {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  collapsed: boolean;
+  count: number;
+  status: BoxStatus;
 }
 
 /** One card, by what it shows and the record's id. */
@@ -457,6 +480,7 @@ export interface DeskData {
   /** Bottom first. */
   cards: CanvasCard[];
   areas: CanvasArea[];
+  labels: CanvasLabel[];
   links: CanvasLink[];
   /** The timeline's days, oldest first, with where each column starts. */
   axis: { date: IsoDate; x: number }[];
@@ -734,6 +758,12 @@ export interface DataApi {
   canvasArea(projectId: string, x: number, y: number, w: number, h: number): Promise<void>;
   /** Take a project's area off the Desk (the project and its cards stay). Tauri: `canvas_area_remove`. */
   canvasAreaRemove(projectId: string): Promise<void>;
+  /** Fold a project's area up to its name and a count, or open it. */
+  canvasAreaCollapse(projectId: string, collapsed: boolean): Promise<void>;
+  /** Make a labelled box (`id` null) or change one; returns its id. */
+  canvasLabelSave(id: string | null, label: string, x: number, y: number, w: number, h: number, collapsed: boolean): Promise<string>;
+  /** Take a labelled box off the Desk (its cards stay), or put it back. */
+  canvasLabelRemove(id: string, removed: boolean): Promise<void>;
   /** Draw a link (`drawn`) or hide an automatic one. Tauri: `canvas_link`. */
   canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void>;
   /** Undo a drawn or hidden link. Tauri: `canvas_link_reset`. */

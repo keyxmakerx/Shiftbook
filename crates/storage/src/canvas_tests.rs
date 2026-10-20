@@ -168,3 +168,51 @@ fn links_are_drawn_hidden_and_reset_in_either_order() {
         assert!(s.canvas_links(me).await.unwrap().is_empty());
     });
 }
+
+#[test]
+fn boxes_fold_up_and_labelled_boxes_are_kept() {
+    let dir = TestDir::new("canvas-boxes");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let p = s.create_project(me, "SSL renewals", None).await.unwrap().id;
+        let area = Area {
+            x: 10,
+            y: 20,
+            w: 600,
+            h: 400,
+        };
+        assert!(!s.set_area(me, p, area).await.unwrap().collapsed);
+        s.set_area_collapsed(me, p, true).await.unwrap();
+        // Moving a folded area keeps it folded.
+        assert!(s.set_area(me, p, area).await.unwrap().collapsed);
+        assert!(s.canvas_areas(me).await.unwrap()[0].collapsed);
+        assert!(s.set_area_collapsed(other, p, false).await.is_err());
+
+        let made = s
+            .save_label(me, None, "  Waiting on vendors ", area, false)
+            .await
+            .unwrap();
+        assert_eq!(made.label, "Waiting on vendors");
+        let moved = Area { x: 300, ..area };
+        s.save_label(me, Some(made.id), "Vendors", moved, true)
+            .await
+            .unwrap();
+        let all = s.canvas_labels(me).await.unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(
+            (all[0].label.as_str(), all[0].area.x, all[0].collapsed),
+            ("Vendors", 300, true)
+        );
+        assert!(s.canvas_labels(other).await.unwrap().is_empty());
+        assert!(s
+            .save_label(other, Some(made.id), "Mine", area, false)
+            .await
+            .is_err());
+        assert!(s.save_label(me, None, "   ", area, false).await.is_err());
+
+        s.set_label_deleted(me, made.id, true).await.unwrap();
+        assert!(s.canvas_labels(me).await.unwrap().is_empty());
+        s.set_label_deleted(me, made.id, false).await.unwrap();
+        assert_eq!(s.canvas_labels(me).await.unwrap().len(), 1);
+    });
+}

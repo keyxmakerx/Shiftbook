@@ -5,7 +5,8 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    auto_links, auto_place, is_recent, timeline, Area, CardKind, LinkReason, LinkText, RECENT_DAYS,
+    area_at, auto_links, auto_place, box_status, is_recent, timeline, Area, BoxStatus, CardKind,
+    LinkReason, LinkText, MemberState, RECENT_DAYS,
 };
 use shiftbook_core::dates::format_date;
 use shiftbook_core::ids::{ProjectId, TimeEntryId, TrayItemId};
@@ -47,6 +48,8 @@ pub struct CardView {
     /// Its spot when the Desk is laid out as a timeline.
     timeline_x: i32,
     timeline_y: i32,
+    /// The box it sits in ("project:<id>" or "label:<id>"), if any.
+    in_box: Option<String>,
     entry: Option<EntryView>,
     tray: Option<TrayCardView>,
     note: Option<NoteView>,
@@ -62,6 +65,26 @@ pub struct AreaView {
     y: i32,
     w: i32,
     h: i32,
+    collapsed: bool,
+    /// Cards inside it.
+    count: usize,
+    status: BoxStatus,
+}
+
+/// A plain labelled box.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelView {
+    id: String,
+    label: String,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    collapsed: bool,
+    /// Cards inside it.
+    count: usize,
+    status: BoxStatus,
 }
 
 /// One end of a link.
@@ -97,6 +120,7 @@ pub struct DeskView {
     /// Bottom first.
     cards: Vec<CardView>,
     areas: Vec<AreaView>,
+    labels: Vec<LabelView>,
     links: Vec<LinkView>,
     /// The timeline's days, oldest first.
     axis: Vec<AxisDay>,
@@ -112,6 +136,8 @@ struct Pending {
     date: Date,
     /// What it says, for links.
     link: LinkText,
+    /// A ticket still open.
+    open: bool,
     card: CardView,
 }
 
@@ -125,6 +151,7 @@ fn blank(kind: CardKind, id: Uuid) -> CardView {
         placed: false,
         timeline_x: 0,
         timeline_y: 0,
+        in_box: None,
         entry: None,
         tray: None,
         note: None,
@@ -155,6 +182,7 @@ fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
         created,
         date,
         link,
+        open: false,
         card,
     }
 }
@@ -165,7 +193,7 @@ fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
         tickets: vec![item.ticket_number.clone()],
         text: item.note.clone().unwrap_or_default(),
     };
-    let (created, date) = (item.created_at, item.date);
+    let (created, date, open) = (item.created_at, item.date, !item.done);
     let mut card = blank(CardKind::Tray, id);
     card.tray = Some(TrayCardView {
         item: tray_item_view(item, fields),
@@ -177,6 +205,7 @@ fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
         created,
         date,
         link,
+        open,
         card,
     }
 }
@@ -196,6 +225,7 @@ fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending {
         created,
         date: created.date(),
         link,
+        open: false,
         card,
     }
 }
@@ -215,6 +245,7 @@ fn inbox_card(scrap: InboxItem) -> Pending {
         created,
         date: created.date(),
         link,
+        open: false,
         card,
     }
 }
@@ -365,21 +396,71 @@ pub async fn canvas(s: State<'_, VaultSession>, today: String) -> Res<DeskView> 
         }
     }
 
-    let areas = store
-        .canvas_areas(owner)
+    // Boxes: project areas, then labelled boxes (a card in two counts for the one on top).
+    let project_areas = store.canvas_areas(owner).await?;
+    let label_boxes = store.canvas_labels(owner).await?;
+    let boxes: Vec<Area> = project_areas
+        .iter()
+        .map(|a| a.area)
+        .chain(label_boxes.iter().map(|l| l.area))
+        .collect();
+    let keys: Vec<String> = project_areas
+        .iter()
+        .map(|a| format!("project:{}", a.project))
+        .chain(label_boxes.iter().map(|l| format!("label:{}", l.id)))
+        .collect();
+    let brought: HashSet<(CardKind, Uuid)> = store
+        .next_up_all(owner)
         .await?
         .into_iter()
-        .map(|a| AreaView {
+        .filter(|i| i.done_at.is_none())
+        .filter_map(|i| i.about)
+        .collect();
+    let mut members: Vec<Vec<MemberState>> = vec![Vec::new(); boxes.len()];
+    for p in placed.iter_mut() {
+        if let Some(b) = area_at(&boxes, (p.card.x, p.card.y)) {
+            members[b].push(MemberState {
+                open: p.open,
+                brought_up: brought.contains(&(p.kind, p.id)),
+                today: p.date == today,
+            });
+            p.card.in_box = Some(keys[b].clone());
+        }
+    }
+    let areas = project_areas
+        .iter()
+        .enumerate()
+        .map(|(i, a)| AreaView {
             project_id: a.project,
             x: a.area.x,
             y: a.area.y,
             w: a.area.w,
             h: a.area.h,
+            collapsed: a.collapsed,
+            count: members[i].len(),
+            status: box_status(&members[i]),
+        })
+        .collect();
+    let first_label = project_areas.len();
+    let labels = label_boxes
+        .into_iter()
+        .enumerate()
+        .map(|(i, l)| LabelView {
+            id: l.id.to_string(),
+            label: l.label,
+            x: l.area.x,
+            y: l.area.y,
+            w: l.area.w,
+            h: l.area.h,
+            collapsed: l.collapsed,
+            count: members[first_label + i].len(),
+            status: box_status(&members[first_label + i]),
         })
         .collect();
     Ok(DeskView {
         cards: placed.into_iter().map(|p| p.card).collect(),
         areas,
+        labels,
         links,
         axis: days
             .into_iter()
@@ -414,6 +495,53 @@ pub async fn canvas_area_remove(s: State<'_, VaultSession>, project_id: String) 
     let project: ProjectId = project_id.parse().map_err(|_| CommandError::InvalidInput)?;
     store.remove_area(owner, project).await?;
     Ok(())
+}
+
+/// Maps to `DataApi.canvasAreaCollapse()`: fold a project's area up to a count, or open it.
+#[tauri::command]
+pub async fn canvas_area_collapse(
+    s: State<'_, VaultSession>,
+    project_id: String,
+    collapsed: bool,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let project: ProjectId = project_id.parse().map_err(|_| CommandError::InvalidInput)?;
+    Ok(store.set_area_collapsed(owner, project, collapsed).await?)
+}
+
+/// Maps to `DataApi.canvasLabelSave()`: make a labelled box (`id` null) or change one.
+/// Returns its id.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub async fn canvas_label_save(
+    s: State<'_, VaultSession>,
+    id: Option<String>,
+    label: String,
+    x: i32,
+    y: i32,
+    w: i32,
+    h: i32,
+    collapsed: bool,
+) -> Res<String> {
+    let (store, owner) = s.data().await?;
+    let id = id
+        .as_deref()
+        .map(Uuid::parse_str)
+        .transpose()
+        .map_err(|_| CommandError::InvalidInput)?;
+    let saved = store
+        .save_label(owner, id, &label, Area { x, y, w, h }, collapsed)
+        .await?;
+    Ok(saved.id.to_string())
+}
+
+/// Maps to `DataApi.canvasLabelRemove()`: take a labelled box off the Desk (its cards stay),
+/// or with `removed` false put it back (Undo).
+#[tauri::command]
+pub async fn canvas_label_remove(s: State<'_, VaultSession>, id: String, removed: bool) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let id = Uuid::parse_str(&id).map_err(|_| CommandError::InvalidInput)?;
+    Ok(store.set_label_deleted(owner, id, removed).await?)
 }
 
 fn ref_arg(kind: &str, id: &str) -> Res<CardRef> {

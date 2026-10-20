@@ -66,6 +66,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "meeting series",
         include_str!("../migrations/0009_meeting_series.sql"),
     ),
+    (
+        10,
+        "canvas boxes",
+        include_str!("../migrations/0010_canvas_boxes.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -267,6 +272,7 @@ mod tests {
                 [
                     "canvas_areas",
                     "canvas_cards",
+                    "canvas_labels",
                     "canvas_links",
                     "category_code_defaults",
                     "custom_fields",

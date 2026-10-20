@@ -283,6 +283,15 @@ export class TauriApi implements DataApi {
   canvasAreaRemove(projectId: string): Promise<void> {
     return call('canvas_area_remove', { projectId });
   }
+  canvasAreaCollapse(projectId: string, collapsed: boolean): Promise<void> {
+    return call('canvas_area_collapse', { projectId, collapsed });
+  }
+  canvasLabelSave(id: string | null, label: string, x: number, y: number, w: number, h: number, collapsed: boolean): Promise<string> {
+    return call('canvas_label_save', { id, label, x, y, w, h, collapsed });
+  }
+  canvasLabelRemove(id: string, removed: boolean): Promise<void> {
+    return call('canvas_label_remove', { id, removed });
+  }
   canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void> {
     return call('canvas_link', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id, drawn });
   }

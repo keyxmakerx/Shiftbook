@@ -78,6 +78,15 @@ names the round it came from. Nothing here is optional unless it says so.
    click a line to remove it; "Link to another card" on any card draws one; the Links button
    hides them all); the timeline (a column per day, oldest left, wrapping after 5 cards; Back
    to my layout restores the view; cards can't be dragged while it shows).
+   **Boxes and the toolbox (built, round 12):** a toolbox down the left of the Desk (fold it
+   away with its arrow) with Move (drag paper to pan), Select (drag around cards; dragging one
+   moves them all; Box these puts a box around them) and Box (drag to draw a box). Shift + drag
+   draws a box with any tool. A new box asks what it is: a project (the cards inside get it,
+   with one Undo; a project that already has a box moves it here), a new project, or Just a
+   label (a plain dashed box that only groups cards; double-click its name to rename it).
+   Every box folds up (▴ on its name) to its name and a count; the count is grey when nothing
+   is waiting, blue when something is from today and orange when a ticket is still open or
+   something is brought up. Folded cards and their links hide until it opens again.
 3. **C3 Tidy:** stacks, Tidy into stacks, drawers.
 4. **C4 Boards:** boards inside boards with tint and breadcrumbs, the List view, the Archive.
 5. **C5:** the meeting canvas.

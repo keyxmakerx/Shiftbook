@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-label-remove"
+description = "Enables the canvas_label_remove command without any pre-configured scope."
+commands.allow = ["canvas_label_remove"]
+
+[[permission]]
+identifier = "deny-canvas-label-remove"
+description = "Denies the canvas_label_remove command without any pre-configured scope."
+commands.deny = ["canvas_label_remove"]

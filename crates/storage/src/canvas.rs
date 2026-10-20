@@ -2,7 +2,7 @@
 //!
 //! Owner-scoped, bound parameters only. Moving a card that has no spot yet creates one.
 
-use shiftbook_core::canvas::{clamp_spot, Area, CardKind};
+use shiftbook_core::canvas::{clamp_spot, clean_label, Area, CardKind};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 use uuid::Uuid;
@@ -117,7 +117,7 @@ impl SqliteStore {
     /// Every project area.
     pub async fn canvas_areas(&self, owner: OwnerId) -> Result<Vec<CanvasArea>> {
         let rows = sqlx::query(
-            "SELECT project_id, x, y, w, h FROM canvas_areas \
+            "SELECT project_id, x, y, w, h, collapsed FROM canvas_areas \
              WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY updated_at, id",
         )
         .bind(owner.to_string())
@@ -167,8 +167,142 @@ impl SqliteStore {
             .execute(&mut *tx)
             .await?;
         }
+        let collapsed: bool = sqlx::query_scalar(
+            "SELECT collapsed FROM canvas_areas \
+             WHERE owner_id = $1 AND project_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .bind(project.to_string())
+        .fetch_one(&mut *tx)
+        .await?;
         tx.commit().await?;
-        Ok(CanvasArea { project, area })
+        Ok(CanvasArea {
+            project,
+            area,
+            collapsed,
+        })
+    }
+
+    /// Fold a project's area up to its name and a count, or open it out again.
+    pub async fn set_area_collapsed(
+        &self,
+        owner: OwnerId,
+        project: ProjectId,
+        collapsed: bool,
+    ) -> Result<()> {
+        let done = sqlx::query(
+            "UPDATE canvas_areas SET collapsed = $1, updated_at = $2 \
+             WHERE owner_id = $3 AND project_id = $4 AND deleted_at IS NULL",
+        )
+        .bind(collapsed)
+        .bind(now_text())
+        .bind(owner.to_string())
+        .bind(project.to_string())
+        .execute(&self.pool)
+        .await?;
+        if done.rows_affected() == 0 {
+            Err(StorageError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    // ---------- labelled boxes ----------
+
+    /// Every plain labelled box.
+    pub async fn canvas_labels(&self, owner: OwnerId) -> Result<Vec<CanvasLabel>> {
+        let rows = sqlx::query(
+            "SELECT id, label, x, y, w, h, collapsed FROM canvas_labels \
+             WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY created_at, id",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+        rows.iter().map(label_from_row).collect()
+    }
+
+    /// Make a labelled box (`id` None) or change one. Sizes are kept sane.
+    pub async fn save_label(
+        &self,
+        owner: OwnerId,
+        id: Option<Uuid>,
+        label: &str,
+        area: Area,
+        collapsed: bool,
+    ) -> Result<CanvasLabel> {
+        let label = clean_label(label)?;
+        let area = area.clean();
+        let now = now_text();
+        let id = match id {
+            Some(id) => {
+                let done = sqlx::query(
+                    "UPDATE canvas_labels SET label = $1, x = $2, y = $3, w = $4, h = $5, \
+                     collapsed = $6, updated_at = $7 \
+                     WHERE id = $8 AND owner_id = $9 AND deleted_at IS NULL",
+                )
+                .bind(&label)
+                .bind(i64::from(area.x))
+                .bind(i64::from(area.y))
+                .bind(i64::from(area.w))
+                .bind(i64::from(area.h))
+                .bind(collapsed)
+                .bind(&now)
+                .bind(id.to_string())
+                .bind(owner.to_string())
+                .execute(&self.pool)
+                .await?;
+                if done.rows_affected() == 0 {
+                    return Err(StorageError::NotFound);
+                }
+                id
+            }
+            None => {
+                let id = Uuid::now_v7();
+                sqlx::query(
+                    "INSERT INTO canvas_labels \
+                     (id, owner_id, label, x, y, w, h, collapsed, created_at, updated_at, deleted_at) \
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL)",
+                )
+                .bind(id.to_string())
+                .bind(owner.to_string())
+                .bind(&label)
+                .bind(i64::from(area.x))
+                .bind(i64::from(area.y))
+                .bind(i64::from(area.w))
+                .bind(i64::from(area.h))
+                .bind(collapsed)
+                .bind(&now)
+                .execute(&self.pool)
+                .await?;
+                id
+            }
+        };
+        Ok(CanvasLabel {
+            id,
+            label,
+            area,
+            collapsed,
+        })
+    }
+
+    /// Take a labelled box off the Desk (its cards stay), or with `deleted` false put it back.
+    pub async fn set_label_deleted(&self, owner: OwnerId, id: Uuid, deleted: bool) -> Result<()> {
+        let now = now_text();
+        let done = sqlx::query(
+            "UPDATE canvas_labels SET deleted_at = $1, updated_at = $2 \
+             WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(deleted.then_some(now.as_str()))
+        .bind(&now)
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&self.pool)
+        .await?;
+        if done.rows_affected() == 0 {
+            Err(StorageError::NotFound)
+        } else {
+            Ok(())
+        }
     }
 
     /// Take a project's area off the Desk (the project and its cards stay).
@@ -290,6 +424,21 @@ pub struct CanvasArea {
     pub project: ProjectId,
     /// Where it is.
     pub area: Area,
+    /// Folded up to its name and a count.
+    pub collapsed: bool,
+}
+
+/// A plain labelled box on the Desk: it only groups cards.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanvasLabel {
+    /// Id.
+    pub id: Uuid,
+    /// Its name.
+    pub label: String,
+    /// Where it is.
+    pub area: Area,
+    /// Folded up to its name and a count.
+    pub collapsed: bool,
 }
 
 /// A link the owner changed: drawn by hand, or an automatic one hidden.
@@ -318,15 +467,29 @@ fn kind_col(row: &SqliteRow, col: &str) -> Result<CardKind> {
         .map_err(|_| StorageError::Corrupt("canvas card kind"))
 }
 
+fn area_of(row: &SqliteRow) -> Result<Area> {
+    Ok(Area {
+        x: i32_col(row, "x")?,
+        y: i32_col(row, "y")?,
+        w: i32_col(row, "w")?,
+        h: i32_col(row, "h")?,
+    })
+}
+
 fn area_from_row(row: &SqliteRow) -> Result<CanvasArea> {
     Ok(CanvasArea {
         project: ProjectId::from_uuid(uuid_col(row, "project_id")?),
-        area: Area {
-            x: i32_col(row, "x")?,
-            y: i32_col(row, "y")?,
-            w: i32_col(row, "w")?,
-            h: i32_col(row, "h")?,
-        },
+        area: area_of(row)?,
+        collapsed: row.try_get("collapsed")?,
+    })
+}
+
+fn label_from_row(row: &SqliteRow) -> Result<CanvasLabel> {
+    Ok(CanvasLabel {
+        id: uuid_col(row, "id")?,
+        label: row.try_get("label")?,
+        area: area_of(row)?,
+        collapsed: row.try_get("collapsed")?,
     })
 }
 
