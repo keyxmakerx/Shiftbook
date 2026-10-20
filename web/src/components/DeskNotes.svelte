@@ -16,6 +16,8 @@
   import { api } from '../lib/api';
   import type { Note } from '../lib/api';
   import { dayMonth, weekdayShort } from '../lib/format';
+  import { paperMenu } from '../lib/menu.svelte';
+  import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
@@ -139,7 +141,18 @@
       <button type="button" class="btn" disabled={!jot.trim()} onclick={saveJot}>Keep it</button>
     </div>
     {#each jots as n (n.id)}
-      <button type="button" class="item" onclick={() => openNote(n.id)}>
+      <button
+        type="button"
+        class="item"
+        title="Click to open · right-click to log it as an entry"
+        onclick={() => openNote(n.id)}
+        use:paperMenu={() => ({
+          sections: [
+            { head: n.title, items: [{ label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(n.id) }] },
+            logNoteSection(n, () => void loadJots()),
+          ],
+        })}
+      >
         <span class="t">{n.title}</span>
       </button>
     {/each}

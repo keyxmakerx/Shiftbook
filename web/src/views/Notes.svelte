@@ -11,6 +11,8 @@
   import { api } from '../lib/api';
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
+  import { openMenu } from '../lib/menu.svelte';
+  import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, projectColor, projectName } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from '../components/Icon.svelte';
@@ -342,6 +344,20 @@
           {#if current.keep && (current.kind === 'jot' || current.kind === 'daily' || current.kind === 'meeting')}
             <button type="button" class="btn" onclick={() => current && letMove(current)} title="Let auto-archive move this note again">
               Kept · let it move
+            </button>
+          {/if}
+          {#if current.kind === 'jot' && !current.archived}
+            <button
+              type="button"
+              class="btn"
+              title="Turn this jot into an entry: pick how long"
+              onclick={async (e) => {
+                const at = e.currentTarget as HTMLElement;
+                await flush();
+                if (current) openMenu(at, { sections: [logNoteSection(current, () => current && void refreshOpen(current.id).then(load))] });
+              }}
+            >
+              <Icon name="log" size={15} />Log it as an entry
             </button>
           {/if}
           <button type="button" class="btn" onclick={() => current && setArchived(current, !current.archived)}>

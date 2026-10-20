@@ -153,7 +153,13 @@ export class TauriApi implements DataApi {
   }
   addEntryMinutes(id: string, delta: number): Promise<Entry> {
     return call('add_entry_minutes', { id, delta });
+  }  addEntryTime(id: string, day: IsoDate, minutes: number): Promise<{ entry: Entry; created: boolean }> {
+    return call('add_entry_time', { id, day, minutes });
+  }  logNote(id: string, date: IsoDate, minutes: number): Promise<Entry> {
+    return call('log_note', { id, date, minutes });
   }
+
+
   deleteEntry(id: string): Promise<void> {
     return call('delete_entry', { id });
   }

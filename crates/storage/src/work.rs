@@ -11,15 +11,20 @@
 use shiftbook_core::capture::Capture;
 use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
 use shiftbook_core::error::CoreError;
-use shiftbook_core::ids::{OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId};
+use shiftbook_core::ids::{
+    NoteId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId,
+};
 use shiftbook_core::minutes::{Minutes, MAX_ENTRY_MINUTES};
 use shiftbook_core::model::{EntryTarget, Project, TargetType, Ticket, TimeEntry, TrayItem};
+use shiftbook_core::notes::jot_to_entry;
 use shiftbook_core::prefs::next_project_color;
-use shiftbook_core::quicklog::{plan_quick_log, DayEntry, PastUse, QuickLogPlan};
+use shiftbook_core::quicklog::{
+    plan_add_time, plan_quick_log, AddTimePlan, DayEntry, PastUse, QuickLogPlan,
+};
 use shiftbook_core::tickets::add_tickets;
 use shiftbook_core::tray::{
     carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
-    RollupAction, DEFAULT_TRAY_MINUTES, TRAY_ENTRY_TITLE,
+    RollupAction, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE, TRAY_ENTRY_TITLE,
 };
 use shiftbook_core::validate::{
     clean_notes, validate_color, validate_project, validate_time_entry,
@@ -1001,6 +1006,104 @@ impl SqliteStore {
         Ok(rec)
     }
 
+    /// Log a jot (any note) as an entry on `date` (round 14, see
+    /// `shiftbook_core::notes::jot_to_entry`): its title says what was done, the rest becomes
+    /// the entry's notes, ticket numbers in it become tickets, and it keeps the note's project.
+    /// The note moves to the archive in the same step.
+    pub async fn log_note(
+        &self,
+        owner: OwnerId,
+        id: NoteId,
+        date: Date,
+        minutes: u32,
+    ) -> Result<EntryRecord> {
+        let note = self.get_note(owner, id).await?;
+        let made = jot_to_entry(&note.title, &note.body);
+        let input = EntryInput {
+            date,
+            minutes: Minutes(minutes),
+            description: made.description,
+            project: note.project_id,
+            category: None,
+            next_step: made.notes,
+            timesheet_code_id: None,
+        };
+        let now = now_text();
+        let mut tx = self.pool.begin().await?;
+        let entry = create_entry_in(&mut tx, owner, &input, &made.tickets.join("\n")).await?;
+        sqlx::query(
+            "UPDATE notes SET archived_at = $1, updated_at = $1 \
+             WHERE id = $2 AND owner_id = $3 AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let rec = entry_record(&mut tx, owner, entry).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Add `minutes` of work on an entry, landing on `day` (see
+    /// `shiftbook_core::quicklog::plan_add_time`): the entry itself when it's from `day`, else
+    /// `day`'s entry with the same title and project, else a copy of it on `day`. Returns the
+    /// entry that got the time and whether it was made just now.
+    pub async fn add_time_on(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        day: Date,
+        minutes: u32,
+    ) -> Result<(EntryRecord, bool)> {
+        let rec = self.get_entry(owner, id).await?;
+        if rec.is_tray {
+            return Err(StorageError::TrayManaged);
+        }
+        let on_day = self.list_entries(owner, day, day).await?;
+        let listed: Vec<(TimeEntryId, &str, EntryTarget, bool)> = on_day
+            .iter()
+            .map(|r| {
+                (
+                    r.entry.id,
+                    r.entry.description.as_str(),
+                    r.entry.target,
+                    r.is_tray,
+                )
+            })
+            .collect();
+        let e = &rec.entry;
+        let plan = plan_add_time((e.id, e.date, &e.description, e.target), day, &listed);
+        let delta = i32::try_from(minutes).map_err(|_| CoreError::HoursTooLarge)?;
+        match plan {
+            AddTimePlan::AddTo(to) => Ok((self.add_entry_minutes(owner, to, delta).await?, false)),
+            AddTimePlan::Copy => {
+                let input = EntryInput {
+                    date: day,
+                    minutes: Minutes(minutes),
+                    description: e.description.clone(),
+                    project: match e.target {
+                        EntryTarget::Project(p) => Some(p),
+                        _ => None,
+                    },
+                    category: e.category.clone(),
+                    next_step: None,
+                    timesheet_code_id: e.timesheet_code_id,
+                };
+                let tickets: Vec<&str> = rec
+                    .tickets
+                    .iter()
+                    .map(|t| t.ticket_number.as_str())
+                    .collect();
+                Ok((
+                    self.create_entry(owner, &input, &tickets.join("\n"))
+                        .await?,
+                    true,
+                ))
+            }
+        }
+    }
+
     /// Add (or with a negative number, take away) minutes. Never below zero;
     /// over 24 hours is refused. Not allowed on the tray roll-up.
     pub async fn add_entry_minutes(
@@ -1297,8 +1400,8 @@ impl SqliteStore {
     }
 
     /// Paste tickets into a day's tray (multi-paste splits, repeats skipped);
-    /// each gets 15 minutes and counts as done. A ticket seen on an earlier day keeps its
-    /// notepad and project, and pasting it finishes it there too. The roll-ups follow.
+    /// each gets 15 minutes and starts still open (`NEW_TICKET_DONE`). A ticket seen on an
+    /// earlier day keeps its notepad and project. The roll-ups follow.
     pub async fn tray_add(&self, owner: OwnerId, date: Date, text: &str) -> Result<TrayDay> {
         let mut tx = self.pool.begin().await?;
         let existing: Vec<String> = tray_items(&mut tx, owner, date)
@@ -1308,7 +1411,7 @@ impl SqliteStore {
             .collect();
         let added = new_tray_tickets(&existing, text)?;
         for t in &added {
-            insert_tray_row(&mut tx, owner, date, t, true).await?;
+            insert_tray_row(&mut tx, owner, date, t, NEW_TICKET_DONE).await?;
         }
         sync_tray(&mut tx, owner, date).await?;
         let day = tray_day_in(&mut tx, owner, date).await?;

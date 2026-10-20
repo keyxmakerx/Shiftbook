@@ -251,8 +251,79 @@ pub fn is_daily_note_for(kind: NoteKind, title: &str, date: time::Date) -> bool 
     kind == NoteKind::Daily && title == daily_note_title(date)
 }
 
+/// What logging a jot as an entry makes (round 14).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct JotEntry {
+    /// "What I worked on": the jot's title, on one line.
+    pub description: String,
+    /// The rest of the jot (the body without a first line that only repeats the title).
+    pub notes: Option<String>,
+    /// Ticket numbers written in the jot, in order, without repeats.
+    pub tickets: Vec<String>,
+}
+
+/// Turn a jot into an entry's text: the title says what was done, the rest becomes the
+/// entry's notes, and any ticket numbers become its tickets.
+pub fn jot_to_entry(title: &str, body: &str) -> JotEntry {
+    let description: String = title
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .chars()
+        .take(crate::validate::MAX_LINE_CHARS)
+        .collect();
+    let body = body.trim();
+    let rest = match body.split_once('\n') {
+        Some((first, rest)) if first.trim() == title.trim() => rest.trim(),
+        None if body == title.trim() => "",
+        _ => body,
+    };
+    let notes = (!rest.is_empty()).then(|| {
+        rest.chars()
+            .take(crate::validate::MAX_NOTES_CHARS)
+            .collect()
+    });
+    let mut tickets: Vec<String> = Vec::new();
+    for word in format!("{title} {body}").split(|c: char| c.is_whitespace() || c == ',' || c == ';')
+    {
+        if let Some(t) = crate::capture::ticket(word) {
+            if !tickets.contains(&t) && tickets.len() < crate::tickets::MAX_TICKETS_PER_ENTRY {
+                tickets.push(t);
+            }
+        }
+    }
+    JotEntry {
+        description,
+        notes,
+        tickets,
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn jots_become_entries() {
+        use super::jot_to_entry;
+        let e = jot_to_entry(
+            "PSUs for the Meraki switch",
+            "PSUs for the Meraki switch\nAsked Sam to ship them, see CHG0012345.",
+        );
+        assert_eq!(e.description, "PSUs for the Meraki switch");
+        assert_eq!(
+            e.notes.as_deref(),
+            Some("Asked Sam to ship them, see CHG0012345.")
+        );
+        assert_eq!(e.tickets, ["CHG0012345"]);
+        // A one-line jot has no notes; tickets in the title count, once.
+        let e = jot_to_entry("reset INC0045678 again", "reset INC0045678 again");
+        assert_eq!(e.notes, None);
+        assert_eq!(e.tickets, ["INC0045678"]);
+        // A titled jot keeps its whole body as notes.
+        let e = jot_to_entry("Printer", "3rd floor\nqueue stuck");
+        assert_eq!(e.notes.as_deref(), Some("3rd floor\nqueue stuck"));
+        assert!(e.tickets.is_empty());
+    }
+
     use super::*;
     use time::macros::datetime;
     use time::Duration;

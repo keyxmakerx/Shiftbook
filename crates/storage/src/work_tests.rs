@@ -371,6 +371,81 @@ fn tray_rolls_up_into_one_entry_per_day() {
 }
 
 #[test]
+fn a_jot_is_logged_as_an_entry() {
+    use crate::notes::NoteInput;
+    use shiftbook_core::notes::NoteKind;
+    let dir = TestDir::new("logjot");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let p = s.create_project(me, "Network", None).await.unwrap();
+        let jot = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Jot,
+                    title: String::new(),
+                    body: "PSUs for the Meraki switch\nasked Sam, CHG0012345".into(),
+                    project: Some(p.id),
+                    tags: String::new(),
+                },
+            )
+            .await
+            .unwrap();
+        let rec = s.log_note(me, jot.id, DAY, 30).await.unwrap();
+        assert_eq!(rec.entry.description, "PSUs for the Meraki switch");
+        assert_eq!(rec.entry.date, DAY);
+        assert_eq!(rec.entry.minutes, Minutes(30));
+        assert_eq!(
+            rec.entry.next_step.as_deref(),
+            Some("asked Sam, CHG0012345")
+        );
+        assert_eq!(rec.entry.target, EntryTarget::Project(p.id));
+        assert_eq!(numbers(&rec), ["CHG0012345"]);
+        // The jot moves to the archive.
+        assert!(s.get_note(me, jot.id).await.unwrap().archived_at.is_some());
+    });
+}
+
+#[test]
+fn added_time_lands_on_the_day_worked() {
+    let dir = TestDir::new("addtime");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let p = s.create_project(me, "Network", None).await.unwrap();
+        let mut old = input(date!(2026 - 10 - 13), 60, "Closet cleanup");
+        old.project = Some(p.id);
+        let old = s.create_entry(me, &old, "CHG0012345").await.unwrap();
+
+        // +15m on last week's entry makes a copy today; the old day is untouched.
+        let (copy, made) = s.add_time_on(me, old.entry.id, DAY, 15).await.unwrap();
+        assert!(made);
+        assert_ne!(copy.entry.id, old.entry.id);
+        assert_eq!(copy.entry.date, DAY);
+        assert_eq!(copy.entry.minutes, Minutes(15));
+        assert_eq!(copy.entry.target, EntryTarget::Project(p.id));
+        assert_eq!(numbers(&copy), ["CHG0012345"]);
+        let again = s.get_entry(me, old.entry.id).await.unwrap();
+        assert_eq!(again.entry.minutes, Minutes(60));
+
+        // Again: it adds to today's copy; on the copy itself, it adds to it.
+        let (more, made) = s.add_time_on(me, old.entry.id, DAY, 30).await.unwrap();
+        assert!(!made);
+        assert_eq!(more.entry.id, copy.entry.id);
+        assert_eq!(more.entry.minutes, Minutes(45));
+        let (same, _) = s.add_time_on(me, copy.entry.id, DAY, 15).await.unwrap();
+        assert_eq!(same.entry.minutes, Minutes(60));
+
+        // Back-filling the old day (Day open on it) adds to the old entry.
+        let (back, made) = s
+            .add_time_on(me, old.entry.id, date!(2026 - 10 - 13), 15)
+            .await
+            .unwrap();
+        assert!(!made);
+        assert_eq!(back.entry.minutes, Minutes(75));
+    });
+}
+
+#[test]
 fn log_work_reuses_or_creates() {
     let dir = TestDir::new("quicklog");
     block_on(async {
@@ -696,13 +771,15 @@ fn open_tickets_come_back_until_ticked() {
         let fri = date!(2026 - 10 - 16);
         let mon = date!(2026 - 10 - 19);
         let tue = date!(2026 - 10 - 20);
+        // Pasted tickets start still open; ticking INC0045678 finishes it.
         let day = s.tray_add(me, fri, "RITM0034567 INC0045678").await.unwrap();
-        assert!(day.items.iter().all(|i| i.done));
+        assert!(day.items.iter().all(|i| !i.done));
         let ritm = day.items[0].id;
+        s.tray_set_done(me, day.items[1].id, true).await.unwrap();
         s.tray_set_note(me, ritm, "waiting on the user")
             .await
             .unwrap();
-        let day = s.tray_set_done(me, ritm, false).await.unwrap();
+        let day = s.tray_day(me, fri).await.unwrap();
         assert!(!day.items[0].done);
         // Its time still counts on Friday.
         assert_eq!(day.minutes, Minutes(30));
@@ -727,16 +804,19 @@ fn open_tickets_come_back_until_ticked() {
         assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
         assert!(s.tray_day(me, fri).await.unwrap().items[0].done);
 
-        // Pasting a ticket that is still open from before finishes it there too.
-        let day = s.tray_add(me, fri, "INC0045700").await.unwrap();
-        let open = day
+        // Pasting a ticket that is still open from before brings it into that day, still
+        // open, and it no longer shows as carried there; ticking it finishes it everywhere.
+        s.tray_add(me, fri, "INC0045700").await.unwrap();
+        assert_eq!(s.tray_carried(me, mon).await.unwrap().len(), 1);
+        let day = s.tray_add(me, mon, "inc0045700").await.unwrap();
+        let again = day
             .items
             .iter()
-            .find(|i| i.ticket_number == "INC0045700")
+            .find(|i| i.ticket_number.eq_ignore_ascii_case("INC0045700"))
             .unwrap();
-        s.tray_set_done(me, open.id, false).await.unwrap();
-        assert_eq!(s.tray_carried(me, tue).await.unwrap().len(), 1);
-        s.tray_add(me, mon, "inc0045700").await.unwrap();
+        assert!(!again.done);
+        assert!(s.tray_carried(me, mon).await.unwrap().is_empty());
+        s.tray_set_done(me, again.id, true).await.unwrap();
         assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
     });
 }

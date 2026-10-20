@@ -14,6 +14,8 @@
 //!
 //! Nothing typed and no tickets is refused.
 
+use time::Date;
+
 use crate::capture::Capture;
 use crate::error::CoreError;
 use crate::ids::{ProjectId, TimeEntryId};
@@ -132,8 +134,73 @@ pub fn target_project(target: EntryTarget) -> Option<ProjectId> {
     }
 }
 
+/// Where "+15m" (or +30m, +1h) on an entry goes (round 14).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AddTimePlan {
+    /// Add the minutes to this entry.
+    AddTo(TimeEntryId),
+    /// Log a copy of the entry (same title, project, category, code and tickets) on the day.
+    Copy,
+}
+
+/// Time added to an entry lands on `day` (today, or the day open on Day), never quietly on
+/// an older day: the entry itself when it's from that day, else the day's entry with the same
+/// title and project, else a copy. `on_day` lists the day's entries as (id, title, target,
+/// is the tray roll-up).
+pub fn plan_add_time(
+    entry: (TimeEntryId, Date, &str, EntryTarget),
+    day: Date,
+    on_day: &[(TimeEntryId, &str, EntryTarget, bool)],
+) -> AddTimePlan {
+    let (id, date, title, target) = entry;
+    if date == day {
+        return AddTimePlan::AddTo(id);
+    }
+    on_day
+        .iter()
+        .find(|(_, t, tg, tray)| {
+            !tray && *tg == target && t.trim().eq_ignore_ascii_case(title.trim())
+        })
+        .map_or(AddTimePlan::Copy, |(same, ..)| AddTimePlan::AddTo(*same))
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn added_time_lands_on_the_day_worked() {
+        use super::{plan_add_time, AddTimePlan};
+        use crate::ids::{ProjectId, TimeEntryId};
+        use crate::model::EntryTarget;
+        use time::macros::date;
+        let (old, today_one, other) = (TimeEntryId::new(), TimeEntryId::new(), TimeEntryId::new());
+        let p = EntryTarget::Project(ProjectId::new());
+        let (mon, tue) = (date!(2026 - 10 - 19), date!(2026 - 10 - 20));
+        // From the day itself: add to it.
+        assert_eq!(
+            plan_add_time((old, tue, "Closet cleanup", p), tue, &[]),
+            AddTimePlan::AddTo(old)
+        );
+        // From an older day: the day's matching entry, else a copy.
+        let day = [
+            (other, "Closet cleanup", EntryTarget::None, false),
+            (today_one, " closet CLEANUP", p, false),
+        ];
+        assert_eq!(
+            plan_add_time((old, mon, "Closet cleanup", p), tue, &day),
+            AddTimePlan::AddTo(today_one)
+        );
+        assert_eq!(
+            plan_add_time((old, mon, "Closet cleanup", p), tue, &day[..1]),
+            AddTimePlan::Copy
+        );
+        // The tray roll-up is never added to.
+        let tray = [(today_one, "Closet cleanup", p, true)];
+        assert_eq!(
+            plan_add_time((old, mon, "Closet cleanup", p), tue, &tray),
+            AddTimePlan::Copy
+        );
+    }
+
     use super::*;
     use crate::capture::{parse_capture, CaptureProject};
     use crate::week::WeekStart;
