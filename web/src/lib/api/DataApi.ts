@@ -773,6 +773,11 @@ export interface DataApi {
    * else a copy there. `created` means a copy was made (Undo deletes it). Tauri: `add_entry_time`.
    */
   addEntryTime(id: string, day: IsoDate, minutes: number): Promise<{ entry: Entry; created: boolean }>;
+  /**
+   * Log a jot as an entry on `date`: its title says what was done, the rest becomes the
+   * entry's notes, ticket numbers become tickets; the jot moves to the archive. Tauri: `log_note`.
+   */
+  logNote(id: string, date: IsoDate, minutes: number): Promise<Entry>;
   /** The entry's notepad, saved as you type (blank clears it). */
   setEntryNotes(id: string, notes: string): Promise<Entry>;
   /** One entry (for a window showing its notepad). */

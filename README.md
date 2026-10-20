@@ -53,7 +53,8 @@ The alpha is a working app you can use day to day for logging time:
   (click an entry for the same slide-out as on the Desk). +15m/+30m/+1h on an entry from an
   earlier day adds the time today (to today's entry with the same title and project, or a copy
   of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
-  meeting notes, all kept in Notes); the Inbox.
+  meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
+  an entry**: its title becomes what you did and the jot is archived); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up

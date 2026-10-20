@@ -371,6 +371,42 @@ fn tray_rolls_up_into_one_entry_per_day() {
 }
 
 #[test]
+fn a_jot_is_logged_as_an_entry() {
+    use crate::notes::NoteInput;
+    use shiftbook_core::notes::NoteKind;
+    let dir = TestDir::new("logjot");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let p = s.create_project(me, "Network", None).await.unwrap();
+        let jot = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Jot,
+                    title: String::new(),
+                    body: "PSUs for the Meraki switch\nasked Sam, CHG0012345".into(),
+                    project: Some(p.id),
+                    tags: String::new(),
+                },
+            )
+            .await
+            .unwrap();
+        let rec = s.log_note(me, jot.id, DAY, 30).await.unwrap();
+        assert_eq!(rec.entry.description, "PSUs for the Meraki switch");
+        assert_eq!(rec.entry.date, DAY);
+        assert_eq!(rec.entry.minutes, Minutes(30));
+        assert_eq!(
+            rec.entry.next_step.as_deref(),
+            Some("asked Sam, CHG0012345")
+        );
+        assert_eq!(rec.entry.target, EntryTarget::Project(p.id));
+        assert_eq!(numbers(&rec), ["CHG0012345"]);
+        // The jot moves to the archive.
+        assert!(s.get_note(me, jot.id).await.unwrap().archived_at.is_some());
+    });
+}
+
+#[test]
 fn added_time_lands_on_the_day_worked() {
     let dir = TestDir::new("addtime");
     block_on(async {

@@ -13,6 +13,7 @@
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
   import { app, attempt, focusLog, openNote, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { logNoteSection } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
@@ -216,6 +217,7 @@
               },
             ],
           },
+          ...(note.kind === 'jot' ? [logNoteSection(note, onchanged)] : []),
         ],
       };
     }

@@ -588,6 +588,23 @@ pub async fn add_entry_time(
     })
 }
 
+/// Maps to `DataApi.logNote()`: log a jot as an entry on `date` (its title says what was
+/// done, the rest becomes notes, ticket numbers become tickets); the jot moves to the archive.
+#[tauri::command]
+pub async fn log_note(
+    s: State<'_, VaultSession>,
+    id: String,
+    date: String,
+    minutes: u32,
+) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let note = id.parse().map_err(|_| CommandError::InvalidInput)?;
+    let rec = store
+        .log_note(owner, note, date_arg(&date)?, minutes)
+        .await?;
+    one_entry(&store, owner, rec).await
+}
+
 /// Maps to `DataApi.getEntry()`: one entry, for a window showing its notepad.
 #[tauri::command]
 pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView> {

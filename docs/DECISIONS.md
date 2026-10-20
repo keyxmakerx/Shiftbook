@@ -16,6 +16,10 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   when done (the round tick stays). Adding tickets asks **"Time on it so far?"** (5m to 2h,
   15m if skipped). The Tickets and Log work boxes stay separate; Log work's example no longer
   looks like a ticket.
+- **Jots into entries** (round 14): a jot's menu (Desk card, Day's Notes card, Notes) has
+  **Log it as an entry** with 15m to 2h. Its title becomes what was done, the rest the
+  entry's notes, ticket numbers its tickets, and it keeps its project; it lands on today (or
+  the day open on Day) and the jot moves to the archive. Undo puts both back.
 - **Adding time to an older entry** (round 14): +15m/+30m/+1h lands on the day being worked
   (today on the Desk, the open day on Day): on that day's entry with the same title and
   project, or a copy of the entry there. The older day is never changed by it.

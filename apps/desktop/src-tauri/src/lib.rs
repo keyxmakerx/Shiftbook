@@ -317,6 +317,7 @@ pub fn run() {
             meetings::bell,
             api::add_entry_minutes,
             api::add_entry_time,
+            api::log_note,
             api::delete_entry,
             api::restore_entry,
             api::add_entry_tickets,
