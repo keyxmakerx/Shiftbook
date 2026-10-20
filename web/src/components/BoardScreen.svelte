@@ -466,7 +466,8 @@
             {/if}
           </div>
         {:else}
-          <div class="plane" aria-label="{data.title} board">
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="plane" aria-label="{data.title} board" ondragstart={(e) => e.preventDefault()}>
             {#if !data.cards.length}
               <p class="empty pad">Nothing on this board yet.</p>
             {/if}

@@ -658,6 +658,12 @@
       return;
     }
     if (selected.size) selected = new Set();
+    // Dragging paper mustn't select text: a selection left behind gets dragged by the browser
+    // itself the next time a card is grabbed on it, and the card sticks.
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    // That also stops the press moving focus, so a rename box being typed in is let go here.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     const startView = view;
     const start = { x: e.clientX, y: e.clientY };
     panning = true;
@@ -887,6 +893,7 @@
     class:drawing={mode === 'free' && tool !== 'hand'}
     bind:this={board}
     onpointerdown={panStart}
+    ondragstart={(e) => e.preventDefault()}
     ondblclick={(e) => {
       if ((e.target as HTMLElement).closest('.tools')) return;
       const { sx, sy } = boardPoint(e);

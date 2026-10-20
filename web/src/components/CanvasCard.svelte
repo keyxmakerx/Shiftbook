@@ -118,6 +118,11 @@
       return;
     }
     if ((e.target as HTMLElement).closest('input, textarea, button')) return;
+    // No text selection or browser drag from a card: either one takes the pointer away and the
+    // card sticks. Focus by hand, since this stops the press from focusing it.
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    el?.focus({ preventScroll: true });
     if (locked) {
       clicked();
       return;

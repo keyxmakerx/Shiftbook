@@ -62,6 +62,10 @@
     if (e.button !== 0 || renaming) return;
     if ((e.target as HTMLElement).closest('input, button')) return;
     e.stopPropagation();
+    // No text selection or browser drag from a pile (see CanvasCard).
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    el?.focus({ preventScroll: true });
     const start = { x: e.clientX, y: e.clientY };
     let moved = false;
     el?.setPointerCapture(e.pointerId);
