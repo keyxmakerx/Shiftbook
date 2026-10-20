@@ -159,12 +159,18 @@
   $effect(() => {
     if (phase !== 'open' && phase !== 'closing') return;
     const away = () => close(true);
+    // The wheel scrolls a long menu while the pointer is over it; anywhere else it closes it.
+    const wheel = (e: WheelEvent) => {
+      const t = e.target instanceof Element ? e.target : null;
+      if (t && layer?.contains(t) && !t.closest('.scrim')) return;
+      close(true);
+    };
     window.addEventListener('resize', away);
-    window.addEventListener('wheel', away, { passive: true });
+    window.addEventListener('wheel', wheel, { passive: true });
     window.addEventListener('blur', away);
     return () => {
       window.removeEventListener('resize', away);
-      window.removeEventListener('wheel', away);
+      window.removeEventListener('wheel', wheel);
       window.removeEventListener('blur', away);
     };
   });

@@ -2,7 +2,8 @@
   // A pile of cards on the Desk (round 8): drop a card on a card to make one. It shows its top
   // card with the rest as sheets behind and a count. Click it to fan the cards out (drag one
   // away to take it off); drag the pile to move it, or onto a drawer to file it all.
-  // Double-click the name to rename it. Right-click for its paper menu.
+  // Double-click the name to rename it. Right-click for its paper menu. The Done today pile
+  // (round 14) gathers the tickets ticked done today; it moves and fans out but keeps its name.
   import type { CanvasCard, CanvasStack } from '../lib/api';
   import { focusNow } from '../lib/focus';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
@@ -62,6 +63,10 @@
     if (e.button !== 0 || renaming) return;
     if ((e.target as HTMLElement).closest('input, button')) return;
     e.stopPropagation();
+    // No text selection or browser drag from a pile (see CanvasCard).
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    el?.focus({ preventScroll: true });
     const start = { x: e.clientX, y: e.clientY };
     let moved = false;
     el?.setPointerCapture(e.pointerId);
@@ -96,6 +101,7 @@
   class:lifted={!!drag}
   class:fanned
   class:dropping
+  class:done={pile.done}
   bind:this={el}
   style:left="{pile.x + (drag?.dx ?? 0)}px"
   style:top="{pile.y + (drag?.dy ?? 0)}px"
@@ -104,7 +110,9 @@
   tabindex="0"
   aria-expanded={fanned}
   aria-label="{label}, a pile of {pile.count} cards"
-  title="Click to fan out · drag to move or file · right-click for options"
+  title={pile.done
+    ? "Tickets you ticked done today. Click to fan out · drag to move · they leave the Desk at the end of the day"
+    : 'Click to fan out · drag to move or file · right-click for options'}
   onpointerdown={down}
   ondblclick={(e) => e.stopPropagation()}
   onkeydown={(e) => {
@@ -264,6 +272,14 @@
     font: 700 11px var(--ui);
     box-shadow: var(--shadow);
     max-width: 200px;
+  }
+
+  .pile.done .face {
+    border-top-color: var(--ok);
+  }
+
+  .pile.done .tab {
+    background: var(--ok);
   }
 
   .tab:not(:has(.nm)) {

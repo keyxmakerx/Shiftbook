@@ -5,8 +5,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, tidy_groups, timeline, Area, BoxStatus,
-    CardKind, Drawer, LinkReason, LinkText, MemberState, RECENT_DAYS,
+    area_at, auto_links, auto_place, box_status, is_recent, tidy_groups, timeline, tray_place,
+    Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState, TrayPlace, ORIGIN,
+    RECENT_DAYS,
 };
 use shiftbook_core::dates::format_date;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
@@ -98,7 +99,13 @@ pub struct StackView {
     x: i32,
     y: i32,
     count: usize,
+    /// The "Done today" pile Shiftbook keeps (id `done`): it can be moved and fanned out,
+    /// not renamed, taken apart or filed.
+    done: bool,
 }
+
+/// The id of the "Done today" pile.
+pub(crate) const DONE_PILE: &str = "done";
 
 /// A drawer in the cabinet: a project's or a folder.
 #[derive(Debug, Clone, Serialize)]
@@ -408,7 +415,8 @@ async fn desk(
 ) -> Res<(DeskView, Vec<Option<Uuid>>)> {
     let from = today - Duration::days(RECENT_DAYS - 1);
     let fields = links_for(store, owner).await?;
-    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let prefs = store.prefs(owner).await?;
+    let after = prefs.notes_auto_archive_days;
     let now = OffsetDateTime::now_utc();
     let spots: HashMap<(CardKind, Uuid), CanvasSpot> = store
         .canvas_spots(owner)
@@ -439,6 +447,26 @@ async fn desk(
     }
     all.retain(|p| !filed_ids.contains(&(p.kind, p.id)));
 
+    // Tickets: open ones stay loose, today's done ones gather in the Done today pile, and done
+    // ones from before today leave the Desk (they're on the Done tickets board and in Find).
+    let place = |p: &Pending| {
+        if p.kind == CardKind::Tray {
+            tray_place(!p.open, p.date, today, spots.contains_key(&(p.kind, p.id)))
+        } else {
+            TrayPlace::Loose
+        }
+    };
+    let mut done_today: Vec<Pending> = Vec::new();
+    let mut rest = Vec::new();
+    for p in all {
+        match place(&p) {
+            TrayPlace::Loose => rest.push(p),
+            TrayPlace::DonePile => done_today.push(p),
+            TrayPlace::Off => {}
+        }
+    }
+    let mut all = rest;
+
     // Older entries and Done tickets the owner moved stay where they put them.
     let shown: HashSet<(CardKind, Uuid)> = all.iter().map(|p| (p.kind, p.id)).collect();
     for spot in spots.values() {
@@ -459,7 +487,9 @@ async fn desk(
             CardKind::Tray => {
                 let id = TrayItemId::from_uuid(spot.record_id);
                 if let Some(item) = store.tray_item(owner, id).await? {
-                    all.push(tray_card(item, &fields));
+                    if tray_place(item.done, item.date, today, true) != TrayPlace::Off {
+                        all.push(tray_card(item, &fields));
+                    }
                 }
             }
             // Notes and scraps that aren't live (archived or removed) stay off the Desk.
@@ -511,14 +541,32 @@ async fn desk(
         }
     }
     loose.sort_by(|a, b| b.created.cmp(&a.created).then(b.id.cmp(&a.id)));
-    let taken: Vec<(i32, i32)> = placed.iter().map(|p| (p.card.x, p.card.y)).collect();
-    let spots_for_loose = auto_place(loose.len(), &taken);
-    for (mut p, (x, y)) in loose.into_iter().zip(spots_for_loose) {
+    let mut taken: Vec<(i32, i32)> = placed.iter().map(|p| (p.card.x, p.card.y)).collect();
+    // The Done today pile sits where the owner left it, or takes the first free spot.
+    let pile_needs_spot = !done_today.is_empty() && prefs.done_pile.is_none();
+    taken.extend(prefs.done_pile.filter(|_| !done_today.is_empty()));
+    let mut free = auto_place(loose.len() + usize::from(pile_needs_spot), &taken).into_iter();
+    let done_spot = match prefs.done_pile {
+        Some(at) => at,
+        None if pile_needs_spot => free.next().unwrap_or(ORIGIN),
+        None => ORIGIN,
+    };
+    for (mut p, (x, y)) in loose.into_iter().zip(free) {
         p.card.x = x;
         p.card.y = y;
         placed.push(p);
     }
     placed.sort_by_key(|p| p.card.z);
+    // Oldest at the bottom of the pile, so the latest one done shows on top.
+    done_today.sort_by(|a, b| a.created.cmp(&b.created).then(a.id.cmp(&b.id)));
+    let done_count = done_today.len();
+    let top_z = placed.last().map_or(0, |p| p.card.z);
+    for (i, mut p) in done_today.into_iter().enumerate() {
+        (p.card.x, p.card.y) = done_spot;
+        p.card.z = top_z + 1 + i as i64;
+        p.card.stack = Some(DONE_PILE.to_string());
+        placed.push(p);
+    }
 
     // The timeline: by day, and within a day in the order things were made.
     let mut order: Vec<usize> = (0..placed.len()).collect();
@@ -629,7 +677,7 @@ async fn desk(
         })
         .collect();
     let projects: Vec<Option<Uuid>> = placed.iter().map(|p| p.project).collect();
-    let stacks = piles
+    let mut stacks: Vec<StackView> = piles
         .values()
         .filter(|st| pile_size.get(&st.id).copied().unwrap_or(0) >= 2)
         .map(|st| StackView {
@@ -638,8 +686,19 @@ async fn desk(
             x: st.x,
             y: st.y,
             count: pile_size[&st.id],
+            done: false,
         })
         .collect();
+    if done_count > 0 {
+        stacks.push(StackView {
+            id: DONE_PILE.to_string(),
+            name: Some("Done today".to_string()),
+            x: done_spot.0,
+            y: done_spot.1,
+            count: done_count,
+            done: true,
+        });
+    }
     let view = DeskView {
         cards: placed.into_iter().map(|p| p.card).collect(),
         areas,

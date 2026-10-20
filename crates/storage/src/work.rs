@@ -1412,6 +1412,18 @@ impl SqliteStore {
         let item = live_tray_item(&mut tx, owner, id).await?;
         if done {
             close_open_rows(&mut tx, owner, &item.ticket_number, item.date).await?;
+            // A ticket ticked done joins the Desk's "Done today" pile, so it gives up the spot
+            // it had (unless it's filed in a drawer).
+            sqlx::query(
+                "UPDATE canvas_cards SET deleted_at = $1, updated_at = $1 \
+                 WHERE owner_id = $2 AND record_kind = 'tray' AND record_id = $3 \
+                 AND drawer IS NULL AND deleted_at IS NULL",
+            )
+            .bind(now_text())
+            .bind(owner.to_string())
+            .bind(id.to_string())
+            .execute(&mut *tx)
+            .await?;
         } else {
             sqlx::query(
                 "UPDATE ticket_tray SET done = FALSE, updated_at = $1 WHERE id = $2 AND owner_id = $3",

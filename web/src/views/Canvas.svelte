@@ -58,7 +58,7 @@
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
-  import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
+  import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BoxPrompt from '../components/BoxPrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
@@ -190,12 +190,13 @@
 
   /** Drop targets for a card: other cards showing, and piles (by their top card). */
   function dropTarget(card: Card, x: number, y: number): { ref: CardRef; x: number; y: number; key: string } | null {
+    // The Done today pile only takes tickets as they're ticked done, not dropped cards.
     const targets = [
-      ...piles.map((st) => {
+      ...piles.filter((st) => !st.done).map((st) => {
         const top = pileMembers(st.id).at(-1)!;
         return { ref: refOf(top), x: st.x, y: st.y, key: `pile:${st.id}` };
       }),
-      ...shown.filter((c) => keyOf(c) !== keyOf(card) && !(card.stack && c.stack === card.stack)).map((c) => {
+      ...shown.filter((c) => keyOf(c) !== keyOf(card) && !(card.stack && c.stack === card.stack) && c.stack !== 'done').map((c) => {
         const p = pos(c);
         return { ref: refOf(c), x: p.x, y: p.y, key: keyOf(c) };
       }),
@@ -216,9 +217,15 @@
     const drawer = drawerAt(at.cx, at.cy);
     hoverDrawer = null;
     dragging = false;
-    if (drawer) return fileThese(pileMembers(st.id), drawer, st);
+    if (drawer) return fileThese(pileMembers(st.id), drawer, st.done ? undefined : st);
     stacks = stacks.map((p) => (p.id === st.id ? { ...p, x, y } : p));
-    if (await attempt(() => api.canvasStackMove(st.id, x, y).then(() => true))) await load();
+    if (await movePile(st, x, y)) await load();
+  }
+
+  /** Save where a pile sits: the Done today pile's spot is a preference. */
+  async function movePile(st: CanvasStack, x: number, y: number): Promise<boolean> {
+    if (st.done) return !!(await savePref('desk.done_pile', `${Math.round(x)} ${Math.round(y)}`));
+    return !!(await attempt(() => api.canvasStackMove(st.id, x, y).then(() => true)));
   }
 
   async function renamePile(st: CanvasStack, name: string) {
@@ -226,6 +233,21 @@
   }
 
   function pileMenu(st: CanvasStack): MenuSpec {
+    const fan = { label: fanned === st.id ? 'Put them back in the pile' : 'Fan them out', icon: 'open' as const, side: true, act: () => (fanned = fanned === st.id ? null : st.id) };
+    if (st.done) {
+      return {
+        sections: [
+          {
+            head: `Done today · ${st.count}`,
+            items: [
+              fan,
+              { label: 'See all done tickets', icon: 'tray', side: true, act: () => openBoard('done', 'list') },
+            ],
+          },
+          ...fileSection((key) => void fileThese(pileMembers(st.id), key)),
+        ],
+      };
+    }
     return {
       sections: [
         {
@@ -440,9 +462,7 @@
       for (const c of cards.filter((c) => drag.members.has(keyOf(c)))) {
         await attempt(() => api.canvasMove(c.kind, c.id, c.x, c.y));
       }
-      for (const st of stacks.filter((st) => drag.piles.has(st.id))) {
-        await attempt(() => api.canvasStackMove(st.id, st.x, st.y));
-      }
+      for (const st of stacks.filter((st) => drag.piles.has(st.id))) await movePile(st, st.x, st.y);
       await load();
     })();
   }
@@ -658,6 +678,12 @@
       return;
     }
     if (selected.size) selected = new Set();
+    // Dragging paper mustn't select text: a selection left behind gets dragged by the browser
+    // itself the next time a card is grabbed on it, and the card sticks.
+    e.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    // That also stops the press moving focus, so a rename box being typed in is let go here.
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     const startView = view;
     const start = { x: e.clientX, y: e.clientY };
     panning = true;
@@ -887,6 +913,7 @@
     class:drawing={mode === 'free' && tool !== 'hand'}
     bind:this={board}
     onpointerdown={panStart}
+    ondragstart={(e) => e.preventDefault()}
     ondblclick={(e) => {
       if ((e.target as HTMLElement).closest('.tools')) return;
       const { sx, sy } = boardPoint(e);
@@ -948,7 +975,7 @@
             }}
             ontoggle={() => (fanned = fanned === st.id ? null : st.id)}
             onrename={(name) => void renamePile(st, name)}
-            bind:renaming={() => renamingPile === st.id, (v) => (renamingPile = v ? st.id : null)}
+            bind:renaming={() => renamingPile === st.id, (v) => (renamingPile = v && !st.done ? st.id : null)}
             menu={() => pileMenu(st)}
           />
         {/if}

@@ -5,7 +5,7 @@
   // entries, Inbox scraps and commands appear below, ranked by crates/core/src/search.rs.
   // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox.
   import { api } from '../lib/api';
-  import type { Capture, Entry, InboxItem, Note } from '../lib/api';
+  import type { Capture, Entry, InboxItem, Note, TrayItem } from '../lib/api';
   import { KIND_LABEL } from '../lib/notes';
   import { dayOfMonth, fmtMinutes, relativeDay, weekdayShort } from '../lib/format';
   import { allowCapture, protectNow } from '../lib/protection.svelte';
@@ -24,6 +24,7 @@
   } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
+  import { openWindow } from '../lib/windows.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
 
@@ -32,6 +33,7 @@
     | { kind: 'entry'; entry: Entry }
     | { kind: 'scrap'; item: InboxItem }
     | { kind: 'note'; note: Note }
+    | { kind: 'ticket'; ticket: TrayItem }
     | { kind: 'command'; command: Command };
 
   const COMMANDS: Command[] = [
@@ -94,6 +96,7 @@
       hits = found
         ? [
             ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
+            ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
             ...found.notes.map((note): Hit => ({ kind: 'note', note })),
             ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ...found.commands.flatMap((i): Hit[] => {
@@ -144,6 +147,8 @@
       await hit.command.run();
     } else if (hit.kind === 'note') {
       openNote(hit.note.id);
+    } else if (hit.kind === 'ticket') {
+      openWindow('tray', hit.ticket.id);
     } else if (hit.kind === 'entry') {
       setView('day');
       await selectDay(hit.entry.date);
@@ -195,11 +200,13 @@
   function group(hit: Hit): string {
     return hit.kind === 'entry'
       ? 'Entries'
-      : hit.kind === 'note'
-        ? 'Notes'
-        : hit.kind === 'scrap'
-          ? 'Inbox'
-          : 'Commands';
+      : hit.kind === 'ticket'
+        ? 'Tickets'
+        : hit.kind === 'note'
+          ? 'Notes'
+          : hit.kind === 'scrap'
+            ? 'Inbox'
+            : 'Commands';
   }
 </script>
 
@@ -282,6 +289,12 @@
             <span class="what"><b>{hit.entry.description || 'Untitled'}</b>
               <small>{relativeDay(hit.entry.date, app.today)}{hit.entry.tickets.length ? ' · ' + hit.entry.tickets.map((t) => t.number).join(', ') : ''}</small></span>
             <span class="mono amt">{hit.entry.hours} h</span>
+          {:else if hit.kind === 'ticket'}
+            {@const t = hit.ticket}
+            <i class="dot" style:--c={t.projectId ? projectColor(t.projectId) : 'var(--accent)'}></i>
+            <span class="what"><b class="mono">{t.ticket}</b>
+              <small>{relativeDay(t.date, app.today)} · {t.done ? 'done' : 'still open'}{t.note ? ' · ' + t.note.split('\n')[0] : ''}</small></span>
+            <span class="mono amt">{fmtMinutes(t.minutes)}</span>
           {:else if hit.kind === 'note'}
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
             <span class="what"><b>{hit.note.title}</b>

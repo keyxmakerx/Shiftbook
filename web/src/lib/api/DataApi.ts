@@ -78,6 +78,8 @@ export interface Prefs {
   notesAutoArchiveDays: number;
   /** Open windows and where they are. */
   windows: WindowSpot[];
+  /** Where the Desk's "Done today" pile sits; null places it automatically. */
+  donePile: [number, number] | null;
 }
 
 /** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
@@ -153,7 +155,8 @@ export type PrefKey =
   | 'day.timer'
   | 'timer.paused'
   | 'notes.auto_archive_days'
-  | 'ui.windows';
+  | 'ui.windows'
+  | 'desk.done_pile';
 
 export interface Project {
   id: string;
@@ -458,6 +461,11 @@ export interface CanvasStack {
   x: number;
   y: number;
   count: number;
+  /**
+   * The "Done today" pile Shiftbook keeps (id `done`): tickets ticked done today. It can be
+   * moved (saved as the `desk.done_pile` preference) and fanned out, not renamed or filed.
+   */
+  done: boolean;
 }
 
 /** A drawer in the cabinet: a project's (key `project:<id>`) or a folder (`folder:<id>`). */
@@ -609,6 +617,8 @@ export interface SearchResult {
   inbox: InboxItem[];
   /** Notes, archived ones included. */
   notes: Note[];
+  /** Tickets from the Tickets tray, done ones included. */
+  tickets: TrayItem[];
   /** Indexes into the command names passed to `search`. */
   commands: number[];
 }

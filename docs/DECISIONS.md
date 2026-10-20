@@ -2,6 +2,12 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 14 — 20 Oct 2026
+- **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a
+  **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets
+  stay loose. Old ones are found on the **Done tickets** board (newest first, with a filter)
+  and in **Find**, which now searches tickets by number, notepad and project.
+
 ## Round 12 — 19 Oct 2026
 - **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)
   slides out a panel underneath with the everyday things: notepad, tickets, project, Bring up
