@@ -13,6 +13,7 @@
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
   import { app, attempt, focusLog, openNote, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
   import ItemPanel from './ItemPanel.svelte';
@@ -199,6 +200,7 @@
               { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
               { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
               { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
+              pinMenuItem('note', note.id),
               {
                 label: 'Archive',
                 icon: 'archive',

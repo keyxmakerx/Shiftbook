@@ -11,6 +11,7 @@ mod boards;
 mod canvas;
 mod meetings;
 mod notes;
+mod pins;
 mod protect;
 mod session;
 
@@ -380,6 +381,9 @@ pub fn run() {
             canvas::canvas_tidy,
             boards::board,
             boards::board_move,
+            pins::pins,
+            pins::pin,
+            pins::unpin,
             canvas::canvas_link,
             canvas::canvas_link_reset,
             notes::daily_note,

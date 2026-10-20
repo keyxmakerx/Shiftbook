@@ -1,6 +1,7 @@
 //! The bell (round 12): what's coming up, in the panel that slides in from the right of the
 //! bottom bar. **Now** holds meetings about to start or just started; **Today** holds the
-//! rest of today's meetings, the things brought up for today and the tickets still open.
+//! rest of today's meetings, the things brought up for today, pins due to chase and the
+//! tickets still open.
 //! The badge counts everything in the panel. Recurring tasks join once they have screens.
 
 use serde::Serialize;
@@ -39,6 +40,13 @@ pub enum BellAbout {
         /// The day it was brought up for.
         from: String,
     },
+    /// A pin whose chase date has come (see `crate::pins`).
+    Chase {
+        /// The pinned record, `kind:id` like a Desk card's key.
+        card: String,
+        /// Its chase date.
+        on: String,
+    },
     /// Tickets worked on but not finished.
     StillOpen {
         /// Their numbers, oldest first.
@@ -58,11 +66,16 @@ pub struct BellItem {
     pub about: BellAbout,
 }
 
+/// A pin to chase: its title, `kind:id` and chase date.
+pub type ChasePin = (String, String, Date);
+
 /// Everything for the bell at `now` (minutes after local midnight on `today`): meetings in
-/// start order, then things brought up (oldest first), then still-open tickets as one item.
+/// start order, then things brought up (oldest first), then pins due to chase (longest
+/// waiting first), then still-open tickets as one item.
 pub fn bell_items(
     meetings: &[MeetingSeries],
     next_up: &[NextUpItem],
+    pins: &[ChasePin],
     open_tickets: &[String],
     today: Date,
     now: u32,
@@ -109,6 +122,18 @@ pub fn bell_items(
                     .show_from
                     .map(crate::dates::format_date)
                     .unwrap_or_default(),
+            },
+        });
+    }
+    let mut chase: Vec<&ChasePin> = pins.iter().filter(|(_, _, on)| *on <= today).collect();
+    chase.sort_by_key(|(_, _, on)| *on);
+    for (title, card, on) in chase {
+        items.push(BellItem {
+            when: BellWhen::Today,
+            title: format!("Chase: {title}"),
+            about: BellAbout::Chase {
+                card: card.clone(),
+                on: crate::dates::format_date(*on),
             },
         });
     }
@@ -176,7 +201,7 @@ mod tests {
             brought("not yet", date!(2026 - 10 - 20)),
         ];
         let open = vec!["RITM0034567".to_string(), "INC0045711".to_string()];
-        let items = bell_items(&meetings, &next_up, &open, MON, 9 * 60 + 50);
+        let items = bell_items(&meetings, &next_up, &[], &open, MON, 9 * 60 + 50);
         let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
         assert_eq!(
             titles,
@@ -197,10 +222,11 @@ mod tests {
         gone.deleted_at = Some(datetime!(2026-10-10 09:00 UTC));
         let mut done = brought("done already", MON);
         done.done_at = Some(datetime!(2026-10-19 08:00 UTC));
-        assert!(bell_items(&[gone], &[done], &[], MON, 9 * 60).is_empty());
+        assert!(bell_items(&[gone], &[done], &[], &[], MON, 9 * 60).is_empty());
         // Tuesday: neither series meets, and one open ticket reads in the singular.
         let items = bell_items(
             &[series("Weekly ops", 600)],
+            &[],
             &[],
             &["INC1".into()],
             date!(2026 - 10 - 20),
@@ -209,5 +235,35 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].title, "1 ticket still open");
         assert_eq!(clock(9 * 60 + 5), "09:05");
+    }
+
+    #[test]
+    fn pins_show_from_their_chase_date() {
+        let pins = [
+            ("PSUs for the switch".to_string(), "note:a".to_string(), MON),
+            (
+                "later".to_string(),
+                "note:b".to_string(),
+                date!(2026 - 10 - 26),
+            ),
+            (
+                "waiting longest".to_string(),
+                "tray:c".to_string(),
+                date!(2026 - 10 - 14),
+            ),
+        ];
+        let items = bell_items(&[], &[], &pins, &[], MON, 600);
+        let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            ["Chase: waiting longest", "Chase: PSUs for the switch"]
+        );
+        assert_eq!(
+            items[1].about,
+            BellAbout::Chase {
+                card: "note:a".into(),
+                on: "2026-10-19".into()
+            }
+        );
     }
 }

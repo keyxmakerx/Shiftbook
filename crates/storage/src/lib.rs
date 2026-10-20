@@ -28,6 +28,7 @@ pub mod hex;
 pub mod meetings;
 pub mod notes;
 pub mod piles;
+pub mod pins;
 pub mod recovery;
 pub mod repo;
 pub mod vault;

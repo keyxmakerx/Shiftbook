@@ -6,6 +6,7 @@
   import { onMount, untrack } from 'svelte';
   import { refreshBell } from '../lib/bell.svelte';
   import { boards } from '../lib/boards.svelte';
+  import { refreshPins } from '../lib/pins.svelte';
   import { loadWindows } from '../lib/windows.svelte';
   import { errorMessage } from '../lib/messages';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
@@ -40,7 +41,7 @@
     loadAll()
       .then(() => {
         loadWindows();
-        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell()]);
+        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins()]);
       })
       .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
@@ -60,6 +61,7 @@
     const timer = setInterval(async () => {
       if (app.ready && (await rollDay())) void checkResume('new_day');
       if (app.ready) void refreshBell();
+      if (app.ready) void refreshPins();
     }, 60_000);
     return () => {
       clearInterval(timer);
@@ -71,7 +73,7 @@
   $effect(() => {
     void app.tray;
     void app.entries;
-    if (app.ready) untrack(() => void refreshBell());
+    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins()]));
   });
 
   function order(v: View): number {
