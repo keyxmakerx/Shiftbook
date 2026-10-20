@@ -33,8 +33,8 @@ M5, quick capture inside the app, the Done tickets tray, custom fields and the p
 the README for what it does.
 
 ### Known gaps in alpha
-- **Planner** (week/month/year): hidden until it is built. **Canvas:** steps 1 and 2 of 5 are built
-  (it is the Desk), plus boxes, the toolbox and folding from round 12; the rest is listed in `docs/CANVAS.md`.
+- **Planner** (week/month/year): hidden until it is built. **Canvas:** steps 1 to 3 of 5 are built
+  (it is the Desk: piles and drawers too), plus boxes, the toolbox and folding from round 12; the rest is listed in `docs/CANVAS.md`.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
   Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
   imports (paste, MOP import with its check screen, OneNote sections), and the **notes map**.

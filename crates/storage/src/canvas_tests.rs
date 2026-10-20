@@ -216,3 +216,96 @@ fn boxes_fold_up_and_labelled_boxes_are_kept() {
         assert_eq!(s.canvas_labels(me).await.unwrap().len(), 1);
     });
 }
+
+#[test]
+fn cards_pile_up_and_come_apart() {
+    let dir = TestDir::new("canvas-piles");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let (a, b, c) = (
+            (CardKind::Entry, Uuid::now_v7()),
+            (CardKind::Note, Uuid::now_v7()),
+            (CardKind::Tray, Uuid::now_v7()),
+        );
+        // b was never moved: the pile starts where b showed.
+        let pile = s.stack_cards(me, a, b, (300, 200)).await.unwrap();
+        let piles = s.canvas_stacks(me).await.unwrap();
+        assert_eq!((piles.len(), piles[0].x, piles[0].y), (1, 300, 200));
+        assert!(s.stack_cards(me, a, a, (0, 0)).await.is_err());
+        // c joins by being dropped on a pile member.
+        assert_eq!(s.stack_cards(me, c, a, (0, 0)).await.unwrap(), pile);
+        let spots = s.canvas_spots(me).await.unwrap();
+        assert!(spots.iter().all(|sp| sp.stack == Some(pile)));
+
+        s.rename_stack(me, pile, " Printers ").await.unwrap();
+        assert_eq!(
+            s.canvas_stacks(me).await.unwrap()[0].name.as_deref(),
+            Some("Printers")
+        );
+        s.rename_stack(me, pile, " ").await.unwrap();
+        assert_eq!(s.canvas_stacks(me).await.unwrap()[0].name, None);
+        s.move_stack(me, pile, 500, 600).await.unwrap();
+
+        // Taking cards off: with one left the pile comes apart where it was.
+        s.unstack_card(me, c, 50, 60).await.unwrap();
+        assert_eq!(s.canvas_stacks(me).await.unwrap().len(), 1);
+        s.move_card(me, a.0, a.1, 10, 10).await.unwrap();
+        assert!(s.canvas_stacks(me).await.unwrap().is_empty());
+        let spots = s.canvas_spots(me).await.unwrap();
+        let left = spots.iter().find(|sp| sp.record_id == b.1).unwrap();
+        assert_eq!((left.x, left.y, left.stack), (500, 600, None));
+
+        // Taking a pile apart spreads its cards out.
+        let pile = s.stack_cards(me, a, b, (100, 100)).await.unwrap();
+        s.dissolve_stack(me, pile).await.unwrap();
+        assert!(s.canvas_stacks(me).await.unwrap().is_empty());
+        assert!(s
+            .canvas_spots(me)
+            .await
+            .unwrap()
+            .iter()
+            .all(|sp| sp.stack.is_none()));
+    });
+}
+
+#[test]
+fn cards_and_piles_are_filed_in_drawers() {
+    let dir = TestDir::new("canvas-drawers");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let folder = s.save_folder(me, None, " Reference ").await.unwrap();
+        assert_eq!(folder.name, "Reference");
+        let drawer = shiftbook_core::canvas::Drawer::Folder(folder.id);
+        let (a, b, c) = (
+            (CardKind::Entry, Uuid::now_v7()),
+            (CardKind::Note, Uuid::now_v7()),
+            (CardKind::Note, Uuid::now_v7()),
+        );
+        s.file_card(me, a, drawer).await.unwrap();
+        let pile = s.stack_cards(me, b, c, (0, 0)).await.unwrap();
+        assert_eq!(s.file_stack(me, pile, drawer).await.unwrap().len(), 2);
+        assert!(s.canvas_stacks(me).await.unwrap().is_empty());
+        let spots = s.canvas_spots(me).await.unwrap();
+        assert_eq!(
+            spots.iter().filter(|sp| sp.drawer == Some(drawer)).count(),
+            3
+        );
+
+        s.unfile_card(me, a, 40, 40).await.unwrap();
+        let back = s.canvas_spots(me).await.unwrap();
+        let a_spot = back.iter().find(|sp| sp.record_id == a.1).unwrap();
+        assert_eq!((a_spot.drawer, a_spot.x), (None, 40));
+
+        s.save_folder(me, Some(folder.id), "Old stuff")
+            .await
+            .unwrap();
+        assert_eq!(s.canvas_folders(me).await.unwrap()[0].name, "Old stuff");
+        assert!(s.canvas_folders(other).await.unwrap().is_empty());
+        assert!(s.save_folder(other, Some(folder.id), "Mine").await.is_err());
+        assert!(s.save_folder(me, None, "  ").await.is_err());
+        s.set_folder_deleted(me, folder.id, true).await.unwrap();
+        assert!(s.canvas_folders(me).await.unwrap().is_empty());
+        s.set_folder_deleted(me, folder.id, false).await.unwrap();
+        assert_eq!(s.canvas_folders(me).await.unwrap().len(), 1);
+    });
+}

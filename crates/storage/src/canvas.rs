@@ -2,7 +2,7 @@
 //!
 //! Owner-scoped, bound parameters only. Moving a card that has no spot yet creates one.
 
-use shiftbook_core::canvas::{clamp_spot, clean_label, Area, CardKind};
+use shiftbook_core::canvas::{clamp_spot, clean_label, Area, CardKind, Drawer};
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
 use uuid::Uuid;
@@ -25,6 +25,10 @@ pub struct CanvasSpot {
     pub y: i32,
     /// Stacking order: higher is on top.
     pub z: i64,
+    /// The pile it's in, if any (it shows at the pile's spot).
+    pub stack: Option<Uuid>,
+    /// The drawer it's filed in, if any (it's off the Desk).
+    pub drawer: Option<Drawer>,
 }
 
 fn spot_from_row(row: &SqliteRow) -> Result<CanvasSpot> {
@@ -37,6 +41,13 @@ fn spot_from_row(row: &SqliteRow) -> Result<CanvasSpot> {
         x: i32::try_from(row.try_get::<i64, _>("x")?).map_err(|_| corrupt(()))?,
         y: i32::try_from(row.try_get::<i64, _>("y")?).map_err(|_| corrupt(()))?,
         z: row.try_get("z")?,
+        stack: row
+            .try_get::<Option<String>, _>("stack_id")?
+            .map(|s| Uuid::parse_str(&s).map_err(|_| corrupt(())))
+            .transpose()?,
+        drawer: row
+            .try_get::<Option<String>, _>("drawer")?
+            .and_then(|d| Drawer::parse(&d)),
     })
 }
 
@@ -44,7 +55,7 @@ impl SqliteStore {
     /// Every moved card's spot.
     pub async fn canvas_spots(&self, owner: OwnerId) -> Result<Vec<CanvasSpot>> {
         let rows = sqlx::query(
-            "SELECT record_kind, record_id, x, y, z FROM canvas_cards \
+            "SELECT record_kind, record_id, x, y, z, stack_id, drawer FROM canvas_cards \
              WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY z",
         )
         .bind(owner.to_string())
@@ -53,7 +64,8 @@ impl SqliteStore {
         rows.iter().map(spot_from_row).collect()
     }
 
-    /// Put a card at `x`, `y` and on top of the others.
+    /// Put a card at `x`, `y` and on top of the others. A card moved on its own leaves its
+    /// pile.
     pub async fn move_card(
         &self,
         owner: OwnerId,
@@ -102,6 +114,7 @@ impl SqliteStore {
             .execute(&mut *tx)
             .await?;
         }
+        crate::piles::loosen(&mut tx, owner, (kind, record_id)).await?;
         tx.commit().await?;
         Ok(CanvasSpot {
             kind,
@@ -109,6 +122,8 @@ impl SqliteStore {
             x,
             y,
             z,
+            stack: None,
+            drawer: None,
         })
     }
 

@@ -87,6 +87,16 @@ names the round it came from. Nothing here is optional unless it says so.
    Every box folds up (▴ on its name) to its name and a count; the count is grey when nothing
    is waiting, blue when something is from today and orange when a ticket is still open or
    something is brought up. Folded cards and their links hide until it opens again.
-3. **C3 Tidy:** stacks, Tidy into stacks, drawers.
+3. **C3 Tidy (built):** **piles**: drop a card on a card (or on a pile) and they pile up
+   with a count; click the pile to fan its cards out beside it, drag one away to take it off
+   (a pile left with one card comes apart); drag the pile to move it; double-click its count
+   to name it; right-click for Fan out, Rename, Take the pile apart and File in. **Tidy into
+   stacks** (bottom bar) piles loose cards by project, two or more per project, with Undo.
+   **Drawers**: the cabinet under the toolbox, one drawer per project plus folders you make
+   (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
+   drawer to file it off the Desk (a project's drawer also gives the cards that project), with
+   Undo. Click a drawer to see what's in it, Open or Put back each thing; folders can be
+   renamed or removed (their cards come back to the Desk, Undo files them again). Filed
+   things stay in Find and count on the timesheet.
 4. **C4 Boards:** boards inside boards with tint and breadcrumbs, the List view, the Archive.
 5. **C5:** the meeting canvas.

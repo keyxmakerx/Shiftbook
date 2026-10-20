@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use time::{Date, Duration};
+use uuid::Uuid;
 
 use crate::error::{preview, CoreError};
 
@@ -408,6 +409,84 @@ pub fn box_status(members: &[MemberState]) -> BoxStatus {
     }
 }
 
+/// Longest name on a pile or a folder.
+pub const MAX_PILE_NAME_CHARS: usize = 60;
+
+/// Clean a pile's name: blank means none (the pile shows its count), else trimmed and short.
+pub fn clean_pile_name(name: &str) -> Result<Option<String>, CoreError> {
+    let t = name.trim();
+    if t.is_empty() {
+        return Ok(None);
+    }
+    crate::validate::validate_required("The pile name", t, MAX_PILE_NAME_CHARS).map(Some)
+}
+
+/// Clean a folder's name: trimmed, required, short.
+pub fn clean_folder_name(name: &str) -> Result<String, CoreError> {
+    crate::validate::validate_required("The folder name", name, MAX_PILE_NAME_CHARS)
+}
+
+/// A drawer in the cabinet (round 8): one per project, plus folders the owner makes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Drawer {
+    /// A project's drawer.
+    Project(Uuid),
+    /// A folder the owner made.
+    Folder(Uuid),
+}
+
+impl Drawer {
+    /// The stored form: `project:<id>` or `folder:<id>`.
+    pub fn key(self) -> String {
+        match self {
+            Drawer::Project(id) => format!("project:{id}"),
+            Drawer::Folder(id) => format!("folder:{id}"),
+        }
+    }
+
+    /// Read the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        let (kind, id) = text.trim().split_once(':')?;
+        let id = Uuid::parse_str(id).ok()?;
+        match kind {
+            "project" => Some(Drawer::Project(id)),
+            "folder" => Some(Drawer::Folder(id)),
+            _ => None,
+        }
+    }
+}
+
+/// The card a dragged card was dropped on: the topmost (last) of `spots` whose card holds
+/// the dropped card's centre, leaving out `skip` (the dragged card itself).
+pub fn card_under(spots: &[Spot], at: Spot, skip: Option<usize>) -> Option<usize> {
+    let (cx, cy) = (at.0 + CARD_W / 2, at.1 + CARD_H / 2);
+    spots
+        .iter()
+        .enumerate()
+        .rev()
+        .filter(|(i, _)| Some(*i) != skip)
+        .find(|(_, s)| cx >= s.0 && cx < s.0 + CARD_W && cy >= s.1 && cy < s.1 + CARD_H)
+        .map(|(i, _)| i)
+}
+
+/// "Tidy into stacks": loose cards grouped by project, a pile for each project with two or
+/// more of them, in the order their first card comes. Cards without a project stay loose.
+pub fn tidy_groups<K: PartialEq>(projects: &[Option<K>]) -> Vec<Vec<usize>> {
+    let mut groups: Vec<(&K, Vec<usize>)> = Vec::new();
+    for (i, p) in projects.iter().enumerate() {
+        let Some(p) = p else { continue };
+        match groups.iter_mut().find(|(k, _)| *k == p) {
+            Some((_, members)) => members.push(i),
+            None => groups.push((p, vec![i])),
+        }
+    }
+    groups
+        .into_iter()
+        .map(|(_, m)| m)
+        .filter(|m| m.len() >= 2)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -626,5 +705,53 @@ mod tests {
         );
         assert!(clean_label("   ").is_err());
         assert!(clean_label(&"x".repeat(MAX_LABEL_CHARS + 1)).is_err());
+    }
+
+    #[test]
+    fn piles_and_folders_have_short_names() {
+        assert_eq!(clean_pile_name("   "), Ok(None));
+        assert_eq!(clean_pile_name(" Printers "), Ok(Some("Printers".into())));
+        assert!(clean_pile_name(&"x".repeat(MAX_PILE_NAME_CHARS + 1)).is_err());
+        assert_eq!(clean_folder_name(" Reference "), Ok("Reference".into()));
+        assert!(clean_folder_name(" ").is_err());
+    }
+
+    #[test]
+    fn drawers_round_trip() {
+        let id = Uuid::now_v7();
+        assert_eq!(
+            Drawer::parse(&Drawer::Project(id).key()),
+            Some(Drawer::Project(id))
+        );
+        assert_eq!(
+            Drawer::parse(&format!("folder:{id}")),
+            Some(Drawer::Folder(id))
+        );
+        assert_eq!(Drawer::parse("shelf:1"), None);
+        assert_eq!(Drawer::parse("folder:nope"), None);
+    }
+
+    #[test]
+    fn a_card_drops_on_the_top_card_under_its_centre() {
+        let spots = [(0, 0), (100, 50), (1000, 1000)];
+        // The dragged card (index 2) now sits over both: the top one (index 1) wins.
+        assert_eq!(card_under(&spots, (60, 40), Some(2)), Some(1));
+        assert_eq!(card_under(&spots, (-150, 0), Some(2)), None);
+        // Never itself.
+        assert_eq!(card_under(&spots, (1000, 1000), Some(2)), None);
+    }
+
+    #[test]
+    fn tidy_piles_projects_with_two_or_more_loose_cards() {
+        let projects = [
+            Some("net"),
+            None,
+            Some("ssl"),
+            Some("net"),
+            Some("net"),
+            None,
+        ];
+        assert_eq!(tidy_groups(&projects), vec![vec![0, 3, 4]]);
+        assert!(tidy_groups::<&str>(&[None, None]).is_empty());
     }
 }

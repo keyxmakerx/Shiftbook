@@ -115,3 +115,34 @@ export function boxAround(spots: { x: number; y: number }[], pad = 24): Rect {
     h: Math.max(MIN_AREA.h, Math.max(...ys) + CARD_H + pad - y),
   };
 }
+
+/** The card a dragged card was dropped on: the topmost one holding the dragged card's centre
+ *  (the last in `spots`), never `skip`. Mirrors `card_under` in crates/core/src/canvas.rs. */
+export function cardUnder(spots: { x: number; y: number }[], x: number, y: number, skip = -1): number {
+  const cx = x + CARD_W / 2;
+  const cy = y + CARD_H / 2;
+  for (let i = spots.length - 1; i >= 0; i--) {
+    if (i === skip) continue;
+    const s = spots[i]!;
+    if (cx >= s.x && cx < s.x + CARD_W && cy >= s.y && cy < s.y + CARD_H) return i;
+  }
+  return -1;
+}
+
+/** Where the cards of a fanned-out pile show: in a row to the right of the pile, wrapping
+ *  after `perRow`. */
+export function fanSpots(x: number, y: number, count: number, perRow = 4): { x: number; y: number }[] {
+  return Array.from({ length: count }, (_, i) => ({
+    x: x + (CARD_W + 16) * ((i % perRow) + 1),
+    y: y + (CARD_H + 16) * Math.floor(i / perRow),
+  }));
+}
+
+/** The drawer under a screen point while something is dragged over the cabinet. */
+export function drawerAt(clientX: number, clientY: number): string | null {
+  for (const el of document.elementsFromPoint(clientX, clientY)) {
+    const key = (el as HTMLElement).closest<HTMLElement>('[data-drawer]')?.dataset.drawer;
+    if (key) return key;
+  }
+  return null;
+}

@@ -26,6 +26,8 @@ import type {
   CardRef,
   DeskData,
   CardKind,
+  CanvasCard,
+  TidyResult,
   Note,
   NoteInput,
   NoteKind,
@@ -291,6 +293,42 @@ export class TauriApi implements DataApi {
   }
   canvasLabelRemove(id: string, removed: boolean): Promise<void> {
     return call('canvas_label_remove', { id, removed });
+  }
+  canvasStack(card: CardRef, onto: CardRef, ontoX: number, ontoY: number): Promise<string> {
+    return call('canvas_stack', { kind: card.kind, id: card.id, ontoKind: onto.kind, ontoId: onto.id, ontoX, ontoY });
+  }
+  canvasUnstack(card: CardRef, x: number, y: number): Promise<void> {
+    return call('canvas_unstack', { kind: card.kind, id: card.id, x, y });
+  }
+  canvasStackMove(id: string, x: number, y: number): Promise<void> {
+    return call('canvas_stack_move', { id, x, y });
+  }
+  canvasStackRename(id: string, name: string): Promise<void> {
+    return call('canvas_stack_rename', { id, name });
+  }
+  canvasStackDissolve(id: string): Promise<void> {
+    return call('canvas_stack_dissolve', { id });
+  }
+  canvasFile(card: CardRef, drawer: string): Promise<void> {
+    return call('canvas_file', { kind: card.kind, id: card.id, drawer });
+  }
+  canvasFileStack(id: string, drawer: string): Promise<CardRef[]> {
+    return call('canvas_file_stack', { id, drawer });
+  }
+  canvasUnfile(card: CardRef, x: number, y: number): Promise<void> {
+    return call('canvas_unfile', { kind: card.kind, id: card.id, x, y });
+  }
+  canvasDrawer(drawer: string): Promise<CanvasCard[]> {
+    return call('canvas_drawer', { drawer });
+  }
+  canvasFolderSave(id: string | null, name: string): Promise<{ id: string; name: string }> {
+    return call('canvas_folder_save', { id, name });
+  }
+  canvasFolderRemove(id: string, removed: boolean): Promise<void> {
+    return call('canvas_folder_remove', { id, removed });
+  }
+  canvasTidy(today: IsoDate): Promise<TidyResult> {
+    return call('canvas_tidy', { today });
   }
   canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void> {
     return call('canvas_link', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id, drawn });

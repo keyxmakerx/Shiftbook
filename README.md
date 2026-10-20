@@ -32,7 +32,10 @@ The alpha is a working app you can use day to day for logging time:
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag) and
   make it a project's area, a new project or just a label. Any box **folds up** to a count
   coloured grey (nothing waiting), blue (from today) or orange (still open or brought up).
-  See `docs/CANVAS.md`.
+  Drop a card on a card to make a **pile** (click it to fan out); **Tidy into stacks** piles
+  loose cards by project. The **drawers** (one per project plus your folders) slide out when
+  you drag something: drop it on one to file it off the Desk; it stays in Find and on the
+  timesheet. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
   entry); the **Tickets** tray (paste tickets as you work on them, each adds 15 minutes you

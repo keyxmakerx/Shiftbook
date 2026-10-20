@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, HOME, MAX_ZOOM, MIN_ZOOM, rectFrom, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, HOME, MAX_ZOOM, MIN_ZOOM, rectFrom, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -75,5 +75,24 @@ describe('boxes and selections', () => {
     expect(r.x + r.w).toBe(400 + CARD_W + 24);
     expect(r.y + r.h).toBe(300 + CARD_H + 24);
     expect(boxAround([{ x: 0, y: 0 }]).w).toBeGreaterThanOrEqual(CARD_W + 48);
+  });
+});
+
+describe('piles', () => {
+  it('drops on the top card under the centre, never itself', () => {
+    const spots = [
+      { x: 0, y: 0 },
+      { x: 100, y: 50 },
+      { x: 1000, y: 1000 },
+    ];
+    expect(cardUnder(spots, 60, 40, 2)).toBe(1);
+    expect(cardUnder(spots, -150, 0, 2)).toBe(-1);
+    expect(cardUnder(spots, 1000, 1000, 2)).toBe(-1);
+  });
+
+  it('fans a pile out in rows to its right', () => {
+    const f = fanSpots(0, 0, 5, 4);
+    expect(f[0]).toEqual({ x: CARD_W + 16, y: 0 });
+    expect(f[4]).toEqual({ x: CARD_W + 16, y: CARD_H + 16 });
   });
 });

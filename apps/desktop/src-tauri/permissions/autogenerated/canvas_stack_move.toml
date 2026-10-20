@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-stack-move"
+description = "Enables the canvas_stack_move command without any pre-configured scope."
+commands.allow = ["canvas_stack_move"]
+
+[[permission]]
+identifier = "deny-canvas-stack-move"
+description = "Denies the canvas_stack_move command without any pre-configured scope."
+commands.deny = ["canvas_stack_move"]

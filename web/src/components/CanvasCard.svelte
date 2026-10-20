@@ -25,6 +25,8 @@
     locked = false,
     linking = false,
     selected = false,
+    dropping = false,
+    extra,
     ondrag,
     onmove,
     onchanged,
@@ -33,8 +35,8 @@
   }: {
     card: CanvasCard;
     zoom: number;
-    /** Dropped at a new spot, in canvas units. */
-    onmove: (x: number, y: number) => void;
+    /** Dropped at a new spot, in canvas units, with the pointer's screen point. */
+    onmove: (x: number, y: number, at: { cx: number; cy: number }) => void;
     /** Something about the record changed; reload the Desk. */
     onchanged: () => void;
     /** Shown where (the timeline puts cards elsewhere); defaults to the card's own spot. */
@@ -46,8 +48,12 @@
     linking?: boolean;
     /** Part of the selection (they move together). */
     selected?: boolean;
-    /** Being dragged this far (canvas units), so selected cards can follow. */
-    ondrag?: (dx: number, dy: number) => void;
+    /** Something is being dragged onto it (it would make a pile). */
+    dropping?: boolean;
+    /** More menu sections from the Desk (filing, piles). */
+    extra?: () => MenuSpec['sections'];
+    /** Being dragged this far (canvas units), with the pointer's screen point. */
+    ondrag?: (dx: number, dy: number, at: { cx: number; cy: number }) => void;
     /** "Link to another card" was chosen on this card. */
     onlink?: () => void;
     /** This card was picked as the other end of a link. */
@@ -123,13 +129,13 @@
       if (!moved && Math.hypot(m.clientX - start.x, m.clientY - start.y) < 4) return;
       moved = true;
       drag = { dx, dy };
-      ondrag?.(dx, dy);
+      ondrag?.(dx, dy, { cx: m.clientX, cy: m.clientY });
     };
-    const up = () => {
+    const up = (u: PointerEvent) => {
       el?.removeEventListener('pointermove', move);
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
-      if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy));
+      if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy), { cx: u.clientX, cy: u.clientY });
       else clicked();
       drag = null;
     };
@@ -167,6 +173,7 @@
         items: [{ label: 'Link to another card', icon: 'link', top: true, act: () => onlink?.() }],
       });
     }
+    if (extra) own.sections.splice(Math.max(1, own.sections.length - 1), 0, ...extra());
     return own;
   }
 
@@ -240,6 +247,7 @@
   class:locked
   class:picking={linking}
   class:selected
+  class:dropping
   class:opened={open}
   bind:this={el}
   bind:offsetHeight={height}
@@ -409,6 +417,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .card.dropping {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      var(--lift);
+    transform: scale(1.02);
   }
 
   .card.selected {

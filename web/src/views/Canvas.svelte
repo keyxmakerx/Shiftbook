@@ -8,6 +8,7 @@
   let linksShown = true;
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
   let toolboxOpen = true;
+  let cabinetShown = false;
 </script>
 
 <script lang="ts">
@@ -18,17 +19,31 @@
   // (automatic and drawn) and the timeline. Step 3 (round 12) adds the toolbox: the hand
   // pans, Select rubber-bands cards that then move together, Box (or Shift + drag anywhere)
   // draws a box that becomes a project's area or a plain labelled box; boxes fold up to a
-  // coloured count. The full plan is docs/CANVAS.md.
+  // coloured count. Step 4 adds piles (drop a card on a card; click to fan out) and the
+  // cabinet of drawers (drag a card or pile onto one to file it off the Desk), plus Tidy into
+  // stacks. The full plan is docs/CANVAS.md.
   import { onMount, tick, untrack } from 'svelte';
   import { api } from '../lib/api';
-  import type { CanvasArea, CanvasCard as Card, CanvasLabel, CanvasLink, CardKind, CardRef } from '../lib/api';
+  import type {
+    CanvasArea,
+    CanvasCard as Card,
+    CanvasDrawer,
+    CanvasLabel,
+    CanvasLink,
+    CanvasStack,
+    CardKind,
+    CardRef,
+  } from '../lib/api';
   import {
     areaAt,
     boxAround,
     cardIn,
+    cardUnder,
     CARD_H,
     CARD_W,
     deskBoxes,
+    drawerAt,
+    fanSpots,
     fitAll,
     MIN_AREA,
     NEW_AREA,
@@ -45,6 +60,9 @@
   import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BoxPrompt from '../components/BoxPrompt.svelte';
+  import Cabinet from '../components/Cabinet.svelte';
+  import CanvasPile from '../components/CanvasPile.svelte';
+  import DrawerPanel from '../components/DrawerPanel.svelte';
   import CanvasAreaBox from '../components/CanvasArea.svelte';
   import CanvasCard from '../components/CanvasCard.svelte';
   import Icon from '../components/Icon.svelte';
@@ -56,13 +74,25 @@
   let cards = $state<Card[]>([]);
   let areas = $state<CanvasArea[]>([]);
   let labels = $state<CanvasLabel[]>([]);
+  let stacks = $state<CanvasStack[]>([]);
+  let drawers = $state<CanvasDrawer[]>([]);
+  /** The pile spread out beside itself, if any. */
+  let fanned = $state<string | null>(null);
+  /** The drawer or the card something is being dragged over. */
+  let hoverDrawer = $state<string | null>(null);
+  let hoverCard = $state<string | null>(null);
+  let openDrawer = $state<string | null>(null);
+  let renamingPile = $state<string | null>(null);
+  let cabinet = $state(cabinetShown);
+  /** A card or pile is being dragged: the cabinet slides open to take it. */
+  let dragging = $state(false);
   let links = $state<CanvasLink[]>([]);
   let axis = $state<{ date: string; x: number }[]>([]);
   let mode = $state<'free' | 'timeline'>('free');
   let viewBeforeTimeline: CanvasView | null = null;
   let showLinks = $state(linksShown);
   let linkFrom = $state<Card | null>(null);
-  let areaDrag = $state<{ index: number; dx: number; dy: number; members: Set<string> } | null>(null);
+  let areaDrag = $state<{ index: number; dx: number; dy: number; members: Set<string>; piles: Set<string> } | null>(null);
   let tool = $state(lastTool);
   let toolbox = $state(toolboxOpen);
   /** Cards picked with Select; dragging one moves them all. */
@@ -95,6 +125,7 @@
   $effect(() => {
     lastTool = tool;
     toolboxOpen = toolbox;
+    cabinetShown = cabinet;
   });
 
   // N (or anything that asks for Log work) opens the panel if it was folded away.
@@ -111,6 +142,10 @@
       cards = desk.cards;
       areas = desk.areas;
       labels = desk.labels;
+      stacks = desk.stacks;
+      drawers = desk.drawers;
+      if (fanned && !stacks.some((st) => st.id === fanned)) fanned = null;
+      if (openDrawer && !drawers.some((d) => d.key === openDrawer)) openDrawer = null;
       links = desk.links;
       axis = desk.axis;
     }
@@ -124,6 +159,11 @@
    *  dragged or the selected card being dragged. */
   function pos(c: Card): { x: number; y: number } {
     if (mode === 'timeline') return { x: c.timelineX, y: c.timelineY };
+    if (c.stack && c.stack === fanned) {
+      const pile = stacks.find((st) => st.id === c.stack)!;
+      const members = pileMembers(c.stack);
+      return fanSpots(pile.x, pile.y, members.length)[members.indexOf(c)] ?? { x: c.x, y: c.y };
+    }
     if (areaDrag?.members.has(keyOf(c))) return { x: c.x + areaDrag.dx, y: c.y + areaDrag.dy };
     const k = keyOf(c);
     if (groupDrag && groupDrag.key !== k && selected.has(k)) return { x: c.x + groupDrag.dx, y: c.y + groupDrag.dy };
@@ -134,8 +174,159 @@
   const boxes = $derived(deskBoxes(areas, labels));
   /** The box a card sits in now (as it shows, so moves count straight away). */
   const boxOf = (c: Card): DeskBox | undefined => boxes[areaAt(boxes, c.x, c.y)];
-  /** Cards in a folded box don't show (the timeline shows everything). */
-  const shown = $derived(mode === 'timeline' ? cards : cards.filter((c) => !boxOf(c)?.collapsed));
+  /** Cards in a folded box don't show, nor cards in a pile unless it's fanned out (the timeline
+   *  shows everything). */
+  const shown = $derived(
+    mode === 'timeline' ? cards : cards.filter((c) => !boxOf(c)?.collapsed && (!c.stack || c.stack === fanned)),
+  );
+
+  // ----- piles -----
+  /** A pile's cards, bottom first (the last is on top). */
+  const pileMembers = (id: string) => cards.filter((c) => c.stack === id).sort((a, b) => a.z - b.z);
+  const piles = $derived(mode === 'timeline' ? [] : stacks.filter((st) => !boxes[areaAt(boxes, st.x, st.y)]?.collapsed));
+  const pileAt = (st: CanvasStack) =>
+    areaDrag && areaDrag.piles.has(st.id) ? { ...st, x: st.x + areaDrag.dx, y: st.y + areaDrag.dy } : st;
+
+  /** Drop targets for a card: other cards showing, and piles (by their top card). */
+  function dropTarget(card: Card, x: number, y: number): { ref: CardRef; x: number; y: number; key: string } | null {
+    const targets = [
+      ...piles.map((st) => {
+        const top = pileMembers(st.id).at(-1)!;
+        return { ref: refOf(top), x: st.x, y: st.y, key: `pile:${st.id}` };
+      }),
+      ...shown.filter((c) => keyOf(c) !== keyOf(card) && !(card.stack && c.stack === card.stack)).map((c) => {
+        const p = pos(c);
+        return { ref: refOf(c), x: p.x, y: p.y, key: keyOf(c) };
+      }),
+    ];
+    const i = cardUnder(targets, x, y);
+    return i >= 0 ? targets[i]! : null;
+  }
+
+  function cardDragging(card: Card, dx: number, dy: number, at: { cx: number; cy: number }) {
+    dragging = true;
+    if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
+    hoverDrawer = drawerAt(at.cx, at.cy);
+    const p = pos(card);
+    hoverCard = hoverDrawer || groupDrag ? null : (dropTarget(card, p.x + dx, p.y + dy)?.key ?? null);
+  }
+
+  async function pileMove(st: CanvasStack, x: number, y: number, at: { cx: number; cy: number }) {
+    const drawer = drawerAt(at.cx, at.cy);
+    hoverDrawer = null;
+    dragging = false;
+    if (drawer) return fileThese(pileMembers(st.id), drawer, st);
+    stacks = stacks.map((p) => (p.id === st.id ? { ...p, x, y } : p));
+    if (await attempt(() => api.canvasStackMove(st.id, x, y).then(() => true))) await load();
+  }
+
+  async function renamePile(st: CanvasStack, name: string) {
+    if (await attempt(() => api.canvasStackRename(st.id, name).then(() => true))) await load();
+  }
+
+  function pileMenu(st: CanvasStack): MenuSpec {
+    return {
+      sections: [
+        {
+          head: st.name ?? `A pile of ${st.count}`,
+          items: [
+            { label: fanned === st.id ? 'Put them back in the pile' : 'Fan them out', icon: 'open', side: true, act: () => (fanned = fanned === st.id ? null : st.id) },
+            { label: 'Rename', icon: 'edit', side: true, act: () => (renamingPile = st.id) },
+            {
+              label: 'Take the pile apart',
+              icon: 'x',
+              top: true,
+              act: () => void attempt(() => api.canvasStackDissolve(st.id).then(() => true)).then((ok) => {
+                if (ok) void load();
+              }),
+            },
+          ],
+        },
+        ...fileSection((key) => void fileThese(pileMembers(st.id), key, st)),
+      ],
+    };
+  }
+
+  // ----- drawers -----
+  /** The "File in" choices for a card's or a pile's menu. */
+  function fileSection(file: (key: string) => void): MenuSpec['sections'] {
+    if (!drawers.length) return [];
+    return [{ head: 'File in a drawer', choices: drawers.map((d) => ({ label: d.name, color: d.color, checked: false, act: () => file(d.key) })) }];
+  }
+
+  /** File cards (one, a selection or a pile) in a drawer. A project's drawer also gives
+   *  them the project. One Undo puts everything back. */
+  async function fileThese(list: Card[], key: string, pile?: CanvasStack) {
+    if (!list.length) return;
+    const was = list.map((c) => ({ ref: refOf(c), x: c.x, y: c.y }));
+    const ok = pile
+      ? await attempt(() => api.canvasFileStack(pile.id, key).then(() => true))
+      : await attempt(async () => {
+          for (const c of list) await api.canvasFile(refOf(c), key);
+          return true;
+        });
+    if (!ok) return;
+    const projectId = key.startsWith('project:') ? key.slice('project:'.length) : null;
+    const undoProject = projectId ? await giveProject(list, projectId) : [];
+    selected = new Set();
+    if (fanned === pile?.id) fanned = null;
+    if (projectId) await refresh();
+    await load();
+    const name = drawers.find((d) => d.key === key)?.name ?? 'the drawer';
+    toast(`Filed ${list.length === 1 ? 'it' : `${list.length} cards`} in ${name}`, 'Undo', () =>
+      void (async () => {
+        for (const w of was) await attempt(() => api.canvasUnfile(w.ref, w.x, w.y));
+        for (const u of undoProject) await attempt(u);
+        await refresh();
+        await load();
+      })(),
+    );
+  }
+
+  async function addFolder(name: string) {
+    if (await attempt(() => api.canvasFolderSave(null, name))) await load();
+  }
+
+  async function renameFolder(key: string, name: string) {
+    if (await attempt(() => api.canvasFolderSave(key.slice('folder:'.length), name))) await load();
+  }
+
+  async function removeFolder(key: string) {
+    const id = key.slice('folder:'.length);
+    const name = drawers.find((d) => d.key === key)?.name ?? 'the folder';
+    if (!(await attempt(() => api.canvasFolderRemove(id, true).then(() => true)))) return;
+    openDrawer = null;
+    await load();
+    toast(`Removed ${name}. Its cards are back on the Desk.`, 'Undo', () => {
+      void attempt(() => api.canvasFolderRemove(id, false)).then(load);
+    });
+  }
+
+  /** Where a card put back from a drawer lands: the middle of what you're looking at. */
+  function middle() {
+    const at = toCanvas(view, (board?.clientWidth ?? 800) / 2, (board?.clientHeight ?? 600) / 2);
+    return { x: Math.round(at.x - CARD_W / 2), y: Math.round(at.y - CARD_H / 2) };
+  }
+
+  /** The Desk's own menu sections for a card: file it. */
+  const cardExtra = (card: Card) => () => fileSection((key) => void fileThese(selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card], key));
+
+  async function tidy() {
+    const done = await attempt(() => api.canvasTidy(app.today));
+    if (!done) return;
+    await load();
+    if (!done.stacks.length) {
+      toast('Nothing to tidy: no project has two loose cards.');
+      return;
+    }
+    toast(`Made ${done.stacks.length} pile${done.stacks.length === 1 ? '' : 's'}, one per project`, 'Undo', () =>
+      void (async () => {
+        for (const id of done.stacks) await attempt(() => api.canvasStackDissolve(id));
+        for (const b of done.before) await attempt(() => api.canvasMove(b.kind, b.id, b.x, b.y));
+        await load();
+      })(),
+    );
+  }
 
   function titleOf(c: Card): string {
     return c.entry?.description || c.tray?.item.ticket || c.note?.title || c.inbox?.text || 'this card';
@@ -154,14 +345,32 @@
   });
 
   // ----- moving cards -----
-  async function move(card: Card, x: number, y: number) {
-    const dx = x - card.x;
-    const dy = y - card.y;
+  async function move(card: Card, x: number, y: number, at?: { cx: number; cy: number }) {
+    const from = pos(card);
+    const dx = x - from.x;
+    const dy = y - from.y;
+    const grouped = !!groupDrag;
     groupDrag = null;
+    hoverCard = null;
     // A selected card brings the rest of the selection along.
     const group = selected.has(keyOf(card)) ? cards.filter((c) => c !== card && selected.has(keyOf(c))) : [];
+    // Dropped on a drawer: filed (with the rest of the selection).
+    const drawer = at ? drawerAt(at.cx, at.cy) : null;
+    hoverDrawer = null;
+    dragging = false;
+    if (drawer) return fileThese([card, ...group], drawer);
+    // Dropped on another card or a pile: they pile up.
+    const target = grouped ? null : dropTarget(card, x, y);
+    if (target) {
+      if (!(await attempt(() => api.canvasStack(refOf(card), target.ref, target.x, target.y).then(() => true)))) return;
+      await load();
+      toast('Piled up. Click the pile to fan it out; drag a card away to take it off.');
+      return;
+    }
     await place(card, x, y);
     for (const c of group) await place(c, c.x + dx, c.y + dy);
+    // A card dragged out of a fanned pile is off it now.
+    if (card.stack) await load();
   }
 
   async function place(card: Card, x: number, y: number) {
@@ -212,8 +421,9 @@
 
   function areaMove(index: number, dx: number, dy: number, done: boolean) {
     if (!areaDrag) {
-      const members = new Set(cards.filter((c) => areaAt(boxes, c.x, c.y) === index).map(keyOf));
-      areaDrag = { index, dx, dy, members };
+      const members = new Set(cards.filter((c) => !c.stack && areaAt(boxes, c.x, c.y) === index).map(keyOf));
+      const inside = new Set(stacks.filter((st) => areaAt(boxes, st.x, st.y) === index).map((st) => st.id));
+      areaDrag = { index, dx, dy, members, piles: inside };
     } else areaDrag = { ...areaDrag, dx, dy };
     if (!done) return;
     const drag = areaDrag;
@@ -223,11 +433,16 @@
     const moved = { ...b, x: b.x + drag.dx, y: b.y + drag.dy };
     putBox(moved);
     cards = cards.map((c) => (drag.members.has(keyOf(c)) ? { ...c, x: c.x + drag.dx, y: c.y + drag.dy, placed: true } : c));
+    stacks = stacks.map((st) => (drag.piles.has(st.id) ? { ...st, x: st.x + drag.dx, y: st.y + drag.dy } : st));
     void (async () => {
       await attempt(() => saveBox(moved));
       for (const c of cards.filter((c) => drag.members.has(keyOf(c)))) {
         await attempt(() => api.canvasMove(c.kind, c.id, c.x, c.y));
       }
+      for (const st of stacks.filter((st) => drag.piles.has(st.id))) {
+        await attempt(() => api.canvasStackMove(st.id, st.x, st.y));
+      }
+      await load();
     })();
   }
 
@@ -433,7 +648,8 @@
 
   function panStart(e: PointerEvent) {
     if (e.button !== 0 || !board) return;
-    if ((e.target as HTMLElement).closest('.tools, .jot, .toolbox, .selbar')) return;
+    if ((e.target as HTMLElement).closest('.tools, .jot, .rail, .selbar, .drawer-at')) return;
+    fanned = null;
     closePanel();
     if (mode === 'free' && (tool === 'box' || tool === 'select' || e.shiftKey)) {
       bandStart(e, tool === 'box' || e.shiftKey);
@@ -714,6 +930,27 @@
           {/each}
         </svg>
       {/if}
+      {#each piles as st (st.id)}
+        {@const top = pileMembers(st.id).at(-1)}
+        {#if top}
+          <CanvasPile
+            pile={pileAt(st)}
+            {top}
+            zoom={view.zoom}
+            fanned={fanned === st.id}
+            dropping={hoverCard === `pile:${st.id}`}
+            onmove={(x, y, at) => void pileMove(st, x, y, at)}
+            ondrag={(at) => {
+              dragging = true;
+              hoverDrawer = drawerAt(at.cx, at.cy);
+            }}
+            ontoggle={() => (fanned = fanned === st.id ? null : st.id)}
+            onrename={(name) => void renamePile(st, name)}
+            bind:renaming={() => renamingPile === st.id, (v) => (renamingPile = v ? st.id : null)}
+            menu={() => pileMenu(st)}
+          />
+        {/if}
+      {/each}
       {#each shown as card (card.kind + card.id)}
         {@const p = pos(card)}
         <CanvasCard
@@ -724,10 +961,10 @@
           locked={mode === 'timeline'}
           linking={!!linkFrom}
           selected={selected.has(keyOf(card))}
-          ondrag={(dx, dy) => {
-            if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
-          }}
-          onmove={(x, y) => void move(card, x, y)}
+          dropping={hoverCard === keyOf(card)}
+          extra={cardExtra(card)}
+          ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}
+          onmove={(x, y, at) => void move(card, x, y, at)}
           onchanged={() => void load()}
           onlink={() => (linkFrom = card)}
           onpick={() => void pickLinkEnd(card)}
@@ -786,6 +1023,7 @@
     {/if}
 
     {#if mode === 'free'}
+      <div class="rail">
       <div class="toolbox" class:shut={!toolbox} role="toolbar" aria-label="Desk tools" aria-orientation="vertical">
         <button type="button" class="tb fold" title={toolbox ? 'Fold the toolbox away' : 'Open the toolbox'} aria-expanded={toolbox} onclick={() => (toolbox = !toolbox)}>
           <Icon name={toolbox ? 'left' : 'right'} size={13} />
@@ -802,6 +1040,23 @@
           </button>
         {/if}
       </div>
+      <Cabinet {drawers} hover={hoverDrawer} bind:open={cabinet} peek={dragging} opened={openDrawer} onopen={(k) => (openDrawer = openDrawer === k ? null : k)} onaddfolder={(n) => void addFolder(n)} />
+      </div>
+      {#if openDrawer}
+        {@const d = drawers.find((x) => x.key === openDrawer)}
+        {#if d}
+          <div class="drawer-at">
+            <DrawerPanel
+              drawer={d}
+              putBack={middle}
+              onclose={() => (openDrawer = null)}
+              onchanged={() => void load()}
+              onrename={(name) => void renameFolder(d.key, name)}
+              onremove={() => void removeFolder(d.key)}
+            />
+          </div>
+        {/if}
+      {/if}
     {/if}
     {#if selected.size}
       <div class="selbar" role="toolbar" aria-label="Selection">
@@ -830,6 +1085,11 @@
       <button type="button" class="wide" aria-pressed={showLinks} onclick={() => (showLinks = !showLinks)}>
         <Icon name="link" size={14} />Links
       </button>
+      {#if mode === 'free'}
+        <button type="button" class="wide" title="Pile loose cards by project" onclick={() => void tidy()}>
+          <Icon name="box" size={14} />Tidy into stacks
+        </button>
+      {/if}
     </div>
     {#if linkFrom}
       <p class="banner" role="status">Click the card to link with “{titleOf(linkFrom)}” · Esc to cancel</p>
@@ -911,11 +1171,34 @@
     border-width: 2px;
   }
 
-  .toolbox {
+  .rail {
     position: absolute;
     left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
+    top: 12px;
+    bottom: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    z-index: 4;
+    pointer-events: none;
+  }
+
+  .rail > :global(*) {
+    pointer-events: auto;
+  }
+
+  .drawer-at {
+    position: absolute;
+    left: 194px;
+    top: 12px;
+    bottom: 56px;
+    z-index: 6;
+    display: flex;
+    align-items: flex-start;
+  }
+
+  .toolbox {
     display: flex;
     flex-direction: column;
     gap: 2px;

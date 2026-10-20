@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-stack"
+description = "Enables the canvas_stack command without any pre-configured scope."
+commands.allow = ["canvas_stack"]
+
+[[permission]]
+identifier = "deny-canvas-stack"
+description = "Denies the canvas_stack command without any pre-configured scope."
+commands.deny = ["canvas_stack"]

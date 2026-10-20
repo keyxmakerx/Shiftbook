@@ -71,6 +71,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "canvas boxes",
         include_str!("../migrations/0010_canvas_boxes.sql"),
     ),
+    (
+        11,
+        "stacks and drawers",
+        include_str!("../migrations/0011_stacks_drawers.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -272,8 +277,10 @@ mod tests {
                 [
                     "canvas_areas",
                     "canvas_cards",
+                    "canvas_folders",
                     "canvas_labels",
                     "canvas_links",
+                    "canvas_stacks",
                     "category_code_defaults",
                     "custom_fields",
                     "custom_values",
