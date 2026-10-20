@@ -22,7 +22,8 @@ names the round it came from. Nothing here is optional unless it says so.
   Done tickets tray add cards; double-click a card to open its details; right-click any card,
   area or empty paper for the paper menu (round 5, round 6) with the fold-out animation.
 - Double-click empty paper to start a jot right there.
-- Pan by dragging empty paper or scrolling; zoom with Ctrl + scroll, the zoom buttons or
+- Pan by dragging empty paper or with Shift + scroll; zoom with the scroll wheel (round 14;
+  it was Ctrl + scroll before), a pinch, the zoom buttons or
   "Fit everything" (round 4 pick).
 - Today's hours stay in view (the top bar), so the Canvas never hides the day's total.
 - Find flies to a card and lifts it.

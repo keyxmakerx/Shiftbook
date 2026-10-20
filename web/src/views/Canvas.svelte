@@ -827,18 +827,22 @@
     return () => window.removeEventListener('keydown', onKey, true);
   });
 
-  // Wheel pans; Ctrl + wheel (or a pinch) zooms around the pointer.
+  // The wheel (or a pinch) zooms around the pointer; Shift + wheel pans (round 14: the owner
+  // expects the wheel to zoom). Dragging empty paper pans too.
   $effect(() => {
     if (!board) return;
     const el = board;
     const onWheel = (e: WheelEvent) => {
-      if ((e.target as HTMLElement).closest('textarea, input')) return;
+      // Lists over the paper (a drawer's contents, the cabinet, a slide-out) scroll themselves.
+      if ((e.target as HTMLElement).closest('textarea, input, .drawer-at, .rail, .under')) return;
       e.preventDefault();
-      if (e.ctrlKey || e.metaKey) {
-        const { sx, sy } = boardPoint(e);
-        view = zoomAt(view, sx, sy, Math.exp(-e.deltaY * 0.0015));
+      if (e.shiftKey) {
+        view = { ...view, x: view.x - (e.deltaX || e.deltaY), y: view.y - (e.deltaX ? e.deltaY : 0) };
       } else {
-        view = { ...view, x: view.x - e.deltaX, y: view.y - e.deltaY };
+        const { sx, sy } = boardPoint(e);
+        // Lines (some mice) count as about 40 pixels each.
+        const dy = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
+        view = zoomAt(view, sx, sy, Math.exp(-dy * 0.0015));
       }
     };
     el.addEventListener('wheel', onWheel, { passive: false });
@@ -1128,7 +1132,7 @@
     {:else if mode === 'timeline'}
       <p class="banner" role="status">The timeline: your layout is kept. Back to my layout puts every card where it was.</p>
     {/if}
-    <p class="hint">Drag cards · Shift + drag to draw a box · double-click to jot · Ctrl + scroll to zoom</p>
+    <p class="hint">Drag cards · Shift + drag to draw a box · double-click to jot · scroll to zoom · Shift + scroll to pan</p>
   </div>
 
   <aside class="panel" aria-label="Today">
