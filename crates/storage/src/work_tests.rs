@@ -742,6 +742,40 @@ fn open_tickets_come_back_until_ticked() {
 }
 
 #[test]
+fn ticking_done_gives_up_the_desk_spot() {
+    use shiftbook_core::canvas::{CardKind, Drawer};
+    let dir = TestDir::new("done-spot");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let day = s
+            .tray_add(me, date!(2026 - 10 - 20), "INC0045678 INC0045690")
+            .await
+            .unwrap();
+        let (a, b) = (day.items[0].id, day.items[1].id);
+        for id in [a, b] {
+            s.tray_set_done(me, id, false).await.unwrap();
+            s.move_card(me, CardKind::Tray, *id.as_uuid(), 100, 100)
+                .await
+                .unwrap();
+        }
+        // A filed ticket stays in its drawer.
+        let folder = s.save_folder(me, None, "Reference").await.unwrap();
+        s.file_card(
+            me,
+            (CardKind::Tray, *b.as_uuid()),
+            Drawer::Folder(folder.id),
+        )
+        .await
+        .unwrap();
+        s.tray_set_done(me, a, true).await.unwrap();
+        s.tray_set_done(me, b, true).await.unwrap();
+        let spots = s.canvas_spots(me).await.unwrap();
+        assert_eq!(spots.len(), 1);
+        assert_eq!(spots[0].record_id, *b.as_uuid());
+    });
+}
+
+#[test]
 fn tray_tickets_with_a_project_roll_up_under_it() {
     let dir = TestDir::new("trayproject");
     block_on(async {

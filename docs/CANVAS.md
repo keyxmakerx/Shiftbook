@@ -98,6 +98,11 @@ names the round it came from. Nothing here is optional unless it says so.
    Undo. Click a drawer to see what's in it, Open or Put back each thing; folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
+   **Done today (round 14):** tickets ticked done today gather in one green **Done today**
+   pile (ticking one done takes it off its spot unless it's filed); drag one out to keep it
+   loose. Drag the pile to move it (its spot is the `desk.done_pile` preference); click to fan
+   it out; right-click for See all done tickets and File in. Done tickets from before today
+   leave the Desk; still-open ones stay.
 4. **C4 Boards (built, round 12):** **Boards** (Desk bottom bar), Open full screen on a
    project's box, or ⤢ on a drawer opens a board full screen. The tree on the left shows every
    board: Projects (one per project), Meetings (one per meeting series, holding the notes
@@ -109,7 +114,9 @@ names the round it came from. Nothing here is optional unless it says so.
    entries and tickets), **Board** (its own canvas: cards keep their own spots here, apart
    from the Desk) and **List** (the boards inside, then its cards). Entries and tickets from
    the last 90 days show, notes always. The **Archive** lists archived notes with Bring back,
-   and archived projects as boards (Bring back on the board). Daily notes now move to the
+   and archived projects as boards (Bring back on the board). **Done tickets** lists every
+   ticket ticked done in the last 90 days, newest first, with a filter box; Find searches
+   tickets from the last two years. Daily notes now move to the
    Archive after 2 weeks without a change (or sooner if the notes setting is shorter).
    **Links** written in a note (http/https) show under it with Copy; opening them in the
    browser waits on a sign-off question (it needs a Tauri plugin). Esc goes back to the Desk.

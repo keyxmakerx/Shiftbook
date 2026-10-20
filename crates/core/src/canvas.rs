@@ -77,6 +77,32 @@ pub fn is_recent(date: Date, today: Date) -> bool {
     date <= today && date > today - Duration::days(RECENT_DAYS)
 }
 
+/// Where a ticket from the Tickets tray goes on the Desk (round 14).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrayPlace {
+    /// A card of its own (still open, or one the owner put somewhere themselves).
+    Loose,
+    /// In the "Done today" pile.
+    DonePile,
+    /// Off the Desk: done on an earlier day (it's on the Done tickets board and in Find).
+    Off,
+}
+
+/// Where a tray ticket from `date` goes: open tickets stay loose; tickets done today gather in
+/// the Done today pile unless the owner `placed` them since; done ones from before today
+/// leave the Desk.
+pub fn tray_place(done: bool, date: Date, today: Date, placed: bool) -> TrayPlace {
+    if !done {
+        TrayPlace::Loose
+    } else if date < today {
+        TrayPlace::Off
+    } else if placed {
+        TrayPlace::Loose
+    } else {
+        TrayPlace::DonePile
+    }
+}
+
 /// Keep a spot within [`MAX_COORD`] of the origin.
 pub fn clamp_spot(x: i32, y: i32) -> (i32, i32) {
     (
@@ -489,6 +515,18 @@ pub fn tidy_groups<K: PartialEq>(projects: &[Option<K>]) -> Vec<Vec<usize>> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn done_tickets_pile_up_then_leave() {
+        use super::{tray_place, TrayPlace};
+        let today = time::macros::date!(2026 - 10 - 20);
+        let before = time::macros::date!(2026 - 10 - 19);
+        assert_eq!(tray_place(false, before, today, false), TrayPlace::Loose);
+        assert_eq!(tray_place(false, today, today, true), TrayPlace::Loose);
+        assert_eq!(tray_place(true, today, today, false), TrayPlace::DonePile);
+        assert_eq!(tray_place(true, today, today, true), TrayPlace::Loose);
+        assert_eq!(tray_place(true, before, today, true), TrayPlace::Off);
+    }
+
     use super::*;
     use time::macros::date;
 

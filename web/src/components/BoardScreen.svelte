@@ -5,7 +5,8 @@
   //   Notebook: its notes, one open to write in (saves as you type). Links written in a note
   //             show underneath with Copy. A project also shows its time and tickets.
   //   Board:    its own canvas. Cards keep their own spots here, apart from the Desk.
-  //   List:     the boards inside it, then its cards. The Archive's notes have Bring back.
+  //   List:     the boards inside it, then its cards, with a box to filter them. The
+  //             Archive's notes have Bring back; Done tickets lists every ticket ticked done.
   // Esc or ✕ goes back to the Desk.
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
@@ -230,12 +231,29 @@
     if (c.tray)
       return {
         kind: `${c.tray.item.done ? 'Ticket' : 'Still open'} · ${fmtMinutes(c.tray.item.minutes)}`,
-        text: c.tray.item.ticket,
+        text: c.tray.item.note ? `${c.tray.item.ticket} · ${c.tray.item.note.split('\n')[0]}` : c.tray.item.ticket,
         day: day(c.tray.date),
       };
     if (c.note) return { kind: `${KIND_LABEL[c.note.kind]} note`, text: c.note.title, day: day(c.note.updatedAt.slice(0, 10)) };
     return { kind: 'Inbox scrap', text: c.inbox?.text ?? '', day: '' };
   }
+
+  // ----- list filter -----
+  let filter = $state('');
+  $effect(() => {
+    void boards.key;
+    filter = '';
+  });
+  const listed = $derived.by(() => {
+    const cards = data?.cards ?? [];
+    const words = filter.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (!words.length) return cards;
+    return cards.filter((c) => {
+      const l = line(c);
+      const text = `${l.kind} ${l.text} ${c.tray?.item.note ?? ''} ${c.entry?.tickets.map((t) => t.number).join(' ') ?? ''} ${c.note?.body ?? ''}`.toLowerCase();
+      return words.every((w) => text.includes(w));
+    });
+  });
 
   const work = $derived((data?.cards ?? []).filter((c) => c.entry || c.tray));
   const tabs: { id: BoardTab; label: string }[] = [
@@ -356,9 +374,21 @@
               </ul>
             {/if}
             {#if data.cards.length}
-              <h2 class="lbl">{data.key === 'archive' ? 'Archived notes' : 'On this board'}</h2>
+              <div class="list-head">
+                <h2 class="lbl">{data.key === 'archive' ? 'Archived notes' : data.key === 'done' ? 'Ticked done, newest first' : 'On this board'}</h2>
+                {#if data.cards.length > 5}
+                  <input
+                    class="filter"
+                    type="search"
+                    bind:value={filter}
+                    placeholder={data.key === 'done' ? 'Filter by ticket or note' : 'Filter'}
+                    aria-label="Filter this list"
+                  />
+                {/if}
+              </div>
+              {#if !listed.length}<p class="empty">Nothing here matches “{filter}”.</p>{/if}
               <ul class="rows">
-                {#each data.cards as c (`${c.kind}:${c.id}`)}
+                {#each listed as c (`${c.kind}:${c.id}`)}
                   {@const l = line(c)}
                   <li class="row">
                     <span class="kind">{l.kind}</span>
@@ -383,7 +413,9 @@
               <p class="empty">
                 {data.key === 'archive'
                   ? 'Nothing is archived. Notes you archive, and ones left alone for a while, wait here.'
-                  : 'Nothing here yet.'}
+                  : data.key === 'done'
+                    ? 'No tickets ticked done in the last 90 days. Older ones turn up in Find.'
+                    : 'Nothing here yet.'}
               </p>
             {/if}
           </div>
@@ -711,6 +743,24 @@
     text-transform: uppercase;
     color: var(--mut);
     margin: 16px 0 8px;
+  }
+
+  .list-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .filter {
+    margin: 0 0 8px;
+    width: 240px;
+    padding: 6px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--paper);
+    font: 13.5px var(--ui);
+    color: var(--ink);
   }
 
   .rows {

@@ -12,7 +12,7 @@ export const boards = $state<{ key: string | null; tab: BoardTab; serial: number
 
 /** Boards that only list other boards have no notebook or canvas. */
 export function onlyLists(key: string): boolean {
-  return key === 'desk' || key === 'projects' || key === 'meetings' || key === 'archive';
+  return key === 'desk' || key === 'projects' || key === 'meetings' || key === 'archive' || key === 'done';
 }
 
 /** Step into a board (from the Desk, a box, a drawer or the tree). */

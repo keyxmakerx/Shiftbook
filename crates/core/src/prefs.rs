@@ -46,6 +46,8 @@ pub const KEY_WINDOWS: &str = "ui.windows";
 /// Days without a change before a note moves to the archive, one of
 /// [`AUTO_ARCHIVE_CHOICES`] (`0` = off).
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
+/// Where the Desk's "Done today" pile sits, `x y` in canvas units, or blank for automatic.
+pub const KEY_DONE_PILE: &str = "desk.done_pile";
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -173,6 +175,8 @@ pub struct Prefs {
     pub notes_auto_archive_days: u32,
     /// Open windows and where they are.
     pub windows: Vec<crate::windows::WindowSpot>,
+    /// Where the Desk's "Done today" pile sits; `None` places it automatically.
+    pub done_pile: Option<(i32, i32)>,
 }
 
 impl Prefs {
@@ -199,6 +203,7 @@ impl Default for Prefs {
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
+            done_pile: None,
         }
     }
 }
@@ -228,6 +233,15 @@ fn parse_clock(value: &str) -> Option<String> {
     let (h, m) = value.split_once(':')?;
     let (h, m) = (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?);
     (h < 24 && m < 60 && value.len() <= 5).then(|| format!("{h:02}:{m:02}"))
+}
+
+/// Read a `desk.done_pile` value `x y`, kept on the Canvas.
+fn parse_spot(value: &str) -> Option<(i32, i32)> {
+    let (x, y) = value.split_once(' ')?;
+    Some(crate::canvas::clamp_spot(
+        x.trim().parse().ok()?,
+        y.trim().parse().ok()?,
+    ))
 }
 
 /// Check a preference before saving. Returns the value to store. Unknown keys
@@ -292,6 +306,15 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_WINDOWS => Ok(crate::windows::format_windows(
             &crate::windows::parse_windows(v),
         )),
+        KEY_DONE_PILE => {
+            if v.is_empty() {
+                Ok(String::new())
+            } else {
+                parse_spot(v)
+                    .map(|(x, y)| format!("{x} {y}"))
+                    .ok_or_else(|| invalid(value))
+            }
+        }
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -355,6 +378,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
             }
             KEY_WINDOWS => prefs.windows = crate::windows::parse_windows(&v),
+            KEY_DONE_PILE => prefs.done_pile = parse_spot(&v),
             _ => {}
         }
     }
@@ -364,6 +388,20 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_done_pile_spot_is_kept_on_the_canvas() {
+        assert_eq!(
+            validate_pref(KEY_DONE_PILE, " 40  -12 "),
+            Ok("40 -12".into())
+        );
+        assert_eq!(validate_pref(KEY_DONE_PILE, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_DONE_PILE, "left").is_err());
+        let far = validate_pref(KEY_DONE_PILE, "99999999 0").unwrap();
+        let p = prefs_from_settings(&[(KEY_DONE_PILE, far.as_str())]);
+        assert!(p.done_pile.unwrap().0 < 99_999_999);
+        assert_eq!(Prefs::default().done_pile, None);
+    }
 
     #[test]
     fn windows_are_kept_cleaned() {

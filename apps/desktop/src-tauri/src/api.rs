@@ -1048,6 +1048,8 @@ const SEARCH_ENTRIES: usize = 8;
 const SEARCH_SCRAPS: usize = 4;
 /// Most notes Find returns.
 const SEARCH_NOTES: usize = 5;
+/// Most tray tickets Find returns.
+const SEARCH_TICKETS: usize = 6;
 
 /// What Find found.
 #[derive(Debug, Clone, Serialize)]
@@ -1059,12 +1061,14 @@ pub struct SearchView {
     inbox: Vec<InboxView>,
     /// Notes (archived ones too), best first.
     notes: Vec<NoteView>,
+    /// Tickets from the Tickets tray (done ones too), best first.
+    tickets: Vec<TrayItemView>,
     /// Indexes into the `commands` that were passed in, best first.
     commands: Vec<usize>,
 }
 
-/// Maps to `DataApi.search()`: entries (title, notes, tickets, project) from the last
-/// two years, Inbox scraps, notes and the UI's command names that match `query`, ranked by
+/// Maps to `DataApi.search()`: entries (title, notes, tickets, project) and tray tickets
+/// (number, notepad, project) from the last two years, Inbox scraps, notes and the UI's command names that match `query`, ranked by
 /// `shiftbook_core::search`.
 #[tauri::command]
 pub async fn search(
@@ -1119,11 +1123,35 @@ pub async fn search(
     .map(inbox_view)
     .collect();
     let notes = find_notes(&store, owner, &query, SEARCH_NOTES).await?;
+    let mut tray = store
+        .tray_between(owner, add_days(today, -SEARCH_DAYS), today)
+        .await?;
+    tray.sort_by_key(|t| std::cmp::Reverse(t.date));
+    let tickets = rank(
+        &query,
+        tray.into_iter().map(|t| {
+            let project = t
+                .project_id
+                .and_then(|id| projects.iter().find(|p| p.id == id))
+                .map_or("", |p| p.name.as_str());
+            let text = format!(
+                "{} {} {project}",
+                t.ticket_number,
+                t.note.as_deref().unwrap_or("")
+            );
+            (t, text)
+        }),
+        SEARCH_TICKETS,
+    )
+    .into_iter()
+    .map(|t| tray_item_view(t, &links))
+    .collect();
     let commands = rank(&query, commands.iter().cloned().enumerate(), commands.len());
     Ok(SearchView {
         entries,
         inbox,
         notes,
+        tickets,
         commands,
     })
 }
