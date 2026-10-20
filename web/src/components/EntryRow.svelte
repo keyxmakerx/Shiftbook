@@ -1,13 +1,16 @@
 <script lang="ts">
   // One entry on Day: hours, title, project, tickets and quick +time buttons.
-  // Click opens the details drawer; right-click opens its paper menu.
+  // Click slides out its notepad and options underneath (round 12); double-click or Enter
+  // opens the details drawer; right-click opens its paper menu with everything.
   import { api } from '../lib/api';
   import type { Entry } from '../lib/api';
   import { addEntryTime, canTime as canTimeEntry, entryMenu } from '../lib/entryActions';
   import { paperMenu } from '../lib/menu.svelte';
+  import { closePanel, panel, togglePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
+  import ItemPanel from './ItemPanel.svelte';
   import TicketChip from './TicketChip.svelte';
 
   let { entry, index = 0 }: { entry: Entry; index?: number } = $props();
@@ -27,6 +30,9 @@
     row.classList.add('flash');
   });
 
+  const key = $derived(`entry:${entry.id}`);
+  const open = $derived(panel.open === key);
+  const firstLine = (text: string) => text.split('\n')[0];
   const addTime = (minutes: number) => addEntryTime(entry, minutes);
   const menu = () => entryMenu(entry);
 
@@ -44,17 +50,29 @@
 <div
   class="row rise"
   class:tray={entry.isTray}
+  class:opened={open}
   style:--c={color}
   style:--i={index}
   bind:this={row}
   role="button"
   tabindex="0"
-  title="Click to open · right-click for options"
-  onclick={() => (app.drawer = entry.id)}
+  aria-expanded={open}
+  title="Click for the notepad and options · double-click to open · right-click for everything"
+  onclick={(e) => {
+    if ((e.target as HTMLElement).closest('button, a')) return;
+    togglePanel(key);
+  }}
+  ondblclick={() => {
+    closePanel();
+    app.drawer = entry.id;
+  }}
   onkeydown={(e) => {
     if (e.target !== row) return;
     if (e.key === 'Enter') app.drawer = entry.id;
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    else if (e.key === ' ') {
+      e.preventDefault();
+      togglePanel(key);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       // Up and down move between entries; the time buttons show on the focused one.
       e.preventDefault();
       const rows = [...(row?.parentElement?.querySelectorAll<HTMLElement>(':scope > .row') ?? [])];
@@ -67,7 +85,7 @@
   <span class="t">
     <b>{entry.description || 'Untitled'}</b>
     <small>
-      {project?.name ?? 'No project'}{#if entry.isTray}{' · from the Done tickets tray'}{/if}{#if entry.notes}{` · ${entry.notes}`}{/if}
+      {project?.name ?? 'No project'}{#if entry.isTray}{' · from the Tickets tray'}{/if}{#if entry.notes}{` · ✎ ${firstLine(entry.notes)}`}{/if}
     </small>
   </span>
   <span class="chips">
@@ -97,6 +115,11 @@
     {/if}
   </span>
 </div>
+{#if open}
+  <div class="under">
+    <ItemPanel {entry} {menu} focusPad={panel.focusPad} onclose={closePanel} />
+  </div>
+{/if}
 
 <style>
   .row {
@@ -113,6 +136,15 @@
 
   .row:hover {
     background: color-mix(in srgb, var(--ink) 4%, transparent);
+  }
+
+  .row.opened {
+    background: color-mix(in srgb, var(--c) 9%, transparent);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .under {
+    margin: 0 0 8px 54px;
   }
 
   .h {

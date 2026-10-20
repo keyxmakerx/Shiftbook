@@ -152,6 +152,10 @@ typed_id!(
     /// A saved response (a message kept for pasting into tickets).
     SavedResponseId
 );
+typed_id!(
+    /// A meeting series (a repeating meeting the bell reminds about).
+    MeetingSeriesId
+);
 
 #[cfg(test)]
 mod tests {

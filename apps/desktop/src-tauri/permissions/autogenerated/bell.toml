@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bell"
+description = "Enables the bell command without any pre-configured scope."
+commands.allow = ["bell"]
+
+[[permission]]
+identifier = "deny-bell"
+description = "Denies the bell command without any pre-configured scope."
+commands.deny = ["bell"]

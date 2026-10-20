@@ -2,6 +2,7 @@
 //! views. Each maps 1:1 to a `DataApi` method in `web/src/lib/api/`.
 
 use serde::{Deserialize, Serialize};
+use shiftbook_core::boards::links_in;
 use shiftbook_core::dates::format_timestamp;
 use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
@@ -40,6 +41,8 @@ pub struct NoteView {
     archive_in_days: Option<u32>,
     created_at: String,
     updated_at: String,
+    /// Web addresses written in it, in order.
+    links: Vec<String>,
 }
 
 pub(crate) fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
@@ -48,6 +51,7 @@ pub(crate) fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteVi
         ArchiveOutlook::Stays | ArchiveOutlook::Due => None,
     };
     NoteView {
+        links: links_in(&n.body),
         id: n.id,
         kind: n.kind,
         title: n.title,

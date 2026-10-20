@@ -19,8 +19,16 @@ import type {
   GroupBy,
   InboxItem,
   NextUpItem,
-  CanvasCard,
+  MeetingSeries,
+  SeriesInput,
+  BellItem,
+  TrayItem,
+  CardRef,
+  BoardData,
+  DeskData,
   CardKind,
+  CanvasCard,
+  TidyResult,
   Note,
   NoteInput,
   NoteKind,
@@ -136,6 +144,12 @@ export class TauriApi implements DataApi {
   updateEntry(id: string, input: EntryInput): Promise<Entry> {
     return call('update_entry', { id, input });
   }
+  setEntryNotes(id: string, notes: string): Promise<Entry> {
+    return call('set_entry_notes', { id, notes });
+  }
+  getEntry(id: string): Promise<Entry> {
+    return call('get_entry', { id });
+  }
   addEntryMinutes(id: string, delta: number): Promise<Entry> {
     return call('add_entry_minutes', { id, delta });
   }
@@ -173,6 +187,33 @@ export class TauriApi implements DataApi {
   }
   traySetNote(id: string, note: string): Promise<TrayDay> {
     return call('tray_set_note', { id, note });
+  }
+  traySetDone(id: string, done: boolean): Promise<TrayDay> {
+    return call('tray_set_done', { id, done });
+  }
+  traySetProject(id: string, projectId: string | null): Promise<TrayDay> {
+    return call('tray_set_project', { id, projectId });
+  }
+  trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
+    return call('tray_carry', { id, date });
+  }
+  trayItem(id: string): Promise<TrayItem | null> {
+    return call('tray_item', { id });
+  }
+  meetingSeries(): Promise<MeetingSeries[]> {
+    return call('meeting_series');
+  }
+  saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries> {
+    return call('save_meeting_series', { id, input });
+  }
+  setMeetingSeriesDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('set_meeting_series_deleted', { id, deleted });
+  }
+  meetingNote(seriesId: string, date: IsoDate): Promise<Note> {
+    return call('meeting_note', { seriesId, date });
+  }
+  bell(today: IsoDate, now: number): Promise<BellItem[]> {
+    return call('bell', { today, now });
   }
   trayRemove(id: string): Promise<TrayDay> {
     return call('tray_remove', { id });
@@ -233,11 +274,74 @@ export class TauriApi implements DataApi {
     return call('set_inbox_deleted', { id, deleted });
   }
 
-  canvas(today: IsoDate): Promise<CanvasCard[]> {
+  canvas(today: IsoDate): Promise<DeskData> {
     return call('canvas', { today });
   }
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void> {
     return call('canvas_move', { kind, id, x, y });
+  }
+  canvasArea(projectId: string, x: number, y: number, w: number, h: number): Promise<void> {
+    return call('canvas_area', { projectId, x, y, w, h });
+  }
+  canvasAreaRemove(projectId: string): Promise<void> {
+    return call('canvas_area_remove', { projectId });
+  }
+  canvasAreaCollapse(projectId: string, collapsed: boolean): Promise<void> {
+    return call('canvas_area_collapse', { projectId, collapsed });
+  }
+  canvasLabelSave(id: string | null, label: string, x: number, y: number, w: number, h: number, collapsed: boolean): Promise<string> {
+    return call('canvas_label_save', { id, label, x, y, w, h, collapsed });
+  }
+  canvasLabelRemove(id: string, removed: boolean): Promise<void> {
+    return call('canvas_label_remove', { id, removed });
+  }
+  canvasStack(card: CardRef, onto: CardRef, ontoX: number, ontoY: number): Promise<string> {
+    return call('canvas_stack', { kind: card.kind, id: card.id, ontoKind: onto.kind, ontoId: onto.id, ontoX, ontoY });
+  }
+  canvasUnstack(card: CardRef, x: number, y: number): Promise<void> {
+    return call('canvas_unstack', { kind: card.kind, id: card.id, x, y });
+  }
+  canvasStackMove(id: string, x: number, y: number): Promise<void> {
+    return call('canvas_stack_move', { id, x, y });
+  }
+  canvasStackRename(id: string, name: string): Promise<void> {
+    return call('canvas_stack_rename', { id, name });
+  }
+  canvasStackDissolve(id: string): Promise<void> {
+    return call('canvas_stack_dissolve', { id });
+  }
+  canvasFile(card: CardRef, drawer: string): Promise<void> {
+    return call('canvas_file', { kind: card.kind, id: card.id, drawer });
+  }
+  canvasFileStack(id: string, drawer: string): Promise<CardRef[]> {
+    return call('canvas_file_stack', { id, drawer });
+  }
+  canvasUnfile(card: CardRef, x: number, y: number): Promise<void> {
+    return call('canvas_unfile', { kind: card.kind, id: card.id, x, y });
+  }
+  canvasDrawer(drawer: string): Promise<CanvasCard[]> {
+    return call('canvas_drawer', { drawer });
+  }
+  canvasFolderSave(id: string | null, name: string): Promise<{ id: string; name: string }> {
+    return call('canvas_folder_save', { id, name });
+  }
+  canvasFolderRemove(id: string, removed: boolean): Promise<void> {
+    return call('canvas_folder_remove', { id, removed });
+  }
+  canvasTidy(today: IsoDate): Promise<TidyResult> {
+    return call('canvas_tidy', { today });
+  }
+  board(today: IsoDate, key: string): Promise<BoardData> {
+    return call('board', { today, key });
+  }
+  boardMove(key: string, kind: CardKind, id: string, x: number, y: number): Promise<void> {
+    return call('board_move', { key, kind, id, x, y });
+  }
+  canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void> {
+    return call('canvas_link', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id, drawn });
+  }
+  canvasLinkReset(a: CardRef, b: CardRef): Promise<void> {
+    return call('canvas_link_reset', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id });
   }
 
   listResponses(): Promise<SavedResponse[]> {
@@ -252,6 +356,9 @@ export class TauriApi implements DataApi {
   }
   setNextUp(items: string[]): Promise<NextUpItem[]> {
     return call('set_next_up', { items });
+  }
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem> {
+    return call('bring_up', { today, kind, id, title });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });

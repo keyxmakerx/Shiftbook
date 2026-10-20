@@ -41,6 +41,8 @@ pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 pub const KEY_TIMER: &str = "day.timer";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
+/// Open windows and where they are (see [`crate::windows`]), or blank.
+pub const KEY_WINDOWS: &str = "ui.windows";
 /// Days without a change before a note moves to the archive, one of
 /// [`AUTO_ARCHIVE_CHOICES`] (`0` = off).
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
@@ -169,6 +171,8 @@ pub struct Prefs {
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
     pub notes_auto_archive_days: u32,
+    /// Open windows and where they are.
+    pub windows: Vec<crate::windows::WindowSpot>,
 }
 
 impl Prefs {
@@ -194,6 +198,7 @@ impl Default for Prefs {
             timer: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
+            windows: Vec::new(),
         }
     }
 }
@@ -284,6 +289,9 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                 parse_clock(v).ok_or_else(|| invalid(value))
             }
         }
+        KEY_WINDOWS => Ok(crate::windows::format_windows(
+            &crate::windows::parse_windows(v),
+        )),
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -346,6 +354,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
             }
+            KEY_WINDOWS => prefs.windows = crate::windows::parse_windows(&v),
             _ => {}
         }
     }
@@ -355,6 +364,17 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn windows_are_kept_cleaned() {
+        let id = uuid::Uuid::now_v7();
+        let stored =
+            validate_pref(KEY_WINDOWS, &format!("note:{id} open 10 20 30 40;junk")).unwrap();
+        assert_eq!(stored, format!("note:{id} open 10 20 260 160"));
+        let p = prefs_from_settings(&[(KEY_WINDOWS, stored.as_str())]);
+        assert_eq!(p.windows.len(), 1);
+        assert_eq!(validate_pref(KEY_WINDOWS, ""), Ok(String::new()));
+    }
 
     #[test]
     fn defaults() {

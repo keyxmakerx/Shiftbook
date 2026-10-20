@@ -2,6 +2,40 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 12 — 19 Oct 2026
+- **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)
+  slides out a panel underneath with the everyday things: notepad, tickets, project, Bring up
+  tomorrow, done / still open and more time. Start the timer shows there only when the timer is
+  turned on. Right-click (or More) keeps the full menu, Delete included, on Day and the Desk.
+- **Tray tickets with a project:** their minutes count under that project (a "Tickets" entry per
+  project per day) instead of the day's plain "Tickets" entry.
+- **Windows, bottom bar and bell:** as pictured. The bell shows meeting reminders (a day and time
+  per meeting series), recurring tasks due, things brought up for today and tickets still open.
+  In-app only for now; no Windows notifications.
+- **Full screen** for projects, meeting series, Daily notes and any note or entry: Notebook,
+  Board (the sub-canvas) and List; notes can hold pictures and **URL links**.
+- **Drawing boxes:** Shift + drag on empty paper, then pick a project, make one or keep it a
+  plain label. Also asked for: a collapsible **toolbox** (ways to move around, multi-select, a
+  Project tool to move, create and edit projects), moving a project's box moves everything in
+  it, and a **collapse** button on project boxes that folds the cards into a count whose colour
+  shows their state (all done grey, something coming up orange, and so on).
+- **Build order:** as proposed (slide-out and round 11 picks; windows, bar and bell; drawing
+  boxes; stacks and drawers; boards, full screen and Archive; pictures, then the meeting
+  canvas), all worked in one living pull request.
+
+## Rounds 10 and 11 — 19 Oct 2026
+- **Desk step 2** (project areas, links, timeline): approved as built; keep going.
+- **A notepad under each entry and ticket**, on the Desk cards and on Day, saved as you type.
+- **Bring up tomorrow** in every right-click menu; tomorrow "Where was I?" shows it first.
+- **Tickets that aren't done:** the tray becomes **Tickets** with a done tick on each. Unticked
+  is **Still open**: its time still counts today and it comes back in tomorrow's tray.
+- **Asked for more** (pictured in round 12): a click opens a slide-out under the card or row with
+  the everyday options and right-click keeps the full menu (archive, delete, …); the notepad pops
+  out into a movable window; a thin bottom bar holds minimised windows on the left and a
+  notification bell on the right (to-dos, meeting reminders) whose panel slides in from the right;
+  tickets can be attached to projects; a project's full screen holds several notes and pictures;
+  boxes on the Desk can be drawn.
+
 ## Round 9 — 19 Oct 2026
 - **Desk notes and ticket notes:** built as shown (Notes card under Done tickets with Jot, Today
   and Meetings; a few words beside each tray ticket).

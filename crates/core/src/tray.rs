@@ -5,6 +5,13 @@
 //! time entry for that day, titled "Tickets", whose minutes are the sum of the
 //! tray tickets (capped at 24 hours) and whose tickets are the tray's tickets.
 //! When the tray for a day becomes empty, that day's roll-up entry is removed.
+//!
+//! A ticket with a project rolls up into that project's own "Tickets" entry for the day
+//! instead (one per project per day), so the timesheet shows its time under the project.
+//! A ticket can be **still open**: worked on but not finished. Its minutes count on the
+//! day they were spent, and it comes back in later trays until it is ticked done.
+
+use time::Date;
 
 use crate::capture::ticket;
 use crate::error::CoreError;
@@ -21,10 +28,12 @@ pub const MAX_TRAY_MINUTES: u32 = 8 * 60;
 /// Title of the roll-up entry.
 pub const TRAY_ENTRY_TITLE: &str = "Tickets";
 
-/// Longest note on a tray ticket: a few words about it.
-pub const MAX_TRAY_NOTE_CHARS: usize = 300;
+/// Longest note on a tray ticket. It began as a few words; the notepad under each ticket
+/// (round 11) makes it a full note.
+pub const MAX_TRAY_NOTE_CHARS: usize = 10_000;
 
-/// Clean a tray ticket's note: trimmed, blank means no note, at most 300 characters.
+/// Clean a tray ticket's note: trimmed, blank means no note, at most
+/// [`MAX_TRAY_NOTE_CHARS`] characters.
 pub fn clean_tray_note(note: &str) -> Result<Option<String>, CoreError> {
     let trimmed = note.trim();
     if trimmed.is_empty() {
@@ -130,6 +139,76 @@ pub fn plan_rollup<S: AsRef<str>>(
     }
 }
 
+/// Plan every roll-up entry of a day when tray tickets can have a project. `items` are
+/// the day's tray tickets as (ticket, minutes, project) in tray order; `existing` are the
+/// day's roll-up entries by the project they hold tickets for (`None` = the plain
+/// "Tickets" entry). Groups come in the order their first ticket was pasted, then the
+/// entries whose group is now empty, to be removed.
+pub fn plan_rollups<S: AsRef<str>, P: Copy + Eq>(
+    items: &[(S, Minutes, Option<P>)],
+    existing: &[(Option<P>, TimeEntryId)],
+) -> Vec<(Option<P>, RollupAction)> {
+    let mut groups: Vec<Option<P>> = Vec::new();
+    for (_, _, project) in items {
+        if !groups.contains(project) {
+            groups.push(*project);
+        }
+    }
+    let entry_for = |group: Option<P>| {
+        existing
+            .iter()
+            .find(|(g, _)| *g == group)
+            .map(|(_, id)| *id)
+    };
+    let mut plans: Vec<(Option<P>, RollupAction)> = groups
+        .iter()
+        .map(|group| {
+            let members: Vec<(&str, Minutes)> = items
+                .iter()
+                .filter(|(_, _, p)| p == group)
+                .map(|(t, m, _)| (t.as_ref(), *m))
+                .collect();
+            (*group, plan_rollup(&members, entry_for(*group)))
+        })
+        .collect();
+    for (group, id) in existing {
+        if !groups.contains(group) {
+            plans.push((*group, RollupAction::Remove(*id)));
+        }
+    }
+    plans
+}
+
+/// Which still-open tickets from earlier days come back in `today`'s tray. `earlier` are
+/// open tray tickets as (ticket, day); only those from before `today` count, the latest
+/// day wins for a ticket seen more than once (ignoring case), and a ticket already in
+/// today's tray (`today_tickets`) doesn't come back twice. Returns indexes into `earlier`,
+/// oldest day first.
+pub fn carried_open<S: AsRef<str>, T: AsRef<str>>(
+    earlier: &[(S, Date)],
+    today_tickets: &[T],
+    today: Date,
+) -> Vec<usize> {
+    let same = |a: &str, b: &str| a.eq_ignore_ascii_case(b);
+    let mut keep: Vec<usize> = Vec::new();
+    for (i, (ticket, day)) in earlier.iter().enumerate() {
+        let ticket = ticket.as_ref();
+        if *day >= today || today_tickets.iter().any(|t| same(t.as_ref(), ticket)) {
+            continue;
+        }
+        match keep
+            .iter()
+            .position(|&k| same(earlier[k].0.as_ref(), ticket))
+        {
+            Some(at) if earlier[keep[at]].1 < *day => keep[at] = i,
+            Some(_) => {}
+            None => keep.push(i),
+        }
+    }
+    keep.sort_by_key(|&i| (earlier[i].1, i));
+    keep
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,6 +255,66 @@ mod tests {
             vec!["CASE#4", "CASE#5"]
         );
         assert!(new_tray_tickets::<&str>(&[], &"X".repeat(65)).is_err());
+    }
+
+    #[test]
+    fn tickets_with_a_project_roll_up_under_it() {
+        let (plain, net) = (TimeEntryId::new(), TimeEntryId::new());
+        let items = [
+            ("INC1", Minutes(15), None),
+            ("INC2", Minutes(30), Some(7)),
+            ("INC3", Minutes(15), None),
+            ("INC4", Minutes(10), Some(7)),
+        ];
+        let plans = plan_rollups(&items, &[(None, plain)]);
+        assert_eq!(plans.len(), 2);
+        assert_eq!(
+            plans[0],
+            (
+                None,
+                RollupAction::Update {
+                    entry: plain,
+                    rollup: Rollup {
+                        minutes: Minutes(30),
+                        tickets: vec!["INC1".into(), "INC3".into()],
+                    },
+                }
+            )
+        );
+        assert_eq!(
+            plans[1],
+            (
+                Some(7),
+                RollupAction::Create(Rollup {
+                    minutes: Minutes(40),
+                    tickets: vec!["INC2".into(), "INC4".into()],
+                })
+            )
+        );
+        // Moving the last plain ticket to the project removes the plain entry.
+        let moved = [("INC2", Minutes(30), Some(7))];
+        let plans = plan_rollups(&moved, &[(None, plain), (Some(7), net)]);
+        assert!(matches!(
+            plans[0],
+            (Some(7), RollupAction::Update { entry, .. }) if entry == net
+        ));
+        assert_eq!(plans[1], (None, RollupAction::Remove(plain)));
+        assert!(plan_rollups::<&str, u8>(&[], &[]).is_empty());
+    }
+
+    #[test]
+    fn open_tickets_come_back_until_ticked() {
+        let today = time::macros::date!(2026 - 10 - 20);
+        let earlier = [
+            ("RITM1", time::macros::date!(2026 - 10 - 15)),
+            ("INC2", time::macros::date!(2026 - 10 - 16)),
+            ("ritm1", time::macros::date!(2026 - 10 - 19)),
+            ("INC3", today),
+            ("INC4", time::macros::date!(2026 - 10 - 19)),
+        ];
+        // INC4 is already in today's tray; INC3 is today's own; RITM1's latest day wins.
+        assert_eq!(carried_open(&earlier, &["inc4"], today), vec![1, 2]);
+        assert!(carried_open::<&str, &str>(&[], &[], today).is_empty());
     }
 
     #[test]

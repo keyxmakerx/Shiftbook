@@ -15,6 +15,7 @@ use shiftbook_core::ids::{
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
+use shiftbook_core::nextup::next_work_day;
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
@@ -121,9 +122,12 @@ pub struct EntryView {
 #[serde(rename_all = "camelCase")]
 pub struct TrayItemView {
     id: TrayItemId,
+    date: String,
     ticket: String,
     minutes: Minutes,
     note: Option<String>,
+    done: bool,
+    project_id: Option<ProjectId>,
     links: Vec<LinkView>,
 }
 
@@ -133,6 +137,8 @@ pub struct TrayItemView {
 pub struct TrayDayView {
     date: String,
     items: Vec<TrayItemView>,
+    /// Still-open tickets from earlier days that come back in this tray.
+    carried: Vec<TrayItemView>,
     entry_id: Option<TimeEntryId>,
     minutes: Minutes,
     hours: String,
@@ -234,6 +240,8 @@ pub struct NextUpView {
     id: NextUpItemId,
     text: String,
     done: bool,
+    /// For a thing brought up from a card: the day it comes up.
+    from: Option<String>,
 }
 
 /// What `unlock` tells the UI.
@@ -363,18 +371,25 @@ pub(crate) fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView 
 pub(crate) fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
     TrayItemView {
         id: item.id,
+        date: format_date(item.date),
         links: ticket_links(fields, &item.ticket_number),
         ticket: item.ticket_number,
         minutes: item.minutes,
         note: item.note,
+        done: item.done,
+        project_id: item.project_id,
     }
 }
 
-fn tray_view(day: TrayDay, fields: &[CustomField]) -> TrayDayView {
+fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> TrayDayView {
     TrayDayView {
         date: format_date(day.date),
         items: day
             .items
+            .into_iter()
+            .map(|i| tray_item_view(i, fields))
+            .collect(),
+        carried: carried
             .into_iter()
             .map(|i| tray_item_view(i, fields))
             .collect(),
@@ -544,6 +559,37 @@ pub async fn add_entry_minutes(
     one_entry(&store, owner, rec).await
 }
 
+/// Maps to `DataApi.getEntry()`: one entry, for a window showing its notepad.
+#[tauri::command]
+pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let rec = store.get_entry(owner, id_arg(&id)?).await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// Maps to `DataApi.trayItem()`: one tray ticket, for a window showing its notepad.
+#[tauri::command]
+pub async fn tray_item(s: State<'_, VaultSession>, id: String) -> Res<Option<TrayItemView>> {
+    let (store, owner) = s.data().await?;
+    let links = links_for(&store, owner).await?;
+    Ok(store
+        .tray_item(owner, id_arg(&id)?)
+        .await?
+        .map(|i| tray_item_view(i, &links)))
+}
+
+/// Maps to `DataApi.setEntryNotes()`: the entry's notepad, saved as you type.
+#[tauri::command]
+pub async fn set_entry_notes(
+    s: State<'_, VaultSession>,
+    id: String,
+    notes: String,
+) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let rec = store.set_entry_notes(owner, id_arg(&id)?, &notes).await?;
+    one_entry(&store, owner, rec).await
+}
+
 /// Maps to `DataApi.deleteEntry()` (soft delete).
 #[tauri::command]
 pub async fn delete_entry(s: State<'_, VaultSession>, id: String) -> Res<()> {
@@ -631,7 +677,8 @@ pub async fn capture_log(
 // ---------- tray ----------
 
 async fn tray_result(store: &SqliteStore, owner: OwnerId, day: TrayDay) -> Res<TrayDayView> {
-    Ok(tray_view(day, &links_for(store, owner).await?))
+    let carried = store.tray_carried(owner, day.date).await?;
+    Ok(tray_view(day, carried, &links_for(store, owner).await?))
 }
 
 /// Maps to `DataApi.trayDay()`.
@@ -671,6 +718,39 @@ pub async fn tray_set_note(
 ) -> Res<TrayDayView> {
     let (store, owner) = s.data().await?;
     let day = store.tray_set_note(owner, id_arg(&id)?, &note).await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.traySetDone()`: tick a ticket done, or untick it to keep it open.
+#[tauri::command]
+pub async fn tray_set_done(s: State<'_, VaultSession>, id: String, done: bool) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store.tray_set_done(owner, id_arg(&id)?, done).await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.traySetProject()`: the project a ticket's minutes count under
+/// (`None` = the day's "Tickets" entry).
+#[tauri::command]
+pub async fn tray_set_project(
+    s: State<'_, VaultSession>,
+    id: String,
+    project_id: Option<String>,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store
+        .tray_set_project(owner, id_arg(&id)?, opt_id(&project_id)?)
+        .await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.trayCarry()`: work on a still-open ticket again on `date`.
+#[tauri::command]
+pub async fn tray_carry(s: State<'_, VaultSession>, id: String, date: String) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store
+        .tray_carry(owner, id_arg(&id)?, date_arg(&date)?)
+        .await?;
     tray_result(&store, owner, day).await
 }
 
@@ -1085,6 +1165,7 @@ fn next_up_views(items: Vec<shiftbook_core::model::NextUpItem>) -> Vec<NextUpVie
             id: i.id,
             text: i.text,
             done: i.done_at.is_some(),
+            from: i.show_from.map(format_date),
         })
         .collect()
 }
@@ -1101,6 +1182,28 @@ pub async fn next_up(s: State<'_, VaultSession>) -> Res<Vec<NextUpView>> {
 pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<Vec<NextUpView>> {
     let (store, owner) = s.data().await?;
     Ok(next_up_views(store.set_next_up(owner, &items).await?))
+}
+
+/// Maps to `DataApi.bringUp()`: "Bring up tomorrow" on a card. It comes up on the next
+/// work day after `today` (a day with a target), titled `title`.
+#[tauri::command]
+pub async fn bring_up(
+    s: State<'_, VaultSession>,
+    today: String,
+    kind: String,
+    id: String,
+    title: String,
+) -> Res<NextUpView> {
+    let today = date_arg(&today)?;
+    let about = (
+        kind.parse().map_err(|_| CommandError::InvalidInput)?,
+        uuid::Uuid::parse_str(&id).map_err(|_| CommandError::InvalidInput)?,
+    );
+    let (store, owner) = s.data().await?;
+    let prefs = store.prefs(owner).await?;
+    let day = next_work_day(today, |d| prefs.day_target(d) > 0);
+    let item = store.bring_up(owner, &title, day, Some(about)).await?;
+    Ok(next_up_views(vec![item]).remove(0))
 }
 
 /// Maps to `DataApi.tickNextUp()`.
@@ -1194,7 +1297,7 @@ pub async fn where_was_i(
         return Ok(None);
     }
     let (store, owner) = s.data().await?;
-    let list = store.next_up(owner).await?;
+    let list = store.next_up_all(owner).await?;
     let records = store
         .list_entries(owner, add_days(today, -LOOK_BACK_DAYS), today)
         .await?;
@@ -1202,7 +1305,7 @@ pub async fn where_was_i(
         .iter()
         .map(|r| (r.entry.clone(), r.is_tray))
         .collect();
-    let view = match resume_start(&list, &pairs) {
+    let view = match resume_start(&list, today, &pairs) {
         None => return Ok(None),
         Some(ResumeStart::List(open)) => ResumeView {
             trigger,

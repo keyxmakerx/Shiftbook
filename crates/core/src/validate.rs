@@ -170,6 +170,17 @@ pub fn validate_recurring_task(r: &RecurringTask) -> Result<(), CoreError> {
     validate_optional("Notes", &r.notes, MAX_NOTES_CHARS)
 }
 
+/// Clean an entry's notepad: trimmed at the end, blank means none, at most
+/// [`MAX_NOTES_CHARS`] characters.
+pub fn clean_notes(notes: &str) -> Result<Option<String>, CoreError> {
+    let kept = notes.trim_end();
+    if kept.trim().is_empty() {
+        return Ok(None);
+    }
+    validate_optional("Notes", kept, MAX_NOTES_CHARS)?;
+    Ok(Some(kept.to_string()))
+}
+
 /// Check a time entry before saving.
 pub fn validate_time_entry(e: &TimeEntry) -> Result<(), CoreError> {
     validate_entry_minutes(e.minutes)?;
@@ -178,7 +189,8 @@ pub fn validate_time_entry(e: &TimeEntry) -> Result<(), CoreError> {
     validate_opt_list("Status", e.status.as_deref())?;
     validate_opt_list("Priority", e.priority.as_deref())?;
     if let Some(n) = &e.next_step {
-        validate_optional("Next step", n, MAX_LINE_CHARS)?;
+        // The entry's notepad (round 11), so as long as any note.
+        validate_optional("Notes", n, MAX_NOTES_CHARS)?;
     }
     Ok(())
 }
@@ -337,6 +349,17 @@ mod tests {
             deleted_at: None,
         };
         assert_eq!(validate_time_entry(&entry), Ok(()));
+        assert_eq!(clean_notes("  \n "), Ok(None));
+        assert_eq!(
+            clean_notes("  - ask the board\n"),
+            Ok(Some("  - ask the board".into()))
+        );
+        // The notepad holds a full note, not one line.
+        entry.next_step = Some("x".repeat(MAX_NOTES_CHARS));
+        assert_eq!(validate_time_entry(&entry), Ok(()));
+        entry.next_step = Some("x".repeat(MAX_NOTES_CHARS + 1));
+        assert!(validate_time_entry(&entry).is_err());
+        entry.next_step = None;
         entry.minutes = Minutes(2000);
         assert_eq!(validate_time_entry(&entry), Err(CoreError::HoursTooLarge));
 

@@ -51,6 +51,36 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         include_str!("../migrations/0005_saved_responses.sql"),
     ),
     (6, "canvas", include_str!("../migrations/0006_canvas.sql")),
+    (
+        7,
+        "canvas areas and links",
+        include_str!("../migrations/0007_canvas_areas_links.sql"),
+    ),
+    (
+        8,
+        "open tickets, ticket projects, bring up",
+        include_str!("../migrations/0008_tickets_open_and_bring_up.sql"),
+    ),
+    (
+        9,
+        "meeting series",
+        include_str!("../migrations/0009_meeting_series.sql"),
+    ),
+    (
+        10,
+        "canvas boxes",
+        include_str!("../migrations/0010_canvas_boxes.sql"),
+    ),
+    (
+        11,
+        "stacks and drawers",
+        include_str!("../migrations/0011_stacks_drawers.sql"),
+    ),
+    (
+        12,
+        "board spots",
+        include_str!("../migrations/0012_board_spots.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -250,13 +280,20 @@ mod tests {
             assert_eq!(
                 tables,
                 [
+                    "board_cards",
+                    "canvas_areas",
                     "canvas_cards",
+                    "canvas_folders",
+                    "canvas_labels",
+                    "canvas_links",
+                    "canvas_stacks",
                     "category_code_defaults",
                     "custom_fields",
                     "custom_values",
                     "frequencies",
                     "inbox_items",
                     "list_options",
+                    "meeting_series",
                     "next_up_items",
                     "notes",
                     "projects",

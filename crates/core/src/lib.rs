@@ -5,6 +5,8 @@
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 
+pub mod bell;
+pub mod boards;
 pub mod canvas;
 pub mod capture;
 pub mod dates;
@@ -13,6 +15,7 @@ pub mod fields;
 pub mod group;
 pub mod hours;
 pub mod ids;
+pub mod meetings;
 pub mod minutes;
 pub mod model;
 pub mod nextup;
@@ -34,6 +37,7 @@ pub mod timesheet;
 pub mod tray;
 pub mod validate;
 pub mod week;
+pub mod windows;
 pub mod wipe;
 
 pub use error::CoreError;

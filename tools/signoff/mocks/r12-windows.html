@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 12 mockups</title>
+<!-- Round 12 mockups: the slide-out under a card or row, notepad windows, the bottom bar,
+     notifications, a project's full-screen notebook and drawing a box. Pick a state with the
+     hash: #desk, #day, #windows, #notify, #full, #draw. Made for 1440 x 900 screenshots. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1); --glass: rgba(255, 255, 255, 0.78);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --warn: #9f5a06; --warn-wash: #fcf1df; --bad: #c2412d;
+    --net: #3d5bb0; --ssl: #2a8a7a; --jot: #d99a2b; --meet: #d99a2b; --page: #8a4f8f;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+    --mono: Consolas, 'DejaVu Sans Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); overflow: hidden; }
+  .app { position: relative; height: 100vh; display: flex; flex-direction: column; padding: 10px 12px 0; gap: 10px; }
+
+  /* top bar */
+  .top { display: flex; align-items: center; gap: 12px; background: var(--glass); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
+  .brand { font: 700 19px var(--display); margin-right: auto; }
+  .brand small { font: 600 10px var(--ui); letter-spacing: .12em; color: var(--mut); margin-left: 6px; }
+  .cap { width: 260px; border: 1px solid var(--rule); border-radius: 9px; padding: 7px 10px; color: var(--mut); background: #fff; }
+  .pill { border: 1px solid var(--rule); border-radius: 9px; padding: 6px 11px; background: #fff; font-weight: 600; font-size: 13px; }
+  .pill .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); margin-right: 6px; }
+  .tabs { display: flex; gap: 2px; background: rgba(29,33,38,.06); padding: 3px; border-radius: 10px; }
+  .tabs span { padding: 6px 13px; border-radius: 8px; color: var(--mut); font-weight: 500; }
+  .tabs .on { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+
+  /* board */
+  .main { flex: 1; display: flex; gap: 12px; min-height: 0; }
+  .board { flex: 1; position: relative; border-radius: 14px; overflow: hidden; border: 1px solid var(--rule);
+    background-color: #eceff2; background-image: radial-gradient(rgba(29,33,38,.13) 1px, transparent 1.2px); background-size: 22px 22px; }
+  .side { width: 300px; background: rgba(255,255,255,.45); border-radius: 14px; border: 1px solid var(--rule); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+  .box { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 12px 14px; }
+  .tot { display: flex; gap: 22px; }
+  .tot b { font: 600 24px var(--mono); display: block; }
+  .tot small { font: 600 10px var(--ui); letter-spacing: .1em; color: var(--mut); }
+  .lbl { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+
+  /* cards */
+  .card { position: absolute; width: 220px; background: var(--paper); border-radius: 4px; box-shadow: var(--shadow); padding: 11px 12px 12px; border-top: 3px solid var(--c, var(--net)); }
+  .card .k { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .card .t { font-weight: 650; margin-top: 3px; }
+  .card .s { color: var(--mut); font-size: 13px; margin-top: 2px; }
+  .card .tk { font: 600 12px var(--mono); margin-top: 3px; }
+  .card.sel { box-shadow: var(--lift), 0 0 0 2px var(--accent); z-index: 5; }
+  .card .padline { margin-top: 7px; font-size: 12px; color: var(--mut); display: flex; gap: 6px; align-items: center; }
+  .area { position: absolute; border-radius: 14px; background: color-mix(in srgb, var(--c) 9%, transparent); border: 1.5px solid color-mix(in srgb, var(--c) 32%, transparent); }
+  .area .nm { position: absolute; left: 12px; top: -12px; padding: 3px 10px; border-radius: 8px; background: var(--c); color: #fff; font: 700 11px var(--ui); letter-spacing: .06em; text-transform: uppercase; box-shadow: var(--shadow); }
+
+  /* the slide-out under a card or row */
+  .under { position: absolute; width: 300px; background: var(--paper); border-radius: 0 0 12px 12px; box-shadow: var(--lift); z-index: 4; padding: 12px 14px 12px; border: 1px solid var(--rule); border-top: none; }
+  .under::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 10px; background: linear-gradient(rgba(29,33,38,.08), transparent); }
+  .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .act { border: 1px solid var(--rule); border-radius: 9px; padding: 8px 10px; font-weight: 600; font-size: 13px; background: #fff; display: flex; gap: 7px; align-items: center; }
+  .act i { font-style: normal; width: 18px; text-align: center; }
+  .act.on { background: color-mix(in srgb, var(--ok) 12%, #fff); border-color: color-mix(in srgb, var(--ok) 40%, transparent); color: var(--ok); }
+  .pad { border: 1px solid var(--rule); border-radius: 9px; background: #fff; padding: 8px 10px; min-height: 64px; color: var(--ink); font-size: 13px; position: relative; }
+  .pad .pop { position: absolute; right: 6px; top: 6px; font-size: 11px; color: var(--accent); font-weight: 600; }
+  .row2 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+  .chip { font: 600 12px var(--mono); padding: 3px 8px; border-radius: 7px; background: rgba(61,91,176,.1); color: var(--accent); }
+  .chip.add { font-family: var(--ui); background: none; border: 1px dashed var(--rule); color: var(--mut); }
+  .proj { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; font-size: 13px; padding: 4px 9px; border-radius: 8px; border: 1px solid var(--rule); background: #fff; }
+  .sw { width: 10px; height: 10px; border-radius: 3px; background: var(--c); }
+  .hint { font-size: 12px; color: var(--mut); }
+
+  /* call-outs for the owner */
+  .note { position: absolute; z-index: 30; background: #1d2126; color: #fff; font: 600 13px/1.35 var(--ui); padding: 8px 11px; border-radius: 9px; max-width: 250px; box-shadow: var(--lift); }
+  .note b { color: #ffd479; }
+  .note::after { content: ''; position: absolute; width: 10px; height: 10px; background: #1d2126; transform: rotate(45deg); }
+  .note.l::after { left: -4px; top: 14px; } .note.r::after { right: -4px; top: 14px; }
+  .note.d::after { bottom: -4px; left: 24px; } .note.u::after { top: -4px; left: 24px; }
+  .num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #ffd479; color: #1d2126; font-size: 11px; margin-right: 6px; }
+
+  /* bottom bar */
+  .bar { height: 40px; margin: 0 -12px; display: flex; align-items: center; gap: 6px; padding: 0 12px; background: rgba(255,255,255,.62); border-top: 1px solid var(--rule); backdrop-filter: blur(8px); position: relative; z-index: 20; }
+  .tb { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border-radius: 8px; font-size: 13px; font-weight: 550; position: relative; max-width: 190px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tb .ic { width: 14px; height: 14px; border-radius: 3px; background: var(--c, var(--jot)); flex: none; }
+  .tb.open { background: rgba(29,33,38,.06); }
+  .tb.open::after { content: ''; position: absolute; left: 30%; right: 30%; bottom: 2px; height: 2.5px; border-radius: 2px; background: var(--accent); }
+  .tb.min::after { content: ''; position: absolute; left: 44%; right: 44%; bottom: 2px; height: 2.5px; border-radius: 2px; background: var(--mut); }
+  .spacer { flex: 1; }
+  .clock { font: 600 12px var(--mono); color: var(--mut); padding: 0 8px; }
+  .bell { position: relative; width: 34px; height: 30px; display: grid; place-items: center; border-radius: 8px; }
+  .bell.on { background: rgba(61,91,176,.12); }
+  .bell .badge { position: absolute; top: 2px; right: 3px; background: var(--bad); color: #fff; font: 700 10px var(--ui); border-radius: 8px; padding: 0 5px; line-height: 15px; }
+
+  /* windows */
+  .win { position: absolute; background: var(--paper); border-radius: 12px; box-shadow: 0 30px 60px -20px rgba(29,33,38,.55), 0 0 0 1px var(--rule); overflow: hidden; z-index: 12; display: flex; flex-direction: column; }
+  .win .bar1 { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 12px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--c) 10%, #fff); cursor: grab; flex: none; }
+  .win .bar1 .ic { width: 12px; height: 12px; border-radius: 3px; background: var(--c); }
+  .win .bar1 .ttl { font-weight: 650; font-size: 13px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wbtn { width: 28px; height: 24px; display: grid; place-items: center; border-radius: 6px; color: var(--mut); font-size: 14px; }
+  .wbtn.x:hover { background: var(--bad); }
+  .win .body { padding: 14px 16px; font-size: 14px; line-height: 1.55; flex: 1; }
+  .win.rolled .body { display: none; }
+  .win .foot { font-size: 11px; color: var(--mut); padding: 6px 12px; border-top: 1px solid var(--rule); display: flex; gap: 10px; }
+  .snap { position: absolute; z-index: 11; border: 2px dashed var(--accent); border-radius: 12px; background: rgba(61,91,176,.07); }
+
+  /* notifications */
+  .panel { position: absolute; right: 0; top: 0; bottom: 40px; width: 380px; background: rgba(250,250,248,.96); border-left: 1px solid var(--rule); box-shadow: -30px 0 60px -30px rgba(29,33,38,.5); z-index: 25; padding: 18px 18px; display: flex; flex-direction: column; gap: 14px; backdrop-filter: blur(14px); }
+  .panel h2 { margin: 0; font: 700 20px var(--display); display: flex; align-items: center; }
+  .panel h2 span { margin-left: auto; font: 600 12px var(--ui); color: var(--accent); }
+  .nt { background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); padding: 10px 12px; display: grid; grid-template-columns: 26px 1fr; gap: 2px 8px; border-left: 3px solid var(--c, var(--accent)); }
+  .nt .ico { grid-row: span 2; font-size: 16px; }
+  .nt b { font-size: 13.5px; }
+  .nt small { color: var(--mut); font-size: 12px; }
+  .nt .btns { grid-column: 2; display: flex; gap: 6px; margin-top: 6px; }
+  .nt .btns span { font-size: 12px; font-weight: 600; border: 1px solid var(--rule); border-radius: 7px; padding: 3px 8px; background: #fff; }
+  .nt .btns span.p { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* day view */
+  .day { flex: 1; display: grid; grid-template-columns: 1fr 360px; gap: 14px; min-height: 0; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .entry { background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; border-left: 4px solid var(--c, var(--none, #8a919a)); }
+  .entry .h { font: 600 15px var(--mono); }
+  .entry.sel { box-shadow: var(--lift), 0 0 0 2px var(--accent); }
+  .entry .under2 { grid-column: 1 / -1; border-top: 1px dashed var(--rule); margin-top: 8px; padding-top: 10px; }
+  .tray li { list-style: none; display: grid; grid-template-columns: 22px auto 1fr auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--rule); font-size: 13px; }
+  .tray ul { margin: 6px 0 0; padding: 0; }
+  .tick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--ok); display: grid; place-items: center; color: #fff; background: var(--ok); font-size: 11px; }
+  .tick.open { background: none; border-style: dashed; border-color: var(--warn); }
+  .few { color: var(--mut); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .06em; text-transform: uppercase; color: var(--warn); background: var(--warn-wash); padding: 2px 6px; border-radius: 6px; }
+
+  /* full screen notebook */
+  .full { position: absolute; left: 0; right: 0; top: 0; bottom: 40px; z-index: 15; background: var(--paper); display: grid; grid-template-columns: 250px 1fr 290px; grid-template-rows: 48px 1fr; }
+  .full .hd { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--net) 9%, #fff); }
+  .crumbs { font-size: 13px; color: var(--mut); }
+  .crumbs b { color: var(--ink); }
+  .seg { display: flex; gap: 2px; background: rgba(29,33,38,.06); padding: 3px; border-radius: 9px; margin-left: 16px; }
+  .seg span { padding: 4px 12px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--mut); }
+  .seg .on { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+  .nlist { border-right: 1px solid var(--rule); padding: 12px; display: flex; flex-direction: column; gap: 4px; background: #faf8f2; }
+  .nlist .it { padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+  .nlist .it small { display: block; color: var(--mut); font-size: 11.5px; }
+  .nlist .it.on { background: #fff; box-shadow: var(--shadow); font-weight: 600; }
+  .editor { padding: 22px 34px; overflow: hidden; }
+  .editor h1 { font: 700 26px var(--display); margin: 0 0 6px; }
+  .tools { display: flex; gap: 4px; margin: 10px 0 14px; padding: 5px; border: 1px solid var(--rule); border-radius: 10px; width: max-content; background: #fff; }
+  .tools span { padding: 4px 9px; border-radius: 6px; font-size: 12.5px; font-weight: 600; color: var(--mut); }
+  .tools .on { background: rgba(61,91,176,.12); color: var(--accent); }
+  .pic { position: relative; width: 560px; height: 230px; border-radius: 8px; overflow: hidden; border: 1px solid var(--rule); background: linear-gradient(#2b3138, #1f242a); margin: 6px 0 4px; }
+  .pic .rack { position: absolute; left: 40px; right: 40px; height: 22px; background: #39414a; border-radius: 3px; }
+  .pic .port { position: absolute; width: 14px; height: 10px; background: #59d18a; border-radius: 2px; }
+  .mk { position: absolute; border: 3px solid #ff5a3c; border-radius: 4px; }
+  .step { position: absolute; width: 24px; height: 24px; border-radius: 50%; background: #ff5a3c; color: #fff; font: 700 13px var(--ui); display: grid; place-items: center; }
+  .aside { border-left: 1px solid var(--rule); padding: 14px; display: flex; flex-direction: column; gap: 14px; background: #faf8f2; }
+  .aside .tkr { display: flex; justify-content: space-between; font-size: 13px; padding: 5px 0; border-bottom: 1px solid var(--rule); }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const S = location.hash.slice(1) || 'desk';
+
+const topBar = (tab) => `
+  <div class="top">
+    <div class="brand">Shiftbook <small>ALPHA</small></div>
+    <div class="cap">Log or note something…</div>
+    <div class="pill"><span class="dot"></span>Protected</div>
+    <div class="pill">Lock</div>
+    <div class="tabs">${['Desk', 'Day', 'Timesheet', 'Notes', 'Settings'].map((t) => `<span class="${t === tab ? 'on' : ''}">${t}</span>`).join('')}</div>
+  </div>`;
+
+const card = (x, y, k, t, s = '', tk = '', c = 'var(--net)', extra = '', cls = '') =>
+  `<div class="card ${cls}" style="left:${x}px;top:${y}px;--c:${c}"><div class="k">${k}</div><div class="t">${t}</div>${s ? `<div class="s">${s}</div>` : ''}${tk ? `<div class="tk">${tk}</div>` : ''}${extra}</div>`;
+
+const area = (x, y, w, h, n, c) => `<div class="area" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px;--c:${c}"><span class="nm">${n}</span></div>`;
+
+const bell = (n, on = false) => `<div class="bell ${on ? 'on' : ''}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#1d2126" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>${n ? `<span class="badge">${n}</span>` : ''}</div>`;
+
+const bar = (items = [], belln = 3, bellOn = false) => `
+  <div class="bar">
+    ${items.map(([n, c, st]) => `<div class="tb ${st}" style="--c:${c}"><span class="ic"></span>${n}</div>`).join('')}
+    <div class="spacer"></div>
+    <span class="clock">3.25 h today</span>
+    ${bell(belln, bellOn)}
+  </div>`;
+
+const side = (extra = '') => `
+  <div class="side">
+    <div class="box tot"><div><b>3.25</b><small>TODAY</small></div><div><b>3.25</b><small>THIS WEEK</small></div></div>
+    <div class="box"><div class="lbl">Log work</div><div class="pad" style="min-height:0;margin-top:8px;color:var(--mut)">INC0045678 50m or “printer on 2nd”</div></div>
+    <div class="box tray"><div style="display:flex;align-items:center;gap:8px"><b>Tickets</b><span class="hint" style="margin-left:auto">1.25 h</span></div>
+      <ul>
+        <li><span class="tick">✓</span><span class="chip">INC0045678</span><span class="few">reset the printer queue</span><span class="hint">15m</span></li>
+        <li><span class="tick">✓</span><span class="chip">INC0045690</span><span class="few">VPN profile reinstalled</span><span class="hint">30m</span></li>
+        <li><span class="tick open"></span><span class="chip">RITM0034567</span><span class="tag">Still open</span><span class="hint">15m</span></li>
+        <li><span class="tick">✓</span><span class="chip">INC0045702</span><span class="few"></span><span class="hint">15m</span></li>
+      </ul></div>
+    ${extra}
+  </div>`;
+
+const deskCards = () =>
+  area(560, 120, 520, 330, 'Network refresh', 'var(--net)') +
+  card(40, 40, 'Done ticket · 15m', 'INC0045678', 'reset the printer queue on 3rd floor', '', 'var(--net)') +
+  card(40, 190, 'Jot note', 'ask Sam about the spare optics', '', '', 'var(--jot)') +
+  card(40, 300, 'Meeting note', 'Weekly ops · Mon 19 Oct', '', '', 'var(--meet)') +
+  card(40, 410, 'Inbox scrap', 'call vendor about the spare PSU', '', '', 'var(--bad)') +
+  card(840, 300, 'Page note', 'Core switch cutover plan', 'Steps 1–6, rollback at step 4.', '', 'var(--page)');
+
+const under = (x, y) => `
+  <div class="under" style="left:${x}px;top:${y}px">
+    <div class="lbl" style="display:flex">Notepad <span style="margin-left:auto;text-transform:none;letter-spacing:0;font-weight:600;color:var(--accent)">⤢ Pop out</span></div>
+    <div class="pad" style="margin-top:6px">Rule allows 10.20.0.0/16 → DMZ. Ask change board if the old rule can go Friday.<span style="color:var(--accent)">|</span></div>
+    <div class="row2"><span class="lbl">Tickets</span><span class="chip">CHG0012345</span><span class="chip">INC0045690</span><span class="chip add">+ Attach a ticket</span></div>
+    <div class="row2"><span class="lbl">Project</span><span class="proj" style="--c:var(--net)"><span class="sw"></span>Network refresh ▾</span></div>
+    <div class="acts">
+      <div class="act"><i>☀</i>Bring up tomorrow</div>
+      <div class="act on"><i>✓</i>Done</div>
+      <div class="act"><i>⏱</i>Add time</div>
+      <div class="act"><i>⋯</i>More</div>
+    </div>
+  </div>`;
+
+const states = {
+  desk() {
+    return topBar('Desk') + `<div class="main"><div class="board">
+      ${deskCards()}
+      ${card(600, 150, 'Entry · 1.5 h', 'Firewall rule cleanup', 'Network refresh', 'CHG0012345', 'var(--net)', '<div class="padline">✎ 1 line in the notepad</div>', 'sel')}
+      ${under(600, 262)}
+      ${card(860, 150, 'Entry · 0.5 h', 'Weekly ops meeting', 'Network refresh', '', 'var(--net)')}
+      <div class="note l" style="left:916px;top:300px"><span class="num">1</span>Click a card once: this slides out <b>from under it</b>. Click again or Esc folds it away.</div>
+      <div class="note l" style="left:916px;top:384px"><span class="num">2</span><b>Pop out</b> turns the notepad into a window you can move around.</div>
+      <div class="note l" style="left:916px;top:446px"><span class="num">3</span>Attach any ticket. A ticket's time stays where it was logged.</div>
+      <div class="note r" style="left:316px;top:600px"><span class="num">4</span>Right-click still opens the full menu.</div>
+    </div>${side()}</div>` + bar([], 3);
+  },
+
+  day() {
+    return topBar('Day') + `<div class="day"><div class="col">
+      <div class="box" style="display:flex;gap:14px;align-items:center"><b style="font:700 20px var(--display)">Monday 19 October</b><span class="hint">3.25 h logged · 4.75 h to go</span></div>
+      <div class="entry" style="--c:var(--net)"><div><b>Weekly ops meeting</b><div class="hint">Network refresh</div></div><span class="h">0.5</span></div>
+      <div class="entry sel" style="--c:var(--net)"><div><b>Firewall rule cleanup</b><div class="hint">Network refresh · <span style="font-family:var(--mono)">CHG0012345</span> · ✎ notepad</div></div><span class="h">1.5</span>
+        <div class="under2">
+          <div class="pad">Rule allows 10.20.0.0/16 → DMZ. Ask change board if the old rule can go Friday.<span class="pop">⤢ Pop out</span></div>
+          <div class="row2"><span class="lbl">Tickets</span><span class="chip">CHG0012345</span><span class="chip">INC0045690</span><span class="chip add">+ Attach a ticket</span>
+            <span class="lbl" style="margin-left:14px">Project</span><span class="proj" style="--c:var(--net)"><span class="sw"></span>Network refresh ▾</span></div>
+          <div class="row2"><span class="act"><i>☀</i>Bring up tomorrow</span><span class="act on"><i>✓</i>Done</span><span class="act"><i>⏱</i>Add time</span><span class="act"><i>⋯</i>More</span></div>
+        </div></div>
+      <div class="entry" style="--c:#8a919a"><div><b>Tickets</b><div class="hint">4 tickets from the tray</div></div><span class="h">1.25</span></div>
+      <div class="note u" style="left:120px;top:560px;position:absolute"><span class="num">1</span>The same slide-out on Day: click a row and it opens <b>under the row</b>, pushing the rows below down.</div>
+    </div>
+    <div class="col">
+      <div class="box tray"><div style="display:flex;align-items:center;gap:8px"><b>Tickets</b><span class="hint" style="margin-left:auto">1.25 h</span></div>
+        <ul>
+          <li><span class="tick">✓</span><span class="chip">INC0045678</span><span class="few">reset the printer queue</span><span class="hint">15m</span></li>
+          <li><span class="tick">✓</span><span class="chip">INC0045690</span><span class="few">VPN profile reinstalled</span><span class="hint">30m</span></li>
+          <li style="background:rgba(61,91,176,.06)"><span class="tick open"></span><span class="chip">RITM0034567</span><span class="tag">Still open</span><span class="hint">15m</span></li>
+          <li style="display:block;padding:8px 6px 10px;background:rgba(61,91,176,.06)">
+            <div class="pad" style="min-height:44px">Waiting on the user to confirm the new laptop works.</div>
+            <div class="row2"><span class="lbl">Project</span><span class="proj" style="--c:var(--ssl)"><span class="sw"></span>SSL renewals ▾</span><span class="act" style="padding:4px 8px"><i>☀</i>Tomorrow</span></div>
+          </li>
+          <li><span class="tick">✓</span><span class="chip">INC0045702</span><span class="few"></span><span class="hint">15m</span></li>
+        </ul></div>
+      <div class="note l" style="position:relative;margin-left:16px"><span class="num">2</span>Tickets with a tick are done. <b>Still open</b> (dashed ring) comes back in tomorrow's tray until you tick it.</div>
+      <div class="note l" style="position:relative;margin-left:16px"><span class="num">3</span>A ticket with a project counts its minutes under that project instead of the day's “Tickets” entry.</div>
+    </div></div>` + bar([], 3);
+  },
+
+  windows() {
+    return topBar('Desk') + `<div class="main"><div class="board">
+      ${deskCards()}
+      ${card(600, 150, 'Entry · 1.5 h', 'Firewall rule cleanup', 'Network refresh', 'CHG0012345', 'var(--net)')}
+      ${card(860, 150, 'Entry · 0.5 h', 'Weekly ops meeting', 'Network refresh', '', 'var(--net)')}
+      <div class="win" style="left:330px;top:70px;width:420px;height:330px;--c:var(--net)">
+        <div class="bar1"><span class="ic"></span><span class="ttl">Firewall rule cleanup · notepad</span><span class="wbtn" title="Roll up">▴</span><span class="wbtn" title="Minimise">–</span><span class="wbtn" title="Full screen">⤢</span><span class="wbtn" title="Close">✕</span></div>
+        <div class="body">Rule allows 10.20.0.0/16 → DMZ.<br>Ask change board if the old rule can go Friday.<br><br>• check the logging rule first<br>• export the old ruleset before touching it<br>• CHG0012345 window: Thu 22:00<span style="color:var(--accent)">|</span></div>
+        <div class="foot"><span>Saved</span><span>Attached to: Firewall rule cleanup</span><span style="margin-left:auto">Ctrl+W closes</span></div>
+      </div>
+      <div class="win rolled" style="left:470px;top:560px;width:300px;--c:var(--page)">
+        <div class="bar1"><span class="ic"></span><span class="ttl">Core switch cutover plan</span><span class="wbtn">▾</span><span class="wbtn">–</span><span class="wbtn">⤢</span><span class="wbtn">✕</span></div>
+      </div>
+      <div class="note l" style="left:760px;top:74px"><span class="num">1</span>A <b>floating window</b>: drag the title bar anywhere. It stays put while you work on the Desk underneath.</div>
+      <div class="note d" style="left:600px;top:16px">▴ roll up · – minimise · ⤢ full screen · ✕ close</div>
+      <div class="note l" style="left:782px;top:556px;max-width:230px"><span class="num">2</span><b>Rolled up</b>: just the title bar. Click ▾ to open it again.</div>
+      <div class="note d" style="left:24px;top:690px"><span class="num">3</span>Minimised windows wait in the bar, left to right, like Windows. Click one to bring it back.</div>
+      <div class="note d" style="left:840px;top:690px;max-width:260px"><span class="num">4</span>The bell: reminders and to-dos slide out from the right.</div>
+    </div>${side()}</div>` +
+      bar([['Firewall rule cleanup', 'var(--net)', 'open'], ['Core switch cutover plan', 'var(--page)', 'open'], ['Daily · Mon 19 Oct', 'var(--jot)', 'min'], ['ask Sam about the spare optics', 'var(--jot)', 'min']], 3);
+  },
+
+  notify() {
+    return topBar('Desk') + `<div class="main"><div class="board">
+      ${deskCards()}
+      ${card(600, 150, 'Entry · 1.5 h', 'Firewall rule cleanup', 'Network refresh', 'CHG0012345', 'var(--net)')}
+      ${card(860, 150, 'Entry · 0.5 h', 'Weekly ops meeting', 'Network refresh', '', 'var(--net)')}
+      <div class="note r" style="left:690px;top:120px;max-width:260px"><span class="num">1</span>Slides in from the right with a soft spring. Click outside or Esc to close.</div>
+    </div>${side()}</div>
+    <div class="panel">
+      <h2>Coming up <span>Clear done</span></h2>
+      <div class="lbl">Now</div>
+      <div class="nt" style="--c:var(--meet)"><span class="ico">🗓</span><b>Weekly ops in 15 minutes</b><small>Mondays 10:00 · opens your meeting note</small><div class="btns"><span class="p">Open note</span><span>Snooze 10m</span></div></div>
+      <div class="lbl">Today</div>
+      <div class="nt" style="--c:var(--bad)"><span class="ico">⏰</span><b>Certificate check is due today</b><small>Monthly · SSL renewals</small><div class="btns"><span class="p">Mark done</span><span>Tomorrow</span></div></div>
+      <div class="nt" style="--c:var(--accent)"><span class="ico">☀</span><b>Brought up from Friday</b><small>call vendor about the spare PSU</small><div class="btns"><span class="p">Open</span><span>Done</span></div></div>
+      <div class="nt" style="--c:var(--warn)"><span class="ico">◌</span><b>2 tickets still open</b><small>RITM0034567 · INC0045711</small><div class="btns"><span class="p">Show</span></div></div>
+      <div class="lbl">This week</div>
+      <div class="nt" style="--c:var(--mut)"><span class="ico">📋</span><b>Timesheet due Friday</b><small>3.25 of 40 h so far</small></div>
+    </div>` + bar([['Firewall rule cleanup', 'var(--net)', 'min']], 3, true);
+  },
+
+  full() {
+    return topBar('Desk') + `<div class="main"><div class="board">
+      <div class="full">
+        <div class="hd"><span class="crumbs">Desk › Projects › <b>Network refresh</b></span>
+          <div class="seg"><span class="on">Notebook</span><span>Board</span><span>List</span></div>
+          <span style="margin-left:auto" class="wbtn">▴</span><span class="wbtn">–</span><span class="wbtn">⧉</span><span class="wbtn">✕</span></div>
+        <div class="nlist">
+          <div class="lbl" style="margin:4px 4px 6px">Notes in this project</div>
+          <div class="it on">Core switch cutover plan<small>Page · edited 10 min ago</small></div>
+          <div class="it">Firewall rule cleanup<small>Entry notepad · today</small></div>
+          <div class="it">Closet photos<small>3 pictures · Thu</small></div>
+          <div class="it">Weekly ops · Mon 19 Oct<small>Meeting note</small></div>
+          <div class="it">Vendor contacts<small>Page · 2 weeks ago</small></div>
+          <div class="it" style="color:var(--accent);font-weight:600">+ New note here</div>
+        </div>
+        <div class="editor">
+          <h1>Core switch cutover plan</h1>
+          <div class="hint">Network refresh · CHG0012345 · 6 steps</div>
+          <div class="tools"><span class="on">▭ Box</span><span>➝ Arrow</span><span>▬ Highlight</span><span>▦ Hide</span><span>⌗ Crop</span><span>T Text</span><span>① Steps</span></div>
+          <div class="pic">
+            <div class="rack" style="top:40px"></div><div class="rack" style="top:80px"></div><div class="rack" style="top:120px"></div><div class="rack" style="top:160px"></div>
+            ${[60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((x) => `<div class="port" style="left:${x}px;top:46px"></div><div class="port" style="left:${x + 10}px;top:86px;background:${x > 250 ? '#e3b341' : '#59d18a'}"></div>`).join('')}
+            <div class="mk" style="left:290px;top:78px;width:96px;height:28px"></div><div class="step" style="left:392px;top:66px">1</div>
+            <div class="mk" style="left:56px;top:154px;width:160px;height:30px;border-color:#ffd479"></div><div class="step" style="left:222px;top:144px;background:#e0a800">2</div>
+          </div>
+          <div class="hint">Picture pasted with Ctrl+V. It stays inside your encrypted file; nothing is uploaded.</div>
+          <p style="max-width:560px">1. Move the uplinks on ports 25–28 to the new switch.<br>2. Patch the old management link last.</p>
+        </div>
+        <div class="aside">
+          <div><div class="lbl">Tickets on this project</div>
+            <div class="tkr"><span class="chip">CHG0012345</span><span class="hint">2.0 h</span></div>
+            <div class="tkr"><span class="chip">INC0045690</span><span class="hint">0.5 h</span></div>
+            <div class="tkr"><span class="chip">INC0045711</span><span class="tag">Still open</span></div>
+            <div class="tkr"><span class="chip add">+ Attach a ticket</span><span></span></div></div>
+          <div><div class="lbl">Time</div><div style="font:600 22px var(--mono);margin-top:4px">6.5 h</div><div class="hint">this week · 21 h in total</div></div>
+          <div><div class="lbl">Coming up</div><div class="hint" style="margin-top:4px">Cutover window Thu 22:00</div></div>
+        </div>
+      </div>
+      <div class="note r" style="left:620px;top:58px;max-width:240px"><span class="num">1</span><b>Notebook · Board · List</b>: the same project three ways. Board is its own canvas inside the Desk.</div>
+      <div class="note u" style="left:676px;top:520px;max-width:250px"><span class="num">2</span>Paste or drop pictures and mark them up: box, arrow, highlight, hide, crop, text, numbered steps.</div>
+    </div></div>` + bar([['Network refresh', 'var(--net)', 'open'], ['Daily · Mon 19 Oct', 'var(--jot)', 'min']], 3);
+  },
+
+  menu() {
+    const it = (i, t, k = '', cls = '') => `<div class="mi ${cls}"><i>${i}</i>${t}<span>${k}</span></div>`;
+    return topBar('Day') + `<style>
+      .menu { position: absolute; width: 270px; background: var(--paper); border-radius: 12px; box-shadow: var(--lift), 0 0 0 1px var(--rule); padding: 6px; z-index: 9; }
+      .mi { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 7px; font-size: 13.5px; }
+      .mi i { font-style: normal; width: 18px; text-align: center; color: var(--mut); }
+      .mi span { margin-left: auto; color: var(--mut); font: 12px var(--mono); }
+      .mi.hl { background: rgba(61,91,176,.1); }
+      .mi.bad, .mi.bad i { color: var(--bad); }
+      .sep { height: 1px; background: var(--rule); margin: 5px 6px; }
+      .mh { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); padding: 6px 10px 3px; }
+    </style>
+    <div class="day"><div class="col" style="position:relative">
+      <div class="box" style="display:flex;gap:14px;align-items:center"><b style="font:700 20px var(--display)">Monday 19 October</b><span class="hint">3.25 h logged · 4.75 h to go</span></div>
+      <div class="entry" style="--c:var(--net)"><div><b>Weekly ops meeting</b><div class="hint">Network refresh</div></div><span class="h">0.5</span></div>
+      <div class="entry sel" style="--c:var(--net)"><div><b>Firewall rule cleanup</b><div class="hint">Network refresh · <span style="font-family:var(--mono)">CHG0012345</span> · ✎ notepad</div></div><span class="h">1.5</span></div>
+      <div class="entry" style="--c:#8a919a"><div><b>Tickets</b><div class="hint">4 tickets from the tray</div></div><span class="h">1.25</span></div>
+      <div class="menu" style="left:330px;top:128px">
+        <div class="mh">Firewall rule cleanup</div>
+        ${it('↗', 'Open details', 'Enter')}
+        ${it('⤢', 'Open notepad in a window')}
+        ${it('☀', 'Bring up tomorrow')}
+        <div class="sep"></div>
+        ${it('◧', 'Project', '›', 'hl')}
+        ${it('⏱', 'Add time', '›')}
+        ${it('↦', 'Move to another day', '›')}
+        ${it('⧉', 'Copy as text')}
+        ${it('⎘', 'Duplicate')}
+        ${it('⌁', 'Show on the Desk')}
+        <div class="sep"></div>
+        ${it('🗄', 'Archive', 'A')}
+        ${it('🗑', 'Delete', 'Del', 'bad')}
+      </div>
+      <div class="menu" style="left:608px;top:250px;width:210px">
+        <div class="mi"><i><span class="sw" style="--c:var(--net);display:inline-block"></span></i>Network refresh<span>✓</span></div>
+        <div class="mi"><i><span class="sw" style="--c:var(--ssl);display:inline-block"></span></i>SSL renewals</div>
+        <div class="mi"><i><span class="sw" style="--c:#b0563d;display:inline-block"></span></i>Printers</div>
+        <div class="mi"><i>∅</i>No project</div>
+        <div class="sep"></div>
+        <div class="mi" style="color:var(--accent)"><i>+</i>New project…</div>
+      </div>
+      <div class="note u" style="left:330px;top:556px;max-width:430px"><span class="num">1</span><b>Right-click</b> (or the ⋯ More button) opens the full menu, on Day and on the Desk alike: everything, including <b>Archive</b> and <b>Delete</b>. Delete always offers Undo.</div>
+    </div>
+    <div class="col">
+      <div class="box tray"><div style="display:flex;align-items:center;gap:8px"><b>Tickets</b><span class="hint" style="margin-left:auto">1.25 h</span></div>
+        <ul>
+          <li><span class="tick">✓</span><span class="chip">INC0045678</span><span class="few">reset the printer queue</span><span class="hint">15m</span></li>
+          <li><span class="tick">✓</span><span class="chip">INC0045690</span><span class="few">VPN profile reinstalled</span><span class="hint">30m</span></li>
+          <li><span class="tick open"></span><span class="chip">RITM0034567</span><span class="tag">Still open</span><span class="hint">15m</span></li>
+          <li><span class="tick">✓</span><span class="chip">INC0045702</span><span class="few"></span><span class="hint">15m</span></li>
+        </ul></div>
+      <div class="note l" style="position:relative;margin-left:16px"><span class="num">2</span><b>Click</b> = the slide-out with the everyday things (notepad, tickets, project, tomorrow, done). <b>Right-click</b> = everything else.</div>
+    </div></div>` + bar([], 3);
+  },
+
+  draw() {
+    return topBar('Desk') + `<div class="main"><div class="board">
+      ${deskCards()}
+      ${card(600, 150, 'Entry · 1.5 h', 'Firewall rule cleanup', 'Network refresh', 'CHG0012345', 'var(--net)')}
+      ${card(860, 150, 'Entry · 0.5 h', 'Weekly ops meeting', 'Network refresh', '', 'var(--net)')}
+      <div class="snap" style="left:300px;top:470px;width:520px;height:220px"></div>
+      ${card(330, 500, 'Jot note', 'renew wildcard cert', '', '', 'var(--jot)')}
+      ${card(570, 520, 'Done ticket · 15m', 'INC0045702', 'cert warning on intranet', '', 'var(--net)')}
+      <div class="under" style="left:560px;top:690px;border-radius:12px;border-top:1px solid var(--rule);width:330px;top:470px;left:830px">
+        <div class="lbl">What is this box?</div>
+        <div class="row2"><span class="proj" style="--c:var(--ssl)"><span class="sw"></span>SSL renewals</span><span class="proj" style="--c:#b0563d"><span class="sw"></span>Printers</span></div>
+        <div class="row2"><span class="proj" style="color:var(--accent)">+ New project…</span><span class="proj">Just a label</span></div>
+        <div class="hint" style="margin-top:8px">2 cards inside will get the project you pick.</div>
+      </div>
+      <div class="note l" style="left:120px;top:560px;max-width:170px"><span class="num">1</span>Hold <b>Shift</b> and drag on empty paper to draw a box.</div>
+      <div class="note l" style="left:1170px;top:470px;max-width:220px"><span class="num">2</span>Pick a project, make one, or keep it as a plain labelled box.</div>
+    </div>${side()}</div>` + bar([], 3);
+  },
+};
+
+document.getElementById('app').innerHTML = (states[S] || states.desk)();
+</script>
+</body>
+</html>

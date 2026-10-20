@@ -7,7 +7,9 @@
 
 mod api;
 mod backoff;
+mod boards;
 mod canvas;
+mod meetings;
 mod notes;
 mod protect;
 mod session;
@@ -304,6 +306,14 @@ pub fn run() {
             api::list_entries,
             api::create_entry,
             api::update_entry,
+            api::set_entry_notes,
+            api::get_entry,
+            api::tray_item,
+            meetings::meeting_series,
+            meetings::save_meeting_series,
+            meetings::set_meeting_series_deleted,
+            meetings::meeting_note,
+            meetings::bell,
             api::add_entry_minutes,
             api::delete_entry,
             api::restore_entry,
@@ -316,6 +326,9 @@ pub fn run() {
             api::tray_add,
             api::tray_set_minutes,
             api::tray_set_note,
+            api::tray_set_done,
+            api::tray_set_project,
+            api::tray_carry,
             api::tray_remove,
             api::tray_restore,
             api::ribbon,
@@ -338,6 +351,7 @@ pub fn run() {
             api::next_up,
             api::set_next_up,
             api::tick_next_up,
+            api::bring_up,
             api::list_responses,
             api::save_responses,
             api::where_was_i,
@@ -347,6 +361,27 @@ pub fn run() {
             notes::create_note,
             canvas::canvas,
             canvas::canvas_move,
+            canvas::canvas_area,
+            canvas::canvas_area_remove,
+            canvas::canvas_area_collapse,
+            canvas::canvas_label_save,
+            canvas::canvas_label_remove,
+            canvas::canvas_stack,
+            canvas::canvas_unstack,
+            canvas::canvas_stack_move,
+            canvas::canvas_stack_rename,
+            canvas::canvas_stack_dissolve,
+            canvas::canvas_file,
+            canvas::canvas_file_stack,
+            canvas::canvas_unfile,
+            canvas::canvas_drawer,
+            canvas::canvas_folder_save,
+            canvas::canvas_folder_remove,
+            canvas::canvas_tidy,
+            boards::board,
+            boards::board_move,
+            canvas::canvas_link,
+            canvas::canvas_link_reset,
             notes::daily_note,
             notes::save_daily_note,
             notes::update_note,

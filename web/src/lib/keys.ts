@@ -16,6 +16,7 @@ export type SettingsSection =
   | 'notes'
   | 'fields'
   | 'responses'
+  | 'meetings'
   | 'backups'
   | 'security';
 

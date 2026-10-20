@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "round": 11,
+    "heading": "Round 11: a notepad under each item, bring it up tomorrow, and tickets that aren't done",
+    "intro": "Canvas step 2 is built (first card). Then your three questions as proposals."
+  },
+  "cards": {
+    "r11-asks": {
+      "round": 11,
+      "order": 10,
+      "area": "Desk and Day",
+      "version": 1,
+      "title": "Three things you asked for",
+      "body": [
+        "**A notepad under each ticket or entry.** Every entry already has a Notes field, but it's hidden in the details panel. Proposal: a small **Notes** fold under each entry and each Done ticket, on the Desk cards and on Day. Click it and a notepad opens right there, saved as you type. A Done ticket's notepad grows from \"a few words\" to a full note.",
+        "**Bring up tomorrow.** There is a \"Tomorrow I start with…\" list, but only inside the end-of-day wrap-up, and that's off unless you turn it on in Settings → Your day. So you probably never saw it. Proposal: **Bring up tomorrow** in the right-click menu of every card and row. It goes on tomorrow's list, and tomorrow \"Where was I?\" shows it first when you open Shiftbook. No wrap-up needed.",
+        "**A ticket you worked on but haven't finished.** The tray says \"Done\", which is wrong for those. Proposal: rename it **Tickets** and give each one a tick, on by default. Untick it and it's **Still open**: its time still counts today, it gets an open ring, and it comes back in tomorrow's tray until you tick it."
+      ],
+      "questions": [
+        {
+          "id": "pad",
+          "legend": "Notepad under each entry and ticket",
+          "options": [
+            {
+              "value": "Yes, as described",
+              "rec": true
+            },
+            {
+              "value": "Only on the Desk cards"
+            },
+            {
+              "value": "Only on Day"
+            }
+          ]
+        },
+        {
+          "id": "tomorrow",
+          "legend": "Bring up tomorrow",
+          "options": [
+            {
+              "value": "Yes, in every right-click menu",
+              "rec": true
+            },
+            {
+              "value": "Also a button on each card",
+              "why": "One click, no menu."
+            }
+          ]
+        },
+        {
+          "id": "open",
+          "legend": "Tickets that aren't done",
+          "options": [
+            {
+              "value": "Rename to Tickets, with a done tick",
+              "rec": true
+            },
+            {
+              "value": "Keep Done tickets, add a separate \"Working on\" list"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to add?",
+          "placeholder": "e.g. open tickets should also show on the Desk until done"
+        }
+      ],
+      "pick": "All three as described. They're small, and I'll build them right after step 2.",
+      "archived": true,
+      "reply": "All three are in. Your extra ideas (the slide-out, notepad windows, the bottom bar and the bell) are pictured in round 12."
+    },
+    "r11-built": {
+      "round": 11,
+      "order": 5,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: Desk step 2 (project areas, links, the timeline)",
+      "body": [
+        "**Project areas.** Right-click empty paper → **Project area here**. Drop a card in and it gets that project; drag it out of the area and the project comes off. Both show Undo. Drag the coloured name to move the area with its cards, and the corner to resize it. Right-click the area to change its colour or take it off the Desk. The project itself stays.",
+        "**Links.** Lines appear by themselves between cards that share a ticket, including a ticket typed in a note. A solid line means a shared ticket. A dashed line means an uncommon word only those two cards use, at most two per card. Click a line to remove it. **Link to another card** in any card's menu draws your own. The **Links** button hides them all.",
+        "**Timeline.** One button lays every card out in a column per day, oldest on the left. **Back to my layout** puts everything back exactly where it was. Cards stay put while the timeline shows.",
+        "**Also fixed:** a line in Log work that is just a project's name (\"Network refresh\") now goes to that project instead of \"No project\". Entries logged before this need right-click → Project once, or a drop into that project's area."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/00c7d7ff4243dd434db74e2135b450c2",
+          "caption": "Two project areas. A card was just dropped into Network refresh (see the Undo)."
+        },
+        {
+          "src": "/_blob/a99bb21a9288c9eff40753bc18ba240a",
+          "caption": "Links: solid for a shared ticket, dashed for a shared word. One was just drawn by hand."
+        },
+        {
+          "src": "/_blob/e32f0e65b26dcd28292b536585cba3e0",
+          "caption": "The timeline. Back to my layout (bottom left) restores your arrangement."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "How does step 2 look?",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. links are too busy"
+        }
+      ],
+      "pick": "Next: your three asks below, then step 3 (stacks and drawers).",
+      "archived": true,
+      "reply": "Yes: each box is a project area. You can't draw one freehand yet; round 12 shows how drawing would work."
+    }
+  }
+}

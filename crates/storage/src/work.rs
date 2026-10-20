@@ -18,10 +18,12 @@ use shiftbook_core::prefs::next_project_color;
 use shiftbook_core::quicklog::{plan_quick_log, DayEntry, PastUse, QuickLogPlan};
 use shiftbook_core::tickets::add_tickets;
 use shiftbook_core::tray::{
-    clean_tray_note, new_tray_tickets, plan_rollup, validate_tray_minutes, RollupAction,
-    DEFAULT_TRAY_MINUTES, TRAY_ENTRY_TITLE,
+    carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
+    RollupAction, DEFAULT_TRAY_MINUTES, TRAY_ENTRY_TITLE,
 };
-use shiftbook_core::validate::{validate_color, validate_project, validate_time_entry};
+use shiftbook_core::validate::{
+    clean_notes, validate_color, validate_project, validate_time_entry,
+};
 use sqlx::sqlite::{SqliteConnection, SqliteRow};
 use sqlx::Row;
 use time::{Date, OffsetDateTime};
@@ -84,9 +86,9 @@ pub struct TrayDay {
     pub date: Date,
     /// Tray tickets in the order they were pasted.
     pub items: Vec<TrayItem>,
-    /// The roll-up entry, if the tray isn't empty.
+    /// The plain "Tickets" roll-up entry, if any ticket has no project.
     pub entry_id: Option<TimeEntryId>,
-    /// Total minutes of the roll-up.
+    /// Total minutes of the day's roll-ups (the plain one and each project's).
     pub minutes: Minutes,
 }
 
@@ -187,6 +189,13 @@ fn ticket_from_row(row: &SqliteRow) -> Result<Ticket> {
     })
 }
 
+macro_rules! tray_columns {
+    () => {
+        "id, owner_id, date, ticket_number, minutes, note, done, project_id, created_at, \
+         updated_at, deleted_at"
+    };
+}
+
 fn tray_from_row(row: &SqliteRow) -> Result<TrayItem> {
     Ok(TrayItem {
         id: TrayItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
@@ -195,6 +204,8 @@ fn tray_from_row(row: &SqliteRow) -> Result<TrayItem> {
         ticket_number: row.try_get("ticket_number")?,
         minutes: Minutes(u32_from(row.try_get("minutes")?, "minutes")?),
         note: row.try_get("note")?,
+        done: row.try_get("done")?,
+        project_id: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
         deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
@@ -404,15 +415,19 @@ async fn check_links(
     Ok(())
 }
 
+/// Insert an entry. `source` marks a tray roll-up, and `tray_project` which project's
+/// tray tickets it rolls up (`None` for the plain "Tickets" entry and for user entries).
 async fn insert_entry(
     conn: &mut SqliteConnection,
     entry: &TimeEntry,
     source: Option<&str>,
+    tray_project: Option<ProjectId>,
 ) -> Result<()> {
     sqlx::query(concat!(
         "INSERT INTO time_entries (",
         entry_columns!(),
-        ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, NULL, $9, $10, NULL, $11, $12, $12, NULL)"
+        ", tray_project_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL, NULL, $9, $10, NULL, \
+         $11, $12, $12, NULL, $13)"
     ))
     .bind(entry.id.to_string())
     .bind(entry.owner_id.to_string())
@@ -426,6 +441,7 @@ async fn insert_entry(
     .bind(entry.timesheet_code_id.map(|c| c.to_string()))
     .bind(source)
     .bind(format_timestamp(entry.created_at))
+    .bind(tray_project.map(|p| p.to_string()))
     .execute(&mut *conn)
     .await?;
     Ok(())
@@ -461,7 +477,7 @@ async fn create_entry_in(
     let entry = checked_entry(owner, input)?;
     check_links(conn, owner, input).await?;
     let tickets = add_tickets::<&str>(&[], tickets)?;
-    insert_entry(conn, &entry, None).await?;
+    insert_entry(conn, &entry, None, None).await?;
     insert_tickets(conn, owner, entry.id, &tickets).await?;
     Ok(entry.id)
 }
@@ -471,11 +487,11 @@ async fn tray_items(
     owner: OwnerId,
     date: Date,
 ) -> Result<Vec<TrayItem>> {
-    let rows = sqlx::query(
-        "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
-         deleted_at FROM ticket_tray WHERE owner_id = $1 AND date = $2 AND deleted_at IS NULL \
-         ORDER BY id",
-    )
+    let rows = sqlx::query(concat!(
+        "SELECT ",
+        tray_columns!(),
+        " FROM ticket_tray WHERE owner_id = $1 AND date = $2 AND deleted_at IS NULL ORDER BY id"
+    ))
     .bind(owner.to_string())
     .bind(format_date(date))
     .fetch_all(&mut *conn)
@@ -483,25 +499,58 @@ async fn tray_items(
     rows.iter().map(tray_from_row).collect()
 }
 
+/// The day's live roll-up entries, by the project they roll up (`None` = plain "Tickets").
+async fn tray_entries(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+) -> Result<Vec<(Option<ProjectId>, TimeEntryId)>> {
+    let rows: Vec<(String, Option<String>)> = sqlx::query_as(
+        "SELECT id, tray_project_id FROM time_entries WHERE owner_id = $1 AND date = $2 \
+         AND source = $3 AND deleted_at IS NULL ORDER BY id",
+    )
+    .bind(owner.to_string())
+    .bind(format_date(date))
+    .bind(SOURCE_TRAY)
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.into_iter()
+        .map(|(id, project)| {
+            Ok((
+                opt_uuid(project)?.map(ProjectId::from_uuid),
+                TimeEntryId::from_uuid(parse_uuid(&id)?),
+            ))
+        })
+        .collect()
+}
+
+/// The day's plain "Tickets" roll-up entry, if there is one.
 async fn tray_entry_id(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     date: Date,
 ) -> Result<Option<TimeEntryId>> {
-    let id: Option<String> = sqlx::query_scalar(
-        "SELECT id FROM time_entries WHERE owner_id = $1 AND date = $2 AND source = $3 \
-         AND deleted_at IS NULL",
+    Ok(tray_entries(conn, owner, date)
+        .await?
+        .into_iter()
+        .find(|(p, _)| p.is_none())
+        .map(|(_, id)| id))
+}
+
+/// The project a roll-up entry rolls up, if it is a project's roll-up.
+async fn tray_group(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TimeEntryId,
+) -> Result<Option<ProjectId>> {
+    let project: Option<Option<String>> = sqlx::query_scalar(
+        "SELECT tray_project_id FROM time_entries WHERE id = $1 AND owner_id = $2",
     )
+    .bind(id.to_string())
     .bind(owner.to_string())
-    .bind(format_date(date))
-    .bind(SOURCE_TRAY)
     .fetch_optional(&mut *conn)
     .await?;
-    Ok(id
-        .as_deref()
-        .map(parse_uuid)
-        .transpose()?
-        .map(TimeEntryId::from_uuid))
+    Ok(opt_uuid(project.flatten())?.map(ProjectId::from_uuid))
 }
 
 /// Make the tickets on `entry` exactly `wanted` (ignoring case), keeping the
@@ -541,15 +590,29 @@ async fn replace_tickets(
     insert_tickets(conn, owner, entry, &missing).await
 }
 
-/// Bring the day's roll-up entry in line with its tray.
+/// Bring the day's roll-up entries (one per project, plus the plain one) in line with
+/// its tray.
 async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<()> {
     let items = tray_items(conn, owner, date).await?;
-    let pairs: Vec<(String, Minutes)> = items
+    let triples: Vec<(String, Minutes, Option<ProjectId>)> = items
         .iter()
-        .map(|i| (i.ticket_number.clone(), i.minutes))
+        .map(|i| (i.ticket_number.clone(), i.minutes, i.project_id))
         .collect();
-    let existing = tray_entry_id(conn, owner, date).await?;
-    match plan_rollup(&pairs, existing) {
+    let existing = tray_entries(conn, owner, date).await?;
+    for (group, action) in plan_rollups(&triples, &existing) {
+        apply_rollup(conn, owner, date, group, action).await?;
+    }
+    Ok(())
+}
+
+async fn apply_rollup(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+    group: Option<ProjectId>,
+    action: RollupAction,
+) -> Result<()> {
+    match action {
         RollupAction::Create(rollup) => {
             let now = OffsetDateTime::now_utc();
             let entry = TimeEntry {
@@ -557,7 +620,7 @@ async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> R
                 owner_id: owner,
                 date,
                 minutes: rollup.minutes,
-                target: EntryTarget::None,
+                target: group.map_or(EntryTarget::None, EntryTarget::Project),
                 category: None,
                 description: TRAY_ENTRY_TITLE.to_string(),
                 status: None,
@@ -569,7 +632,7 @@ async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> R
                 updated_at: now,
                 deleted_at: None,
             };
-            insert_entry(conn, &entry, Some(SOURCE_TRAY)).await?;
+            insert_entry(conn, &entry, Some(SOURCE_TRAY), group).await?;
             insert_tickets(conn, owner, entry.id, &rollup.tickets).await
         }
         RollupAction::Update { entry, rollup } => {
@@ -595,16 +658,33 @@ async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> R
 async fn tray_day_in(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<TrayDay> {
     let items = tray_items(conn, owner, date).await?;
     let entry_id = tray_entry_id(conn, owner, date).await?;
-    let minutes = match entry_id {
-        Some(id) => fetch_entry(conn, owner, id).await?.0.minutes,
-        None => Minutes::ZERO,
-    };
+    let mut minutes = Minutes::ZERO;
+    for (_, id) in tray_entries(conn, owner, date).await? {
+        minutes = minutes + fetch_entry(conn, owner, id).await?.0.minutes;
+    }
     Ok(TrayDay {
         date,
         items,
         entry_id,
         minutes,
     })
+}
+
+async fn live_tray_item(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TrayItemId,
+) -> Result<TrayItem> {
+    let row = sqlx::query(concat!(
+        "SELECT ",
+        tray_columns!(),
+        " FROM ticket_tray WHERE owner_id = $1 AND id = $2 AND deleted_at IS NULL"
+    ))
+    .bind(owner.to_string())
+    .bind(id.to_string())
+    .fetch_optional(&mut *conn)
+    .await?;
+    tray_from_row(&row.ok_or(StorageError::NotFound)?)
 }
 
 async fn tray_item_date(
@@ -623,6 +703,82 @@ async fn tray_item_date(
     .fetch_optional(&mut *conn)
     .await?;
     corrupt_date(&date.ok_or(StorageError::NotFound)?)
+}
+
+/// The latest tray row for `ticket` from before `date` (ignoring case), if any.
+async fn earlier_tray_row(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    ticket: &str,
+    date: Date,
+) -> Result<Option<TrayItem>> {
+    let row = sqlx::query(concat!(
+        "SELECT ",
+        tray_columns!(),
+        " FROM ticket_tray WHERE owner_id = $1 AND lower(ticket_number) = lower($2) \
+         AND date < $3 AND deleted_at IS NULL ORDER BY date DESC, id DESC LIMIT 1"
+    ))
+    .bind(owner.to_string())
+    .bind(ticket)
+    .bind(format_date(date))
+    .fetch_optional(&mut *conn)
+    .await?;
+    row.as_ref().map(tray_from_row).transpose()
+}
+
+/// Close every still-open row of `ticket` up to and including `date`: finishing a ticket
+/// finishes it on the earlier days it came back on too.
+async fn close_open_rows(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    ticket: &str,
+    date: Date,
+) -> Result<()> {
+    sqlx::query(
+        "UPDATE ticket_tray SET done = TRUE, updated_at = $1 WHERE owner_id = $2 \
+         AND lower(ticket_number) = lower($3) AND date <= $4 AND done = FALSE \
+         AND deleted_at IS NULL",
+    )
+    .bind(now_text())
+    .bind(owner.to_string())
+    .bind(ticket)
+    .bind(format_date(date))
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+/// Add one ticket to a day's tray, carrying on from its latest earlier row: the notepad
+/// and project come along. `done` false keeps it open; true also closes the earlier rows.
+async fn insert_tray_row(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+    ticket: &str,
+    done: bool,
+) -> Result<()> {
+    let before = earlier_tray_row(conn, owner, ticket, date).await?;
+    let now = now_text();
+    sqlx::query(concat!(
+        "INSERT INTO ticket_tray (",
+        tray_columns!(),
+        ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL)"
+    ))
+    .bind(TrayItemId::new().to_string())
+    .bind(owner.to_string())
+    .bind(format_date(date))
+    .bind(ticket)
+    .bind(i64::from(DEFAULT_TRAY_MINUTES))
+    .bind(before.as_ref().and_then(|b| b.note.clone()))
+    .bind(done)
+    .bind(before.and_then(|b| b.project_id).map(|p| p.to_string()))
+    .bind(&now)
+    .execute(&mut *conn)
+    .await?;
+    if done {
+        close_open_rows(conn, owner, ticket, date).await?;
+    }
+    Ok(())
 }
 
 impl SqliteStore {
@@ -816,6 +972,9 @@ impl SqliteStore {
         if is_tray {
             input.minutes = current.minutes;
             input.date = current.date;
+            if let Some(project) = tray_group(&mut tx, owner, id).await? {
+                input.project = Some(project);
+            }
         }
         let checked = checked_entry(owner, &input)?;
         check_links(&mut tx, owner, &input).await?;
@@ -863,8 +1022,32 @@ impl SqliteStore {
         Ok(rec)
     }
 
-    /// Soft-delete an entry. Deleting the tray roll-up also empties that day's
-    /// tray (restoring brings both back).
+    /// Save an entry's notepad (its notes; blank clears them). Works on tray roll-ups too.
+    pub async fn set_entry_notes(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        notes: &str,
+    ) -> Result<EntryRecord> {
+        let notes = clean_notes(notes)?;
+        let mut tx = self.pool.begin().await?;
+        fetch_entry(&mut tx, owner, id).await?;
+        sqlx::query(
+            "UPDATE time_entries SET next_step = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(notes)
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let rec = entry_record(&mut tx, owner, id).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Soft-delete an entry. Deleting a tray roll-up also takes its tickets out of that
+    /// day's tray: all of the plain entry's, or one project's (restoring brings both back).
     pub async fn delete_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<()> {
         let mut tx = self.pool.begin().await?;
         let (entry, is_tray) = fetch_entry(&mut tx, owner, id).await?;
@@ -878,13 +1061,16 @@ impl SqliteStore {
         .execute(&mut *tx)
         .await?;
         if is_tray {
+            let group = tray_group(&mut tx, owner, id).await?;
             sqlx::query(
                 "UPDATE ticket_tray SET deleted_at = $1, updated_at = $1 \
-                 WHERE owner_id = $2 AND date = $3 AND deleted_at IS NULL",
+                 WHERE owner_id = $2 AND date = $3 AND deleted_at IS NULL \
+                 AND COALESCE(project_id, '') = $4",
             )
             .bind(&now)
             .bind(owner.to_string())
             .bind(format_date(entry.date))
+            .bind(group.map(|p| p.to_string()).unwrap_or_default())
             .execute(&mut *tx)
             .await?;
         }
@@ -905,10 +1091,12 @@ impl SqliteStore {
         .await?;
         let (date, source, deleted_at) = row.ok_or(StorageError::NotFound)?;
         let is_tray = source.as_deref() == Some(SOURCE_TRAY);
+        let group = tray_group(&mut tx, owner, id).await?;
         if is_tray
-            && tray_entry_id(&mut tx, owner, corrupt_date(&date)?)
+            && tray_entries(&mut tx, owner, corrupt_date(&date)?)
                 .await?
-                .is_some()
+                .iter()
+                .any(|(g, _)| *g == group)
         {
             return Err(StorageError::Duplicate(TRAY_ENTRY_TITLE.to_string()));
         }
@@ -924,12 +1112,14 @@ impl SqliteStore {
         if is_tray {
             sqlx::query(
                 "UPDATE ticket_tray SET deleted_at = NULL, updated_at = $1 \
-                 WHERE owner_id = $2 AND date = $3 AND deleted_at = $4",
+                 WHERE owner_id = $2 AND date = $3 AND deleted_at = $4 \
+                 AND COALESCE(project_id, '') = $5",
             )
             .bind(&now)
             .bind(owner.to_string())
             .bind(&date)
             .bind(&deleted_at)
+            .bind(group.map(|p| p.to_string()).unwrap_or_default())
             .execute(&mut *tx)
             .await?;
             sync_tray(&mut tx, owner, corrupt_date(&date)?).await?;
@@ -1107,7 +1297,8 @@ impl SqliteStore {
     }
 
     /// Paste tickets into a day's tray (multi-paste splits, repeats skipped);
-    /// each gets 15 minutes. The roll-up entry follows.
+    /// each gets 15 minutes and counts as done. A ticket seen on an earlier day keeps its
+    /// notepad and project, and pasting it finishes it there too. The roll-ups follow.
     pub async fn tray_add(&self, owner: OwnerId, date: Date, text: &str) -> Result<TrayDay> {
         let mut tx = self.pool.begin().await?;
         let existing: Vec<String> = tray_items(&mut tx, owner, date)
@@ -1116,20 +1307,8 @@ impl SqliteStore {
             .map(|i| i.ticket_number)
             .collect();
         let added = new_tray_tickets(&existing, text)?;
-        let now = now_text();
         for t in &added {
-            sqlx::query(
-                "INSERT INTO ticket_tray (id, owner_id, date, ticket_number, minutes, note, \
-                 created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, NULL, $6, $6, NULL)",
-            )
-            .bind(TrayItemId::new().to_string())
-            .bind(owner.to_string())
-            .bind(format_date(date))
-            .bind(t)
-            .bind(i64::from(DEFAULT_TRAY_MINUTES))
-            .bind(&now)
-            .execute(&mut *tx)
-            .await?;
+            insert_tray_row(&mut tx, owner, date, t, true).await?;
         }
         sync_tray(&mut tx, owner, date).await?;
         let day = tray_day_in(&mut tx, owner, date).await?;
@@ -1144,11 +1323,12 @@ impl SqliteStore {
         from: Date,
         to: Date,
     ) -> Result<Vec<TrayItem>> {
-        let rows = sqlx::query(
-            "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
-             deleted_at FROM ticket_tray WHERE owner_id = $1 AND date >= $2 AND date <= $3 \
-             AND deleted_at IS NULL ORDER BY date, id",
-        )
+        let rows = sqlx::query(concat!(
+            "SELECT ",
+            tray_columns!(),
+            " FROM ticket_tray WHERE owner_id = $1 AND date >= $2 AND date <= $3 \
+             AND deleted_at IS NULL ORDER BY date, id"
+        ))
         .bind(owner.to_string())
         .bind(format_date(from))
         .bind(format_date(to))
@@ -1159,10 +1339,11 @@ impl SqliteStore {
 
     /// One live Done ticket, or None.
     pub async fn tray_item(&self, owner: OwnerId, id: TrayItemId) -> Result<Option<TrayItem>> {
-        let row = sqlx::query(
-            "SELECT id, owner_id, date, ticket_number, minutes, note, created_at, updated_at, \
-             deleted_at FROM ticket_tray WHERE owner_id = $1 AND id = $2 AND deleted_at IS NULL",
-        )
+        let row = sqlx::query(concat!(
+            "SELECT ",
+            tray_columns!(),
+            " FROM ticket_tray WHERE owner_id = $1 AND id = $2 AND deleted_at IS NULL"
+        ))
         .bind(owner.to_string())
         .bind(id.to_string())
         .fetch_optional(&self.pool)
@@ -1214,6 +1395,109 @@ impl SqliteStore {
         .bind(owner.to_string())
         .execute(&mut *tx)
         .await?;
+        let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Tick a tray ticket done, or untick it to keep it open. Ticking also finishes the
+    /// ticket on the earlier days it came back on.
+    pub async fn tray_set_done(
+        &self,
+        owner: OwnerId,
+        id: TrayItemId,
+        done: bool,
+    ) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        let item = live_tray_item(&mut tx, owner, id).await?;
+        if done {
+            close_open_rows(&mut tx, owner, &item.ticket_number, item.date).await?;
+        } else {
+            sqlx::query(
+                "UPDATE ticket_tray SET done = FALSE, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+            )
+            .bind(now_text())
+            .bind(id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        let day = tray_day_in(&mut tx, owner, item.date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Give a tray ticket a project (its minutes then count under it), or `None` to put
+    /// it back in the day's plain "Tickets" entry.
+    pub async fn tray_set_project(
+        &self,
+        owner: OwnerId,
+        id: TrayItemId,
+        project: Option<ProjectId>,
+    ) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        if let Some(p) = project {
+            project_exists(&mut tx, owner, p).await?;
+        }
+        let date = tray_item_date(&mut tx, owner, id, true).await?;
+        sqlx::query(
+            "UPDATE ticket_tray SET project_id = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(project.map(|p| p.to_string()))
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        sync_tray(&mut tx, owner, date).await?;
+        let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Still-open tickets from before `date` that come back in its tray (latest row per
+    /// ticket, oldest first), leaving out tickets already in that day's tray.
+    pub async fn tray_carried(&self, owner: OwnerId, date: Date) -> Result<Vec<TrayItem>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows = sqlx::query(concat!(
+            "SELECT ",
+            tray_columns!(),
+            " FROM ticket_tray WHERE owner_id = $1 AND done = FALSE AND date < $2 \
+             AND deleted_at IS NULL ORDER BY date, id"
+        ))
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        let open: Vec<TrayItem> = rows.iter().map(tray_from_row).collect::<Result<_>>()?;
+        let today: Vec<String> = tray_items(&mut conn, owner, date)
+            .await?
+            .into_iter()
+            .map(|i| i.ticket_number)
+            .collect();
+        let pairs: Vec<(&str, Date)> = open
+            .iter()
+            .map(|i| (i.ticket_number.as_str(), i.date))
+            .collect();
+        Ok(carried_open(&pairs, &today, date)
+            .into_iter()
+            .map(|i| open[i].clone())
+            .collect())
+    }
+
+    /// Carry a still-open ticket into `date`'s tray: a new open row with 15 minutes, its
+    /// notepad and its project. Already there: nothing changes.
+    pub async fn tray_carry(&self, owner: OwnerId, id: TrayItemId, date: Date) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        let item = live_tray_item(&mut tx, owner, id).await?;
+        let there = tray_items(&mut tx, owner, date)
+            .await?
+            .iter()
+            .any(|i| i.ticket_number.eq_ignore_ascii_case(&item.ticket_number));
+        if !there {
+            insert_tray_row(&mut tx, owner, date, &item.ticket_number, false).await?;
+            sync_tray(&mut tx, owner, date).await?;
+        }
         let day = tray_day_in(&mut tx, owner, date).await?;
         tx.commit().await?;
         Ok(day)

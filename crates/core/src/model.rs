@@ -7,13 +7,16 @@
 
 use serde::{Deserialize, Serialize};
 use time::{Date, OffsetDateTime};
+use uuid::Uuid;
 
+use crate::canvas::CardKind;
 use crate::dates::{iso_date, rfc3339};
 use crate::fields::{AppliesTo, FieldKind};
 use crate::ids::{
     CategoryCodeDefaultId, ChecklistItemId, CustomFieldId, CustomValueId, FrequencyId, InboxItemId,
-    ListOptionId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, SavedResponseId,
-    TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetTickId, TimesheetWeekId, TrayItemId,
+    ListOptionId, MeetingSeriesId, NextUpItemId, NoteId, OwnerId, ProjectId, RecurringTaskId,
+    SavedResponseId, TaskId, TicketId, TimeEntryId, TimesheetCodeId, TimesheetTickId,
+    TimesheetWeekId, TrayItemId,
 };
 use crate::minutes::Minutes;
 use crate::notes::NoteKind;
@@ -498,8 +501,13 @@ pub struct TrayItem {
     pub ticket_number: String,
     /// Minutes it adds to the day's roll-up entry.
     pub minutes: Minutes,
-    /// Optional note.
+    /// Optional note (the ticket's notepad).
     pub note: Option<String>,
+    /// False while the ticket is still open: worked on today but not finished. It comes
+    /// back in later trays until it is ticked (see [`crate::tray::carried_open`]).
+    pub done: bool,
+    /// The project its minutes count under; `None` puts them in the day's "Tickets" entry.
+    pub project_id: Option<ProjectId>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,
@@ -633,6 +641,12 @@ pub struct NextUpItem {
     pub position: u32,
     /// What to do.
     pub text: String,
+    /// For a thing brought up from a card ("Bring up tomorrow"): the day it comes up.
+    /// `None` for the wrap-up list.
+    #[serde(with = "iso_date::option")]
+    pub show_from: Option<Date>,
+    /// The card it was brought up from, if any.
+    pub about: Option<(CardKind, Uuid)>,
     /// When ticked off (UTC), if it is.
     #[serde(with = "rfc3339::option")]
     pub done_at: Option<OffsetDateTime>,
@@ -750,4 +764,31 @@ mod tests {
         assert_eq!(ListName::Category.as_str(), "category");
         assert_eq!(ListName::RecurringType.as_str(), "recurring_type");
     }
+}
+
+/// A meeting that repeats on set weekdays at a set time (see [`crate::meetings`]).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MeetingSeries {
+    /// Id.
+    pub id: MeetingSeriesId,
+    /// Owner.
+    pub owner_id: OwnerId,
+    /// Name, e.g. "Weekly ops".
+    pub name: String,
+    /// The weekdays it meets, Monday first.
+    pub days: [bool; 7],
+    /// Start time in minutes after local midnight.
+    pub at: u32,
+    /// Minutes ahead the bell starts reminding.
+    pub remind_minutes: u32,
+    /// When created (UTC).
+    #[serde(with = "rfc3339")]
+    pub created_at: OffsetDateTime,
+    /// When last changed (UTC).
+    #[serde(with = "rfc3339")]
+    pub updated_at: OffsetDateTime,
+    /// When soft-deleted, if ever.
+    #[serde(with = "rfc3339::option")]
+    pub deleted_at: Option<OffsetDateTime>,
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tray-carry"
+description = "Enables the tray_carry command without any pre-configured scope."
+commands.allow = ["tray_carry"]
+
+[[permission]]
+identifier = "deny-tray-carry"
+description = "Denies the tray_carry command without any pre-configured scope."
+commands.deny = ["tray_carry"]

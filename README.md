@@ -19,24 +19,51 @@ The alpha is a working app you can use day to day for logging time:
   Ctrl+L and auto-lock after idle (minutes are set in Settings → Security). After unlocking with
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
-- **Desk (the Canvas, home):** your entries, Done tickets, notes and Inbox scraps as paper cards
+- **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
   you arrange. Drag to move (it's remembered), drag empty paper or scroll to pan, Ctrl + scroll
-  to zoom, Fit everything. Double-click a card to open it (a Done ticket takes a few words);
-  double-click empty paper to jot. Right-click anything for its paper menu. The side panel has
-  today's hours, Where was I?, Log work, Done tickets and the wrap-up. See `docs/CANVAS.md`.
+  to zoom, Fit everything. Click an entry or a ticket and its **slide-out** opens underneath:
+  the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
+  open, more time and More. Double-click a card to open it; double-click empty paper to jot.
+  Right-click anything for its paper menu with everything. The side panel has today's hours,
+  Where was I?, Log work, the Tickets tray and the wrap-up. **Project areas**
+  (right-click empty paper) give cards dropped into them that project; **links** join cards
+  that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
+  Desk out by day and Back to my layout puts it back. The **toolbox** on the left has Move,
+  Select (drag around cards to move them together) and Box: draw a box (or Shift + drag) and
+  make it a project's area, a new project or just a label. Any box **folds up** to a count
+  coloured grey (nothing waiting), blue (from today) or orange (still open or brought up).
+  Drop a card on a card to make a **pile** (click it to fan out); **Tidy into stacks** piles
+  loose cards by project. The **drawers** (one per project plus your folders) slide out when
+  you drag something: drop it on one to file it off the Desk; it stays in Find and on the
+  timesheet. **Boards** open a project, a meeting series, the Daily notes, a folder or the
+  **Archive** full screen, as a Notebook, a Board of its own or a List; links in notes show
+  with Copy. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
-  entry); the **Done tickets** tray (paste tickets as you finish them, each adds 15 minutes you
+  entry); the **Tickets** tray (paste tickets as you work on them, each adds 15 minutes you
   can step up or down, and they roll up into one “Tickets” entry for the day; a box beside each
-  ticket takes a few words about it); the entries list with +15m/+30m/+1h and ticket chips you
-  click to copy; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  ticket takes a few words, and its slide-out holds a full notepad; **untick** a ticket that
+  isn't finished and it stays **Still open**, coming back each day until you tick it; give a
+  ticket a project and its minutes count under that project instead); the entries list with
+  +15m/+30m/+1h and ticket chips you click to copy (click an entry for the same slide-out as on
+  the Desk); **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes); the Inbox.
-- **Saved responses:** the copy button on Done tickets lists messages you paste into tickets
+- **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
+  a right-click menu) puts a notepad or a note in a window that floats over everything and
+  saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
+  to the title bar, – minimises it to the bottom bar, ⤢ fills the screen, ✕ closes it. Windows
+  come back where they were after you unlock. The thin **bottom bar** lines windows up from the
+  left (click to show or tuck away, right-click for more), with today's hours and the **bell** on
+  the right: its panel slides in with meetings about to start, things brought up for today and
+  tickets still open. Meetings that repeat are set in **Settings → Meetings** (days, time, how
+  early to remind); the bell opens that day's meeting note. All of it stays inside Shiftbook.
+- **Saved responses:** the copy button on the Tickets tray lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
   them in Settings → Responses.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
-  day starts, the Desk shows what to pick up: the list from your wrap-up, or else the last
-  thing you logged with its tickets and next step. **Carry on** puts it into Log work;
+  day starts, the Desk shows what to pick up: things you brought up for today (**Bring up
+  tomorrow** in any slide-out or right-click menu picks the next work day), then the list from
+  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** puts it into Log work;
   **Later** hides it until the next unlock.
 - **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
   today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded
@@ -78,7 +105,7 @@ The alpha is a working app you can use day to day for logging time:
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 
-Not in the alpha yet: Planner, the rest of the Canvas (project areas, links, timeline, stacks, drawers, boards; see `docs/CANVAS.md`), the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
+Not in the alpha yet: Planner, pictures in notes, the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 

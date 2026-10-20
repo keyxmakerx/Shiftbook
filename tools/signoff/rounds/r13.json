@@ -1,0 +1,107 @@
+{
+  "meta": {
+    "round": 13,
+    "heading": "Round 13: boxes, the toolbox, piles and drawers",
+    "intro": "Steps 3 and 4 are built: boxes and the toolbox, then piles and drawers."
+  },
+  "cards": {
+    "r13-built3": {
+      "round": 13,
+      "order": 0,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: step 3, draw boxes, the toolbox, and folding boxes up",
+      "body": [
+        "**The toolbox** sits down the left of the Desk; its arrow folds it away. It has three tools. **Move** drags empty paper to look around, as before. **Select** drags around cards to pick them, and dragging one then moves them all; **Box these** puts a box around them. **Box** drags to draw a box. **Shift + drag** draws a box whichever tool is on.",
+        "**What is this box?** After you draw one, pick a project and the cards inside get it, with one Undo for them all (a project that already has a box moves it here). Or make a **New project…**, or choose **Just a label**: a dashed box that only groups cards. Double-click a label's name to rename it, or right-click for Rename, Fold and Take off the Desk (with Undo).",
+        "**Folding.** Every box has **▴** on its name. It folds the box to its name and a count; **▾** opens it again. The count's colour shows how its cards stand: **grey** when nothing is waiting, **blue** when something is from today, **orange** when a ticket is still open or something is brought up. Folded cards and their link lines hide until you open the box.",
+        "**Moving a box moves everything in it**, folded or not. That was already the case and still is."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/bfe74adc2419ecd8b64ff8f9e09b99a1",
+          "caption": "Select: two notes picked. Drag one and both move; Box these boxes them."
+        },
+        {
+          "src": "/_blob/5c724dc45a1d1e0be22789e9c7991c40",
+          "caption": "After drawing a box: what is it?"
+        },
+        {
+          "src": "/_blob/513f31ce8a0a853f1a5aefe6dbfeeb04",
+          "caption": "Two boxes folded: a label with 2 cards from today (blue) and a new project with 1."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 3",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. a keyboard key for each tool"
+        }
+      ],
+      "pick": "Next: step 4, stacks and drawers (round 8)."
+    },
+    "r13-built4": {
+      "round": 13,
+      "order": 1,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: step 4, piles, drawers and Tidy into stacks",
+      "body": [
+        "**Piles.** Drop a card on another card, or on a pile, and they pile up with a count on the corner. **Click** the pile to fan its cards out beside it, and click it again to put them back. **Drag a card away** to take it off; a pile left with one card comes apart. Drag the pile to move it, and double-click its count to give it a name. Right-click for Fan out, Rename, Take the pile apart, and File in.",
+        "**Tidy into stacks** (bottom bar) piles loose cards by project, one pile per project with two or more. Cards in a box or already in a pile stay put. Undo puts everything back.",
+        "**Drawers.** The cabinet sits under the toolbox, with one drawer per project plus folders you make (**+ Folder**). It stays folded until you pick something up, then slides out. Drop a card, a selection or a whole pile on a drawer to file it off the Desk. A project's drawer also gives the cards that project. Every filing has Undo.",
+        "**What's in a drawer.** Click a drawer to see its contents. Each one has **Open** and **Put back**, which lands it in the middle of what you're looking at. Folders can be renamed or removed; removing one puts its cards back on the Desk, and Undo files them again. Filed things still show in Find and count on the timesheet."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/a5567297ff1f6ca132412ff955d96cbc",
+          "caption": "A pile of 3, fanned out to its right."
+        },
+        {
+          "src": "/_blob/f704638af7b5aa5554d175b2cf741e87",
+          "caption": "Dragging a jot: the drawers slide out and Reference lights up."
+        },
+        {
+          "src": "/_blob/bedab4c70173da07744b216fec90c6cb",
+          "caption": "Filed, with Undo. The Reference drawer, opened."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 4",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. keep the drawers open all the time"
+        }
+      ],
+      "pick": "Next: step 5, boards inside boards, full screen (Notebook, Board, List) and the Archive."
+    }
+  }
+}

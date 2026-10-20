@@ -1,0 +1,80 @@
+{
+  "meta": {
+    "round": 14,
+    "heading": "Round 14: boards, full screen and the Archive",
+    "intro": "Step 5 is built: step into a project, a meeting series, the Daily notes, a folder or the Archive, full screen. One question about links."
+  },
+  "cards": {
+    "r14-built5": {
+      "round": 14,
+      "order": 0,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: step 5, boards full screen, and the Archive",
+      "body": [
+        "**Getting in.** Press **Boards** on the Desk's bottom bar, choose **Open full screen** on a project's box, or press **⤢** on an open drawer. **Esc** or **✕** goes back to the Desk.",
+        "**Finding your way.** The tree on the left lists every board: **Projects** (one per project), **Meetings** (one per meeting series), **Daily notes**, each of your folders, and the **Archive** at the bottom. The trail on top walks back up, e.g. Desk › Projects › Network refresh. A project's board takes on its colour.",
+        "**Three views of the same board.** **Notebook** lists its notes with one open to write in; it saves as you type. **New note** makes a page for a project, **Today's note** for Daily notes, and **Today's meeting note** for a meeting series. A project also shows its hours logged in all, its tickets still open and its latest entries and tickets; click one to open its notepad. **Board** is the board's own canvas: arrange the cards there and they keep those spots, apart from the Desk. **List** shows the boards inside, then everything on it.",
+        "**Links in notes.** Any web address in a note shows under it with a **Copy** button.",
+        "**The Archive** lists archived notes, each with **Bring back** (and Undo), and archived projects as boards. Daily notes now go to the Archive by themselves after 2 weeks without a change. Meeting series boards hold the notes titled \"Weekly ops · Mon 12 Oct 2026\", the ones Open note makes from the bell."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/b9994fdbda1baafa2b1d2478a38d782f",
+          "caption": "Boards: every board in the tree and the list."
+        },
+        {
+          "src": "/_blob/030056c07a1d8249611773799b4f5959",
+          "caption": "A project's Notebook: its notes, the open note with its link and Copy, and its hours and tickets on the right."
+        },
+        {
+          "src": "/_blob/786df39b94c874025554ee1e632421b0",
+          "caption": "The same project as a Board: its own canvas, tinted in its colour."
+        },
+        {
+          "src": "/_blob/953199bd2ac287c6b3a8512dd6537bfc",
+          "caption": "A meeting series: its notes, with Today's meeting note."
+        },
+        {
+          "src": "/_blob/dbe192b999a14915a9d99ad30cd10cc2",
+          "caption": "The Archive, with Bring back."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 5",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "links",
+          "legend": "Clicking a link in a note",
+          "options": [
+            {
+              "value": "Open it in my web browser (adds one small Tauri plugin, the official opener; Shiftbook itself still never goes online)",
+              "rec": true
+            },
+            {
+              "value": "Keep Copy only"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. open the Notebook on the newest note"
+        }
+      ],
+      "pick": "Next: step 6, pictures in notes with simple markup, then the meeting canvas."
+    }
+  }
+}

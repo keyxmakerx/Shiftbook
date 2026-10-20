@@ -76,6 +76,49 @@ export interface Prefs {
   pausedTimer: PausedTimer | null;
   /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
   notesAutoArchiveDays: number;
+  /** Open windows and where they are. */
+  windows: WindowSpot[];
+}
+
+/** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
+export type WindowMode = 'open' | 'rolled' | 'min' | 'full';
+
+/** A notepad or note popped out into a window (round 12). */
+export interface WindowSpot {
+  kind: CardKind;
+  id: string;
+  mode: WindowMode;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** A meeting that repeats on set weekdays at a set time; the bell reminds about it. */
+export interface MeetingSeries {
+  id: string;
+  name: string;
+  /** Weekdays it meets, Monday first. */
+  days: boolean[];
+  /** Start, minutes after local midnight. */
+  at: number;
+  /** Minutes ahead the bell starts reminding. */
+  remindMinutes: number;
+}
+
+export type SeriesInput = Omit<MeetingSeries, 'id'>;
+
+/** Where today's meeting stands. Mirrors `shiftbook_core::meetings::MeetingToday`. */
+export type MeetingToday = { state: 'later' } | { state: 'soon'; minutes: number } | { state: 'started'; minutes: number };
+
+/** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
+export interface BellItem {
+  when: 'now' | 'today';
+  title: string;
+  about:
+    | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
+    | { kind: 'brought_up'; id: string; from: IsoDate }
+    | { kind: 'still_open'; tickets: string[] };
 }
 
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
@@ -109,7 +152,8 @@ export type PrefKey =
   | 'day.wrapup_at'
   | 'day.timer'
   | 'timer.paused'
-  | 'notes.auto_archive_days';
+  | 'notes.auto_archive_days'
+  | 'ui.windows';
 
 export interface Project {
   id: string;
@@ -148,7 +192,7 @@ export interface Entry {
   notes: string | null;
   timesheetCodeId: string | null;
   tickets: Ticket[];
-  /** The day's roll-up of the Done tickets tray. */
+  /** A roll-up of the Tickets tray (the day's plain one, or a project's). */
   isTray: boolean;
 }
 
@@ -164,16 +208,25 @@ export interface EntryInput {
 
 export interface TrayItem {
   id: string;
+  /** The day it was worked on. */
+  date: IsoDate;
   ticket: string;
   minutes: number;
-  /** A few words about the ticket, if any. */
+  /** The ticket's notepad, if anything is written in it. */
   note: string | null;
+  /** False while it is still open: worked on, not finished. */
+  done: boolean;
+  /** The project its minutes count under; null = the day's "Tickets" entry. */
+  projectId: string | null;
   links: TicketLink[];
 }
 
 export interface TrayDay {
   date: IsoDate;
   items: TrayItem[];
+  /** Still-open tickets from earlier days, back until they are ticked. */
+  carried: TrayItem[];
+  /** The plain "Tickets" roll-up entry (tickets without a project), if any. */
   entryId: string | null;
   minutes: number;
   hours: string;
@@ -336,6 +389,8 @@ export interface NextUpItem {
   id: string;
   text: string;
   done: boolean;
+  /** For a thing brought up from a card: the day it comes up. */
+  from: IsoDate | null;
 }
 
 /** A saved response: a message kept for pasting into tickets, copied from the tray. */
@@ -365,10 +420,137 @@ export interface CanvasCard {
   z: number;
   /** The owner moved it; false means it was placed automatically this time. */
   placed: boolean;
+  /** Its spot when the Desk is laid out as a timeline. */
+  timelineX: number;
+  timelineY: number;
+  /** The box it sits in ("project:<id>" or "label:<id>"), if any. */
+  inBox: string | null;
+  /** The pile it's in, if any (it shows at the pile's spot). */
+  stack: string | null;
   entry: Entry | null;
   tray: { item: TrayItem; date: IsoDate } | null;
   note: Note | null;
   inbox: InboxItem | null;
+}
+
+/** A project's area on the Desk: cards dropped inside get its project. */
+export interface CanvasArea {
+  projectId: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Folded up to its name and a count. */
+  collapsed: boolean;
+  /** Cards inside it. */
+  count: number;
+  status: BoxStatus;
+}
+
+/** How a box's cards stand. Mirrors `shiftbook_core::canvas::BoxStatus`. */
+export type BoxStatus = 'quiet' | 'today' | 'waiting';
+
+/** A pile of cards on the Desk. */
+export interface CanvasStack {
+  id: string;
+  /** Its name; null shows the count. */
+  name: string | null;
+  x: number;
+  y: number;
+  count: number;
+}
+
+/** A drawer in the cabinet: a project's (key `project:<id>`) or a folder (`folder:<id>`). */
+export interface CanvasDrawer {
+  key: string;
+  name: string;
+  color: string | null;
+  /** Cards filed in it. */
+  count: number;
+}
+
+/** What Tidy into stacks did, for Undo. */
+export interface TidyResult {
+  stacks: string[];
+  before: { kind: CardKind; id: string; x: number; y: number }[];
+}
+
+/** A plain labelled box on the Desk: it only groups cards. */
+export interface CanvasLabel {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  collapsed: boolean;
+  count: number;
+  status: BoxStatus;
+}
+
+/** One card, by what it shows and the record's id. */
+export interface CardRef {
+  kind: CardKind;
+  id: string;
+}
+
+/** A line between two cards: automatic (with why) or drawn by hand. */
+export interface CanvasLink {
+  a: CardRef;
+  b: CardRef;
+  reason: { kind: 'ticket' | 'word'; text: string } | null;
+  drawn: boolean;
+}
+
+/** Everything on the Desk. */
+export interface DeskData {
+  /** Bottom first. */
+  cards: CanvasCard[];
+  areas: CanvasArea[];
+  labels: CanvasLabel[];
+  stacks: CanvasStack[];
+  drawers: CanvasDrawer[];
+  links: CanvasLink[];
+  /** The timeline's days, oldest first, with where each column starts. */
+  axis: { date: IsoDate; x: number }[];
+}
+
+/**
+ * A board you can step into (see crates/core/src/boards.rs): `desk`, `projects`,
+ * `project:<id>`, `meetings`, `series:<id>`, `daily`, `folder:<id>` or `archive`.
+ */
+export interface BoardChild {
+  key: string;
+  title: string;
+  /** A project's colour. */
+  color: string | null;
+  /** Cards on it (for Projects and Meetings: the boards inside). */
+  count: number;
+  /** The boards inside it (only filled in the tree). */
+  children: BoardChild[];
+}
+
+/** A board's full screen. */
+export interface BoardData {
+  key: string;
+  title: string;
+  /** A project's colour, for the tint. */
+  color: string | null;
+  /** From the Desk down to this board. */
+  trail: { key: string; title: string }[];
+  /** It has a canvas of its own (Projects, Meetings, Archive and the Desk's list don't). */
+  hasCanvas: boolean;
+  children: BoardChild[];
+  /** Newest first, each with its spot on this board. */
+  cards: CanvasCard[];
+  /** For a project: every minute logged against it, as hours. */
+  hours: string | null;
+  /** For a project: its tickets still open. */
+  openTickets: number;
+  /** An archived project. */
+  archived: boolean;
+  /** Every board from the Desk down, for the tree beside it. */
+  tree: BoardChild[];
 }
 
 /** What brought the user back to Shiftbook. */
@@ -400,6 +582,8 @@ export interface Note {
   archiveInDays: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Web addresses written in it, in order. */
+  links: string[];
 }
 
 export interface NoteInput {
@@ -561,6 +745,10 @@ export interface DataApi {
   updateEntry(id: string, input: EntryInput): Promise<Entry>;
   /** Add (or with a negative number take away) minutes. */
   addEntryMinutes(id: string, delta: number): Promise<Entry>;
+  /** The entry's notepad, saved as you type (blank clears it). */
+  setEntryNotes(id: string, notes: string): Promise<Entry>;
+  /** One entry (for a window showing its notepad). */
+  getEntry(id: string): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
@@ -574,12 +762,31 @@ export interface DataApi {
   /** Log a capture line; it must contain hours. */
   captureLog(text: string, today: IsoDate): Promise<Entry>;
 
-  // ----- Done tickets tray -----
+  // ----- Tickets tray -----
   trayDay(date: IsoDate): Promise<TrayDay>;
   trayAdd(date: IsoDate, text: string): Promise<TrayDay>;
   traySetMinutes(id: string, minutes: number): Promise<TrayDay>;
-  /** A few words about one tray ticket (blank clears them, at most 300 characters). */
+  /** A tray ticket's notepad (blank clears it). */
   traySetNote(id: string, note: string): Promise<TrayDay>;
+  /** Tick a ticket done (also on the earlier days it came back on), or untick it: still open. */
+  traySetDone(id: string, done: boolean): Promise<TrayDay>;
+  /** The project a ticket's minutes count under (null = the day's "Tickets" entry). */
+  traySetProject(id: string, projectId: string | null): Promise<TrayDay>;
+  /** Work on a still-open ticket again on `date`: it joins that day's tray. */
+  trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
+  /** One tray ticket, or null when it was taken out (for a window showing its notepad). */
+  trayItem(id: string): Promise<TrayItem | null>;
+
+  // ----- meetings and the bell -----
+  meetingSeries(): Promise<MeetingSeries[]>;
+  /** Add a series (`id` null) or change one. */
+  saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries>;
+  /** Remove a series, or with `deleted` false bring it back (Undo). Its notes stay. */
+  setMeetingSeriesDeleted(id: string, deleted: boolean): Promise<void>;
+  /** The series' meeting note for `date`, made the first time it's asked for. */
+  meetingNote(seriesId: string, date: IsoDate): Promise<Note>;
+  /** What's coming up at `now` (minutes after local midnight on `today`). */
+  bell(today: IsoDate, now: number): Promise<BellItem[]>;
   trayRemove(id: string): Promise<TrayDay>;
   trayRestore(id: string): Promise<TrayDay>;
 
@@ -612,10 +819,51 @@ export interface DataApi {
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
 
   // ----- the Desk (Canvas) -----
-  /** Every card on the Desk, bottom first. Tauri: `canvas`. */
-  canvas(today: IsoDate): Promise<CanvasCard[]>;
+  /** Everything on the Desk: cards (bottom first), project areas, links and the timeline. Tauri: `canvas`. */
+  canvas(today: IsoDate): Promise<DeskData>;
   /** Put a card where it was dropped, on top. Tauri: `canvas_move`. */
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void>;
+  /** Put a project's area here, making it the first time. Tauri: `canvas_area`. */
+  canvasArea(projectId: string, x: number, y: number, w: number, h: number): Promise<void>;
+  /** Take a project's area off the Desk (the project and its cards stay). Tauri: `canvas_area_remove`. */
+  canvasAreaRemove(projectId: string): Promise<void>;
+  /** Fold a project's area up to its name and a count, or open it. */
+  canvasAreaCollapse(projectId: string, collapsed: boolean): Promise<void>;
+  /** Make a labelled box (`id` null) or change one; returns its id. */
+  canvasLabelSave(id: string | null, label: string, x: number, y: number, w: number, h: number, collapsed: boolean): Promise<string>;
+  /** Take a labelled box off the Desk (its cards stay), or put it back. */
+  canvasLabelRemove(id: string, removed: boolean): Promise<void>;
+  /** Drop a card on another (shown at `onto` x, y): they pile up, or it joins that pile. */
+  canvasStack(card: CardRef, onto: CardRef, ontoX: number, ontoY: number): Promise<string>;
+  /** Take a card off its pile, to x, y. */
+  canvasUnstack(card: CardRef, x: number, y: number): Promise<void>;
+  canvasStackMove(id: string, x: number, y: number): Promise<void>;
+  /** Name a pile; blank shows its count. */
+  canvasStackRename(id: string, name: string): Promise<void>;
+  /** Take a pile apart. */
+  canvasStackDissolve(id: string): Promise<void>;
+  /** File a card in a drawer (off the Desk). */
+  canvasFile(card: CardRef, drawer: string): Promise<void>;
+  /** File a whole pile; returns the cards filed. */
+  canvasFileStack(id: string, drawer: string): Promise<CardRef[]>;
+  /** Back on the Desk at x, y. */
+  canvasUnfile(card: CardRef, x: number, y: number): Promise<void>;
+  /** What's filed in a drawer, newest first. */
+  canvasDrawer(drawer: string): Promise<CanvasCard[]>;
+  /** Make a folder (`id` null) or rename one. */
+  canvasFolderSave(id: string | null, name: string): Promise<{ id: string; name: string }>;
+  /** Remove a folder (its cards show on the Desk while it's gone), or bring it back. */
+  canvasFolderRemove(id: string, removed: boolean): Promise<void>;
+  /** Tidy into stacks: pile loose cards by project. */
+  canvasTidy(today: IsoDate): Promise<TidyResult>;
+  /** One board's full screen (see `BoardData`). Tauri: `board`. */
+  board(today: IsoDate, key: string): Promise<BoardData>;
+  /** Put a card where it was dropped on a board's own canvas. Tauri: `board_move`. */
+  boardMove(key: string, kind: CardKind, id: string, x: number, y: number): Promise<void>;
+  /** Draw a link (`drawn`) or hide an automatic one. Tauri: `canvas_link`. */
+  canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void>;
+  /** Undo a drawn or hidden link. Tauri: `canvas_link_reset`. */
+  canvasLinkReset(a: CardRef, b: CardRef): Promise<void>;
 
   // ----- saved responses -----
   /** Saved responses, in order. Tauri: `list_responses`. */
@@ -624,8 +872,10 @@ export interface DataApi {
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 
   // ----- next up -----
-  /** The "next up" list, in order. */
+  /** The wrap-up's "next up" list, in order. */
   nextUp(): Promise<NextUpItem[]>;
+  /** "Bring up tomorrow": the card comes up first on the next work day after `today`. */
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;

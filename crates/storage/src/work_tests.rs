@@ -300,7 +300,11 @@ fn tray_rolls_up_into_one_entry_per_day() {
         let day = s.tray_set_note(me, day.items[1].id, " ").await.unwrap();
         assert_eq!(day.items[1].note, None);
         assert!(s
-            .tray_set_note(me, day.items[1].id, &"x".repeat(301))
+            .tray_set_note(
+                me,
+                day.items[1].id,
+                &"x".repeat(shiftbook_core::tray::MAX_TRAY_NOTE_CHARS + 1)
+            )
             .await
             .is_err());
         assert!(matches!(
@@ -681,5 +685,219 @@ fn saved_responses() {
         assert!(s.set_responses(me, &[d(&long, "ok")]).await.is_err());
         assert_eq!(s.responses(me).await.unwrap().len(), 2);
         assert!(s.set_responses(me, &[]).await.unwrap().is_empty());
+    });
+}
+
+#[test]
+fn open_tickets_come_back_until_ticked() {
+    let dir = TestDir::new("open");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let fri = date!(2026 - 10 - 16);
+        let mon = date!(2026 - 10 - 19);
+        let tue = date!(2026 - 10 - 20);
+        let day = s.tray_add(me, fri, "RITM0034567 INC0045678").await.unwrap();
+        assert!(day.items.iter().all(|i| i.done));
+        let ritm = day.items[0].id;
+        s.tray_set_note(me, ritm, "waiting on the user")
+            .await
+            .unwrap();
+        let day = s.tray_set_done(me, ritm, false).await.unwrap();
+        assert!(!day.items[0].done);
+        // Its time still counts on Friday.
+        assert_eq!(day.minutes, Minutes(30));
+
+        // Monday: it comes back, once.
+        let back = s.tray_carried(me, mon).await.unwrap();
+        assert_eq!(back.len(), 1);
+        assert_eq!(back[0].ticket_number, "RITM0034567");
+        assert!(s.tray_carried(me, fri).await.unwrap().is_empty());
+
+        // Working on it Monday carries its notepad; it shows in Monday's tray, not twice.
+        let day = s.tray_carry(me, ritm, mon).await.unwrap();
+        assert_eq!(day.items.len(), 1);
+        assert!(!day.items[0].done);
+        assert_eq!(day.items[0].note.as_deref(), Some("waiting on the user"));
+        assert!(s.tray_carried(me, mon).await.unwrap().is_empty());
+        assert_eq!(s.tray_carried(me, tue).await.unwrap().len(), 1);
+
+        // Ticking Monday's row finishes it everywhere.
+        let monday_row = day.items[0].id;
+        s.tray_set_done(me, monday_row, true).await.unwrap();
+        assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+        assert!(s.tray_day(me, fri).await.unwrap().items[0].done);
+
+        // Pasting a ticket that is still open from before finishes it there too.
+        let day = s.tray_add(me, fri, "INC0045700").await.unwrap();
+        let open = day
+            .items
+            .iter()
+            .find(|i| i.ticket_number == "INC0045700")
+            .unwrap();
+        s.tray_set_done(me, open.id, false).await.unwrap();
+        assert_eq!(s.tray_carried(me, tue).await.unwrap().len(), 1);
+        s.tray_add(me, mon, "inc0045700").await.unwrap();
+        assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+    });
+}
+
+#[test]
+fn tray_tickets_with_a_project_roll_up_under_it() {
+    let dir = TestDir::new("trayproject");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let net = s
+            .create_project(me, "Network refresh", None)
+            .await
+            .unwrap()
+            .id;
+        let day = s
+            .tray_add(me, DAY, "INC1001 INC1002 INC1003")
+            .await
+            .unwrap();
+        let plain = day.entry_id.unwrap();
+        let (a, b) = (day.items[0].id, day.items[1].id);
+        s.tray_set_project(me, a, Some(net)).await.unwrap();
+        let day = s.tray_set_project(me, b, Some(net)).await.unwrap();
+        assert_eq!(day.entry_id, Some(plain));
+        assert_eq!(day.minutes, Minutes(45));
+
+        let entries = s.list_entries(me, DAY, DAY).await.unwrap();
+        assert_eq!(entries.len(), 2);
+        let rollup = entries
+            .iter()
+            .find(|r| r.entry.target == EntryTarget::Project(net))
+            .unwrap();
+        assert!(rollup.is_tray);
+        assert_eq!(rollup.entry.minutes, Minutes(30));
+        assert_eq!(numbers(rollup), ["INC1001", "INC1002"]);
+        let plain_rec = entries.iter().find(|r| r.entry.id == plain).unwrap();
+        assert_eq!(numbers(plain_rec), ["INC1003"]);
+
+        // The project roll-up keeps its project whatever the details panel sends.
+        let mut edit = input(DAY, 0, "Tickets");
+        edit.project = None;
+        let kept = s.update_entry(me, rollup.entry.id, &edit).await.unwrap();
+        assert_eq!(kept.entry.target, EntryTarget::Project(net));
+
+        // Deleting the project's roll-up takes only its tickets; restoring brings them back.
+        s.delete_entry(me, rollup.entry.id).await.unwrap();
+        assert_eq!(s.tray_day(me, DAY).await.unwrap().items.len(), 1);
+        s.restore_entry(me, rollup.entry.id).await.unwrap();
+        assert_eq!(s.tray_day(me, DAY).await.unwrap().items.len(), 3);
+
+        // Back to no project: the project's roll-up goes away.
+        s.tray_set_project(me, a, None).await.unwrap();
+        let day = s.tray_set_project(me, b, None).await.unwrap();
+        assert_eq!(s.list_entries(me, DAY, DAY).await.unwrap().len(), 1);
+        assert_eq!(day.minutes, Minutes(45));
+        assert!(matches!(
+            s.tray_set_project(other, a, Some(net)).await,
+            Err(StorageError::NotFound)
+        ));
+    });
+}
+
+#[test]
+fn brought_up_things_stay_apart_from_the_wrapup_list() {
+    let dir = TestDir::new("bringup");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let card = uuid::Uuid::now_v7();
+        let item = s
+            .bring_up(
+                me,
+                "Firewall rule cleanup",
+                date!(2026 - 10 - 20),
+                Some((shiftbook_core::canvas::CardKind::Entry, card)),
+            )
+            .await
+            .unwrap();
+        assert_eq!(item.show_from, Some(date!(2026 - 10 - 20)));
+        assert!(s.next_up(me).await.unwrap().is_empty());
+        s.set_next_up(me, &["Call the vendor".to_string()])
+            .await
+            .unwrap();
+        assert_eq!(s.next_up_all(me).await.unwrap().len(), 2);
+        // Bringing the same card up again moves it.
+        s.bring_up(
+            me,
+            "Firewall rule cleanup",
+            date!(2026 - 10 - 21),
+            Some((shiftbook_core::canvas::CardKind::Entry, card)),
+        )
+        .await
+        .unwrap();
+        let all = s.next_up_all(me).await.unwrap();
+        assert_eq!(all.len(), 2);
+        assert!(all
+            .iter()
+            .any(|i| i.show_from == Some(date!(2026 - 10 - 21))));
+        // Saving the wrap-up list doesn't touch it.
+        s.set_next_up(me, &[]).await.unwrap();
+        assert_eq!(s.next_up_all(me).await.unwrap().len(), 1);
+    });
+}
+
+#[test]
+fn meeting_series_are_kept_and_checked() {
+    let dir = TestDir::new("meetings");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mon_thu = [true, false, false, true, false, false, false];
+        let input = crate::meetings::SeriesInput {
+            name: " Weekly ops ".into(),
+            days: mon_thu,
+            at: 600,
+            remind_minutes: 15,
+        };
+        let ops = s.create_meeting_series(me, &input).await.unwrap();
+        assert_eq!(ops.name, "Weekly ops");
+        assert_eq!(ops.days, mon_thu);
+        let early = crate::meetings::SeriesInput {
+            name: "All-hands".into(),
+            at: 540,
+            ..input.clone()
+        };
+        s.create_meeting_series(me, &early).await.unwrap();
+        let names: Vec<String> = s
+            .meeting_series(me)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|m| m.name)
+            .collect();
+        assert_eq!(names, ["All-hands", "Weekly ops"]);
+        assert!(s.meeting_series(other).await.unwrap().is_empty());
+
+        let moved = crate::meetings::SeriesInput {
+            at: 630,
+            ..input.clone()
+        };
+        assert_eq!(
+            s.update_meeting_series(me, ops.id, &moved)
+                .await
+                .unwrap()
+                .at,
+            630
+        );
+        assert!(matches!(
+            s.update_meeting_series(other, ops.id, &moved).await,
+            Err(StorageError::NotFound)
+        ));
+        let no_days = crate::meetings::SeriesInput {
+            days: [false; 7],
+            ..input.clone()
+        };
+        assert!(s.create_meeting_series(me, &no_days).await.is_err());
+
+        s.set_meeting_series_deleted(me, ops.id, true)
+            .await
+            .unwrap();
+        assert_eq!(s.meeting_series(me).await.unwrap().len(), 1);
+        s.set_meeting_series_deleted(me, ops.id, false)
+            .await
+            .unwrap();
+        assert_eq!(s.meeting_series(me).await.unwrap().len(), 2);
     });
 }

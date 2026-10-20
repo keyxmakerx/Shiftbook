@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-stack-dissolve"
+description = "Enables the canvas_stack_dissolve command without any pre-configured scope."
+commands.allow = ["canvas_stack_dissolve"]
+
+[[permission]]
+identifier = "deny-canvas-stack-dissolve"
+description = "Denies the canvas_stack_dissolve command without any pre-configured scope."
+commands.deny = ["canvas_stack_dissolve"]

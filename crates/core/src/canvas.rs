@@ -10,6 +10,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 use time::{Date, Duration};
+use uuid::Uuid;
 
 use crate::error::{preview, CoreError};
 
@@ -107,6 +108,385 @@ pub fn auto_place(count: usize, taken: &[(i32, i32)]) -> Vec<(i32, i32)> {
     out
 }
 
+// ---------- project areas (step 2) ----------
+
+/// Smallest project area, in canvas units.
+pub const MIN_AREA: (i32, i32) = (CARD_W + 2 * GAP, CARD_H + 3 * GAP);
+/// Largest project area either way.
+pub const MAX_AREA_SIDE: i32 = 40_000;
+
+/// A project area: a tinted region; cards dropped inside get its project.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Area {
+    /// Left edge.
+    pub x: i32,
+    /// Top edge.
+    pub y: i32,
+    /// Width.
+    pub w: i32,
+    /// Height.
+    pub h: i32,
+}
+
+impl Area {
+    /// Keep an area on the canvas and between the smallest and largest sizes.
+    pub fn clean(self) -> Area {
+        let (x, y) = clamp_spot(self.x, self.y);
+        Area {
+            x,
+            y,
+            w: self.w.clamp(MIN_AREA.0, MAX_AREA_SIDE),
+            h: self.h.clamp(MIN_AREA.1, MAX_AREA_SIDE),
+        }
+    }
+
+    /// True when a card at `spot` (its top-left corner) has its centre inside the area.
+    pub fn holds(self, spot: (i32, i32)) -> bool {
+        let (cx, cy) = (spot.0 + CARD_W / 2, spot.1 + CARD_H / 2);
+        cx >= self.x && cx < self.x + self.w && cy >= self.y && cy < self.y + self.h
+    }
+}
+
+/// The area a card at `spot` belongs to: the last (topmost) one holding its centre.
+pub fn area_at(areas: &[Area], spot: (i32, i32)) -> Option<usize> {
+    areas.iter().rposition(|a| a.holds(spot))
+}
+
+/// A new area's spot when it's made from the menu at `(x, y)`: a few cards wide.
+pub fn new_area(x: i32, y: i32) -> Area {
+    Area {
+        x,
+        y,
+        w: 2 * (CARD_W + GAP) + GAP,
+        h: 2 * (CARD_H + GAP) + 2 * GAP,
+    }
+    .clean()
+}
+
+// ---------- links (step 2) ----------
+
+/// Why two cards are linked.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "kind", content = "text", rename_all = "snake_case")]
+pub enum LinkReason {
+    /// Both mention this ticket.
+    Ticket(String),
+    /// Both use this uncommon word.
+    Word(String),
+}
+
+/// What a card says, for finding links: its tickets and its words.
+#[derive(Debug, Clone, Default)]
+pub struct LinkText {
+    /// Ticket numbers it carries (any case).
+    pub tickets: Vec<String>,
+    /// Its title and text.
+    pub text: String,
+}
+
+/// A word worth linking on: long enough and not an everyday word.
+fn link_words(text: &str) -> Vec<String> {
+    const COMMON: &[&str] = &[
+        "about",
+        "after",
+        "again",
+        "before",
+        "being",
+        "check",
+        "could",
+        "daily",
+        "doing",
+        "done",
+        "every",
+        "first",
+        "follow",
+        "from",
+        "have",
+        "here",
+        "into",
+        "jot",
+        "just",
+        "later",
+        "meeting",
+        "might",
+        "minutes",
+        "need",
+        "next",
+        "note",
+        "notes",
+        "other",
+        "should",
+        "some",
+        "still",
+        "that",
+        "their",
+        "them",
+        "then",
+        "there",
+        "these",
+        "they",
+        "thing",
+        "things",
+        "this",
+        "those",
+        "ticket",
+        "tickets",
+        "today",
+        "tomorrow",
+        "update",
+        "what",
+        "when",
+        "where",
+        "which",
+        "while",
+        "with",
+        "work",
+        "worked",
+        "would",
+        "yesterday",
+        "your",
+    ];
+    let mut out: Vec<String> = text
+        .split(|c: char| !c.is_alphanumeric())
+        .map(str::to_lowercase)
+        .filter(|w| w.chars().count() >= 5 && !w.chars().all(|c| c.is_ascii_digit()))
+        .filter(|w| !COMMON.contains(&w.as_str()))
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Links drawn automatically between cards: any two that share a ticket (also one written in a
+/// note's text), and any two that are the only cards using the same uncommon word. A pair is
+/// linked once, by its first reason; a card gets at most [`MAX_WORD_LINKS`] word links.
+pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
+    use std::collections::{BTreeMap, BTreeSet};
+    let tickets: Vec<BTreeSet<String>> = cards
+        .iter()
+        .map(|c| {
+            let mut set: BTreeSet<String> =
+                c.tickets.iter().map(|t| t.trim().to_uppercase()).collect();
+            set.extend(c.text.split_whitespace().filter_map(crate::capture::ticket));
+            set.retain(|t| !t.is_empty());
+            set
+        })
+        .collect();
+    let mut out = Vec::new();
+    let mut linked = BTreeSet::new();
+    for a in 0..cards.len() {
+        for b in a + 1..cards.len() {
+            if let Some(t) = tickets[a].intersection(&tickets[b]).next() {
+                linked.insert((a, b));
+                out.push((a, b, LinkReason::Ticket(t.clone())));
+            }
+        }
+    }
+    let mut users: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    for (i, c) in cards.iter().enumerate() {
+        for w in link_words(&c.text) {
+            users.entry(w).or_default().push(i);
+        }
+    }
+    let mut per_card = vec![0usize; cards.len()];
+    for (word, who) in users {
+        if let [a, b] = who[..] {
+            if linked.contains(&(a, b))
+                || per_card[a] >= MAX_WORD_LINKS
+                || per_card[b] >= MAX_WORD_LINKS
+            {
+                continue;
+            }
+            linked.insert((a, b));
+            per_card[a] += 1;
+            per_card[b] += 1;
+            out.push((a, b, LinkReason::Word(word)));
+        }
+    }
+    out
+}
+
+/// Most word links one card gets, so the Desk doesn't turn into a web.
+pub const MAX_WORD_LINKS: usize = 2;
+
+// ---------- timeline (step 2) ----------
+
+/// A card's top-left corner, in canvas units.
+pub type Spot = (i32, i32);
+
+/// Room above the first row of cards for the date labels.
+pub const TIMELINE_LABEL: i32 = 44;
+
+/// Most cards stacked in one timeline column; a busier day wraps into more columns.
+pub const TIMELINE_ROWS: usize = 5;
+
+/// The timeline: days oldest on the left, each day's cards stacked in the order given, wrapping
+/// into another column every [`TIMELINE_ROWS`] cards. Returns each card's spot and where each
+/// day starts.
+pub fn timeline(dates: &[Date]) -> (Vec<Spot>, Vec<(Date, i32)>) {
+    let mut days: Vec<Date> = dates.to_vec();
+    days.sort();
+    days.dedup();
+    let per_day: Vec<usize> = days
+        .iter()
+        .map(|d| dates.iter().filter(|x| *x == d).count())
+        .collect();
+    let col_x = |col: usize| {
+        ORIGIN.0
+            + i32::try_from(col)
+                .unwrap_or(i32::MAX / 2)
+                .saturating_mul(CARD_W + 2 * GAP)
+    };
+    // The first column of each day.
+    let mut first = Vec::with_capacity(days.len());
+    let mut col = 0usize;
+    for n in &per_day {
+        first.push(col);
+        col += n.div_ceil(TIMELINE_ROWS).max(1);
+    }
+    let axis = days
+        .iter()
+        .zip(&first)
+        .map(|(d, c)| (*d, col_x(*c)))
+        .collect();
+    let mut used = vec![0usize; days.len()];
+    let spots = dates
+        .iter()
+        .map(|d| {
+            let day = days.binary_search(d).unwrap_or(0);
+            let n = used[day];
+            used[day] += 1;
+            let row = i32::try_from(n % TIMELINE_ROWS).unwrap_or(0);
+            (
+                col_x(first[day] + n / TIMELINE_ROWS),
+                ORIGIN.1 + TIMELINE_LABEL + row * (CARD_H + GAP),
+            )
+        })
+        .collect();
+    (spots, axis)
+}
+
+/// Longest name on a plain labelled box.
+pub const MAX_LABEL_CHARS: usize = 60;
+
+/// Clean a labelled box's name: trimmed, required, at most [`MAX_LABEL_CHARS`].
+pub fn clean_label(label: &str) -> Result<String, CoreError> {
+    crate::validate::validate_required("The box name", label, MAX_LABEL_CHARS)
+}
+
+/// How a box's cards stand, for the colour of its count when it is folded up (round 12).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BoxStatus {
+    /// Nothing waiting: grey.
+    Quiet,
+    /// Something from today: the accent colour.
+    Today,
+    /// A ticket still open or something brought up: orange.
+    Waiting,
+}
+
+/// What matters about one card in a box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct MemberState {
+    /// A ticket that is still open.
+    pub open: bool,
+    /// Brought up for a day and not ticked off yet.
+    pub brought_up: bool,
+    /// Dated today (an entry or a ticket) or made today (a note or a scrap).
+    pub today: bool,
+}
+
+/// A box's status: waiting when any card is still open or brought up, otherwise today when
+/// any card is from today, otherwise quiet (also when it's empty).
+pub fn box_status(members: &[MemberState]) -> BoxStatus {
+    if members.iter().any(|m| m.open || m.brought_up) {
+        BoxStatus::Waiting
+    } else if members.iter().any(|m| m.today) {
+        BoxStatus::Today
+    } else {
+        BoxStatus::Quiet
+    }
+}
+
+/// Longest name on a pile or a folder.
+pub const MAX_PILE_NAME_CHARS: usize = 60;
+
+/// Clean a pile's name: blank means none (the pile shows its count), else trimmed and short.
+pub fn clean_pile_name(name: &str) -> Result<Option<String>, CoreError> {
+    let t = name.trim();
+    if t.is_empty() {
+        return Ok(None);
+    }
+    crate::validate::validate_required("The pile name", t, MAX_PILE_NAME_CHARS).map(Some)
+}
+
+/// Clean a folder's name: trimmed, required, short.
+pub fn clean_folder_name(name: &str) -> Result<String, CoreError> {
+    crate::validate::validate_required("The folder name", name, MAX_PILE_NAME_CHARS)
+}
+
+/// A drawer in the cabinet (round 8): one per project, plus folders the owner makes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Drawer {
+    /// A project's drawer.
+    Project(Uuid),
+    /// A folder the owner made.
+    Folder(Uuid),
+}
+
+impl Drawer {
+    /// The stored form: `project:<id>` or `folder:<id>`.
+    pub fn key(self) -> String {
+        match self {
+            Drawer::Project(id) => format!("project:{id}"),
+            Drawer::Folder(id) => format!("folder:{id}"),
+        }
+    }
+
+    /// Read the stored form.
+    pub fn parse(text: &str) -> Option<Self> {
+        let (kind, id) = text.trim().split_once(':')?;
+        let id = Uuid::parse_str(id).ok()?;
+        match kind {
+            "project" => Some(Drawer::Project(id)),
+            "folder" => Some(Drawer::Folder(id)),
+            _ => None,
+        }
+    }
+}
+
+/// The card a dragged card was dropped on: the topmost (last) of `spots` whose card holds
+/// the dropped card's centre, leaving out `skip` (the dragged card itself).
+pub fn card_under(spots: &[Spot], at: Spot, skip: Option<usize>) -> Option<usize> {
+    let (cx, cy) = (at.0 + CARD_W / 2, at.1 + CARD_H / 2);
+    spots
+        .iter()
+        .enumerate()
+        .rev()
+        .filter(|(i, _)| Some(*i) != skip)
+        .find(|(_, s)| cx >= s.0 && cx < s.0 + CARD_W && cy >= s.1 && cy < s.1 + CARD_H)
+        .map(|(i, _)| i)
+}
+
+/// "Tidy into stacks": loose cards grouped by project, a pile for each project with two or
+/// more of them, in the order their first card comes. Cards without a project stay loose.
+pub fn tidy_groups<K: PartialEq>(projects: &[Option<K>]) -> Vec<Vec<usize>> {
+    let mut groups: Vec<(&K, Vec<usize>)> = Vec::new();
+    for (i, p) in projects.iter().enumerate() {
+        let Some(p) = p else { continue };
+        match groups.iter_mut().find(|(k, _)| *k == p) {
+            Some((_, members)) => members.push(i),
+            None => groups.push((p, vec![i])),
+        }
+    }
+    groups
+        .into_iter()
+        .map(|(_, m)| m)
+        .filter(|m| m.len() >= 2)
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +541,217 @@ mod tests {
     fn spots_are_clamped() {
         assert_eq!(clamp_spot(i32::MAX, -i32::MAX), (MAX_COORD, -MAX_COORD));
         assert_eq!(clamp_spot(10, -20), (10, -20));
+    }
+
+    #[test]
+    fn areas_hold_cards_by_their_centre() {
+        let a = Area {
+            x: 0,
+            y: 0,
+            w: 600,
+            h: 400,
+        };
+        assert!(a.holds((0, 0)));
+        assert!(a.holds((450, 300)), "the centre is still inside");
+        assert!(!a.holds((520, 0)), "the centre is past the right edge");
+        let b = Area {
+            x: 300,
+            y: 0,
+            w: 600,
+            h: 400,
+        };
+        assert_eq!(area_at(&[a, b], (400, 10)), Some(1), "the top area wins");
+        assert_eq!(area_at(&[a, b], (5000, 10)), None);
+    }
+
+    #[test]
+    fn areas_are_kept_to_sane_sizes() {
+        let tiny = Area {
+            x: 0,
+            y: 0,
+            w: 5,
+            h: -9,
+        }
+        .clean();
+        assert_eq!((tiny.w, tiny.h), MIN_AREA);
+        let huge = Area {
+            x: i32::MAX,
+            y: 0,
+            w: i32::MAX,
+            h: 10_000,
+        }
+        .clean();
+        assert_eq!((huge.x, huge.w), (MAX_COORD, MAX_AREA_SIDE));
+        let made = new_area(100, 100);
+        assert!(made.holds((110, 110)));
+    }
+
+    fn lt(tickets: &[&str], text: &str) -> LinkText {
+        LinkText {
+            tickets: tickets.iter().map(|t| t.to_string()).collect(),
+            text: text.into(),
+        }
+    }
+
+    #[test]
+    fn links_shared_tickets_also_inside_note_text() {
+        let cards = [
+            lt(&["CHG0012345"], "Firewall rule cleanup"),
+            lt(&[], "Rollback plan for chg0012345 if the rules break"),
+            lt(&["INC0000001"], "Printer"),
+        ];
+        let links = auto_links(&cards);
+        assert_eq!(links, vec![(0, 1, LinkReason::Ticket("CHG0012345".into()))]);
+    }
+
+    #[test]
+    fn links_uncommon_words_used_by_exactly_two_cards() {
+        let cards = [
+            lt(&[], "Core switch cutover plan"),
+            lt(&[], "cutover went fine"),
+            lt(&[], "optics arrived"),
+            lt(&[], "spare optics for the switch"),
+            lt(&[], "optics again"),
+        ];
+        let links = auto_links(&cards);
+        assert!(links.contains(&(0, 1, LinkReason::Word("cutover".into()))));
+        assert!(links.contains(&(0, 3, LinkReason::Word("switch".into()))));
+        assert!(
+            !links
+                .iter()
+                .any(|l| l.2 == LinkReason::Word("optics".into())),
+            "three cards use it"
+        );
+    }
+
+    #[test]
+    fn word_links_are_capped_per_card() {
+        let hub = lt(&[], "alpha bravo charlie delta");
+        let cards = [
+            hub,
+            lt(&[], "alpha"),
+            lt(&[], "bravo"),
+            lt(&[], "charlie"),
+            lt(&[], "delta"),
+        ];
+        let links = auto_links(&cards);
+        assert_eq!(links.iter().filter(|l| l.0 == 0).count(), MAX_WORD_LINKS);
+    }
+
+    #[test]
+    fn timeline_has_a_column_per_day_oldest_first() {
+        let d1 = date!(2026 - 10 - 13);
+        let d2 = date!(2026 - 10 - 15);
+        let (spots, axis) = timeline(&[d2, d1, d2]);
+        assert_eq!(axis.iter().map(|a| a.0).collect::<Vec<_>>(), [d1, d2]);
+        assert_eq!(
+            spots[1].0, axis[0].1,
+            "the older card is in the first column"
+        );
+        assert_eq!(spots[0].0, spots[2].0);
+        assert!(spots[2].1 > spots[0].1, "same-day cards stack downwards");
+        assert_eq!(spots[0].1, ORIGIN.1 + TIMELINE_LABEL);
+    }
+
+    #[test]
+    fn a_busy_day_wraps_into_more_columns() {
+        let d1 = date!(2026 - 10 - 13);
+        let d2 = date!(2026 - 10 - 14);
+        let mut dates = vec![d1; TIMELINE_ROWS + 2];
+        dates.push(d2);
+        let (spots, axis) = timeline(&dates);
+        let step = CARD_W + 2 * GAP;
+        assert_eq!(
+            spots[TIMELINE_ROWS].0,
+            spots[0].0 + step,
+            "the sixth card starts a second column"
+        );
+        assert_eq!(spots[TIMELINE_ROWS].1, spots[0].1, "at the top");
+        assert_eq!(
+            axis[1].1,
+            axis[0].1 + 2 * step,
+            "the next day starts after both columns"
+        );
+        assert_eq!(spots[TIMELINE_ROWS + 2].0, axis[1].1);
+    }
+
+    #[test]
+    fn boxes_show_whether_anything_is_waiting() {
+        let quiet = MemberState::default();
+        let today = MemberState {
+            today: true,
+            ..quiet
+        };
+        let open = MemberState {
+            open: true,
+            ..quiet
+        };
+        let brought = MemberState {
+            brought_up: true,
+            ..quiet
+        };
+        assert_eq!(box_status(&[]), BoxStatus::Quiet);
+        assert_eq!(box_status(&[quiet, quiet]), BoxStatus::Quiet);
+        assert_eq!(box_status(&[quiet, today]), BoxStatus::Today);
+        assert_eq!(box_status(&[today, open]), BoxStatus::Waiting);
+        assert_eq!(box_status(&[brought]), BoxStatus::Waiting);
+    }
+
+    #[test]
+    fn labelled_boxes_need_a_short_name() {
+        assert_eq!(
+            clean_label("  Waiting on vendors "),
+            Ok("Waiting on vendors".into())
+        );
+        assert!(clean_label("   ").is_err());
+        assert!(clean_label(&"x".repeat(MAX_LABEL_CHARS + 1)).is_err());
+    }
+
+    #[test]
+    fn piles_and_folders_have_short_names() {
+        assert_eq!(clean_pile_name("   "), Ok(None));
+        assert_eq!(clean_pile_name(" Printers "), Ok(Some("Printers".into())));
+        assert!(clean_pile_name(&"x".repeat(MAX_PILE_NAME_CHARS + 1)).is_err());
+        assert_eq!(clean_folder_name(" Reference "), Ok("Reference".into()));
+        assert!(clean_folder_name(" ").is_err());
+    }
+
+    #[test]
+    fn drawers_round_trip() {
+        let id = Uuid::now_v7();
+        assert_eq!(
+            Drawer::parse(&Drawer::Project(id).key()),
+            Some(Drawer::Project(id))
+        );
+        assert_eq!(
+            Drawer::parse(&format!("folder:{id}")),
+            Some(Drawer::Folder(id))
+        );
+        assert_eq!(Drawer::parse("shelf:1"), None);
+        assert_eq!(Drawer::parse("folder:nope"), None);
+    }
+
+    #[test]
+    fn a_card_drops_on_the_top_card_under_its_centre() {
+        let spots = [(0, 0), (100, 50), (1000, 1000)];
+        // The dragged card (index 2) now sits over both: the top one (index 1) wins.
+        assert_eq!(card_under(&spots, (60, 40), Some(2)), Some(1));
+        assert_eq!(card_under(&spots, (-150, 0), Some(2)), None);
+        // Never itself.
+        assert_eq!(card_under(&spots, (1000, 1000), Some(2)), None);
+    }
+
+    #[test]
+    fn tidy_piles_projects_with_two_or_more_loose_cards() {
+        let projects = [
+            Some("net"),
+            None,
+            Some("ssl"),
+            Some("net"),
+            Some("net"),
+            None,
+        ];
+        assert_eq!(tidy_groups(&projects), vec![vec![0, 3, 4]]);
+        assert!(tidy_groups::<&str>(&[None, None]).is_empty());
     }
 }

@@ -1,0 +1,414 @@
+{
+  "meta": {
+    "round": 12,
+    "heading": "Round 12: click for options, notepad windows, a bottom bar and a bell",
+    "intro": "Steps 1 and 2 are built: the slide-out and tickets that aren't done, then windows, the bottom bar and the bell."
+  },
+  "cards": {
+    "r12-click": {
+      "round": 12,
+      "order": 10,
+      "area": "Desk and Day",
+      "version": 1,
+      "title": "Click for the everyday things, right-click for everything",
+      "body": [
+        "**Click once** on a card (Desk) or a row (Day) and a panel slides out **from under it**. It holds the **notepad**, its **tickets**, its **project**, **Bring up tomorrow**, **Done** and **Add time**. Click again or press Esc and it folds away.",
+        "**Right-click** (or **⋯ More**) opens the full menu, on Day and on the Desk alike. It has everything, including **Archive** and **Delete**. Delete always shows Undo.",
+        "**Tickets and projects:** you can attach any ticket to an entry, and that entry's project lists it. A ticket in the Tickets tray can get a project too. Then its minutes count under that project instead of the day's \"Tickets\" entry, so the timesheet shows them in the right place.",
+        "**Tickets that aren't done** (your pick from round 11): a full green tick means done. A dashed ring means **Still open**, and it comes back in tomorrow's tray until you tick it."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/f75ed0f3d9ec5a97525f8edcf4e5b317",
+          "caption": "Desk: one click on \"Firewall rule cleanup\" slides the panel out under it."
+        },
+        {
+          "src": "/_blob/3d2b0b5176dd6bf699d3b4810c75f649",
+          "caption": "Day: the same panel opens under the row. On the right, a still-open ticket with its own notepad and a project."
+        },
+        {
+          "src": "/_blob/726d0cd0680ffe7a0c2e9c6fa3cfe456",
+          "caption": "Right-click on Day: the full menu, with Archive and Delete at the bottom."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Click = slide-out, right-click = full menu",
+          "options": [
+            {
+              "value": "Yes, like this",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "tproj",
+          "legend": "A tray ticket with a project",
+          "options": [
+            {
+              "value": "Its minutes count under that project",
+              "rec": true,
+              "why": "The timesheet shows the time where it belongs."
+            },
+            {
+              "value": "Just a label; the time stays in the day's Tickets entry"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to add or move?",
+          "placeholder": "e.g. put Archive in the slide-out too"
+        }
+      ],
+      "pick": "Yes to both. It keeps the everyday things one click away and the rest out of sight.",
+      "archived": true,
+      "reply": "Built in step 1 (see the first card). Start the timer shows in the slide-out only when the timer is turned on; +15m/+30m/+1h are plain buttons, not the timer."
+    },
+    "r12-windows": {
+      "round": 12,
+      "order": 20,
+      "area": "Whole app",
+      "version": 1,
+      "title": "Notepad windows, a bottom bar, and a bell",
+      "body": [
+        "**Windows:** Pop out a notepad (or any note) and it floats over the Desk or Day. Drag its title bar anywhere and keep working underneath. Four buttons: **▴ roll up** to just the title bar, **– minimise** to the bottom bar, **⤢ full screen**, **✕ close**. Windows remember where you left them.",
+        "**The bottom bar:** thin, light and out of the way. Minimised and open windows line up from the left like Windows' taskbar; a short line under each shows which are open. Today's hours and the **bell** sit on the right.",
+        "**The bell:** a panel slides in from the right with what's coming up. It shows meeting reminders, recurring tasks that are due, things you brought up for today, tickets still open and the timesheet deadline. Each item has a button that does the obvious thing.",
+        "The bell lives inside Shiftbook only. Windows' own pop-up notifications would need one more Tauri add-on, so I'd ask before adding it."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/17b8b213c1104fab9c7cdf34986670ea",
+          "caption": "A floating notepad, a rolled-up page note, and four windows waiting in the bottom bar."
+        },
+        {
+          "src": "/_blob/3265ab034924213a4a73ab4030dce7af",
+          "caption": "The bell's panel, slid in from the right."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Windows, bar and bell",
+          "options": [
+            {
+              "value": "Yes, like this",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "bell",
+          "type": "many",
+          "legend": "What should the bell show?",
+          "options": [
+            {
+              "value": "Meeting reminders (you set a day and time per meeting series)",
+              "rec": true
+            },
+            {
+              "value": "Recurring tasks that are due",
+              "rec": true
+            },
+            {
+              "value": "Things brought up for today",
+              "rec": true
+            },
+            {
+              "value": "Tickets still open",
+              "rec": true
+            },
+            {
+              "value": "Timesheet due"
+            }
+          ]
+        },
+        {
+          "id": "toast",
+          "legend": "Also Windows pop-up notifications?",
+          "options": [
+            {
+              "value": "Not now, the bell is enough",
+              "rec": true
+            },
+            {
+              "value": "Yes, add the Tauri add-on for them"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to add?",
+          "placeholder": "e.g. remind me 10 minutes before a meeting"
+        }
+      ],
+      "pick": "Yes, and keep the bell in-app for now.",
+      "archived": true,
+      "reply": "Next up, step 2. In-app bell only, with the four things you picked."
+    },
+    "r12-full": {
+      "round": 12,
+      "order": 30,
+      "area": "Projects",
+      "version": 1,
+      "title": "Full screen: a project's notebook (and the sub-canvas you remembered)",
+      "body": [
+        "**Yes, we planned a sub-canvas:** \"boards inside boards\" from round 8, step 4 of the Desk, not built yet. Any card (a project, a meeting series, Daily notes) can become a board with its own canvas, tinted, with breadcrumbs (Desk › Projects › Network refresh). Its **List** view shows the same things as a list.",
+        "**Proposal: full screen joins them up.** Make a project full screen and it has three tabs over the same records. **Notebook** has all its notes on the left and the open note in the middle. **Board** is its sub-canvas. **List** is the plain list. On the right: the project's tickets (with Still open), its time, and what's coming up.",
+        "**Pictures:** paste or drop them into any note and mark them up with the tools you picked in round 4 (box, arrow, highlight, hide, crop, text, numbered steps). They are stored inside your encrypted file. Nothing is uploaded anywhere."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/ae1357c75df3f22a01db06f03f04a410",
+          "caption": "Network refresh, full screen, on Notebook: its notes, a marked-up picture, its tickets and time."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "A project's full screen",
+          "options": [
+            {
+              "value": "Yes: Notebook, Board, List",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "who",
+          "type": "many",
+          "legend": "What else gets a full screen like this?",
+          "options": [
+            {
+              "value": "Meeting series",
+              "rec": true
+            },
+            {
+              "value": "Daily notes",
+              "rec": true
+            },
+            {
+              "value": "Any note or entry"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to add?",
+          "placeholder": "e.g. a checklist on the right"
+        }
+      ],
+      "pick": "Yes, for projects, meeting series and Daily notes.",
+      "archived": true,
+      "reply": "Planned for step 5, with URL links in notes added to the list."
+    },
+    "r12-draw": {
+      "round": 12,
+      "order": 40,
+      "area": "Desk",
+      "version": 1,
+      "title": "The boxes on the Desk, and drawing your own",
+      "body": [
+        "**What the boxes are:** each tinted box is a **project area** (one per project). A card inside it belongs to that project. Today you make one from right-click on empty paper → Project area here, and drag its corner to resize it.",
+        "**Proposal, drawing them:** hold **Shift** and drag on empty paper to draw a box. When you let go, pick a project, make a new one, or choose **Just a label** for a plain box with a name that only groups cards. The cards inside get the project you pick, with Undo."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/dba9cea68cb3cbc19ab14165890b66ea",
+          "caption": "A box just drawn around two cards, asking what it is."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Drawing boxes",
+          "options": [
+            {
+              "value": "Shift + drag, then pick a project or Just a label",
+              "rec": true
+            },
+            {
+              "value": "Only project boxes, no plain labels"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to add?",
+          "placeholder": "e.g. a Draw a box button too"
+        }
+      ],
+      "pick": "Shift + drag, with Just a label as an option.",
+      "archived": true,
+      "reply": "Planned for step 3, with your extras recorded: the toolbox, a project's box moving everything in it (it already does), and collapsing a box to a coloured count."
+    },
+    "r12-order": {
+      "round": 12,
+      "order": 50,
+      "area": "Plan",
+      "version": 1,
+      "title": "The build order from here",
+      "body": [
+        "1. **The click slide-out** with the notepad, attach tickets, ticket projects, Bring up tomorrow and Still open tickets (your round 11 picks), plus the right-click menu on Day.",
+        "2. **Windows, the bottom bar and the bell.**",
+        "3. **Drawing boxes.**",
+        "4. **Desk step 3:** stacks and drawers.",
+        "5. **Desk step 4:** boards inside boards, full screen with Notebook / Board / List, and the Archive.",
+        "6. **Pictures in notes** with the markup tools, then **step 5**, the meeting canvas.",
+        "Each step goes to you as a pull request with screenshots here, like step 2."
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "This order",
+          "options": [
+            {
+              "value": "Yes",
+              "rec": true
+            },
+            {
+              "value": "Move something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "What should move?",
+          "placeholder": "e.g. windows first"
+        }
+      ],
+      "pick": "This order: the things you'll use every day first.",
+      "archived": true,
+      "reply": "Working it all in the one open pull request, as you asked. Step 1 is pushed there now."
+    },
+    "r12-built1": {
+      "round": 12,
+      "order": 1,
+      "area": "Desk and Day",
+      "version": 1,
+      "title": "Built: step 1, the slide-out, notepads and tickets that aren't done",
+      "body": [
+        "**Click** an entry or a ticket (a Desk card, a row on Day, a ticket in the tray) and the slide-out opens underneath. It holds the **notepad**, which saves as you type; the entry's **tickets** with **+ Attach a ticket**; the **project**; **Bring up tomorrow**; **Done / Still open** for tickets; **+15m +30m +1h**; and **More** for the full menu. **Start the timer** shows there only when the timer is on. Click empty paper or press Esc to fold it away. Double-click still opens the details.",
+        "**Tickets tray:** it's called **Tickets** now. Each ticket has a tick. Untick it and it's **Still open**: its time still counts today, and it comes back under **Still open from before** each day until you tick it. **+ Today** works on it again. Pasting it again or ticking it finishes it everywhere.",
+        "**A ticket's project:** pick one in the slide-out or by right-click → Count its time under. Its minutes then go to that project's own \"Tickets\" entry for the day, so the timesheet shows them there.",
+        "**Bring up tomorrow** is in every slide-out and right-click menu. It comes up first in Where was I? on your next work day (Friday → Monday). It stays apart from the wrap-up list.",
+        "**Right-click on Day** has everything: notepad, Bring up tomorrow, time, copy, log again, project and Delete with Undo. **Archive** for entries comes with the Archive in step 5; notes already have it.",
+        "**One thing to know:** single-click on a Day row used to open the details. Now it opens the slide-out; double-click or Enter opens the details."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/48f9f2128dc2e9fcc373ff53d07d6d37",
+          "caption": "Desk: an entry clicked. Its notepad, ticket, project, Bring up tomorrow, time and More."
+        },
+        {
+          "src": "/_blob/ed781752147159fbf9fe5837933edf96",
+          "caption": "A still-open ticket with a project: on its card and in the side panel's Tickets tray."
+        },
+        {
+          "src": "/_blob/f0f4781245585c0f9c4d0e26021dab78",
+          "caption": "Day: the same slide-out under the row. Right: ticks, Still open, and Still open from before."
+        },
+        {
+          "src": "/_blob/29f0a94f69b65b394b86f90228c3679f",
+          "caption": "Right-click on Day: the full menu."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 1",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. make the notepad bigger"
+        }
+      ],
+      "pick": "Next: windows, the bottom bar and the bell.",
+      "archived": true,
+      "reply": "Thanks, approved."
+    },
+    "r12-built2": {
+      "round": 12,
+      "order": 0,
+      "area": "Whole app",
+      "version": 1,
+      "title": "Built: step 2, windows, the bottom bar and the bell",
+      "body": [
+        "**Windows.** **Pop out** in a slide-out, or **Open in a window** on a right-click menu, puts a notepad or a note in a window over everything. It saves as you type. Drag the title bar to move it and the corner to resize it. **▴** rolls it up to the title bar, **–** minimises it to the bottom bar, **⤢** fills the screen (double-clicking the title does too) and **✕** closes it. Windows come back where you left them after you unlock.",
+        "**The bottom bar.** It's thin and light, along the bottom of every view. Windows line up from the left like the Windows taskbar, with a blue line under open ones and a short grey one under minimised ones. Click to show one or tuck it away; right-click for roll up, full screen or close. Today's hours and the **bell** are on the right.",
+        "**The bell.** The number shows how many things are waiting, and the bell wiggles when a meeting is about to start. Its panel slides in from the right. **Now** has meetings about to start; **Today** has later meetings, things you brought up for today and tickets still open. Each has a button: **Open note** opens that day's meeting note in a window, **Done** ticks off a brought-up thing, and **Show** goes to the tray. It checks every minute and stays inside Shiftbook, with no Windows pop-ups.",
+        "**Settings → Meetings.** Add the meetings that repeat: a name, the days, a time and how early to remind (from at the start to an hour before). Removing one has Undo, and its notes stay.",
+        "**Not yet:** recurring tasks show in the bell once they have screens; that's a later milestone."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/5f6d91f8f044e6b667b29f84bdfb57f4",
+          "caption": "A notepad window, a rolled-up page note, and three windows in the bottom bar (the ticket one minimised)."
+        },
+        {
+          "src": "/_blob/d3964d0dfab16780a16ba0a05dea552e",
+          "caption": "The bell's panel: Now, then Today."
+        },
+        {
+          "src": "/_blob/7272f7e08f63f6854787565fdf0cd3d6",
+          "caption": "Open note on a meeting: that day's meeting note, here full screen."
+        },
+        {
+          "src": "/_blob/7f135a3d8a34cf7ae4289f7bff57d630",
+          "caption": "Settings → Meetings."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 2",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. a snooze button on meeting reminders"
+        }
+      ],
+      "pick": "Next: step 3, drawing boxes with the toolbox and collapsing project boxes.",
+      "archived": true,
+      "reply": "Thanks, approved. Step 3 is in round 13."
+    }
+  }
+}

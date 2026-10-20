@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-file-stack"
+description = "Enables the canvas_file_stack command without any pre-configured scope."
+commands.allow = ["canvas_file_stack"]
+
+[[permission]]
+identifier = "deny-canvas-file-stack"
+description = "Denies the canvas_file_stack command without any pre-configured scope."
+commands.deny = ["canvas_file_stack"]

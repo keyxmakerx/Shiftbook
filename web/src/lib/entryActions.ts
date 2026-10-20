@@ -1,16 +1,20 @@
 // What you can do to one entry, shared by its row on Day and its card on the Desk (the
-// Canvas): add time, move it to a project, recolour the project, delete, log it again and
-// copy its tickets, plus the paper menu that offers all of them.
+// Canvas): add time, move it to a project, recolour the project, delete, log it again, copy
+// its tickets and bring it up tomorrow, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { Entry } from './api';
+import { bringUp } from './bringUp';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { openNotepad } from './panel.svelte';
+import { openWindow } from './windows.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, putEntry, refresh, refreshProjects } from './store.svelte';
 import { toast } from './toast.svelte';
 import { fmtMinutes } from './format';
 import { startTimer, stopTimer, timer } from './timer.svelte';
 
-function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
+/** The entry as an update with these changes (the project, so far). */
+export function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
   return {
     date: e.date,
     minutes: e.minutes,
@@ -29,7 +33,7 @@ export function canTime(entry: Entry): boolean {
 
 export async function addEntryTime(entry: Entry, minutes: number): Promise<void> {
   if (entry.isTray) {
-    toast('The Tickets entry adds up the Done tickets tray. Change minutes there.');
+    toast('The Tickets entry adds up the Tickets tray. Change minutes there.');
     return;
   }
   const updated = await attempt(() => api.addEntryMinutes(entry.id, minutes));
@@ -111,6 +115,9 @@ export function entryMenu(entry: Entry): MenuSpec {
   const timing = timer.running && timer.target?.entryId === entry.id;
   const main: MenuItem[] = [
     { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
+    { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
+    { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },
+    { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('entry', entry.id, entry.description) },
   ];
   if (!entry.isTray) {
     main.push(

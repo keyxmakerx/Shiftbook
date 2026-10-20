@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-canvas-file"
+description = "Enables the canvas_file command without any pre-configured scope."
+commands.allow = ["canvas_file"]
+
+[[permission]]
+identifier = "deny-canvas-file"
+description = "Denies the canvas_file command without any pre-configured scope."
+commands.deny = ["canvas_file"]

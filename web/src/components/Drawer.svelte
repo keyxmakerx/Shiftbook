@@ -155,7 +155,7 @@
   {#if entry}
     {#key entry.id}
       <button class="x" type="button" aria-label="Close" onclick={close}><Icon name="x" size={18} /></button>
-      <span class="lbl rise" style:--i={0}>{longDay(entry.date)}{entry.isTray ? ' · from the Done tickets tray' : ''}</span>
+      <span class="lbl rise" style:--i={0}>{longDay(entry.date)}{entry.isTray ? ' · from the Tickets tray' : ''}</span>
 
       <div class="field rise" style:--i={1}>
         <label class="lbl" for="dr-title">What</label>

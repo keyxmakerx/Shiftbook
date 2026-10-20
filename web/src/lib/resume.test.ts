@@ -20,7 +20,7 @@ function entry(description: string, tickets: string[], notes: string | null = nu
 
 const list = (texts: string[]): ResumeCard => ({
   trigger: 'unlocked',
-  list: texts.map((text, i) => ({ id: `n${i}`, text, done: false })),
+  list: texts.map((text, i) => ({ id: `n${i}`, text, done: false, from: null })),
   entry: null,
   changedAt: null,
 });

@@ -33,8 +33,10 @@ M5, quick capture inside the app, the Done tickets tray, custom fields and the p
 the README for what it does.
 
 ### Known gaps in alpha
-- **Planner** (week/month/year): hidden until it is built. **Canvas:** step 1 of 5 is built
-  (it is the Desk); the rest is listed in `docs/CANVAS.md`.
+- **Planner** (week/month/year): hidden until it is built. **Canvas:** steps 1 to 4 of 5 are built
+  (it is the Desk: piles, drawers and full-screen boards with the Archive too), plus boxes, the
+  toolbox and folding from round 12; the meeting canvas and pictures in notes are next (see
+  `docs/CANVAS.md`).
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
   Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
   imports (paste, MOP import with its check screen, OneNote sections), and the **notes map**.
@@ -50,9 +52,11 @@ the README for what it does.
   and otherwise Georgia, Segoe UI/system-ui and Consolas/monospace. Bundling the OFL fonts
   inside the app (no network) is a follow-up.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
-- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet; custom
+- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet (the bell
+  shows recurring tasks once they do); custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
-  can only be filled in on entries; the tray's roll-up entry starts with no project; the Planner
+  can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
+  given a project rolls up under it); the Planner
   has no keyboard shortcut yet (1 to 5 are Desk, Day, Timesheet, Notes, Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)
