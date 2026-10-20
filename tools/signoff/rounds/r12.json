@@ -350,7 +350,9 @@
           "placeholder": "e.g. make the notepad bigger"
         }
       ],
-      "pick": "Next: windows, the bottom bar and the bell."
+      "pick": "Next: windows, the bottom bar and the bell.",
+      "archived": true,
+      "reply": "Thanks, approved."
     },
     "r12-built2": {
       "round": 12,
@@ -404,7 +406,9 @@
           "placeholder": "e.g. a snooze button on meeting reminders"
         }
       ],
-      "pick": "Next: step 3, drawing boxes with the toolbox and collapsing project boxes."
+      "pick": "Next: step 3, drawing boxes with the toolbox and collapsing project boxes.",
+      "archived": true,
+      "reply": "Thanks, approved. Step 3 is in round 13."
     }
   }
 }

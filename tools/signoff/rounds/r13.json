@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "round": 13,
+    "heading": "Round 13: boxes, the toolbox and folding",
+    "intro": "Step 3 is built. Next: stacks and drawers."
+  },
+  "cards": {
+    "r13-built3": {
+      "round": 13,
+      "order": 0,
+      "area": "Desk",
+      "version": 1,
+      "title": "Built: step 3, draw boxes, the toolbox, and folding boxes up",
+      "body": [
+        "**The toolbox** sits down the left of the Desk; its arrow folds it away. It has three tools. **Move** drags empty paper to look around, as before. **Select** drags around cards to pick them, and dragging one then moves them all; **Box these** puts a box around them. **Box** drags to draw a box. **Shift + drag** draws a box whichever tool is on.",
+        "**What is this box?** After you draw one, pick a project and the cards inside get it, with one Undo for them all (a project that already has a box moves it here). Or make a **New project…**, or choose **Just a label**: a dashed box that only groups cards. Double-click a label's name to rename it, or right-click for Rename, Fold and Take off the Desk (with Undo).",
+        "**Folding.** Every box has **▴** on its name. It folds the box to its name and a count; **▾** opens it again. The count's colour shows how its cards stand: **grey** when nothing is waiting, **blue** when something is from today, **orange** when a ticket is still open or something is brought up. Folded cards and their link lines hide until you open the box.",
+        "**Moving a box moves everything in it**, folded or not. That was already the case and still is."
+      ],
+      "figures": [
+        {
+          "src": "/_blob/bfe74adc2419ecd8b64ff8f9e09b99a1",
+          "caption": "Select: two notes picked. Drag one and both move; Box these boxes them."
+        },
+        {
+          "src": "/_blob/5c724dc45a1d1e0be22789e9c7991c40",
+          "caption": "After drawing a box: what is it?"
+        },
+        {
+          "src": "/_blob/513f31ce8a0a853f1a5aefe6dbfeeb04",
+          "caption": "Two boxes folded: a label with 2 cards from today (blue) and a new project with 1."
+        }
+      ],
+      "questions": [
+        {
+          "id": "ok",
+          "legend": "Step 3",
+          "options": [
+            {
+              "value": "Good, keep going",
+              "rec": true
+            },
+            {
+              "value": "Change something (say below)"
+            }
+          ]
+        },
+        {
+          "id": "more",
+          "type": "text",
+          "legend": "Anything to change?",
+          "placeholder": "e.g. a keyboard key for each tool"
+        }
+      ],
+      "pick": "Next: step 4, stacks and drawers (round 8)."
+    }
+  }
+}
