@@ -9,6 +9,7 @@
 //! - [`repo`]: repository traits and the SQLite implementation.
 //! - [`notes`]: notes, the archive and auto-archive.
 //! - [`canvas`]: where the owner put each card on the Canvas.
+//! - [`boards`]: where the owner put each card on a board's own canvas.
 //! - [`wipe`]: delete all local data to start again.
 //!
 //! Secrets live only in `secrecy`/`zeroize` types and never implement `Debug`
@@ -17,6 +18,7 @@
 #![warn(missing_docs)]
 
 pub mod backup;
+pub mod boards;
 pub mod canvas;
 pub mod db;
 pub mod error;

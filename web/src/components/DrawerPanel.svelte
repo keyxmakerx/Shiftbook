@@ -6,6 +6,7 @@
   import { focusNow } from '../lib/focus';
   import { fmtMinutes } from '../lib/format';
   import { KIND_LABEL } from '../lib/notes';
+  import { openBoard } from '../lib/boards.svelte';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
@@ -109,6 +110,11 @@
       >
       <button type="button" class="ib" title="Remove the folder (its cards go back on the Desk)" aria-label="Remove the folder" onclick={onremove}>
         <Icon name="trash" size={14} />
+      </button>
+    {/if}
+    {#if !renaming}
+      <button type="button" class="ib" title="Open full screen" aria-label="Open {drawer.name} full screen" onclick={() => openBoard(drawer.key)}>
+        <Icon name="expand" size={14} />
       </button>
     {/if}
     <button type="button" class="ib" aria-label="Close" onclick={onclose}><Icon name="x" size={14} /></button>

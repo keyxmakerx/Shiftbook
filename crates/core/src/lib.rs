@@ -6,6 +6,7 @@
 #![warn(missing_docs)]
 
 pub mod bell;
+pub mod boards;
 pub mod canvas;
 pub mod capture;
 pub mod dates;

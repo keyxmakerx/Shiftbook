@@ -76,6 +76,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "stacks and drawers",
         include_str!("../migrations/0011_stacks_drawers.sql"),
     ),
+    (
+        12,
+        "board spots",
+        include_str!("../migrations/0012_board_spots.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -275,6 +280,7 @@ mod tests {
             assert_eq!(
                 tables,
                 [
+                    "board_cards",
                     "canvas_areas",
                     "canvas_cards",
                     "canvas_folders",

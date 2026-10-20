@@ -188,12 +188,22 @@ pub struct ArchiveFacts {
     pub updated_at: OffsetDateTime,
 }
 
+/// Daily notes move to the archive after at most this many days without a change (round 8),
+/// sooner than other notes unless auto-archive is set shorter or turned off.
+pub const DAILY_ARCHIVE_DAYS: u32 = 14;
+
 /// What auto-archive does with a note at `now`, when notes move after `after_days`
-/// days without a change (0 = auto-archive is off).
+/// days without a change (0 = auto-archive is off). Daily notes go after at most
+/// [`DAILY_ARCHIVE_DAYS`].
 pub fn archive_outlook(note: ArchiveFacts, now: OffsetDateTime, after_days: u32) -> ArchiveOutlook {
     if after_days == 0 || note.keep || note.archived || !note.kind.auto_archives() {
         return ArchiveOutlook::Stays;
     }
+    let after_days = if note.kind == NoteKind::Daily {
+        after_days.min(DAILY_ARCHIVE_DAYS)
+    } else {
+        after_days
+    };
     let idle = (now - note.updated_at).whole_days().max(0);
     let idle = u32::try_from(idle).unwrap_or(u32::MAX);
     if idle >= after_days {
@@ -351,6 +361,23 @@ mod tests {
         assert_eq!(archive_outlook(f, now, 90), ArchiveOutlook::Due);
         let (f, now) = facts(NoteKind::Daily, 400);
         assert_eq!(archive_outlook(f, now, 30), ArchiveOutlook::Due);
+    }
+
+    #[test]
+    fn daily_notes_go_after_two_weeks() {
+        let (f, now) = facts(NoteKind::Daily, 14);
+        assert_eq!(archive_outlook(f, now, 90), ArchiveOutlook::Due);
+        let (f, now) = facts(NoteKind::Daily, 10);
+        assert_eq!(
+            archive_outlook(f, now, 90),
+            ArchiveOutlook::Soon { days_left: 4 }
+        );
+        // Off stays off.
+        let (f, now) = facts(NoteKind::Daily, 400);
+        assert_eq!(archive_outlook(f, now, 0), ArchiveOutlook::Stays);
+        // Other notes keep the setting.
+        let (f, now) = facts(NoteKind::Jot, 14);
+        assert_eq!(archive_outlook(f, now, 90), ArchiveOutlook::Stays);
     }
 
     #[test]

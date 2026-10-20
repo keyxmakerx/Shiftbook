@@ -5,6 +5,7 @@
   // shortcuts and the copy guard.
   import { onMount, untrack } from 'svelte';
   import { refreshBell } from '../lib/bell.svelte';
+  import { boards } from '../lib/boards.svelte';
   import { loadWindows } from '../lib/windows.svelte';
   import { errorMessage } from '../lib/messages';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
@@ -16,6 +17,7 @@
   import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
+  import BoardScreen from '../components/BoardScreen.svelte';
   import BottomBar from '../components/BottomBar.svelte';
   import Capture from '../components/Capture.svelte';
   import WindowLayer from '../components/WindowLayer.svelte';
@@ -169,6 +171,7 @@
       <p class="pad lead">Opening your work log…</p>
     {/if}
     {#if app.ready}
+      {#if boards.key}<BoardScreen />{/if}
       <WindowLayer />
       <BellPanel />
     {/if}

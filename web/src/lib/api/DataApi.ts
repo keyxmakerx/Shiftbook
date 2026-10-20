@@ -515,6 +515,44 @@ export interface DeskData {
   axis: { date: IsoDate; x: number }[];
 }
 
+/**
+ * A board you can step into (see crates/core/src/boards.rs): `desk`, `projects`,
+ * `project:<id>`, `meetings`, `series:<id>`, `daily`, `folder:<id>` or `archive`.
+ */
+export interface BoardChild {
+  key: string;
+  title: string;
+  /** A project's colour. */
+  color: string | null;
+  /** Cards on it (for Projects and Meetings: the boards inside). */
+  count: number;
+  /** The boards inside it (only filled in the tree). */
+  children: BoardChild[];
+}
+
+/** A board's full screen. */
+export interface BoardData {
+  key: string;
+  title: string;
+  /** A project's colour, for the tint. */
+  color: string | null;
+  /** From the Desk down to this board. */
+  trail: { key: string; title: string }[];
+  /** It has a canvas of its own (Projects, Meetings, Archive and the Desk's list don't). */
+  hasCanvas: boolean;
+  children: BoardChild[];
+  /** Newest first, each with its spot on this board. */
+  cards: CanvasCard[];
+  /** For a project: every minute logged against it, as hours. */
+  hours: string | null;
+  /** For a project: its tickets still open. */
+  openTickets: number;
+  /** An archived project. */
+  archived: boolean;
+  /** Every board from the Desk down, for the tree beside it. */
+  tree: BoardChild[];
+}
+
 /** What brought the user back to Shiftbook. */
 export type ResumeTrigger = 'unlocked' | 'break' | 'new_day';
 
@@ -544,6 +582,8 @@ export interface Note {
   archiveInDays: number | null;
   createdAt: string;
   updatedAt: string;
+  /** Web addresses written in it, in order. */
+  links: string[];
 }
 
 export interface NoteInput {
@@ -816,6 +856,10 @@ export interface DataApi {
   canvasFolderRemove(id: string, removed: boolean): Promise<void>;
   /** Tidy into stacks: pile loose cards by project. */
   canvasTidy(today: IsoDate): Promise<TidyResult>;
+  /** One board's full screen (see `BoardData`). Tauri: `board`. */
+  board(today: IsoDate, key: string): Promise<BoardData>;
+  /** Put a card where it was dropped on a board's own canvas. Tauri: `board_move`. */
+  boardMove(key: string, kind: CardKind, id: string, x: number, y: number): Promise<void>;
   /** Draw a link (`drawn`) or hide an automatic one. Tauri: `canvas_link`. */
   canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void>;
   /** Undo a drawn or hidden link. Tauri: `canvas_link_reset`. */

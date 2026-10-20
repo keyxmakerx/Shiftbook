@@ -40,11 +40,11 @@ pub struct TrayCardView {
 pub struct CardView {
     kind: CardKind,
     id: String,
-    x: i32,
-    y: i32,
-    z: i64,
+    pub(crate) x: i32,
+    pub(crate) y: i32,
+    pub(crate) z: i64,
     /// The owner moved it (false: placed automatically this time).
-    placed: bool,
+    pub(crate) placed: bool,
     /// Its spot when the Desk is laid out as a timeline.
     timeline_x: i32,
     timeline_y: i32,
@@ -155,20 +155,20 @@ pub struct DeskView {
 }
 
 /// A record that can be a card, before it gets a spot.
-struct Pending {
-    kind: CardKind,
-    id: Uuid,
+pub(crate) struct Pending {
+    pub(crate) kind: CardKind,
+    pub(crate) id: Uuid,
     /// For newest-first auto-placing and the timeline order within a day.
-    created: OffsetDateTime,
+    pub(crate) created: OffsetDateTime,
     /// Its day on the timeline.
     date: Date,
     /// What it says, for links.
     link: LinkText,
     /// A ticket still open.
-    open: bool,
+    pub(crate) open: bool,
     /// Its project, for Tidy into stacks.
-    project: Option<Uuid>,
-    card: CardView,
+    pub(crate) project: Option<Uuid>,
+    pub(crate) card: CardView,
 }
 
 fn blank(kind: CardKind, id: Uuid) -> CardView {
@@ -190,7 +190,7 @@ fn blank(kind: CardKind, id: Uuid) -> CardView {
     }
 }
 
-fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
+pub(crate) fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
     let id = *rec.entry.id.as_uuid();
     let link = LinkText {
         tickets: rec
@@ -223,7 +223,7 @@ fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
     }
 }
 
-fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
+pub(crate) fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
     let id = *item.id.as_uuid();
     let link = LinkText {
         tickets: vec![item.ticket_number.clone()],
@@ -248,7 +248,7 @@ fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
     }
 }
 
-fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending {
+pub(crate) fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending {
     let id = *note.id.as_uuid();
     let link = LinkText {
         tickets: Vec::new(),
@@ -270,7 +270,7 @@ fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending {
     }
 }
 
-fn inbox_card(scrap: InboxItem) -> Pending {
+pub(crate) fn inbox_card(scrap: InboxItem) -> Pending {
     let id = *scrap.id.as_uuid();
     let link = LinkText {
         tickets: Vec::new(),
@@ -291,7 +291,7 @@ fn inbox_card(scrap: InboxItem) -> Pending {
     }
 }
 
-fn skip_missing<T>(found: Result<T, StorageError>) -> Res<Option<T>> {
+pub(crate) fn skip_missing<T>(found: Result<T, StorageError>) -> Res<Option<T>> {
     match found {
         Ok(v) => Ok(Some(v)),
         Err(StorageError::NotFound) => Ok(None),
@@ -300,7 +300,7 @@ fn skip_missing<T>(found: Result<T, StorageError>) -> Res<Option<T>> {
 }
 
 /// The card for a record the layout knows about, if the record is still there.
-async fn card_for(
+pub(crate) async fn card_for(
     store: &SqliteStore,
     owner: OwnerId,
     kind: CardKind,

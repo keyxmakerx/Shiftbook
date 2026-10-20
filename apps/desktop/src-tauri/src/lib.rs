@@ -7,6 +7,7 @@
 
 mod api;
 mod backoff;
+mod boards;
 mod canvas;
 mod meetings;
 mod notes;
@@ -377,6 +378,8 @@ pub fn run() {
             canvas::canvas_folder_save,
             canvas::canvas_folder_remove,
             canvas::canvas_tidy,
+            boards::board,
+            boards::board_move,
             canvas::canvas_link,
             canvas::canvas_link_reset,
             notes::daily_note,

@@ -24,6 +24,7 @@ import type {
   BellItem,
   TrayItem,
   CardRef,
+  BoardData,
   DeskData,
   CardKind,
   CanvasCard,
@@ -329,6 +330,12 @@ export class TauriApi implements DataApi {
   }
   canvasTidy(today: IsoDate): Promise<TidyResult> {
     return call('canvas_tidy', { today });
+  }
+  board(today: IsoDate, key: string): Promise<BoardData> {
+    return call('board', { today, key });
+  }
+  boardMove(key: string, kind: CardKind, id: string, x: number, y: number): Promise<void> {
+    return call('board_move', { key, kind, id, x, y });
   }
   canvasLink(a: CardRef, b: CardRef, drawn: boolean): Promise<void> {
     return call('canvas_link', { aKind: a.kind, aId: a.id, bKind: b.kind, bId: b.id, drawn });

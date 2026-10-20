@@ -98,5 +98,19 @@ names the round it came from. Nothing here is optional unless it says so.
    Undo. Click a drawer to see what's in it, Open or Put back each thing; folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
-4. **C4 Boards:** boards inside boards with tint and breadcrumbs, the List view, the Archive.
+4. **C4 Boards (built, round 12):** **Boards** (Desk bottom bar), Open full screen on a
+   project's box, or ⤢ on a drawer opens a board full screen. The tree on the left shows every
+   board: Projects (one per project), Meetings (one per meeting series, holding the notes
+   titled "<series> · <day>"), Daily notes, each folder, and the Archive. The trail on top
+   walks back up (Desk › Projects › a project); a project's board takes its colour. Three
+   views: **Notebook** (its notes; one open to write in, saved as you type; New note makes a
+   page for a project, Today's note for Daily, Today's meeting note for a series, a jot filed
+   in a folder; a project also shows its hours in all, tickets still open and its latest
+   entries and tickets), **Board** (its own canvas: cards keep their own spots here, apart
+   from the Desk) and **List** (the boards inside, then its cards). Entries and tickets from
+   the last 90 days show, notes always. The **Archive** lists archived notes with Bring back,
+   and archived projects as boards (Bring back on the board). Daily notes now move to the
+   Archive after 2 weeks without a change (or sooner if the notes setting is shorter).
+   **Links** written in a note (http/https) show under it with Copy; opening them in the
+   browser waits on a sign-off question (it needs a Tauri plugin). Esc goes back to the Desk.
 5. **C5:** the meeting canvas.

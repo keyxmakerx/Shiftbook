@@ -56,6 +56,7 @@
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
   import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -504,6 +505,7 @@
         {
           head: `${p?.name ?? 'Project'} area`,
           items: [
+            { label: 'Open full screen', icon: 'expand', side: true, act: () => openBoard(`project:${a.projectId}`) },
             fold,
             {
               label: 'Take the area off the Desk',
@@ -1084,6 +1086,9 @@
       </button>
       <button type="button" class="wide" aria-pressed={showLinks} onclick={() => (showLinks = !showLinks)}>
         <Icon name="link" size={14} />Links
+      </button>
+      <button type="button" class="wide" title="Step into a project, a meeting, the Daily notes, a folder or the Archive" onclick={() => openBoard('desk')}>
+        <Icon name="expand" size={14} />Boards
       </button>
       {#if mode === 'free'}
         <button type="button" class="wide" title="Pile loose cards by project" onclick={() => void tidy()}>

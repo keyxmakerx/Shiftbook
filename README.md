@@ -35,7 +35,9 @@ The alpha is a working app you can use day to day for logging time:
   Drop a card on a card to make a **pile** (click it to fan out); **Tidy into stacks** piles
   loose cards by project. The **drawers** (one per project plus your folders) slide out when
   you drag something: drop it on one to file it off the Desk; it stays in Find and on the
-  timesheet. See `docs/CANVAS.md`.
+  timesheet. **Boards** open a project, a meeting series, the Daily notes, a folder or the
+  **Archive** full screen, as a Notebook, a Board of its own or a List; links in notes show
+  with Copy. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
   entry); the **Tickets** tray (paste tickets as you work on them, each adds 15 minutes you
@@ -103,7 +105,7 @@ The alpha is a working app you can use day to day for logging time:
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 
-Not in the alpha yet: Planner, the rest of the Canvas (stacks, drawers, boards; see `docs/CANVAS.md`), the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
+Not in the alpha yet: Planner, pictures in notes, the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `docs/ROADMAP.md`.
 

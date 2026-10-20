@@ -78,6 +78,8 @@ fn main() {
             "create_note",
             "canvas",
             "canvas_move",
+            "board",
+            "board_move",
             "canvas_area",
             "canvas_area_remove",
             "canvas_area_collapse",

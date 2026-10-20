@@ -32,6 +32,7 @@
     onchanged,
     onlink,
     onpick,
+    onopen,
   }: {
     card: CanvasCard;
     zoom: number;
@@ -58,6 +59,8 @@
     onlink?: () => void;
     /** This card was picked as the other end of a link. */
     onpick?: () => void;
+    /** Opening it (double-click or Enter) does this instead (a board opens notes in its Notebook). */
+    onopen?: () => void;
   } = $props();
 
   let el: HTMLElement | undefined = $state();
@@ -155,7 +158,8 @@
   }
 
   function openCard() {
-    if (card.entry) {
+    if (onopen) onopen();
+    else if (card.entry) {
       closePanel();
       app.drawer = card.entry.id;
     } else if (card.note) openNote(card.note.id);

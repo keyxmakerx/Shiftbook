@@ -81,6 +81,8 @@
     "allow-create-note",
     "allow-canvas",
     "allow-canvas-move",
+    "allow-board",
+    "allow-board-move",
     "allow-canvas-area",
     "allow-canvas-area-remove",
     "allow-canvas-area-collapse",
