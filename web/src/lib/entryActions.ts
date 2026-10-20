@@ -37,13 +37,19 @@ export async function addEntryTime(entry: Entry, minutes: number): Promise<void>
     toast('The Tickets entry adds up the Tickets tray. Change minutes there.');
     return;
   }
-  const updated = await attempt(() => api.addEntryMinutes(entry.id, minutes));
-  if (!updated) return;
-  putEntry(updated);
+  // Time lands on the day being worked (today, or the day open on Day), never quietly on an
+  // older day: rules in crates/core/src/quicklog.rs (plan_add_time).
+  const day = app.view === 'day' ? app.selected : app.today;
+  const done = await attempt(() => api.addEntryTime(entry.id, day, minutes));
+  if (!done) return;
+  const updated = done.entry;
+  if (updated.date === app.selected) putEntry(updated);
   flashEntry(updated.id);
   void refresh();
-  toast(`Added ${fmtMinutes(minutes)} to ${updated.description || 'the entry'}`, 'Undo', () => {
-    void attempt(() => api.addEntryMinutes(updated.id, -minutes)).then(refresh);
+  const where = updated.date === entry.date ? '' : updated.date === app.today ? ' today' : ` on ${updated.date}`;
+  toast(`Added ${fmtMinutes(minutes)} to ${updated.description || 'the entry'}${where}`, 'Undo', () => {
+    const undo: Promise<unknown> = done.created ? api.deleteEntry(updated.id) : api.addEntryMinutes(updated.id, -minutes);
+    void attempt(() => undo).then(refresh);
   });
 }
 

@@ -559,6 +559,35 @@ pub async fn add_entry_minutes(
     one_entry(&store, owner, rec).await
 }
 
+/// What "+15m" on an entry did.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddedTimeView {
+    /// The entry that got the time.
+    entry: EntryView,
+    /// It was made just now (a copy on the day), so Undo removes it.
+    created: bool,
+}
+
+/// Maps to `DataApi.addEntryTime()`: add work time on an entry, landing on `day` (today, or
+/// the day open on Day): see `shiftbook_core::quicklog::plan_add_time`.
+#[tauri::command]
+pub async fn add_entry_time(
+    s: State<'_, VaultSession>,
+    id: String,
+    day: String,
+    minutes: u32,
+) -> Res<AddedTimeView> {
+    let (store, owner) = s.data().await?;
+    let (rec, created) = store
+        .add_time_on(owner, id_arg(&id)?, date_arg(&day)?, minutes)
+        .await?;
+    Ok(AddedTimeView {
+        entry: one_entry(&store, owner, rec).await?,
+        created,
+    })
+}
+
 /// Maps to `DataApi.getEntry()`: one entry, for a window showing its notepad.
 #[tauri::command]
 pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView> {

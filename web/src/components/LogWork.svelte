@@ -158,7 +158,7 @@
           timesEl?.querySelector<HTMLButtonElement>('button')?.focus();
         }
       }}
-      placeholder="INC0045678 50m or “printer on 2nd floor”"
+      placeholder="e.g. “patched print server 45m”"
       autocomplete="off"
       spellcheck="false"
     />

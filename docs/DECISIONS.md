@@ -12,6 +12,13 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   window, right-click to set a day to chase it (Today, Tomorrow, In 3 days, Next week) or
   unpin. From the chase day the chip turns orange and the bell lists it with Open and
   Tomorrow.
+- **Tickets start still open** (round 14): a pasted ticket starts Still open and is ticked
+  when done (the round tick stays). Adding tickets asks **"Time on it so far?"** (5m to 2h,
+  15m if skipped). The Tickets and Log work boxes stay separate; Log work's example no longer
+  looks like a ticket.
+- **Adding time to an older entry** (round 14): +15m/+30m/+1h lands on the day being worked
+  (today on the Desk, the open day on Day): on that day's entry with the same title and
+  project, or a copy of the entry there. The older day is never changed by it.
 - **Scroll wheel:** on the Desk it zooms around the pointer (was Ctrl + scroll; round 4).
   Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
   slide-out, the wheel scrolls that instead.

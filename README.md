@@ -44,13 +44,15 @@ The alpha is a working app you can use day to day for logging time:
   with Copy. See `docs/CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
-  entry); the **Tickets** tray (paste tickets as you work on them, each adds 15 minutes you
-  can step up or down, and they roll up into one “Tickets” entry for the day; a box beside each
-  ticket takes a few words, and its slide-out holds a full notepad; **untick** a ticket that
-  isn't finished and it stays **Still open**, coming back each day until you tick it; give a
-  ticket a project and its minutes count under that project instead); the entries list with
-  +15m/+30m/+1h and ticket chips you click to copy (click an entry for the same slide-out as on
-  the Desk); **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  entry); the **Tickets** tray (paste tickets as you work on them; a small box asks how long
+  you've spent so far (15 minutes if you skip it), which you can step up or down later, and
+  they roll up into one “Tickets” entry for the day; a box beside each ticket takes a few
+  words, and its slide-out holds a full notepad; a new ticket starts **Still open** and comes
+  back each day until you **tick** it done; give a ticket a project and its minutes count under
+  that project instead); the entries list with +15m/+30m/+1h and ticket chips you click to copy
+  (click an entry for the same slide-out as on the Desk). +15m/+30m/+1h on an entry from an
+  earlier day adds the time today (to today's entry with the same title and project, or a copy
+  of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
   a right-click menu) puts a notepad or a note in a window that floats over everything and

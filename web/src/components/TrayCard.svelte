@@ -1,7 +1,7 @@
 <script lang="ts">
   // The Tickets tray: paste tickets as you work on them through the day. Each one adds its
-  // minutes (15 by default, change with the stepper). A tick means done; untick one to keep
-  // it open and it comes back each day until it is ticked. Tickets without a project roll up
+  // minutes (15 by default; a little box asks how long so far, and the stepper changes it).
+  // A ticket starts still open and comes back each day until it is ticked done (round 14). Tickets without a project roll up
   // into the day's "Tickets" entry, the others into their project's (rules in
   // crates/core/src/tray.rs). Click a ticket for its notepad and options.
   import { api } from '../lib/api';
@@ -18,18 +18,31 @@
   import TicketChip from './TicketChip.svelte';
 
   const STEP = 5;
+  /** Choices in the "time on it so far?" box. */
+  const SO_FAR = [5, 15, 30, 45, 60, 120];
   let text = $state('');
+  /** Tickets just added, waiting for "time on it so far?". */
+  let asking = $state<string[]>([]);
 
   async function add(pasted: string) {
     if (!pasted.trim()) return;
-    const before = app.tray?.items.length ?? 0;
+    const before = new Set(app.tray?.items.map((i) => i.id) ?? []);
     const result = await attempt(() => api.trayAdd(app.selected, pasted));
     if (!result) return;
     text = '';
-    const added = result.items.length - before;
+    const added = result.items.filter((i) => !before.has(i.id)).map((i) => i.id);
     await applyTray(result);
-    toast(added > 0 ? `Added ${added} ticket${added === 1 ? '' : 's'} to the tray` : 'Those tickets are already in the tray.');
+    if (added.length) asking = added;
+    else toast('Those tickets are already in the tray.');
   }
+
+  /** Answer "time on it so far?" for one ticket. */
+  async function soFar(item: TrayItem, minutes: number) {
+    asking = asking.filter((id) => id !== item.id);
+    if (minutes !== item.minutes) await applyTray(await attempt(() => api.traySetMinutes(item.id, minutes)));
+  }
+
+  const askingItems = $derived(asking.map((id) => app.tray?.items.find((i) => i.id === id)).filter((i): i is TrayItem => !!i));
 
   async function step(item: TrayItem, by: number) {
     const next = Math.max(0, Math.min(480, item.minutes + by));
@@ -100,7 +113,7 @@
       <span class="total mono">{app.tray?.hours ?? '0'} h</span>
     </span>
   </h3>
-  <p class="hint">Paste tickets as you work on them. Untick one that isn't finished: it comes back tomorrow.</p>
+  <p class="hint">Paste tickets as you work on them. Each stays open, and comes back tomorrow, until you tick it done.</p>
   <input
     class="text-in"
     bind:value={text}
@@ -122,6 +135,24 @@
       }
     }}
   />
+  {#if askingItems.length}
+    <div class="ask" role="group" aria-label="Time on the new tickets so far">
+      <span class="ask-head">
+        <b>Time on {askingItems.length === 1 ? 'it' : 'them'} so far?</b>
+        <button type="button" class="ask-skip" onclick={() => (asking = [])}>Keep {fmtMinutes(askingItems[0]!.minutes)}</button>
+      </span>
+      {#each askingItems as item (item.id)}
+        <span class="ask-row">
+          {#if askingItems.length > 1}<span class="mono ask-tk">{item.ticket}</span>{/if}
+          <span class="picks">
+            {#each SO_FAR as m (m)}
+              <button type="button" class:on={item.minutes === m} onclick={() => void soFar(item, m)}>{fmtMinutes(m)}</button>
+            {/each}
+          </span>
+        </span>
+      {/each}
+    </div>
+  {/if}
   {#if app.tray && app.tray.items.length > 0}
     <ul class="items">
       {#each app.tray.items as item, i (item.id)}
@@ -291,6 +322,75 @@
     margin: 0;
     font-size: 12.5px;
     color: var(--mut);
+  }
+
+  .ask {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 9px 10px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+    border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+    animation: ask-in calc(0.25s * var(--m)) var(--spring);
+  }
+
+  @keyframes ask-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+  }
+
+  .ask-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .ask-skip {
+    border: 0;
+    background: none;
+    padding: 2px 4px;
+    font: 600 12px var(--ui);
+    color: var(--mut);
+    cursor: pointer;
+  }
+
+  .ask-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .ask-tk {
+    font-size: 12px;
+    min-width: 92px;
+  }
+
+  .picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .picks button {
+    min-width: 40px;
+    padding: 4px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 7px;
+    background: var(--paper);
+    font: 600 12px var(--mono);
+    color: var(--ink);
+    cursor: pointer;
+  }
+
+  .picks button:hover,
+  .picks button.on {
+    border-color: var(--accent);
   }
 
   .items {

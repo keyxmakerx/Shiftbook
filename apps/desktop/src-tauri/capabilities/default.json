@@ -35,6 +35,7 @@
     "allow-meeting-note",
     "allow-bell",
     "allow-add-entry-minutes",
+    "allow-add-entry-time",
     "allow-delete-entry",
     "allow-restore-entry",
     "allow-add-entry-tickets",

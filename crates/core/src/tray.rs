@@ -21,6 +21,9 @@ use crate::tickets::add_tickets;
 
 /// Minutes a newly pasted tray ticket gets.
 pub const DEFAULT_TRAY_MINUTES: u32 = 15;
+/// A ticket added to the tray starts still open (round 14): it's ticked done when it is,
+/// and until then it comes back each day.
+pub const NEW_TICKET_DONE: bool = false;
 /// The stepper moves in steps of this many minutes.
 pub const TRAY_MINUTES_STEP: u32 = 5;
 /// Most minutes one tray ticket can carry.

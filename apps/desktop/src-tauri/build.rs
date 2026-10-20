@@ -32,6 +32,7 @@ fn main() {
             "meeting_note",
             "bell",
             "add_entry_minutes",
+            "add_entry_time",
             "delete_entry",
             "restore_entry",
             "add_entry_tickets",
