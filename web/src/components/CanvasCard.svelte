@@ -20,6 +20,7 @@
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
+  import { workTickets } from '../lib/workTickets';
 
   let {
     card,
@@ -300,17 +301,23 @@
 >
   {#if card.entry}
     {@const e = card.entry}
-    <span class="kind">Entry · {e.hours} h{dayWord(e.date)}</span>
+    <span class="kind">
+      {#if card.work.length}
+        {@const days = new Set([e.date, ...card.work.map((w) => w.date)]).size}
+        Entry · {card.workHours} h · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
+      {:else}Entry · {e.hours} h{dayWord(e.date)}{/if}
+    </span>
     <span class="title">{e.description || 'Untitled'}</span>
     <span class="sub">{projectById(e.projectId)?.name ?? 'No project'}</span>
-    {#if e.tickets.length}
-      {@const still = e.tickets.filter((t) => !t.done).length}
+    {@const all = workTickets(card)}
+    {#if all.length}
+      {@const still = all.filter((t) => !t.done).length}
       <button
         type="button"
         class="tstrip"
         class:still={still > 0}
         aria-expanded={group}
-        title="{e.tickets.map((t) => t.number).join(', ')} · click to open them"
+        title="{all.map((t) => t.number).join(', ')} · click to open them"
         onclick={(ev) => {
           ev.stopPropagation();
           closePanel();
@@ -318,7 +325,7 @@
         }}
       >
         <Icon name="ticket" size={12} />
-        <span class="tn">{e.tickets.length === 1 ? e.tickets[0]!.number : `${e.tickets.length} tickets`}</span>
+        <span class="tn">{all.length === 1 ? all[0]!.number : `${all.length} tickets`}</span>
         {#if still}<span class="so">{still} open</span>{/if}
       </button>
     {/if}
@@ -344,13 +351,7 @@
 </div>
 {#if group && card.entry}
   <div class="tgroup" style:left="{x + 230}px" style:top="{y}px">
-    <TicketGroup
-      entry={card.entry}
-      onclose={(changed) => {
-        group = false;
-        if (changed) onchanged();
-      }}
-    />
+    <TicketGroup {card} {onchanged} onclose={() => (group = false)} />
   </div>
 {/if}
 {#if open && (card.entry || card.tray)}

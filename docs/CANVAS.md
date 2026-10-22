@@ -101,6 +101,9 @@ names the round it came from. Nothing here is optional unless it says so.
    (round 14); folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
+   **Same work, one card (round 14):** entries with the same title and project show as one
+   card (the newest, with the total and the days); tray tickets with one of its numbers fold
+   into its strip.
    **Entry tickets (round 14):** an entry's tickets fold into a strip on its card; click it
    for a box over the Desk with the entry and a card per ticket (tick, notepad, attach more).
    **Done today (round 14):** tickets ticked done today gather in one green **Done today**

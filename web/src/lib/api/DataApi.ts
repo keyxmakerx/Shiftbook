@@ -450,6 +450,12 @@ export interface CanvasCard {
   tray: { item: TrayItem; date: IsoDate } | null;
   note: Note | null;
   inbox: InboxItem | null;
+  /** For an entry: the same work on other days, folded into this card, newest first. */
+  work: Entry[];
+  /** The time across this card and `work`, as hours (only when there is other work). */
+  workHours: string | null;
+  /** Tickets-tray tickets with a number this work has, folded into this card. */
+  folded: { item: TrayItem; date: IsoDate }[];
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */

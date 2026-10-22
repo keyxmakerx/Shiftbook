@@ -1,41 +1,49 @@
 <script lang="ts">
-  // An entry's tickets, opened from the strip on its Desk card (round 14): a box that floats
-  // over the Desk with the entry itself first, then a card per ticket. Each ticket has the
-  // round tick (done / still open) and its own notepad, like the Tickets tray; their time is
-  // the entry's. More tickets can be attached at the bottom. Esc or ✕ folds it away.
+  // The tickets of a Desk card, opened from the strip on it (round 14): a box that floats
+  // over the Desk with the work first (and its days, when the same work spans several), then
+  // a card per ticket. A ticket number shows once even when it's on several days' entries or
+  // also in the Tickets tray (lib/workTickets.ts); its round tick ticks it everywhere and its
+  // notepad is the newest one. Their time is the work's. More tickets can be attached at the
+  // bottom. Esc or ✕ folds it away.
   import { api } from '../lib/api';
-  import type { Entry, Ticket } from '../lib/api';
+  import type { CanvasCard } from '../lib/api';
   import { focusNow } from '../lib/focus';
-  import { attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
+  import { dayMonth, weekdayShort } from '../lib/format';
+  import { app, attempt, projectById, projectColor } from '../lib/store.svelte';
+  import { applyTray } from '../lib/trayActions';
+  import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
 
-  let { entry, onclose }: { entry: Entry; onclose: (changed: boolean) => void } = $props();
+  let { card, onchanged, onclose }: { card: CanvasCard; onchanged: () => void; onclose: () => void } = $props();
 
   const SAVE_AFTER_MS = 700;
-  // The entry as this box last saw it: the card's copy until a change here returns it fresh.
-  let fresh = $state<Entry | null>(null);
-  const shown = $derived(fresh ?? entry);
-  let changed = false;
   let open = $state<string | null>(null);
   let draft = $state('');
   let adding = $state('');
   let timer: ReturnType<typeof setTimeout> | null = null;
 
-  function took(updated: Entry | undefined) {
-    if (!updated) return;
-    fresh = updated;
-    changed = true;
-    putEntry(updated);
+  const entry = $derived(card.entry!);
+  const tickets = $derived(workTickets(card));
+  const days = $derived([entry, ...card.work]);
+  const stillOpen = $derived(tickets.filter((t) => !t.done).length);
+
+  async function tick(w: WorkTicket) {
+    const done = !w.done;
+    const ok = await attempt(async () => {
+      for (const s of w.sources) {
+        if (s.done === done) continue;
+        if (s.kind === 'entry') await api.ticketSetDone(s.id, done);
+        else applyTray(await api.traySetDone(s.id, done));
+      }
+      return true;
+    });
+    if (ok) onchanged();
   }
 
-  async function tick(t: Ticket) {
-    took(await attempt(() => api.ticketSetDone(t.id, !t.done)));
-  }
-
-  function openNote(t: Ticket) {
+  function openNote(w: WorkTicket) {
     void flush();
-    open = open === t.id ? null : t.id;
-    draft = t.note ?? '';
+    open = open === w.number ? null : w.number;
+    draft = w.note ?? '';
   }
 
   function typed() {
@@ -46,24 +54,30 @@
   async function flush() {
     if (timer) clearTimeout(timer);
     timer = null;
-    const t = shown.tickets.find((x) => x.id === open);
-    if (!t || draft.trim() === (t.note ?? '').trim()) return;
-    took(await attempt(() => api.ticketSetNote(t.id, draft)));
+    const w = tickets.find((x) => x.number === open);
+    if (!w || draft.trim() === (w.note ?? '').trim()) return;
+    // The note goes on the newest place the ticket appears.
+    const s = w.sources[0]!;
+    const text = draft;
+    const ok = await attempt(async () => {
+      if (s.kind === 'entry') await api.ticketSetNote(s.id, text);
+      else applyTray(await api.traySetNote(s.id, text));
+      return true;
+    });
+    if (ok) onchanged();
   }
 
   async function add() {
     if (!adding.trim()) return;
     const text = adding;
     adding = '';
-    took(await attempt(() => api.addEntryTickets(shown.id, text)));
+    if (await attempt(() => api.addEntryTickets(entry.id, text).then(() => true))) onchanged();
   }
 
   async function close() {
     await flush();
-    onclose(changed);
+    onclose();
   }
-
-  const open_count = $derived(shown.tickets.filter((t) => !t.done).length);
 </script>
 
 <svelte:window
@@ -78,23 +92,32 @@
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <section
   class="group paper"
-  aria-label="Tickets on {shown.description || 'this entry'}"
+  aria-label="Tickets on {entry.description || 'this entry'}"
   onpointerdown={(e) => e.stopPropagation()}
   ondblclick={(e) => e.stopPropagation()}
   onwheel={(e) => e.stopPropagation()}
 >
   <header>
-    <span class="head">{shown.tickets.length} ticket{shown.tickets.length === 1 ? '' : 's'}{open_count ? ` · ${open_count} still open` : ''}</span>
+    <span class="head">{tickets.length} ticket{tickets.length === 1 ? '' : 's'}{stillOpen ? ` · ${stillOpen} still open` : ''}</span>
     <button type="button" class="x" aria-label="Close" onclick={() => void close()}><Icon name="x" size={14} /></button>
   </header>
   <div class="grid">
-    <div class="sq parent" style:--c={projectColor(shown.projectId)}>
-      <span class="kind">Entry · {shown.hours} h</span>
-      <span class="title">{shown.description || 'Untitled'}</span>
-      <span class="sub">{projectById(shown.projectId)?.name ?? 'No project'}</span>
+    <div class="sq parent" style:--c={projectColor(entry.projectId)}>
+      <span class="kind">Entry · {card.workHours ?? entry.hours} h</span>
+      <span class="title">{entry.description || 'Untitled'}</span>
+      <span class="sub">{projectById(entry.projectId)?.name ?? 'No project'}</span>
+      {#if card.work.length}
+        <span class="days">
+          {#each days as d (d.id)}
+            <button type="button" class="day" title="Open this day's entry" onclick={() => (app.drawer = d.id)}>
+              {d.date === app.today ? 'Today' : `${weekdayShort(d.date)} ${dayMonth(d.date)}`} · {d.hours} h
+            </button>
+          {/each}
+        </span>
+      {/if}
     </div>
-    {#each shown.tickets as t (t.id)}
-      <div class="sq" class:still={!t.done} class:opened={open === t.id} style:--c={projectColor(shown.projectId)}>
+    {#each tickets as t (t.number)}
+      <div class="sq" class:still={!t.done} class:opened={open === t.number} style:--c={projectColor(entry.projectId)}>
         <span class="top">
           <button
             type="button"
@@ -110,7 +133,7 @@
           <span class="num mono">{t.number}</span>
           {#if !t.done}<span class="tag">Still open</span>{/if}
         </span>
-        {#if open === t.id}
+        {#if open === t.number}
           <textarea
             class="pad"
             bind:value={draft}
@@ -133,7 +156,7 @@
     class="text-in add"
     bind:value={adding}
     placeholder="+ Attach tickets (paste one or many)"
-    aria-label="Attach tickets to {shown.description || 'this entry'}"
+    aria-label="Attach tickets to {entry.description || 'this entry'}"
     autocomplete="off"
     spellcheck="false"
     onkeydown={(e) => {
@@ -218,6 +241,27 @@
 
   .sq.parent {
     background: color-mix(in srgb, var(--c) 8%, var(--paper));
+  }
+
+  .days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 2px;
+  }
+
+  .day {
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 1px 7px;
+    background: var(--paper);
+    font: 600 11px var(--ui);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .day:hover {
+    border-color: var(--accent);
   }
 
   .sq.still {
