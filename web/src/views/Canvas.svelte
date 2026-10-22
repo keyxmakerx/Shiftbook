@@ -87,6 +87,8 @@
   let cabinet = $state(cabinetShown);
   /** A card or pile is being dragged: the cabinet slides open to take it. */
   let dragging = $state(false);
+  /** Where the open drawer's panel was dragged to (kept while the app is open). */
+  let drawerShift = $state({ x: 0, y: 0 });
   let links = $state<CanvasLink[]>([]);
   let axis = $state<{ date: string; x: number }[]>([]);
   let mode = $state<'free' | 'timeline'>('free');
@@ -1087,6 +1089,7 @@
               onrename={(name) => void renameFolder(d.key, name)}
               onremove={() => void removeFolder(d.key)}
               dropping={hoverDrawer === d.key}
+              bind:shift={drawerShift}
             />
           </div>
         {/if}
@@ -1238,6 +1241,12 @@
     z-index: 6;
     display: flex;
     align-items: flex-start;
+    /* Only the panel takes the pointer: cards under the empty space below it stay grabbable. */
+    pointer-events: none;
+  }
+
+  .drawer-at > :global(*) {
+    pointer-events: auto;
   }
 
   .toolbox {

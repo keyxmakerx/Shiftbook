@@ -1,6 +1,7 @@
 <script lang="ts">
   // What's in a drawer: everything filed there, newest first. Drop a card or a pile on the
-  // open panel to file it here too (round 14), as on the drawer's name in the cabinet. Put back brings a card onto
+  // open panel to file it here too (round 14), as on the drawer's name in the cabinet. Drag
+  // its title bar to move it out of the way. Put back brings a card onto
   // the Desk where you're looking; Open opens it. A folder can be renamed or removed.
   import { api } from '../lib/api';
   import type { CanvasCard, CanvasDrawer } from '../lib/api';
@@ -20,10 +21,13 @@
     onrename,
     onremove,
     dropping = false,
+    shift = $bindable({ x: 0, y: 0 }),
   }: {
     drawer: CanvasDrawer;
     /** Something is being dragged over it (dropping files it here). */
     dropping?: boolean;
+    /** How far it was dragged from its usual spot, in pixels. */
+    shift?: { x: number; y: number };
     /** Where a card put back lands (canvas units). */
     putBack: () => { x: number; y: number };
     onclose: () => void;
@@ -65,6 +69,29 @@
     else if (c.note) openNote(c.note.id);
     else if (c.tray) openWindow('tray', c.tray.item.id);
   }
+
+  /** Drag the title bar to move the panel (buttons and the rename box keep their clicks). */
+  function moveStart(e: PointerEvent) {
+    if (e.button !== 0 || (e.target as HTMLElement).closest('button, input')) return;
+    e.preventDefault();
+    const target = e.currentTarget as HTMLElement;
+    const start = { x: e.clientX - shift.x, y: e.clientY - shift.y };
+    target.setPointerCapture(e.pointerId);
+    const move = (m: PointerEvent) => {
+      // Keep the title bar on screen.
+      const x = Math.max(-180, Math.min(window.innerWidth - 300, m.clientX - start.x));
+      const y = Math.max(-10, Math.min(window.innerHeight - 160, m.clientY - start.y));
+      shift = { x, y };
+    };
+    const up = () => {
+      target.removeEventListener('pointermove', move);
+      target.removeEventListener('pointerup', up);
+      target.removeEventListener('pointercancel', up);
+    };
+    target.addEventListener('pointermove', move);
+    target.addEventListener('pointerup', up);
+    target.addEventListener('pointercancel', up);
+  }
 </script>
 
 <svelte:window
@@ -77,8 +104,17 @@
 />
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<section class="panel paper" class:dropping data-drawer={drawer.key} style:--c={drawer.color ?? 'var(--mut)'} aria-label="{drawer.name} drawer" onpointerdown={(e) => e.stopPropagation()}>
-  <header>
+<section
+  class="panel paper"
+  class:dropping
+  data-drawer={drawer.key}
+  style:--c={drawer.color ?? 'var(--mut)'}
+  style:transform="translate({shift.x}px, {shift.y}px)"
+  aria-label="{drawer.name} drawer"
+  onpointerdown={(e) => e.stopPropagation()}
+>
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <header title="Drag to move" onpointerdown={moveStart}>
     {#if renaming}
       <input
         class="text-in"
@@ -181,6 +217,12 @@
     display: flex;
     align-items: center;
     gap: 4px;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  header:active {
+    cursor: grabbing;
   }
 
   h3 {
