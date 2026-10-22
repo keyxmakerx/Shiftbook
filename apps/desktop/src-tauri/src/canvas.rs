@@ -478,10 +478,14 @@ fn fold_same_work(
                 .tickets
                 .first()
                 .and_then(|n| ticket_home(n, &numbers));
-            if let (Some(h), Some(tray)) = (home, p.card.tray.take()) {
-                cards[h].open |= p.open;
-                cards[h].card.folded.push(tray);
-                continue;
+            // Only a ticket that has a home gives up its card (taking it any sooner left an
+            // empty card behind for the rest).
+            if let Some(h) = home {
+                if let Some(tray) = p.card.tray.take() {
+                    cards[h].open |= p.open;
+                    cards[h].card.folded.push(tray);
+                    continue;
+                }
             }
         }
         others.push(p);
@@ -1194,4 +1198,50 @@ pub async fn canvas_move(
     let id = Uuid::parse_str(&id).map_err(|_| CommandError::InvalidInput)?;
     store.move_card(owner, kind, id, x, y).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use shiftbook_core::ids::{OwnerId, TrayItemId};
+    use time::macros::{date, datetime};
+
+    fn tray(number: &str) -> Pending {
+        tray_card(
+            TrayItem {
+                id: TrayItemId::new(),
+                owner_id: OwnerId::new(),
+                date: date!(2026 - 10 - 22),
+                ticket_number: number.into(),
+                minutes: Minutes(15),
+                note: None,
+                done: false,
+                project_id: None,
+                created_at: datetime!(2026-10-22 09:00 UTC),
+                updated_at: datetime!(2026-10-22 09:00 UTC),
+                deleted_at: None,
+            },
+            &[],
+        )
+    }
+
+    #[test]
+    fn a_ticket_without_a_home_keeps_its_card() {
+        let mut entry = tray("CHG0146615");
+        // An entry card whose work has CHG0146615 (only its kind and tickets matter here).
+        entry.kind = CardKind::Entry;
+        entry.title = "Network closet".into();
+        let out = fold_same_work(
+            vec![entry, tray("chg0146615"), tray("INC0099001")],
+            &HashMap::new(),
+        );
+        assert_eq!(out.len(), 2);
+        assert_eq!(out[0].card.folded.len(), 1);
+        let loose = &out[1];
+        assert_eq!(loose.kind, CardKind::Tray);
+        assert!(
+            loose.card.tray.is_some(),
+            "an unmatched ticket keeps what its card shows"
+        );
+    }
 }
