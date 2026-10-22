@@ -96,7 +96,8 @@ names the round it came from. Nothing here is optional unless it says so.
    **Drawers**: the cabinet under the toolbox, one drawer per project plus folders you make
    (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
    drawer to file it off the Desk (a project's drawer also gives the cards that project), with
-   Undo. Click a drawer to see what's in it, Open or Put back each thing; folders can be
+   Undo. Click a drawer to see what's in it, Open or Put back each thing; dropping a card or a
+   pile on that open panel files it there too (round 14); folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
    **Done today (round 14):** tickets ticked done today gather in one green **Done today**
