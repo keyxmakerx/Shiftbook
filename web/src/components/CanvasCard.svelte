@@ -17,7 +17,9 @@
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
+  import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import TicketGroup from './TicketGroup.svelte';
 
   let {
     card,
@@ -66,6 +68,8 @@
   } = $props();
 
   let el: HTMLElement | undefined = $state();
+  /** The entry's tickets are open in their floating box (round 14). */
+  let group = $state(false);
   let drag = $state<{ dx: number; dy: number } | null>(null);
   let height = $state(0);
 
@@ -119,7 +123,12 @@
       onpick?.();
       return;
     }
-    if ((e.target as HTMLElement).closest('input, textarea, button')) return;
+    // A button on the card (the tickets strip) gets its own click; the Desk mustn't take the
+    // pointer for panning.
+    if ((e.target as HTMLElement).closest('input, textarea, button')) {
+      e.stopPropagation();
+      return;
+    }
     // No text selection or browser drag from a card: either one takes the pointer away and the
     // card sticks. Focus by hand, since this stops the press from focusing it.
     e.preventDefault();
@@ -295,7 +304,23 @@
     <span class="title">{e.description || 'Untitled'}</span>
     <span class="sub">{projectById(e.projectId)?.name ?? 'No project'}</span>
     {#if e.tickets.length}
-      <span class="tickets">{e.tickets.map((t) => t.number).join(' · ')}</span>
+      {@const still = e.tickets.filter((t) => !t.done).length}
+      <button
+        type="button"
+        class="tstrip"
+        class:still={still > 0}
+        aria-expanded={group}
+        title="{e.tickets.map((t) => t.number).join(', ')} · click to open them"
+        onclick={(ev) => {
+          ev.stopPropagation();
+          closePanel();
+          group = !group;
+        }}
+      >
+        <Icon name="ticket" size={12} />
+        <span class="tn">{e.tickets.length === 1 ? e.tickets[0]!.number : `${e.tickets.length} tickets`}</span>
+        {#if still}<span class="so">{still} open</span>{/if}
+      </button>
     {/if}
     {#if e.notes}<span class="padline">✎ {e.notes.split('\n')[0]}</span>{/if}
   {:else if card.tray}
@@ -317,6 +342,17 @@
     <span class="title">{card.inbox.text}</span>
   {/if}
 </div>
+{#if group && card.entry}
+  <div class="tgroup" style:left="{x + 230}px" style:top="{y}px">
+    <TicketGroup
+      entry={card.entry}
+      onclose={(changed) => {
+        group = false;
+        if (changed) onchanged();
+      }}
+    />
+  </div>
+{/if}
 {#if open && (card.entry || card.tray)}
   <div class="under" style:left="{x}px" style:top="{y + height}px">
     <ItemPanel
@@ -424,14 +460,6 @@
     font-style: italic;
   }
 
-  .tickets {
-    font: 600 11px var(--mono);
-    color: var(--mut);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
   .card.dropping {
     box-shadow:
       0 0 0 3px var(--accent),
@@ -456,6 +484,45 @@
     position: absolute;
     width: 300px;
     z-index: 99997;
+  }
+
+  .tgroup {
+    position: absolute;
+    z-index: 99997;
+  }
+
+  .tstrip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 100%;
+    margin-top: 2px;
+    padding: 2px 8px 2px 6px;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--ink) 4%, transparent);
+    font: 600 11px var(--mono);
+    color: var(--ink-2);
+    cursor: pointer;
+  }
+
+  .tstrip:hover,
+  .tstrip[aria-expanded='true'] {
+    border-color: var(--accent);
+  }
+
+  .tn {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .so {
+    font: 700 10px var(--ui);
+    color: var(--warn);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
   }
 
   .padline {

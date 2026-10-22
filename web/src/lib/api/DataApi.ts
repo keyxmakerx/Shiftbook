@@ -194,6 +194,10 @@ export interface Ticket {
   id: string;
   number: string;
   links: TicketLink[];
+  /** Ticked done; false while still open (round 14). */
+  done: boolean;
+  /** Its notepad. */
+  note: string | null;
 }
 
 export interface Entry {
@@ -786,6 +790,10 @@ export interface DataApi {
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
   removeTicket(ticketId: string): Promise<Entry>;
+  /** Tick an entry's ticket done, or mark it still open. Tauri: `ticket_set_done`. */
+  ticketSetDone(id: string, done: boolean): Promise<Entry>;
+  /** Write an entry ticket's notepad (blank clears it). Tauri: `ticket_set_note`. */
+  ticketSetNote(id: string, note: string): Promise<Entry>;
   /** Log work: tickets or words plus a time button, on `date`. */
   quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry>;
 

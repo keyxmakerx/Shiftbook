@@ -98,6 +98,10 @@ pub struct TicketView {
     id: String,
     number: String,
     links: Vec<LinkView>,
+    /// Ticked done; false while still open (round 14).
+    done: bool,
+    /// Its notepad.
+    note: Option<String>,
 }
 
 /// A time entry with its tickets.
@@ -360,6 +364,8 @@ pub(crate) fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView 
             .into_iter()
             .map(|t| TicketView {
                 id: t.id.to_string(),
+                done: t.done,
+                note: t.note,
                 links: ticket_links(fields, &t.ticket_number),
                 number: t.ticket_number,
             })
@@ -668,6 +674,30 @@ pub async fn add_entry_tickets(
 pub async fn remove_ticket(s: State<'_, VaultSession>, id: String) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let rec = store.remove_ticket(owner, id_arg::<TicketId>(&id)?).await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// Maps to `DataApi.ticketSetDone()`: tick an entry's ticket done, or mark it still open.
+#[tauri::command]
+pub async fn ticket_set_done(s: State<'_, VaultSession>, id: String, done: bool) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let rec = store
+        .set_ticket_done(owner, id_arg::<TicketId>(&id)?, done)
+        .await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// Maps to `DataApi.ticketSetNote()`: write an entry ticket's notepad.
+#[tauri::command]
+pub async fn ticket_set_note(
+    s: State<'_, VaultSession>,
+    id: String,
+    note: String,
+) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let rec = store
+        .set_ticket_note(owner, id_arg::<TicketId>(&id)?, &note)
+        .await?;
     one_entry(&store, owner, rec).await
 }
 

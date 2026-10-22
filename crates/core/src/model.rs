@@ -409,8 +409,10 @@ pub struct Ticket {
     pub time_entry_id: TimeEntryId,
     /// The ticket number/text as pasted (trimmed).
     pub ticket_number: String,
-    /// Optional note.
+    /// Optional note (its notepad).
     pub note: Option<String>,
+    /// Ticked done; false while it is still open (round 14).
+    pub done: bool,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

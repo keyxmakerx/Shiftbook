@@ -101,6 +101,8 @@ names the round it came from. Nothing here is optional unless it says so.
    (round 14); folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
+   **Entry tickets (round 14):** an entry's tickets fold into a strip on its card; click it
+   for a box over the Desk with the entry and a card per ticket (tick, notepad, attach more).
    **Done today (round 14):** tickets ticked done today gather in one green **Done today**
    pile (ticking one done takes it off its spot unless it's filed); drag one out to keep it
    loose. Drag the pile to move it (its spot is the `desk.done_pile` preference); click to fan

@@ -188,6 +188,7 @@ fn ticket_from_row(row: &SqliteRow) -> Result<Ticket> {
         time_entry_id: TimeEntryId::from_uuid(parse_uuid(row.try_get("time_entry_id")?)?),
         ticket_number: row.try_get("ticket_number")?,
         note: row.try_get("note")?,
+        done: row.try_get("done")?,
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
         deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
@@ -320,7 +321,7 @@ async fn entry_tickets(
     id: TimeEntryId,
 ) -> Result<Vec<Ticket>> {
     let rows = sqlx::query(
-        "SELECT id, owner_id, time_entry_id, ticket_number, note, created_at, updated_at, \
+        "SELECT id, owner_id, time_entry_id, ticket_number, note, done, created_at, updated_at, \
          deleted_at FROM tickets WHERE owner_id = $1 AND time_entry_id = $2 \
          AND deleted_at IS NULL ORDER BY id",
     )
@@ -345,6 +346,8 @@ async fn entry_record(
     })
 }
 
+/// Add tickets to an entry. They start still open (`NEW_TICKET_DONE`), except on a tray
+/// roll-up, whose tickets only mirror the tray (their state lives there).
 async fn insert_tickets(
     conn: &mut SqliteConnection,
     owner: OwnerId,
@@ -352,15 +355,24 @@ async fn insert_tickets(
     tickets: &[String],
 ) -> Result<()> {
     let now = now_text();
+    let rollup: Option<String> =
+        sqlx::query_scalar("SELECT source FROM time_entries WHERE id = $1 AND owner_id = $2")
+            .bind(entry.to_string())
+            .bind(owner.to_string())
+            .fetch_optional(&mut *conn)
+            .await?
+            .flatten();
+    let done = rollup.is_some() || NEW_TICKET_DONE;
     for t in tickets {
         sqlx::query(
-            "INSERT INTO tickets (id, owner_id, time_entry_id, ticket_number, note, created_at, \
-             updated_at, deleted_at) VALUES ($1, $2, $3, $4, NULL, $5, $5, NULL)",
+            "INSERT INTO tickets (id, owner_id, time_entry_id, ticket_number, note, done, \
+             created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, NULL, $5, $6, $6, NULL)",
         )
         .bind(TicketId::new().to_string())
         .bind(owner.to_string())
         .bind(entry.to_string())
         .bind(t)
+        .bind(done)
         .bind(&now)
         .execute(&mut *conn)
         .await?;
@@ -926,8 +938,8 @@ impl SqliteStore {
             })
             .collect::<Result<_>>()?;
         let ticket_rows = sqlx::query(
-            "SELECT t.id, t.owner_id, t.time_entry_id, t.ticket_number, t.note, t.created_at, \
-             t.updated_at, t.deleted_at FROM tickets t \
+            "SELECT t.id, t.owner_id, t.time_entry_id, t.ticket_number, t.note, t.done, \
+             t.created_at, t.updated_at, t.deleted_at FROM tickets t \
              JOIN time_entries e ON e.id = t.time_entry_id \
              WHERE t.owner_id = $1 AND e.owner_id = $1 AND e.date >= $2 AND e.date <= $3 \
              AND e.deleted_at IS NULL AND t.deleted_at IS NULL ORDER BY t.id",
@@ -1254,6 +1266,88 @@ impl SqliteStore {
         let rec = entry_record(&mut tx, owner, id).await?;
         tx.commit().await?;
         Ok(rec)
+    }
+
+    /// Tick an entry's ticket done, or mark it still open (round 14). Returns the entry.
+    pub async fn set_ticket_done(
+        &self,
+        owner: OwnerId,
+        ticket: TicketId,
+        done: bool,
+    ) -> Result<EntryRecord> {
+        self.change_ticket(owner, ticket, Some(done), None).await
+    }
+
+    /// Write an entry ticket's notepad (blank clears it). Returns the entry.
+    pub async fn set_ticket_note(
+        &self,
+        owner: OwnerId,
+        ticket: TicketId,
+        note: &str,
+    ) -> Result<EntryRecord> {
+        let note = clean_notes(note)?;
+        self.change_ticket(owner, ticket, None, Some(note)).await
+    }
+
+    async fn change_ticket(
+        &self,
+        owner: OwnerId,
+        ticket: TicketId,
+        done: Option<bool>,
+        note: Option<Option<String>>,
+    ) -> Result<EntryRecord> {
+        let mut tx = self.pool.begin().await?;
+        let entry: Option<String> = sqlx::query_scalar(
+            "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(ticket.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let entry = TimeEntryId::from_uuid(parse_uuid(&entry.ok_or(StorageError::NotFound)?)?);
+        let (_, is_tray) = fetch_entry(&mut tx, owner, entry).await?;
+        if is_tray {
+            return Err(StorageError::TrayManaged);
+        }
+        let now = now_text();
+        if let Some(done) = done {
+            sqlx::query(
+                "UPDATE tickets SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(done)
+            .bind(&now)
+            .bind(ticket.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        if let Some(note) = note {
+            sqlx::query(
+                "UPDATE tickets SET note = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(note)
+            .bind(&now)
+            .bind(ticket.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        let rec = entry_record(&mut tx, owner, entry).await?;
+        tx.commit().await?;
+        Ok(rec)
+    }
+
+    /// Numbers of the tickets on entries (not the tray's) still open, oldest first.
+    pub async fn open_entry_tickets(&self, owner: OwnerId) -> Result<Vec<String>> {
+        Ok(sqlx::query_scalar(
+            "SELECT t.ticket_number FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.done = FALSE \
+             AND t.deleted_at IS NULL AND e.deleted_at IS NULL AND e.source IS NULL \
+             ORDER BY e.date, t.created_at",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?)
     }
 
     /// Remove one ticket from its entry (soft delete). Returns the entry.
