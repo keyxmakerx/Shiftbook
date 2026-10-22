@@ -1,5 +1,6 @@
 <script lang="ts">
-  // What's in a drawer: everything filed there, newest first. Put back brings a card onto
+  // What's in a drawer: everything filed there, newest first. Drop a card or a pile on the
+  // open panel to file it here too (round 14), as on the drawer's name in the cabinet. Put back brings a card onto
   // the Desk where you're looking; Open opens it. A folder can be renamed or removed.
   import { api } from '../lib/api';
   import type { CanvasCard, CanvasDrawer } from '../lib/api';
@@ -18,8 +19,11 @@
     onchanged,
     onrename,
     onremove,
+    dropping = false,
   }: {
     drawer: CanvasDrawer;
+    /** Something is being dragged over it (dropping files it here). */
+    dropping?: boolean;
     /** Where a card put back lands (canvas units). */
     putBack: () => { x: number; y: number };
     onclose: () => void;
@@ -73,7 +77,7 @@
 />
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<section class="panel paper" style:--c={drawer.color ?? 'var(--mut)'} aria-label="{drawer.name} drawer" onpointerdown={(e) => e.stopPropagation()}>
+<section class="panel paper" class:dropping data-drawer={drawer.key} style:--c={drawer.color ?? 'var(--mut)'} aria-label="{drawer.name} drawer" onpointerdown={(e) => e.stopPropagation()}>
   <header>
     {#if renaming}
       <input
@@ -122,7 +126,7 @@
   {#if cards === null}
     <p class="empty">Opening…</p>
   {:else if cards.length === 0}
-    <p class="empty">Nothing filed here yet. Drag a card or a pile onto the drawer to file it.</p>
+    <p class="empty">Nothing filed here yet. Drag a card or a pile here (or onto the drawer's name) to file it.</p>
   {:else}
     <ul>
       {#each cards as c (c.kind + c.id)}
@@ -151,6 +155,19 @@
     box-shadow: var(--lift);
     overflow: auto;
     animation: slide calc(0.25s * var(--m)) var(--spring);
+    /* Dragging over it mustn't select its text. */
+    user-select: none;
+    transition: box-shadow 0.15s;
+  }
+
+  .panel input {
+    user-select: text;
+  }
+
+  .panel.dropping {
+    box-shadow:
+      0 0 0 3px var(--accent),
+      var(--lift);
   }
 
   @keyframes slide {

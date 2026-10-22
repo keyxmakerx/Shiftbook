@@ -909,7 +909,7 @@
   }
 </script>
 
-<div class="desk" class:closed={!panel}>
+<div class="desk" class:closed={!panel} class:dragging>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="board"
@@ -1086,6 +1086,7 @@
               onchanged={() => void load()}
               onrename={(name) => void renameFolder(d.key, name)}
               onremove={() => void removeFolder(d.key)}
+              dropping={hoverDrawer === d.key}
             />
           </div>
         {/if}
@@ -1155,6 +1156,11 @@
 </div>
 
 <style>
+  /* Nothing on the Desk gets its text selected while a card or pile is dragged. */
+  .desk.dragging {
+    user-select: none;
+  }
+
   .desk {
     position: relative;
     height: 100%;
