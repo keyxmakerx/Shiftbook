@@ -77,6 +77,42 @@ pub fn is_recent(date: Date, today: Date) -> bool {
     date <= today && date > today - Duration::days(RECENT_DAYS)
 }
 
+/// True when two entries are the same work (round 14): the same title (ignoring case and
+/// spacing) and the same project. Their Desk cards fold into one.
+pub fn same_work(a: (&str, Option<Uuid>), b: (&str, Option<Uuid>)) -> bool {
+    let norm = |t: &str| {
+        t.split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_lowercase()
+    };
+    a.1 == b.1 && !a.0.trim().is_empty() && norm(a.0) == norm(b.0)
+}
+
+/// Group entries that are the same work, keeping the given order inside each group and
+/// ordering groups by their first member. Pass entries newest first so each group's first
+/// member is the one its card shows.
+pub fn work_groups(entries: &[(&str, Option<Uuid>)]) -> Vec<Vec<usize>> {
+    let mut groups: Vec<Vec<usize>> = Vec::new();
+    for (i, e) in entries.iter().enumerate() {
+        match groups.iter_mut().find(|g| same_work(entries[g[0]], *e)) {
+            Some(g) => g.push(i),
+            None => groups.push(vec![i]),
+        }
+    }
+    groups
+}
+
+/// The card a tray ticket folds into: the first (newest) one whose tickets include its
+/// number, ignoring case.
+pub fn ticket_home<S: AsRef<str>>(number: &str, cards: &[Vec<S>]) -> Option<usize> {
+    cards.iter().position(|tickets| {
+        tickets
+            .iter()
+            .any(|t| t.as_ref().eq_ignore_ascii_case(number))
+    })
+}
+
 /// Where a ticket from the Tickets tray goes on the Desk (round 14).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayPlace {
@@ -515,6 +551,25 @@ pub fn tidy_groups<K: PartialEq>(projects: &[Option<K>]) -> Vec<Vec<usize>> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn same_work_folds_into_one_card() {
+        use super::{same_work, ticket_home, work_groups};
+        let p = Some(uuid::Uuid::now_v7());
+        assert!(same_work(("Network  closet", p), ("network closet", p)));
+        assert!(!same_work(("Network closet", p), ("Network closet", None)));
+        assert!(!same_work(("", None), ("", None)));
+        let entries = [
+            ("Huntsville closet", p),
+            ("CDC switch", None),
+            ("huntsville CLOSET", p),
+            ("CDC switch", p),
+        ];
+        assert_eq!(work_groups(&entries), [vec![0, 2], vec![1], vec![3]]);
+        let tickets = [vec!["CHG0146615"], vec!["INC1"], vec!["chg0146615"]];
+        assert_eq!(ticket_home("chg0146615", &tickets), Some(0));
+        assert_eq!(ticket_home("INC9", &tickets), None);
+    }
+
     #[test]
     fn done_tickets_pile_up_then_leave() {
         use super::{tray_place, TrayPlace};

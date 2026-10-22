@@ -16,6 +16,16 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   when done (the round tick stays). Adding tickets asks **"Time on it so far?"** (5m to 2h,
   15m if skipped). The Tickets and Log work boxes stay separate; Log work's example no longer
   looks like a ticket.
+- **Same work, one card** (round 14): on the Desk, entries with the same title and project
+  (e.g. a copy made by adding time today) show as one card: the newest day's entry, with the
+  total time and the days ("4 h · 2 days"). A Tickets-tray ticket with a number the work has
+  folds into its tickets strip. In the tickets box each number shows once; ticking it ticks
+  it everywhere it appears. Day and the timesheet still keep each day's entry.
+- **Tickets on entries** (round 14): a ticket added to an entry (Log work, Attach) has the
+  same round tick (starts still open) and its own notepad as Tickets-tray tickets; its time
+  is the entry's. On the Desk they fold into a strip on the entry's card ("3 tickets · 1
+  open"); clicking it opens a box over the Desk with the entry and a card per ticket. Open
+  ones count in the bell.
 - **Jots into entries** (round 14): a jot's menu (Desk card, Day's Notes card, Notes) has
   **Log it as an entry** with 15m to 2h. Its title becomes what was done, the rest the
   entry's notes, ticket numbers its tickets, and it keeps its project; it lands on today (or

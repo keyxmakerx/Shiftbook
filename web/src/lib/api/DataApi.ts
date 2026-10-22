@@ -194,6 +194,10 @@ export interface Ticket {
   id: string;
   number: string;
   links: TicketLink[];
+  /** Ticked done; false while still open (round 14). */
+  done: boolean;
+  /** Its notepad. */
+  note: string | null;
 }
 
 export interface Entry {
@@ -446,6 +450,12 @@ export interface CanvasCard {
   tray: { item: TrayItem; date: IsoDate } | null;
   note: Note | null;
   inbox: InboxItem | null;
+  /** For an entry: the same work on other days, folded into this card, newest first. */
+  work: Entry[];
+  /** The time across this card and `work`, as hours (only when there is other work). */
+  workHours: string | null;
+  /** Tickets-tray tickets with a number this work has, folded into this card. */
+  folded: { item: TrayItem; date: IsoDate }[];
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */
@@ -786,6 +796,10 @@ export interface DataApi {
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
   removeTicket(ticketId: string): Promise<Entry>;
+  /** Tick an entry's ticket done, or mark it still open. Tauri: `ticket_set_done`. */
+  ticketSetDone(id: string, done: boolean): Promise<Entry>;
+  /** Write an entry ticket's notepad (blank clears it). Tauri: `ticket_set_note`. */
+  ticketSetNote(id: string, note: string): Promise<Entry>;
   /** Log work: tickets or words plus a time button, on `date`. */
   quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry>;
 

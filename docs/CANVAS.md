@@ -97,9 +97,15 @@ names the round it came from. Nothing here is optional unless it says so.
    (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
    drawer to file it off the Desk (a project's drawer also gives the cards that project), with
    Undo. Click a drawer to see what's in it, Open or Put back each thing; dropping a card or a
-   pile on that open panel files it there too (round 14); folders can be
+   pile on that open panel files it there too, and its title bar drags it out of the way
+   (round 14); folders can be
    renamed or removed (their cards come back to the Desk, Undo files them again). Filed
    things stay in Find and count on the timesheet.
+   **Same work, one card (round 14):** entries with the same title and project show as one
+   card (the newest, with the total and the days); tray tickets with one of its numbers fold
+   into its strip.
+   **Entry tickets (round 14):** an entry's tickets fold into a strip on its card; click it
+   for a box over the Desk with the entry and a card per ticket (tick, notepad, attach more).
    **Done today (round 14):** tickets ticked done today gather in one green **Done today**
    pile (ticking one done takes it off its spot unless it's filed); drag one out to keep it
    loose. Drag the pile to move it (its spot is the `desk.done_pile` preference); click to fan

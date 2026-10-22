@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ticket-set-note"
+description = "Enables the ticket_set_note command without any pre-configured scope."
+commands.allow = ["ticket_set_note"]
+
+[[permission]]
+identifier = "deny-ticket-set-note"
+description = "Denies the ticket_set_note command without any pre-configured scope."
+commands.deny = ["ticket_set_note"]

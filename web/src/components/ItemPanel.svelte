@@ -118,6 +118,13 @@
     void refresh();
   }
 
+  async function tickTicket(ticketId: string, done: boolean) {
+    const updated = await attempt(() => api.ticketSetDone(ticketId, done));
+    if (!updated) return;
+    putEntry(updated);
+    onsaved?.();
+  }
+
   async function detach(ticketId: string, number: string) {
     const updated = await attempt(() => api.removeTicket(ticketId));
     if (!updated) return;
@@ -178,7 +185,20 @@
     <div class="row">
       <span class="lbl">Tickets</span>
       {#each entry.tickets as t (t.id)}
-        <TicketChip number={t.number} links={t.links} color={projectColor(entry.projectId)} onRemove={() => void detach(t.id, t.number)} />
+        <span class="etk">
+          <button
+            type="button"
+            class="tick"
+            class:done={t.done}
+            aria-pressed={t.done}
+            title={t.done ? 'Done. Click if it is still open.' : 'Still open. Click when it is done.'}
+            aria-label={t.done ? `${t.number} is done; mark it still open` : `${t.number} is still open; mark it done`}
+            onclick={() => void tickTicket(t.id, !t.done)}
+          >
+            {#if t.done}<Icon name="check" size={10} />{/if}
+          </button>
+          <TicketChip number={t.number} links={t.links} color={projectColor(entry.projectId)} onRemove={() => void detach(t.id, t.number)} />
+        </span>
       {/each}
       <input
         class="attach"
@@ -246,6 +266,31 @@
 </section>
 
 <style>
+  .etk {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .tick {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    flex: none;
+    border-radius: 50%;
+    border: 2px dashed var(--warn);
+    background: none;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  .tick.done {
+    border: 2px solid var(--ok);
+    background: var(--ok);
+  }
+
   .panel {
     display: flex;
     flex-direction: column;

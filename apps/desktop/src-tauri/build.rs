@@ -38,6 +38,8 @@ fn main() {
             "restore_entry",
             "add_entry_tickets",
             "remove_ticket",
+            "ticket_set_done",
+            "ticket_set_note",
             "quick_log",
             "parse_capture_line",
             "capture_log",

@@ -5,12 +5,14 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, tidy_groups, timeline, tray_place,
-    Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState, TrayPlace, ORIGIN,
-    RECENT_DAYS,
+    area_at, auto_links, auto_place, box_status, is_recent, ticket_home, tidy_groups, timeline,
+    tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState,
+    TrayPlace, ORIGIN, RECENT_DAYS,
 };
 use shiftbook_core::dates::format_date;
+use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
+use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, InboxItem, Note, TrayItem};
 use shiftbook_storage::canvas::{pair, CanvasSpot, CardRef};
 use shiftbook_storage::work::EntryRecord;
@@ -57,6 +59,13 @@ pub struct CardView {
     tray: Option<TrayCardView>,
     note: Option<NoteView>,
     inbox: Option<InboxView>,
+    /// For an entry: the same work on other days, folded into this card (round 14), newest
+    /// first. This card shows the newest.
+    work: Vec<EntryView>,
+    /// The time across this card and `work`, as hours (only when there is other work).
+    work_hours: Option<String>,
+    /// Tickets from the Tickets tray with a number this work has, folded into this card.
+    folded: Vec<TrayCardView>,
 }
 
 /// A project's area.
@@ -175,6 +184,12 @@ pub(crate) struct Pending {
     pub(crate) open: bool,
     /// Its project, for Tidy into stacks.
     pub(crate) project: Option<Uuid>,
+    /// For entries: the title and minutes, to fold the same work into one card.
+    title: String,
+    minutes: u32,
+    /// The record whose saved spot this card uses: a folded-in older card's when this one
+    /// has none of its own yet.
+    spot_of: Option<Uuid>,
     pub(crate) card: CardView,
 }
 
@@ -194,6 +209,9 @@ fn blank(kind: CardKind, id: Uuid) -> CardView {
         tray: None,
         note: None,
         inbox: None,
+        work: Vec::new(),
+        work_hours: None,
+        folded: Vec::new(),
     }
 }
 
@@ -216,6 +234,7 @@ pub(crate) fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
         shiftbook_core::model::EntryTarget::Project(p) => Some(*p.as_uuid()),
         _ => None,
     };
+    let (title, minutes) = (rec.entry.description.clone(), rec.entry.minutes.0);
     let mut card = blank(CardKind::Entry, id);
     card.entry = Some(entry_view(rec, fields));
     Pending {
@@ -226,6 +245,9 @@ pub(crate) fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
         link,
         open: false,
         project,
+        title,
+        minutes,
+        spot_of: None,
         card,
     }
 }
@@ -251,6 +273,9 @@ pub(crate) fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
         link,
         open,
         project,
+        title: String::new(),
+        minutes: 0,
+        spot_of: None,
         card,
     }
 }
@@ -273,6 +298,9 @@ pub(crate) fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending 
         link,
         open: false,
         project,
+        title: String::new(),
+        minutes: 0,
+        spot_of: None,
         card,
     }
 }
@@ -294,6 +322,9 @@ pub(crate) fn inbox_card(scrap: InboxItem) -> Pending {
         link,
         open: false,
         project: None,
+        title: String::new(),
+        minutes: 0,
+        spot_of: None,
         card,
     }
 }
@@ -389,6 +420,74 @@ async fn drawers(
         }
     }));
     Ok((views, filed))
+}
+
+/// Fold the same work on several days into one card (see `shiftbook_core::canvas::work_groups`):
+/// the newest entry shows, the older ones go in its `work`, and its time is the total. A tray
+/// ticket with a number the work has folds in too (`ticket_home`). Other cards pass through.
+fn fold_same_work(
+    all: Vec<Pending>,
+    spots: &HashMap<(CardKind, Uuid), CanvasSpot>,
+) -> Vec<Pending> {
+    let (mut entries, rest): (Vec<Pending>, Vec<Pending>) =
+        all.into_iter().partition(|p| p.kind == CardKind::Entry);
+    entries.sort_by_key(|p| std::cmp::Reverse((p.date, p.created)));
+    let keys: Vec<(&str, Option<Uuid>)> = entries
+        .iter()
+        .map(|p| (p.title.as_str(), p.project))
+        .collect();
+    let groups = work_groups(&keys);
+    let mut slots: Vec<Option<Pending>> = entries.into_iter().map(Some).collect();
+    let mut cards: Vec<Pending> = Vec::new();
+    for group in groups {
+        let Some(mut head) = slots[group[0]].take() else {
+            continue;
+        };
+        let mut minutes = head.minutes;
+        for &i in &group[1..] {
+            let Some(mut older) = slots[i].take() else {
+                continue;
+            };
+            minutes = minutes.saturating_add(older.minutes);
+            if head.spot_of.is_none()
+                && !spots.contains_key(&(CardKind::Entry, head.id))
+                && spots.contains_key(&(CardKind::Entry, older.id))
+            {
+                head.spot_of = Some(older.id);
+            }
+            for t in older.link.tickets.drain(..) {
+                if !head.link.tickets.iter().any(|h| h.eq_ignore_ascii_case(&t)) {
+                    head.link.tickets.push(t);
+                }
+            }
+            if let Some(e) = older.card.entry.take() {
+                head.card.work.push(e);
+            }
+        }
+        if group.len() > 1 {
+            head.card.work_hours = Some(format_hours(Minutes(minutes)));
+        }
+        cards.push(head);
+    }
+    let numbers: Vec<Vec<String>> = cards.iter().map(|p| p.link.tickets.clone()).collect();
+    let mut others = Vec::new();
+    for mut p in rest {
+        if p.kind == CardKind::Tray {
+            let home = p
+                .link
+                .tickets
+                .first()
+                .and_then(|n| ticket_home(n, &numbers));
+            if let (Some(h), Some(tray)) = (home, p.card.tray.take()) {
+                cards[h].open |= p.open;
+                cards[h].card.folded.push(tray);
+                continue;
+            }
+        }
+        others.push(p);
+    }
+    cards.extend(others);
+    cards
 }
 
 fn card_ref(kind: CardKind, id: Uuid) -> CardRefView {
@@ -497,6 +596,9 @@ async fn desk(
         }
     }
 
+    // The same work on several days shows as one card, and tray tickets it has fold in.
+    let all = fold_same_work(all, &spots);
+
     // Piles: a card in a live pile shows at the pile's spot. A pile with fewer than two of
     // its cards on the Desk shows as loose cards.
     let piles: HashMap<Uuid, shiftbook_storage::piles::CanvasStack> = store
@@ -507,7 +609,10 @@ async fn desk(
         .collect();
     let mut pile_size: HashMap<Uuid, usize> = HashMap::new();
     for p in &all {
-        if let Some(st) = spots.get(&(p.kind, p.id)).and_then(|sp| sp.stack) {
+        if let Some(st) = spots
+            .get(&(p.kind, p.spot_of.unwrap_or(p.id)))
+            .and_then(|sp| sp.stack)
+        {
             if piles.contains_key(&st) {
                 *pile_size.entry(st).or_default() += 1;
             }
@@ -525,7 +630,7 @@ async fn desk(
     let mut placed = Vec::new();
     let mut loose = Vec::new();
     for mut p in all {
-        if let Some(spot) = spots.get(&(p.kind, p.id)) {
+        if let Some(spot) = spots.get(&(p.kind, p.spot_of.unwrap_or(p.id))) {
             p.card.x = spot.x;
             p.card.y = spot.y;
             p.card.z = spot.z;

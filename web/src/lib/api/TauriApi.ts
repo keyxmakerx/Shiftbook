@@ -171,7 +171,13 @@ export class TauriApi implements DataApi {
   }
   removeTicket(ticketId: string): Promise<Entry> {
     return call('remove_ticket', { id: ticketId });
+  }  ticketSetDone(id: string, done: boolean): Promise<Entry> {
+    return call('ticket_set_done', { id, done });
   }
+  ticketSetNote(id: string, note: string): Promise<Entry> {
+    return call('ticket_set_note', { id, note });
+  }
+
   quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry> {
     return call('quick_log', { date, text, minutes });
   }

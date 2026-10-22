@@ -82,6 +82,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         include_str!("../migrations/0012_board_spots.sql"),
     ),
     (13, "pins", include_str!("../migrations/0013_pins.sql")),
+    (
+        14,
+        "ticket done",
+        include_str!("../migrations/0014_ticket_done.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {

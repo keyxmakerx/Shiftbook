@@ -371,6 +371,43 @@ fn tray_rolls_up_into_one_entry_per_day() {
 }
 
 #[test]
+fn entry_tickets_have_a_state_and_a_notepad() {
+    let dir = TestDir::new("entrytickets");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let rec = s
+            .create_entry(me, &input(DAY, 60, "VPN issue"), "INC1001 INC1002")
+            .await
+            .unwrap();
+        // New tickets start still open, and the bell can list them.
+        assert!(rec.tickets.iter().all(|t| !t.done));
+        assert_eq!(
+            s.open_entry_tickets(me).await.unwrap(),
+            ["INC1001", "INC1002"]
+        );
+        let first = rec.tickets[0].id;
+        let rec = s.set_ticket_done(me, first, true).await.unwrap();
+        assert!(rec.tickets[0].done && !rec.tickets[1].done);
+        assert_eq!(s.open_entry_tickets(me).await.unwrap(), ["INC1002"]);
+        let rec = s
+            .set_ticket_note(me, first, "user can't reach the VPN from home")
+            .await
+            .unwrap();
+        assert_eq!(
+            rec.tickets[0].note.as_deref(),
+            Some("user can't reach the VPN from home")
+        );
+        let rec = s.set_ticket_note(me, first, "  ").await.unwrap();
+        assert_eq!(rec.tickets[0].note, None);
+        // The entry's time is untouched.
+        assert_eq!(rec.entry.minutes, Minutes(60));
+        // Tray roll-up tickets aren't counted: their state is in the tray.
+        s.tray_add(me, DAY, "INC2001").await.unwrap();
+        assert_eq!(s.open_entry_tickets(me).await.unwrap(), ["INC1002"]);
+    });
+}
+
+#[test]
 fn a_jot_is_logged_as_an_entry() {
     use crate::notes::NoteInput;
     use shiftbook_core::notes::NoteKind;

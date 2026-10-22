@@ -165,6 +165,12 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
             .filter(|i| !i.done)
             .map(|i| i.ticket_number),
     );
+    // Tickets on entries still open count too (round 14), once each.
+    for t in store.open_entry_tickets(owner).await? {
+        if !open.iter().any(|o| o.eq_ignore_ascii_case(&t)) {
+            open.push(t);
+        }
+    }
     let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(&store, owner, today)
         .await?
         .into_iter()
