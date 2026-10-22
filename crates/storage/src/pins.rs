@@ -50,26 +50,36 @@ impl SqliteStore {
         let now = now_text();
         let chase = chase_on.map(format_date);
         let mut tx = self.pool.begin().await?;
+        // Check before writing anything: a refused pin must not leave a write lock behind.
         let pinned: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM pins WHERE owner_id = $1 AND deleted_at IS NULL",
         )
         .bind(owner.to_string())
         .fetch_one(&mut *tx)
         .await?;
-        let updated = sqlx::query(
-            "UPDATE pins SET chase_on = $1, updated_at = $2 WHERE owner_id = $3 \
-             AND record_kind = $4 AND record_id = $5 AND deleted_at IS NULL",
+        let already: bool = sqlx::query_scalar(
+            "SELECT COUNT(*) > 0 FROM pins WHERE owner_id = $1 AND record_kind = $2 \
+             AND record_id = $3 AND deleted_at IS NULL",
         )
-        .bind(&chase)
-        .bind(&now)
         .bind(owner.to_string())
         .bind(kind.as_str())
         .bind(record_id.to_string())
-        .execute(&mut *tx)
+        .fetch_one(&mut *tx)
         .await?;
-        let already = updated.rows_affected() > 0;
         check_pin(kind, already, usize::try_from(pinned).unwrap_or(usize::MAX))?;
-        if !already {
+        if already {
+            sqlx::query(
+                "UPDATE pins SET chase_on = $1, updated_at = $2 WHERE owner_id = $3 \
+                 AND record_kind = $4 AND record_id = $5 AND deleted_at IS NULL",
+            )
+            .bind(&chase)
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(kind.as_str())
+            .bind(record_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+        } else {
             sqlx::query(
                 "INSERT INTO pins (id, owner_id, record_kind, record_id, chase_on, created_at, \
                  updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $6, NULL)",
