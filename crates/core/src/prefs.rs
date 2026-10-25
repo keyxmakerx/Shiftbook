@@ -29,6 +29,8 @@ pub const KEY_COMMENT_SEPARATOR: &str = "timesheet.comment_separator";
 pub const KEY_WEEK_START: &str = "calendar.week_start";
 /// Minutes without activity before the app locks (1 to 240).
 pub const KEY_AUTO_LOCK: &str = "security.auto_lock_minutes";
+/// Phone: minutes away from the app before it locks, one of [`LEAVE_LOCK_CHOICES`].
+pub const KEY_LEAVE_LOCK: &str = "security.leave_lock_minutes";
 
 /// Daily target per weekday for the Desk ring: seven minute counts, Monday first,
 /// comma-separated (e.g. `480,480,480,480,240,0,0`).
@@ -62,6 +64,10 @@ pub const MAX_DAY_TARGET: u32 = 24 * 60;
 pub const DEFAULT_AUTO_LOCK_MINUTES: u32 = 15;
 /// Largest auto-lock setting (4 hours).
 pub const MAX_AUTO_LOCK_MINUTES: u32 = 240;
+/// Phone: lock straight away, or after 1, 5 or 15 minutes away from the app.
+pub const LEAVE_LOCK_CHOICES: [u32; 4] = [0, 1, 5, 15];
+/// Phone: lock after a minute away (phones get lost more than computers).
+pub const DEFAULT_LEAVE_LOCK_MINUTES: u32 = 1;
 /// Longest comment separator.
 pub const MAX_SEPARATOR_CHARS: usize = 5;
 
@@ -161,6 +167,8 @@ pub struct Prefs {
     pub week_start: WeekStart,
     /// Minutes before auto-lock.
     pub auto_lock_minutes: u32,
+    /// Phone: minutes away from the app before it locks.
+    pub leave_lock_minutes: u32,
     /// Daily target in minutes, Monday first.
     pub day_targets: [u32; 7],
     /// Text size in percent.
@@ -196,6 +204,7 @@ impl Default for Prefs {
             comment: CommentFormat::default(),
             week_start: WeekStart::default(),
             auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
+            leave_lock_minutes: DEFAULT_LEAVE_LOCK_MINUTES,
             day_targets: DEFAULT_DAY_TARGETS,
             text_size: DEFAULT_TEXT_SIZE,
             wrapup_at: None,
@@ -285,6 +294,10 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                 max: i64::from(MAX_AUTO_LOCK_MINUTES),
             }),
         },
+        KEY_LEAVE_LOCK => match v.parse::<u32>() {
+            Ok(n) if LEAVE_LOCK_CHOICES.contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_DAY_TARGETS => parse_day_targets(v)
             .map(|t| t.map(|n| n.to_string()).join(","))
             .ok_or_else(|| invalid(value)),
@@ -366,6 +379,9 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             }
             KEY_AUTO_LOCK => {
                 prefs.auto_lock_minutes = v.parse().unwrap_or(DEFAULT_AUTO_LOCK_MINUTES)
+            }
+            KEY_LEAVE_LOCK => {
+                prefs.leave_lock_minutes = v.parse().unwrap_or(DEFAULT_LEAVE_LOCK_MINUTES)
             }
             KEY_DAY_TARGETS => {
                 prefs.day_targets = parse_day_targets(&v).unwrap_or(DEFAULT_DAY_TARGETS)
@@ -470,6 +486,14 @@ mod tests {
         assert_eq!(validate_pref(KEY_AUTO_LOCK, "240"), Ok("240".into()));
         assert!(validate_pref(KEY_AUTO_LOCK, "241").is_err());
         assert!(validate_pref(KEY_AUTO_LOCK, "x").is_err());
+        assert_eq!(validate_pref(KEY_LEAVE_LOCK, " 5 "), Ok("5".into()));
+        assert_eq!(validate_pref(KEY_LEAVE_LOCK, "0"), Ok("0".into()));
+        assert!(validate_pref(KEY_LEAVE_LOCK, "2").is_err());
+        assert_eq!(Prefs::default().leave_lock_minutes, 1);
+        assert_eq!(
+            prefs_from_settings(&[(KEY_LEAVE_LOCK, "15")]).leave_lock_minutes,
+            15
+        );
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "------").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "\n").is_err());

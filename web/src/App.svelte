@@ -63,6 +63,26 @@
     };
   });
 
+  // Phone: lock after being away from the app (another app, the home screen or the screen off)
+  // for the chosen time; 0 locks as soon as Shiftbook is left.
+  $effect(() => {
+    if (!unlocked || !phone.on) return;
+    const awayMs = (app.prefs?.leaveLockMinutes ?? 1) * 60 * 1000;
+    let leftAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        leftAt = Date.now();
+        if (awayMs === 0) void lockNow();
+      } else if (leftAt !== null && Date.now() - leftAt >= awayMs) {
+        void lockNow();
+      } else {
+        leftAt = null;
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  });
+
   function onKeydown(event: KeyboardEvent) {
     // In the app the Shell handles Ctrl+L; elsewhere while unlocked, lock here.
     if (screen === 'app' || !unlocked) return;

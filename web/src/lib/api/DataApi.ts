@@ -64,6 +64,8 @@ export interface Prefs {
   comment: CommentFormat;
   weekStart: WeekStartDay;
   autoLockMinutes: number;
+  /** Phone: minutes away from the app before it locks (0, 1, 5 or 15). */
+  leaveLockMinutes: number;
   /** Daily target in minutes, Monday first (seven numbers). */
   dayTargets: number[];
   /** Text size in percent: 90, 100, 115 or 130. */
@@ -161,6 +163,7 @@ export type PrefKey =
   | 'timesheet.comment_separator'
   | 'calendar.week_start'
   | 'security.auto_lock_minutes'
+  | 'security.leave_lock_minutes'
   | 'day.targets'
   | 'ui.text_size'
   | 'day.wrapup_at'

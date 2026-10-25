@@ -76,6 +76,14 @@ pub const KDF_CAP: KdfParams = KdfParams {
     p: 4,
 };
 
+/// The most memory calibration picks for a new vault. Phones share a few GiB with every other
+/// app and Android stops apps that take too much, so a phone stops at 256 MiB and adds passes
+/// instead; a computer can go up to the cap.
+#[cfg(target_os = "android")]
+const CALIBRATION_MAX_M_KIB: u32 = 256 * 1024;
+#[cfg(not(target_os = "android"))]
+const CALIBRATION_MAX_M_KIB: u32 = KDF_CAP.m_kib;
+
 /// How long a key derivation should take on this computer.
 pub const KDF_TARGET: Duration = Duration::from_millis(500);
 
@@ -91,7 +99,7 @@ impl KdfParams {
 }
 
 /// Pick parameters so one derivation takes about `target`, given that the floor
-/// took `floor_took`. Memory grows first (up to the cap), then passes.
+/// took `floor_took`. Memory grows first (up to [`CALIBRATION_MAX_M_KIB`]), then passes.
 pub fn calibrated_params(floor_took: Duration, target: Duration) -> KdfParams {
     let took = floor_took.as_secs_f64().max(0.001);
     let factor = target.as_secs_f64() / took;
@@ -101,7 +109,7 @@ pub fn calibrated_params(floor_took: Duration, target: Duration) -> KdfParams {
     let want_m = f64::from(KDF_FLOOR.m_kib) * factor;
     // Whole MiB, between the floor and the cap.
     let m_kib = ((want_m / 1024.0).floor() * 1024.0)
-        .clamp(f64::from(KDF_FLOOR.m_kib), f64::from(KDF_CAP.m_kib)) as u32;
+        .clamp(f64::from(KDF_FLOOR.m_kib), f64::from(CALIBRATION_MAX_M_KIB)) as u32;
     let left = want_m / f64::from(m_kib);
     let t = (f64::from(KDF_FLOOR.t) * left)
         .floor()
@@ -1004,15 +1012,15 @@ mod tests {
                 p: 1
             }
         );
-        // Very fast: memory hits the 1 GiB cap, then passes grow (up to 10).
+        // Very fast: memory hits the ceiling (1 GiB, a phone 256 MiB), then passes grow (up to 10).
         let p = calibrated_params(Duration::from_millis(10), target);
-        assert_eq!(p.m_kib, KDF_CAP.m_kib);
-        assert_eq!(p.t, 9);
+        assert_eq!(p.m_kib, CALIBRATION_MAX_M_KIB);
+        assert_eq!(p.t, if cfg!(target_os = "android") { 10 } else { 9 });
         let p = calibrated_params(Duration::from_nanos(1), target);
         assert_eq!(
             p,
             KdfParams {
-                m_kib: KDF_CAP.m_kib,
+                m_kib: CALIBRATION_MAX_M_KIB,
                 t: 10,
                 p: 1
             }

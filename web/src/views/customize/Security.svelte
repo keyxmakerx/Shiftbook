@@ -9,6 +9,14 @@
   import { toast } from '../../lib/toast.svelte';
   import ChangePassword from '../../components/ChangePassword.svelte';
   import DeleteAllData from '../../components/DeleteAllData.svelte';
+  import { phone } from '../../lib/phone.svelte';
+
+  const LEAVE_CHOICES = [
+    { minutes: 0, label: 'Straight away' },
+    { minutes: 1, label: 'After 1 minute' },
+    { minutes: 5, label: 'After 5 minutes' },
+    { minutes: 15, label: 'After 15 minutes' },
+  ];
 
   let changing = $state(false);
   let minutes = $state(app.prefs?.autoLockMinutes ?? 15);
@@ -26,6 +34,11 @@
       app.prefs = p;
       toast(`Shiftbook locks after ${p.autoLockMinutes} minutes without activity.`);
     }
+  }
+
+  async function saveLeave(value: number) {
+    const p = await attempt(() => api.savePref('security.leave_lock_minutes', String(value)));
+    if (p) app.prefs = p;
   }
 
   async function makeKey(event: SubmitEvent) {
@@ -70,6 +83,25 @@
     <button class="btn primary" type="submit">Save</button>
   </form>
 </article>
+
+{#if phone.on}
+  <article class="paper cz-card">
+    <h3>Lock after leaving the app</h3>
+    <p class="sub">When you switch to another app or turn the screen off.</p>
+    <div class="leave" role="radiogroup" aria-label="Lock after leaving the app">
+      {#each LEAVE_CHOICES as choice (choice.minutes)}
+        <button
+          class="btn"
+          class:primary={app.prefs?.leaveLockMinutes === choice.minutes}
+          type="button"
+          role="radio"
+          aria-checked={app.prefs?.leaveLockMinutes === choice.minutes}
+          onclick={() => void saveLeave(choice.minutes)}>{choice.label}</button
+        >
+      {/each}
+    </div>
+  </article>
+{/if}
 
 <article class="paper cz-card">
   <h3>Recovery key</h3>
@@ -126,6 +158,12 @@
 </article>
 
 <style>
+  .leave {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
   .mins {
     width: 90px;
   }

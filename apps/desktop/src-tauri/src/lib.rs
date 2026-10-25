@@ -11,6 +11,7 @@ mod boards;
 mod canvas;
 mod meetings;
 mod notes;
+mod phone;
 mod pins;
 mod protect;
 mod session;
@@ -91,7 +92,7 @@ async fn lock(
     guard: State<'_, protect::CaptureGuard>,
 ) -> Result<(), CommandError> {
     guard.end_allow();
-    let _ = window.set_content_protected(true);
+    let _ = phone::set_protected(&window, true);
     state.lock().await
 }
 
@@ -137,7 +138,7 @@ async fn delete_all_data(
     confirm: String,
 ) -> Result<(), CommandError> {
     guard.end_allow();
-    let _ = window.set_content_protected(true);
+    let _ = phone::set_protected(&window, true);
     state.delete_all_data(&confirm).await
 }
 
@@ -151,14 +152,23 @@ fn start_automatic_backup(app: AppHandle) {
     });
 }
 
-/// A dialog result as a path, off the main thread.
-async fn dialog_path(
+/// A dialog result, off the main thread.
+async fn dialog_pick(
     work: impl FnOnce() -> Option<tauri_plugin_dialog::FilePath> + Send + 'static,
-) -> Result<Option<std::path::PathBuf>, CommandError> {
-    let picked = tauri::async_runtime::spawn_blocking(work)
+) -> Result<Option<tauri_plugin_dialog::FilePath>, CommandError> {
+    tauri::async_runtime::spawn_blocking(work)
         .await
+        .map_err(|_| CommandError::StorageError)
+}
+
+/// A file of our own for passing a backup to or from a picked Android document.
+fn phone_temp(app: &AppHandle, name: &str) -> Result<std::path::PathBuf, CommandError> {
+    let dir = app
+        .path()
+        .app_cache_dir()
         .map_err(|_| CommandError::StorageError)?;
-    Ok(picked.and_then(|p| p.into_path().ok()))
+    shiftbook_storage::create_private_dir(&dir).map_err(|_| CommandError::StorageError)?;
+    Ok(dir.join(name))
 }
 
 fn file_name_of(path: &std::path::Path) -> String {
@@ -186,19 +196,36 @@ async fn backup_now(
     let dialog = dialog.set_parent(&window);
     #[cfg(mobile)]
     let _ = window;
-    let dialog = dialog
-        .set_title("Save a backup")
-        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION])
-        .set_file_name(format!("Shiftbook backup {today}.{BACKUP_EXTENSION}"));
-    let Some(mut path) = dialog_path(move || dialog.blocking_save_file()).await? else {
-        return Ok(None);
-    };
-    if path.extension().is_none_or(|e| e != BACKUP_EXTENSION) {
-        path.set_extension(BACKUP_EXTENSION);
+    let file_name = format!("Shiftbook backup {today}.{BACKUP_EXTENSION}");
+    let dialog = dialog.set_title("Save a backup").set_file_name(&file_name);
+    // Android picks by file type, and knows no type for .shiftbak.
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
+    match dialog_pick(move || dialog.blocking_save_file()).await? {
+        None => Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(mut path)) => {
+            if path.extension().is_none_or(|e| e != BACKUP_EXTENSION) {
+                path.set_extension(BACKUP_EXTENSION);
+            }
+            let name = file_name_of(&path);
+            state.backup_to(path).await?;
+            Ok(Some(name))
+        }
+        // Android: a document link. Make the backup in our cache, copy it there, remove ours.
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "outgoing.shiftbak")?;
+            let made = state.backup_to(temp.clone()).await;
+            let copied = made.and_then(|()| {
+                phone::copy_to_uri(&app, &temp, url.as_str())
+                    .map_err(|()| CommandError::StorageError)
+            });
+            let _ = std::fs::remove_file(&temp);
+            copied?;
+            Ok(Some(
+                phone::display_name(&app, url.as_str()).unwrap_or(file_name),
+            ))
+        }
     }
-    let name = file_name_of(&path);
-    state.backup_to(path).await?;
-    Ok(Some(name))
 }
 
 /// The automatic and safety backups. Maps to `DataApi.listBackups()`.
@@ -221,13 +248,25 @@ async fn pick_backup_file(
     let dialog = dialog.set_parent(&window);
     #[cfg(mobile)]
     let _ = window;
-    let dialog = dialog
-        .set_title("Restore from a backup")
-        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
-    let Some(path) = dialog_path(move || dialog.blocking_pick_file()).await? else {
-        return Ok(None);
+    let dialog = dialog.set_title("Restore from a backup");
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
+    let (path, name) = match dialog_pick(move || dialog.blocking_pick_file()).await? {
+        None => return Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(path)) => {
+            let name = file_name_of(&path);
+            (path, name)
+        }
+        // Android: copy the picked document into our cache; restore reads it from there.
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "incoming.shiftbak")?;
+            phone::copy_from_uri(&app, url.as_str(), &temp)
+                .map_err(|()| CommandError::StorageError)?;
+            let name =
+                phone::display_name(&app, url.as_str()).unwrap_or_else(|| "the backup".to_owned());
+            (temp, name)
+        }
     };
-    let name = file_name_of(&path);
     state.set_picked_backup(path).await?;
     Ok(Some(name))
 }
@@ -281,6 +320,7 @@ async fn restore_backup(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(phone::init())
         .setup(|app| {
             // Tauri's per-user app data folder; never a hard-coded path.
             let data_dir = app
