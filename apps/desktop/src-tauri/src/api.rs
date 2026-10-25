@@ -15,7 +15,7 @@ use shiftbook_core::ids::{
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
-use shiftbook_core::nextup::next_work_day;
+use shiftbook_core::nextup::{bring_up_on, next_work_day};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
@@ -1288,8 +1288,23 @@ pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<
     Ok(next_up_views(store.set_next_up(owner, &items).await?))
 }
 
-/// Maps to `DataApi.bringUp()`: "Bring up tomorrow" on a card. It comes up on the next
-/// work day after `today` (a day with a target), titled `title`.
+/// Maps to `DataApi.bringUpDays()`: the days "Bring up…" offers from `today`.
+#[tauri::command]
+pub async fn bring_up_days(s: State<'_, VaultSession>, today: String) -> Res<Vec<String>> {
+    let today = date_arg(&today)?;
+    let (store, owner) = s.data().await?;
+    let prefs = store.prefs(owner).await?;
+    Ok(
+        shiftbook_core::nextup::bring_up_days(today, prefs.week_start, |d| prefs.day_target(d) > 0)
+            .into_iter()
+            .map(format_date)
+            .collect(),
+    )
+}
+
+/// Maps to `DataApi.bringUp()`: "Bring up…" on a card, titled `title`. It comes up on
+/// `on` (moved to the next work day if that isn't one), or without `on` on the next work
+/// day after `today` (a day with a target).
 #[tauri::command]
 pub async fn bring_up(
     s: State<'_, VaultSession>,
@@ -1297,15 +1312,23 @@ pub async fn bring_up(
     kind: String,
     id: String,
     title: String,
+    on: Option<String>,
 ) -> Res<NextUpView> {
     let today = date_arg(&today)?;
+    let on = on.as_deref().map(date_arg).transpose()?;
     let about = (
         kind.parse().map_err(|_| CommandError::InvalidInput)?,
         uuid::Uuid::parse_str(&id).map_err(|_| CommandError::InvalidInput)?,
     );
     let (store, owner) = s.data().await?;
     let prefs = store.prefs(owner).await?;
-    let day = next_work_day(today, |d| prefs.day_target(d) > 0);
+    let is_work_day = |d: Date| prefs.day_target(d) > 0;
+    let day = match on {
+        Some(chosen) => {
+            bring_up_on(today, chosen, is_work_day).ok_or(CommandError::InvalidInput)?
+        }
+        None => next_work_day(today, is_work_day),
+    };
     let item = store.bring_up(owner, &title, day, Some(about)).await?;
     Ok(next_up_views(vec![item]).remove(0))
 }

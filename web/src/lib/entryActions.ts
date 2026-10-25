@@ -3,7 +3,7 @@
 // its tickets and bring it up tomorrow, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { Entry } from './api';
-import { bringUp } from './bringUp';
+import { bringUp, bringUpSection } from './bringUp';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
 import { pinMenuItem } from './pins.svelte';
@@ -152,6 +152,7 @@ export function entryMenu(entry: Entry): MenuSpec {
   ];
   const sections: MenuSpec['sections'] = [
     { head: entry.description || 'Untitled', items: main },
+    bringUpSection('entry', entry.id, entry.description),
     { head: 'Project', choices },
   ];
   if (project) {

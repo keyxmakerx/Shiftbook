@@ -3,7 +3,7 @@
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { TrayDay, TrayItem } from './api';
-import { bringUp } from './bringUp';
+import { bringUp, bringUpSection } from './bringUp';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { pinMenuItem } from './pins.svelte';
@@ -91,6 +91,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
   return {
     sections: [
       { head: `${item.ticket} · ${fmtMinutes(item.minutes)}`, items: main },
+      bringUpSection('tray', item.id, item.ticket),
       { head: 'Count its time under', choices },
       { items: [{ label: 'Take out of the tray', icon: 'trash', danger: true, top: true, act: () => void removeTray(item) }] },
     ],

@@ -73,6 +73,7 @@ fn main() {
             "set_next_up",
             "tick_next_up",
             "bring_up",
+            "bring_up_days",
             "list_responses",
             "save_responses",
             "where_was_i",

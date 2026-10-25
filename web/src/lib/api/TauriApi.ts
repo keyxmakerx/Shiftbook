@@ -380,8 +380,11 @@ export class TauriApi implements DataApi {
   setNextUp(items: string[]): Promise<NextUpItem[]> {
     return call('set_next_up', { items });
   }
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem> {
-    return call('bring_up', { today, kind, id, title });
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem> {
+    return call('bring_up', { today, kind, id, title, on: on ?? null });
+  }
+  bringUpDays(today: IsoDate): Promise<IsoDate[]> {
+    return call('bring_up_days', { today });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });

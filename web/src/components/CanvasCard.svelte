@@ -5,7 +5,7 @@
   // The card is the record itself: changes show everywhere else too.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
-  import { bringUp } from '../lib/bringUp';
+  import { bringUp, bringUpSection } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
   import { fmtMinutes, relativeDay } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
@@ -227,6 +227,7 @@
               },
             ],
           },
+          bringUpSection('note', note.id, note.title),
           ...(note.kind === 'jot' ? [logNoteSection(note, onchanged)] : []),
         ],
       };

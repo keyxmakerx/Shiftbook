@@ -54,6 +54,8 @@ export const app = $state({
   noteOpen: { id: null as string | null, serial: 0 },
   /** The Settings section to open next time Settings shows. */
   settingsSection: 'look' as SettingsSection,
+  /** The days "Bring up…" offers from today, the next work day first. */
+  bringUpDays: [] as string[],
 });
 
 /** Run an API call; on failure show a plain message and resolve undefined. */
@@ -113,7 +115,13 @@ export async function savePref(key: PrefKey, value: string): Promise<Prefs | und
   if (!p) return undefined;
   app.prefs = p;
   applyPrefs(p);
+  // Targets and the week start decide which days "Bring up…" offers.
+  void refreshBringUpDays();
   return p;
+}
+
+export async function refreshBringUpDays(): Promise<void> {
+  app.bringUpDays = (await attempt(() => api.bringUpDays(app.today))) ?? [];
 }
 
 export async function refreshDay(): Promise<void> {
@@ -157,7 +165,7 @@ export async function loadAll(): Promise<void> {
   app.codes = codes;
   app.fields = fields;
   app.inbox = inbox;
-  await Promise.all([refreshDay(), refreshRibbon()]);
+  await Promise.all([refreshDay(), refreshRibbon(), refreshBringUpDays()]);
   app.ready = true;
 }
 
@@ -207,6 +215,6 @@ export async function rollDay(): Promise<boolean> {
   const wasToday = app.selected === app.today;
   app.today = now;
   if (wasToday) app.selected = now;
-  await refresh();
+  await Promise.all([refresh(), refreshBringUpDays()]);
   return true;
 }

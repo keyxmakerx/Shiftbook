@@ -927,8 +927,13 @@ export interface DataApi {
   // ----- next up -----
   /** The wrap-up's "next up" list, in order. */
   nextUp(): Promise<NextUpItem[]>;
-  /** "Bring up tomorrow": the card comes up first on the next work day after `today`. */
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem>;
+  /**
+   * "Bring up…": the card comes up first on `on` (moved to the next work day if it isn't
+   * one), or without `on` on the next work day after `today`.
+   */
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
+  /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
+  bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;
