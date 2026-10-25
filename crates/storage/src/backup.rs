@@ -851,6 +851,103 @@ mod tests {
         });
     }
 
+    /// A backup written by an earlier version, checked in so a change that stops old
+    /// backups restoring fails here. Made with tiny test Argon2 parameters and the test
+    /// password; it holds only the made-up records from [`write_fixture_data`].
+    const FIXTURE: &[u8] = include_bytes!("../tests/fixtures/schema-14.shiftbak");
+
+    async fn write_fixture_data(store: &SqliteStore) {
+        use crate::work::EntryInput;
+        use shiftbook_core::minutes::Minutes;
+        use time::macros::date;
+        let me = store.initialize_local_owner("Me").await.unwrap().id;
+        let shed = store.create_project(me, "Garden shed", None).await.unwrap();
+        let entry = EntryInput {
+            date: date!(2026 - 10 - 20),
+            minutes: Minutes(45),
+            description: "Fixed the printer".into(),
+            project: Some(shed.id),
+            category: None,
+            next_step: Some("Order more toner".into()),
+            timesheet_code_id: None,
+        };
+        store.create_entry(me, &entry, "INC0001234").await.unwrap();
+        store
+            .tray_add(me, date!(2026 - 10 - 20), "RITM0005678")
+            .await
+            .unwrap();
+        set_marker(store, "fixture").await;
+    }
+
+    /// Writes the fixture again (after a deliberate format change):
+    /// `cargo test -p shiftbook-storage write_backup_fixture -- --ignored`.
+    #[test]
+    #[ignore = "writes tests/fixtures; run by hand"]
+    fn write_backup_fixture() {
+        block_on(async {
+            let s = setup("bak-fixture-write").await;
+            write_fixture_data(&s.store).await;
+            let created = OffsetDateTime::parse(
+                "2026-10-25T12:00:00Z",
+                &time::format_description::well_known::Rfc3339,
+            )
+            .unwrap();
+            let bytes = create_backup(&s.store, &s.vault_dir, s.vault.dek(), "0.4.0", created)
+                .await
+                .unwrap();
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("tests/fixtures/schema-14.shiftbak");
+            std::fs::write(path, bytes).unwrap();
+        });
+    }
+
+    #[test]
+    fn a_backup_from_an_earlier_version_still_restores() {
+        use time::macros::date;
+        block_on(async {
+            let s = setup("bak-fixture").await;
+            s.store.initialize_local_owner("Me").await.unwrap();
+            let schema = current_schema_version(&s.store).await.unwrap();
+            let pw = SecretString::from(PW);
+            let opened = open_backup(
+                FIXTURE,
+                BackupKey::Secret(&pw, SecretKind::Password),
+                &s.vault_dir,
+                schema,
+            )
+            .unwrap();
+            let summary = opened.summary();
+            assert_eq!(
+                (summary.entries, summary.tickets, summary.projects),
+                (2, 2, 1),
+                "the entry and the tray's roll-up entry, a ticket on each"
+            );
+            restore_backup(&s.store, &opened).await.unwrap();
+            let owner = s.store.initialize_local_owner("Me").await.unwrap().id;
+            assert_eq!(marker(&s.store).await.as_deref(), Some("fixture"));
+            let entries = s
+                .store
+                .list_entries(owner, date!(2026 - 10 - 20), date!(2026 - 10 - 20))
+                .await
+                .unwrap();
+            let printer = entries
+                .iter()
+                .find(|e| e.entry.description == "Fixed the printer")
+                .expect("the entry came back");
+            assert_eq!(printer.tickets[0].ticket_number, "INC0001234");
+            let tray = s
+                .store
+                .tray_day(owner, date!(2026 - 10 - 20))
+                .await
+                .unwrap();
+            assert_eq!(tray.items[0].ticket_number, "RITM0005678");
+            assert_eq!(
+                s.store.list_projects(owner).await.unwrap()[0].name,
+                "Garden shed"
+            );
+        });
+    }
+
     #[test]
     fn any_edited_byte_is_refused() {
         block_on(async {
