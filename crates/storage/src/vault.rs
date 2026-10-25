@@ -12,6 +12,10 @@
 //! Every unlock failure (wrong secret, edited or damaged file, parameters out of
 //! range) is the same [`VaultError::UnlockFailed`], so nothing reveals which
 //! part was wrong.
+//!
+//! Quick unlock (round 15): [`PinWrap`] is one more wrap of the DEK, under a key from a
+//! 6-digit PIN with the same Argon2id parameters. It lives in memory only and is wiped on
+//! drop; it is never part of `vault.json` or a backup.
 
 use std::fs;
 use std::io;
@@ -220,6 +224,41 @@ impl Vault {
     }
 }
 
+/// The DEK wrapped under a PIN for Quick unlock: in memory only, wiped when dropped. No
+/// `Debug`, `Clone` or `Serialize`.
+pub struct PinWrap {
+    params: KdfParams,
+    salt: Zeroizing<[u8; SALT_BYTES]>,
+    nonce: [u8; NONCE_BYTES],
+    wrapped: Zeroizing<[u8; WRAPPED_BYTES]>,
+}
+
+impl PinWrap {
+    /// Unwrap the DEK with `pin`; a wrong PIN is [`VaultError::UnlockFailed`].
+    pub fn unlock(&self, pin: &SecretString) -> Result<Vault, VaultError> {
+        let kek = derive_kek(pin.expose_secret().as_bytes(), &self.salt, &self.params)?;
+        let cipher = XChaCha20Poly1305::new_from_slice(kek.as_ref())
+            .map_err(|_| VaultError::UnlockFailed)?;
+        let plain = Zeroizing::new(
+            cipher
+                .decrypt(
+                    &XNonce::from(self.nonce),
+                    Payload {
+                        msg: self.wrapped.as_ref(),
+                        aad: &aad_for(&self.params, &self.salt, PIN_LABEL),
+                    },
+                )
+                .map_err(|_| VaultError::UnlockFailed)?,
+        );
+        if plain.len() != DEK_BYTES {
+            return Err(VaultError::UnlockFailed);
+        }
+        let mut key = SecretBox::new(Box::new([0u8; DEK_BYTES]));
+        key.expose_secret_mut().copy_from_slice(&plain);
+        Ok(Vault { dek: Dek(key) })
+    }
+}
+
 /// The vault files in one data folder.
 #[derive(Debug, Clone)]
 pub struct VaultDir {
@@ -373,12 +412,19 @@ fn derive_kek(
 /// Associated data for a wrap: everything an attacker might edit in the file
 /// except the nonce (which is the cipher's own input).
 fn aad(params: &KdfParams, salt: &[u8; SALT_BYTES], purpose: Purpose) -> Vec<u8> {
+    aad_for(params, salt, purpose.label())
+}
+
+/// The PIN wrap's purpose label in its associated data.
+const PIN_LABEL: &str = "pin";
+
+fn aad_for(params: &KdfParams, salt: &[u8; SALT_BYTES], label: &str) -> Vec<u8> {
     format!(
         "shiftbook-vault|version={VAULT_VERSION}|kdf={KDF_NAME}-v19|m={}|t={}|p={}|purpose={}|salt={}",
         params.m_kib,
         params.t,
         params.p,
-        purpose.label(),
+        label,
         hex::encode(salt)
     )
     .into_bytes()
@@ -543,6 +589,39 @@ impl VaultDir {
             Purpose::Password,
         )?;
         Ok(Vault { dek })
+    }
+
+    /// Wrap the open vault's DEK under `pin` (fresh salt and nonce, the vault's own Argon2id
+    /// parameters) for Quick unlock. The result is kept in memory only.
+    pub fn wrap_for_pin(&self, vault: &Vault, pin: &SecretString) -> Result<PinWrap, VaultError> {
+        let params = self.load()?.params;
+        let salt = Zeroizing::new(random_array::<SALT_BYTES>()?);
+        let nonce = random_array::<NONCE_BYTES>()?;
+        let kek = derive_kek(pin.expose_secret().as_bytes(), &salt, &params)?;
+        let cipher =
+            XChaCha20Poly1305::new_from_slice(kek.as_ref()).map_err(|_| VaultError::Kdf)?;
+        let ciphertext = Zeroizing::new(
+            cipher
+                .encrypt(
+                    &XNonce::from(nonce),
+                    Payload {
+                        msg: vault.dek.expose(),
+                        aad: &aad_for(&params, &salt, PIN_LABEL),
+                    },
+                )
+                .map_err(|_| VaultError::Kdf)?,
+        );
+        let mut wrapped = Zeroizing::new([0u8; WRAPPED_BYTES]);
+        if ciphertext.len() != WRAPPED_BYTES {
+            return Err(VaultError::Kdf);
+        }
+        wrapped.copy_from_slice(&ciphertext);
+        Ok(PinWrap {
+            params,
+            salt,
+            nonce,
+            wrapped,
+        })
     }
 
     /// Unlock with the recovery key as typed by the user.
@@ -1056,5 +1135,22 @@ mod tests {
             first["wrapped_dek_password"],
             second["wrapped_dek_password"]
         );
+    }
+
+    #[test]
+    fn a_pin_wrap_unlocks_with_its_pin_only_and_stays_out_of_the_file() {
+        let (_t, v, vault, _key) = setup("pin");
+        let before = std::fs::read(v.vault_path()).unwrap();
+        let wrap = v.wrap_for_pin(&vault, &secret("042917")).unwrap();
+        let opened = wrap.unlock(&secret("042917")).unwrap();
+        assert_eq!(opened.dek().expose(), vault.dek().expose());
+        assert!(matches!(
+            wrap.unlock(&secret("042918")),
+            Err(VaultError::UnlockFailed)
+        ));
+        assert_eq!(std::fs::read(v.vault_path()).unwrap(), before);
+        let again = v.wrap_for_pin(&vault, &secret("042917")).unwrap();
+        assert_ne!(*again.salt, *wrap.salt);
+        assert_ne!(again.nonce, wrap.nonce);
     }
 }

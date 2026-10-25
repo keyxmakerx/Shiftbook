@@ -9,6 +9,7 @@
   import Unlock from './pages/Unlock.svelte';
   import NewPassword from './pages/NewPassword.svelte';
   import Shell from './pages/Shell.svelte';
+  import TodayPin from './components/TodayPin.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
 
@@ -17,6 +18,8 @@
   // Held only between setup and "Continue" on the recovery key page.
   let recoveryKey = $state<string | null>(null);
   let locking = $state(false);
+  // Just unlocked with the password: offer to set today's PIN when Quick unlock is on.
+  let askPin = $state(false);
 
   $effect(() => {
     api
@@ -32,10 +35,12 @@
 
   const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'new-password');
 
-  async function lockNow() {
+  async function lockNow(slept = false) {
     if (locking) return;
     locking = true;
     recoveryKey = null;
+    // A sleep ends Quick unlock's window: the next unlock needs the password.
+    if (slept) await api.endQuickUnlock().catch(() => undefined);
     await lockAndReload();
   }
 
@@ -53,7 +58,7 @@
     const timer = setInterval(() => {
       const result = checkIdle(idle, Date.now(), idleMs);
       idle = result.state;
-      if (result.lock) void lockNow();
+      if (result.lock) void lockNow(result.lock === 'asleep');
     }, TICK_MS);
     return () => {
       clearInterval(timer);
@@ -96,9 +101,17 @@
     }}
   />
 {:else if screen === 'unlock'}
-  <Unlock onUnlocked={(mustSetPassword) => (screen = mustSetPassword ? 'new-password' : 'app')} />
+  <Unlock
+    onUnlocked={(mustSetPassword, withPin) => {
+      askPin = !withPin && !mustSetPassword;
+      screen = mustSetPassword ? 'new-password' : 'app';
+    }}
+  />
 {:else if screen === 'new-password'}
   <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
-  <Shell onLock={lockNow} />
+  <Shell onLock={() => void lockNow()} />
+  {#if askPin && app.prefs?.quickUnlock}
+    <TodayPin onDone={() => (askPin = false)} />
+  {/if}
 {/if}

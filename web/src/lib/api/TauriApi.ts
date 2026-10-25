@@ -27,6 +27,7 @@ import type {
   BoardData,
   DeskData,
   PinItem,
+  PinOutcome,
   CardKind,
   CanvasCard,
   TidyResult,
@@ -79,6 +80,21 @@ export class TauriApi implements DataApi {
   }
   unlock(secret: string, kind: SecretKind): Promise<UnlockOutcome> {
     return call('unlock', { secret, kind });
+  }
+  quickUnlockReady(today: IsoDate): Promise<boolean> {
+    return call('quick_unlock_ready', { today });
+  }
+  unlockWithPin(pin: string, today: IsoDate): Promise<PinOutcome> {
+    return call('unlock_with_pin', { pin, today });
+  }
+  startQuickUnlock(pin: string, today: IsoDate): Promise<void> {
+    return call('start_quick_unlock', { pin, today });
+  }
+  enableQuickUnlock(password: string, pin: string, today: IsoDate): Promise<void> {
+    return call('enable_quick_unlock', { password, pin, today });
+  }
+  endQuickUnlock(): Promise<void> {
+    return call('end_quick_unlock');
   }
   lock(): Promise<void> {
     return call('lock');

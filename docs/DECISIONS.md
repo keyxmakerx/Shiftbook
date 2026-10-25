@@ -2,6 +2,30 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15, quality of life — 25 Oct 2026
+Built as pictured on the `r15-qol-*` mockups; the owner will try them and say which help most.
+- **Paste on the Desk:** text that is only ticket numbers goes to the Tickets tray and asks
+  "Time on them so far?" where the pointer is; anything else becomes a jot there (Undo).
+- **Find does everything; `/` opens it:** commands grouped Go to / Do / Settings (boards by name,
+  wrap up the day, back up now, copy for stand-up, fit, tidy, timeline, timer, each Settings
+  page), days like "fri", "last friday" or "12 oct", and "help" lists everything.
+- **Bring up…** offers a few work days, next week and Pick a day…, not only tomorrow.
+- **Copy for stand-up:** your last day with work and what you start with today, as plain lines;
+  the two headings are yours to name (Settings → Your day).
+- **Ctrl+Z undo with a history:** the last 20 changes with an Undo button; typing "undo" in Find
+  lists them, and undoing an older one undoes the ones after it. Redo where the change knows how.
+- **Your own time buttons:** up to five, used in Log work, on jots and for tickets.
+- **Log a meeting from the bell:** a series says how long it usually lasts and its project; when it
+  finishes the bell offers Log / Other time… / Skip, linking the entry to the meeting note.
+- **Just today** (bottom bar, key T) fades cards that aren't from today, still open, brought up
+  for today or pinned.
+- **Timesheet reminder:** from midday on your last work day the bell says the week isn't entered
+  yet, until every day is ticked off; "Remind me at…" hides it for two hours.
+- **Quick unlock with a PIN:** as written in SECURITY.md. Because the PIN is never stored, after
+  the day's first password unlock a small box asks for today's PIN (Skip is fine). The owner was
+  asked on a card whether to keep that box or set it only from Settings.
+- **The 11 newer ideas** (`r15-qol-new`) wait until the owner has tried these.
+
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a
   **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets

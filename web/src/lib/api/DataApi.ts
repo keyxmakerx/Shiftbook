@@ -21,6 +21,13 @@ export interface UnlockOutcome {
   mustSetPassword: boolean;
 }
 
+/** What a PIN unlock did (Quick unlock, round 15). */
+export interface PinOutcome {
+  unlocked: boolean;
+  /** Wrong PINs left; 0 means only the password or recovery key works now. */
+  triesLeft: number;
+}
+
 /** ISO local date, `YYYY-MM-DD`. */
 export type IsoDate = string;
 
@@ -84,6 +91,8 @@ export interface Prefs {
   standupWords: [string, string];
   /** Your own time buttons (round 15), shortest first. */
   timeButtons: number[];
+  /** Quick unlock with a PIN is on (Settings → Security). */
+  quickUnlock: boolean;
 }
 
 /** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
@@ -180,7 +189,8 @@ export type PrefKey =
   | 'ui.windows'
   | 'desk.done_pile'
   | 'day.standup_words'
-  | 'day.time_buttons';
+  | 'day.time_buttons'
+  | 'security.quick_unlock';
 
 export interface Project {
   id: string;
@@ -728,6 +738,16 @@ export interface DataApi {
   vaultConfirmRecoverySaved(): Promise<void>;
   /** Unlock with the password or the recovery key. Tauri: `unlock`. */
   unlock(secret: string, kind: SecretKind): Promise<UnlockOutcome>;
+  /** True when today's PIN can open the app now (Quick unlock). */
+  quickUnlockReady(today: IsoDate): Promise<boolean>;
+  /** Unlock with today's PIN. A wrong PIN resolves with the tries left. */
+  unlockWithPin(pin: string, today: IsoDate): Promise<PinOutcome>;
+  /** Set today's PIN after a password unlock. */
+  startQuickUnlock(pin: string, today: IsoDate): Promise<void>;
+  /** Turn Quick unlock on (Settings → Security): checks the password, sets today's PIN. */
+  enableQuickUnlock(password: string, pin: string, today: IsoDate): Promise<void>;
+  /** End the PIN window now; locks then ask for the password. */
+  endQuickUnlock(): Promise<void>;
   /** Close the data file and forget the key. Reload the page afterwards. Tauri: `lock`. */
   lock(): Promise<void>;
   /** Change the master password; needs the current one. Tauri: `change_password`. */

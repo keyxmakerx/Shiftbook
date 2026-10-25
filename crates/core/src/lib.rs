@@ -25,6 +25,7 @@ pub mod pins;
 pub mod prefs;
 pub mod project;
 pub mod quicklog;
+pub mod quickunlock;
 pub mod recurring;
 pub mod reminder;
 pub mod responses;
