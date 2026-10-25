@@ -208,3 +208,55 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   gone the database key is gone, so recovered database blocks can't be read. An old copy of
   `vault.json` in a user's own file backup, together with recovered database blocks and the
   password of that time, would still open them (see "Old copies of `vault.json`" above).
+
+## Quick unlock with a PIN (proposed, not built)
+Proposed in sign-off round 15. Nothing here is built until the owner approves this section.
+
+**The problem.** Auto-lock after 15 minutes idle is the right default, but every unlock needs the
+full master password (12+ characters). On a day of short breaks people turn auto-lock off or
+raise it to hours, which leaves the app open for longer than a PIN would.
+
+**What it does.** An optional 6-digit PIN, set in Settings → Security (needs the password). After
+an idle lock or Lock now, the unlock screen asks for the PIN instead of the password. It works
+only inside a **PIN window** that starts at a full unlock (password or recovery key) and ends at
+the first of: midnight, 10 hours after that unlock, the app quitting, the computer sleeping (the
+gap the page already detects), 3 wrong PINs, or "Use my password instead" on the unlock screen.
+Outside the window the unlock screen asks for the password as now.
+
+**How the key is held during a PIN lock.** The database is closed and the DEK is wiped exactly as
+in a normal lock. Before wiping, the DEK is wrapped (XChaCha20-Poly1305, fresh random nonce) with
+a **PIN KEK** = Argon2id(PIN, random 16-byte salt, same parameters as the password KEK). The
+wrapped DEK, salt and nonce are kept **in memory only**, in `zeroize` types in the Rust session.
+They are never written to disk, to `vault.json` or to backups. A PIN unlock derives the PIN KEK,
+unwraps the DEK and opens the database as a normal unlock does.
+
+**Wrong PINs.** The attempt count lives in the Rust session, not the page. The third wrong PIN
+wipes the wrapped DEK and the salt at once, so further guesses are impossible and only the
+password or recovery key can open the app. There is no back-off delay for PINs; the hard limit of
+3 replaces it.
+
+**What a PIN protects, and what it doesn't.**
+- The database file on disk is unchanged: encrypted with the DEK, which is wrapped only by the
+  password and recovery KEKs. Copying the file (or a backup) and guessing the PIN gets nothing.
+- Someone at the unlocked computer during a PIN lock gets 3 guesses at 1,000,000 PINs.
+- Someone who can read Shiftbook's memory during a PIN lock (malware running as the user, a
+  memory dump, a hibernation file) can find the wrapped DEK and try all PINs offline. At ~0.5 s
+  per Argon2id guess that is roughly 6 core-days for the whole space, much less on many cores.
+  Today the same attacker reading memory while the app is **unlocked** gets the DEK directly, so
+  this adds a small window, not a new kind of attack. It is why the PIN window ends at sleep
+  (hibernation) and after 10 hours.
+- The PIN itself is never stored. Only the in-memory salt and wrapped DEK exist, and only during
+  the window.
+
+**Not chosen.**
+- Keeping the database open behind a lock screen ("soft lock"): simpler, but the DEK and sqlx's
+  copy of the key would stay in memory in the clear for the whole lock.
+- Storing a PIN-wrapped key on disk so the PIN survives a restart: a 6-digit PIN on disk is
+  brute-forced offline in days, which would make the PIN the real strength of the file.
+- The OS keychain or Windows Hello: needs new plugins and behaves differently on each OS; the
+  Android thread's fingerprint option can revisit this.
+
+**Tests before it ships.** PIN unlock inside the window; refusal after midnight, after 10 hours,
+after quit and after a sleep gap; the third wrong PIN wipes the wrapped key (a fourth attempt with
+the right PIN fails); nothing PIN-related appears in `vault.json`, the database or a backup;
+changing the password or recovery key ends the window.
