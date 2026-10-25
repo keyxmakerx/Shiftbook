@@ -402,8 +402,17 @@ pub fn run() {
             check_backup,
             restore_backup,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Shiftbook");
+        .build(tauri::generate_context!())
+        .expect("error while building Shiftbook")
+        .run(|app, event| {
+            // Close the database before the process ends, so no connection is still
+            // closing on its own thread while the encryption library shuts down.
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<VaultSession>() {
+                    let _ = tauri::async_runtime::block_on(state.lock());
+                }
+            }
+        });
 }
 
 #[cfg(test)]

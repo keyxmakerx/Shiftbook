@@ -51,14 +51,38 @@ pub const DATABASE_FILE_NAME: &str = "shiftbook.db";
 /// A tiny Tokio runtime for async unit tests (Tokio's `macros` feature isn't enabled).
 #[cfg(test)]
 pub(crate) mod test_rt {
+    use std::cell::RefCell;
     use std::future::Future;
 
+    use sqlx::SqlitePool;
+
+    thread_local! {
+        /// Databases this test thread opened, closed when its `block_on` finishes.
+        static OPEN: RefCell<Vec<SqlitePool>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Remember a database the current test opened (see [`block_on`]).
+    pub fn track(pool: &SqlitePool) {
+        OPEN.with(|open| open.borrow_mut().push(pool.clone()));
+    }
+
+    /// Run a test's async body, then close every database it opened and wait for them.
+    /// A pool that is only dropped closes its connections later on their own threads; if
+    /// the test binary exits meanwhile, SQLCipher can still be closing while OpenSSL shuts
+    /// down, which crashed CI now and then (SIGSEGV after every test had passed).
     pub fn block_on<F: Future>(future: F) -> F::Output {
-        tokio::runtime::Builder::new_current_thread()
+        let rt = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
-            .expect("test runtime")
-            .block_on(future)
+            .expect("test runtime");
+        let out = rt.block_on(future);
+        let pools = OPEN.with(|open| std::mem::take(&mut *open.borrow_mut()));
+        rt.block_on(async {
+            for pool in pools {
+                pool.close().await;
+            }
+        });
+        out
     }
 }
 

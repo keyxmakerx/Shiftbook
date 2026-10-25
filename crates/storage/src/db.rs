@@ -149,6 +149,8 @@ pub async fn open_encrypted(path: &Path, dek: &Dek) -> Result<SqlitePool, Storag
     }
     fsutil::make_file_private(path).map_err(StorageError::Io)?;
     migrator().run(&pool).await?;
+    #[cfg(test)]
+    crate::test_rt::track(&pool);
     Ok(pool)
 }
 
