@@ -23,6 +23,8 @@
   let text = $state('');
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);
+  /** More than one ticket was pasted, so each row keeps its number even once others are answered. */
+  let askedMany = $state(false);
 
   async function add(pasted: string) {
     if (!pasted.trim()) return;
@@ -32,7 +34,10 @@
     text = '';
     const added = result.items.filter((i) => !before.has(i.id)).map((i) => i.id);
     await applyTray(result);
-    if (added.length) asking = added;
+    if (added.length) {
+      asking = added;
+      askedMany = added.length > 1;
+    }
     else toast('Those tickets are already in the tray.');
   }
 
@@ -143,7 +148,7 @@
       </span>
       {#each askingItems as item (item.id)}
         <span class="ask-row">
-          {#if askingItems.length > 1}<span class="mono ask-tk">{item.ticket}</span>{/if}
+          {#if askedMany}<span class="mono ask-tk">{item.ticket}</span>{/if}
           <span class="picks">
             {#each SO_FAR as m (m)}
               <button type="button" class:on={item.minutes === m} onclick={() => void soFar(item, m)}>{fmtMinutes(m)}</button>

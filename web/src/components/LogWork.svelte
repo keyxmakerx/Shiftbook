@@ -4,7 +4,7 @@
   import { api } from '../lib/api';
   import type { Capture } from '../lib/api';
   import type { Entry } from '../lib/api';
-  import { addDays, fmtMinutes } from '../lib/format';
+  import { addDays, fmtMinutes, weekdayLong } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
   import { app, attempt, flashEntry, projectById, projectColor, refresh, words } from '../lib/store.svelte';
   import { hasHome, hasWork } from '../lib/words';
@@ -42,6 +42,8 @@
   const workToo = $derived(hasWork(app.prefs?.useMode));
 
   const repeats = $derived(repeatCandidates(app.selected, earlier, app.entries));
+  // The repeats come from the last day with work, which on a Monday is usually Friday.
+  const repeatDay = $derived(repeats[0] && repeats[0].date !== addDays(app.selected, -1) ? weekdayLong(repeats[0].date) : 'yesterday');
 
   $effect(() => {
     const serial = app.logFocus.serial;
@@ -208,7 +210,7 @@
   </div>
   {#if repeats.length > 0}
     <div class="repeat">
-      <span class="lbl">Same as yesterday</span>
+      <span class="lbl">Same as {repeatDay}</span>
       {#each repeats as r (r.id)}
         <button type="button" class="btn rep" disabled={working} onclick={() => repeat(r)} title="Log {fmtMinutes(r.minutes)} of {r.description} again">
           <span class="chip" style:--c={projectColor(r.projectId)}>{fmtMinutes(r.minutes)}</span>{r.description}

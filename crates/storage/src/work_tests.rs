@@ -855,6 +855,26 @@ fn open_tickets_come_back_until_ticked() {
         assert!(s.tray_carried(me, mon).await.unwrap().is_empty());
         s.tray_set_done(me, again.id, true).await.unwrap();
         assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+
+        // Ticking it on an older day (Friday's tray) also finishes the copy already
+        // carried into Monday, so it doesn't keep coming back.
+        let day = s.tray_add(me, fri, "INC0045800").await.unwrap();
+        let older = day
+            .items
+            .iter()
+            .find(|i| i.ticket_number == "INC0045800")
+            .unwrap()
+            .id;
+        s.tray_carry(me, older, mon).await.unwrap();
+        s.tray_set_done(me, older, true).await.unwrap();
+        assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+        assert!(s
+            .tray_day(me, mon)
+            .await
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.done));
     });
 }
 
