@@ -54,7 +54,7 @@
     type Rect,
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
-  import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
+  import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
@@ -66,6 +66,8 @@
   import DrawerPanel from '../components/DrawerPanel.svelte';
   import CanvasAreaBox from '../components/CanvasArea.svelte';
   import CanvasCard from '../components/CanvasCard.svelte';
+  import DueSoonCard from '../components/DueSoonCard.svelte';
+  import { hasHome } from '../lib/words';
   import Icon from '../components/Icon.svelte';
   import LogWork from '../components/LogWork.svelte';
   import TrayCard from '../components/TrayCard.svelte';
@@ -138,6 +140,9 @@
 
   const today = $derived(ribbonDay(app.today));
   const week = $derived(ribbonWeekOf(app.today));
+  // Home with no hours to aim for (round 15): count what got done today instead.
+  const countDone = $derived(hasHome(app.prefs?.useMode) && !app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7]);
+  const doneToday = $derived(app.entries.filter((e) => !e.isTray).length);
 
   async function load() {
     const desk = await attempt(() => api.canvas(app.today));
@@ -1146,9 +1151,14 @@
     {#if panel}
       <div class="stack">
         <div class="paper hours">
-          <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
-          <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+          {#if countDone}
+            <div><span class="big mono">{doneToday}</span><span class="lbl">{doneToday === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : weekdayShort(app.selected)}</span></div>
+          {:else}
+            <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
+            <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+          {/if}
         </div>
+        <DueSoonCard />
         <WhereWasI />
         <LogWork />
         <TrayCard />

@@ -86,6 +86,14 @@ works the way it does is in `DECISIONS.md`.
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
+- **Work, Home or Both:** the first run asks what Shiftbook is for (Settings → Look changes it).
+  Home turns the hours targets off, hides the Timesheet, uses everyday words and gives Log work a
+  **✓ Done** button that saves a line with no time.
+- **Repeating:** bills, bins, renewals and birthdays. Each one repeats or expires on a date;
+  **Done** marks it for today (with Undo), and overdue or due-soon things show on the Desk and in
+  the bell. After a break, the bell opens on **While you were away**.
+- **Lists:** shopping, packing or "before we go away" lists. Paste several lines at once; **Reset
+  for next time** unticks everything and keeps the items.
 - **Settings:** Look (theme, motion, accent, text size, project colours), Your day (targets,
   wrap-up, timer), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
@@ -97,7 +105,7 @@ works the way it does is in `DECISIONS.md`.
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Settings), Ctrl+L lock, Ctrl + / − / 0
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 7 switch views (Desk, Day, Timesheet, Notes, Repeating, Lists, Settings; at home the Timesheet is hidden and it's 1 to 6), Ctrl+L lock, Ctrl + / − / 0
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 

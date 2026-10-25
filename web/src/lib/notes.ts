@@ -7,12 +7,22 @@ import { dayMonth, relativeDay, toIso, weekdayShort } from './format';
 
 export const KINDS: readonly NoteKind[] = ['jot', 'daily', 'meeting', 'page', 'mop'];
 
+// The MOP kind is called "Step-by-step guide" at home (round 15); the store says which.
+let mopWord = (): string => 'MOP';
+
+/** Let the store name the MOP kind for the current "What's Shiftbook for?". */
+export function useMopWord(word: () => string): void {
+  mopWord = word;
+}
+
 export const KIND_LABEL: Record<NoteKind, string> = {
   jot: 'Jot',
   daily: 'Daily',
   meeting: 'Meeting',
   page: 'Page',
-  mop: 'MOP',
+  get mop() {
+    return mopWord();
+  },
 };
 
 /** A piece of text, marked when it matches one of the typed words. */

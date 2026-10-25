@@ -6,22 +6,18 @@
   import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, protection, protectNow } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView, shownViews } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import type { View } from '../lib/keys';
+  import { VIEW_NAMES } from '../lib/keys';
+  import { hasWork } from '../lib/words';
   import Icon from './Icon.svelte';
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
 
   // Desk is the Canvas, where the day happens; Day is for starting and ending it (round 9).
-  // The Planner joins this list once it's built.
-  const VIEW_LIST: { id: View; label: string; key: string }[] = [
-    { id: 'desk', label: 'Desk', key: '1' },
-    { id: 'day', label: 'Day', key: '2' },
-    { id: 'timesheet', label: 'Timesheet', key: '3' },
-    { id: 'notes', label: 'Notes', key: '4' },
-    { id: 'settings', label: 'Settings', key: '5' },
-  ];
+  // Repeating and Lists came in round 15; the Timesheet hides at home. The Planner joins this
+  // list once it's built.
+  const VIEW_LIST = $derived(shownViews().map((id, i) => ({ id, label: VIEW_NAMES[id], key: String(i + 1) })));
 
   let viewsEl: HTMLElement | undefined = $state();
   let pill = $state({ left: 0, width: 0 });
@@ -30,6 +26,7 @@
   $effect(() => {
     void app.view;
     void viewsEl;
+    void VIEW_LIST;
     const place = () => {
       const b = viewsEl?.querySelector<HTMLElement>('button[aria-pressed="true"]');
       if (b) pill = { left: b.offsetLeft, width: b.offsetWidth };
@@ -66,20 +63,24 @@
                 void selectDay(day.date).then(onCapture);
               },
             },
-            {
-              label: 'What to enter for this week',
-              icon: 'sheet',
-              top: true,
-              act: () => {
-                void selectDay(day.date).then(() => setView('timesheet'));
-              },
-            },
-            {
-              label: 'Book as holiday (8 h)',
-              icon: 'sun',
-              top: true,
-              act: () => void holiday(day.date),
-            },
+            ...(hasWork(app.prefs?.useMode)
+              ? [
+                  {
+                    label: 'What to enter for this week',
+                    icon: 'sheet' as const,
+                    top: true,
+                    act: () => {
+                      void selectDay(day.date).then(() => setView('timesheet'));
+                    },
+                  },
+                  {
+                    label: 'Book as holiday (8 h)',
+                    icon: 'sun' as const,
+                    top: true,
+                    act: () => void holiday(day.date),
+                  },
+                ]
+              : []),
           ],
         },
       ],

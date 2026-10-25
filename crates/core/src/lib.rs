@@ -13,6 +13,7 @@ pub mod dates;
 pub mod error;
 pub mod fields;
 pub mod group;
+pub mod home;
 pub mod hours;
 pub mod ids;
 pub mod items;

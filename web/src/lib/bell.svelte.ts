@@ -4,7 +4,11 @@ import { api } from './api';
 import type { BellItem } from './api';
 import { app } from './store.svelte';
 
-export const bell = $state<{ items: BellItem[]; open: boolean }>({ items: [], open: false });
+export const bell = $state<{ items: BellItem[]; open: boolean; away: { since: string | null; items: BellItem[] } | null }>({
+  items: [],
+  open: false,
+  away: null,
+});
 
 /** Minutes since local midnight. */
 export function nowMinutes(at = new Date()): number {
@@ -17,5 +21,20 @@ export async function refreshBell(): Promise<void> {
     bell.items = await api.bell(app.today, nowMinutes());
   } catch {
     // The next tick tries again.
+  }
+}
+
+/**
+ * "While you were away" (round 15): after unlock, or when the day changes, open the panel on
+ * what came due since Shiftbook was last open, if anything did. Quiet on failure.
+ */
+export async function openAway(): Promise<void> {
+  try {
+    const away = await api.whileAway(app.today, nowMinutes());
+    if (away.items.length === 0) return;
+    bell.away = away;
+    bell.open = true;
+  } catch {
+    // Nothing to show; the bell still has everything.
   }
 }

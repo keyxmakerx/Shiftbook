@@ -6,7 +6,8 @@
   import type { Entry } from '../lib/api';
   import { addDays, fmtMinutes } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
-  import { app, attempt, flashEntry, projectById, projectColor, refresh } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectById, projectColor, refresh, words } from '../lib/store.svelte';
+  import { hasHome, hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
 
   const TIMES = [15, 30, 45, 60, 120];
@@ -35,6 +36,10 @@
       live = false;
     };
   });
+
+  // Home and Both (round 15): a Done button saves the line with no time; time stays optional.
+  const home = $derived(hasHome(app.prefs?.useMode));
+  const workToo = $derived(hasWork(app.prefs?.useMode));
 
   const repeats = $derived(repeatCandidates(app.selected, earlier, app.entries));
 
@@ -128,7 +133,11 @@
     flashEntry(entry.id);
     const existed = before.has(entry.id);
     toast(
-      existed
+      minutes === 0
+        ? existed
+          ? `${entry.description} is already down for today`
+          : `Done: ${entry.description}`
+        : existed
         ? `Added ${fmtMinutes(minutes)} to ${entry.description}`
         : `Logged ${fmtMinutes(minutes)}${entry.tickets.length ? ' on ' + entry.tickets.map((t) => t.number).join(', ') : ''}`,
       'Undo',
@@ -141,7 +150,15 @@
 </script>
 
 <div class="quick">
-  <label class="lbl" for="log-work">Log work · paste a ticket or say what you did, add a time or pick one</label>
+  <label class="lbl" for="log-work">
+    {#if home && !workToo}
+      {words().logWork} · type what you did and press Done; a time is optional
+    {:else if home}
+      Log work · say what you did and press Done, or paste a ticket and pick a time
+    {:else}
+      Log work · paste a ticket or say what you did, add a time or pick one
+    {/if}
+  </label>
   <div class="in">
     <input
       id="log-work"
@@ -158,11 +175,14 @@
           timesEl?.querySelector<HTMLButtonElement>('button')?.focus();
         }
       }}
-      placeholder="e.g. “patched print server 45m”"
+      placeholder={home && !workToo ? 'e.g. “paid the water bill”' : 'e.g. “patched print server 45m”'}
       autocomplete="off"
       spellcheck="false"
     />
     <span class="times" role="toolbar" tabindex="-1" aria-label="Log it as" bind:this={timesEl} onkeydown={timesKey}>
+      {#if home}
+        <button type="button" class="hbtn donebtn" disabled={working} onclick={() => log(0)} title="Save it with no time">✓ Done</button>
+      {/if}
       {#each TIMES as m (m)}
         <button type="button" class="hbtn" disabled={working} onclick={() => log(m)}>{fmtMinutes(m)}</button>
       {/each}
@@ -182,7 +202,7 @@
       {#if seen.minutes}
         <span class="lbl pick"><b class="mono">{fmtMinutes(seen.minutes)}</b> · <span class="kbd">Enter</span> logs it</span>
       {:else}
-        <span class="lbl pick">pick a time, or <span class="kbd">Enter</span> to jump to them</span>
+        <span class="lbl pick">{home ? 'press Done, or pick a time' : 'pick a time'}, or <span class="kbd">Enter</span> to jump to them</span>
       {/if}
     {/if}
   </div>
@@ -230,6 +250,11 @@
     gap: 6px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  .donebtn {
+    font-weight: 700;
+    color: var(--ok);
   }
 
   .pick {

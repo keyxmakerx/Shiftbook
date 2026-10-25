@@ -1,13 +1,30 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space opens capture, 1–5 switch views, Ctrl+L locks, Ctrl +/−/0
+// N focuses Log work, Ctrl+Space opens capture, 1–7 switch views (1–6 at home, where the
+// Timesheet is hidden), Ctrl+L locks, Ctrl +/−/0
 // change the text size, Esc closes
 // the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
-export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'settings';
-export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'settings'];
+export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'settings';
+export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'repeating', 'lists', 'settings'];
+
+/** The views shown, in tab order: without the Timesheet at home (round 15). */
+export function viewsFor(work: boolean): readonly View[] {
+  return work ? VIEWS : VIEWS.filter((v) => v !== 'timesheet');
+}
+
+/** Tab names. */
+export const VIEW_NAMES: Record<View, string> = {
+  desk: 'Desk',
+  day: 'Day',
+  timesheet: 'Timesheet',
+  notes: 'Notes',
+  repeating: 'Repeating',
+  lists: 'Lists',
+  settings: 'Settings',
+};
 export type SettingsSection =
   | 'look'
   | 'day'
@@ -40,7 +57,7 @@ export interface KeyInfo {
   typing: boolean;
 }
 
-export function shortcutFor(e: KeyInfo): Shortcut | null {
+export function shortcutFor(e: KeyInfo, views: readonly View[] = VIEWS): Shortcut | null {
   const mod = e.ctrlKey || e.metaKey;
   if (mod && !e.altKey && (e.code === 'Space' || e.key === ' ')) return { kind: 'capture' };
   if (mod && !e.altKey && e.key.toLowerCase() === 'l') return { kind: 'lock' };
@@ -52,19 +69,27 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
   if (mod || e.altKey || e.typing) return null;
   if (e.key === 'n' || e.key === 'N') return { kind: 'focus-log' };
   const n = Number(e.key);
-  if (Number.isInteger(n) && n >= 1 && n <= VIEWS.length) {
-    const view = VIEWS[n - 1];
+  if (Number.isInteger(n) && n >= 1 && n <= views.length) {
+    const view = views[n - 1];
     if (view) return { kind: 'view', view };
   }
   return null;
 }
 
 /** Every shortcut, as shown on the hold-Ctrl overlay. Keep in step with `shortcutFor`. */
+export function shortcutList(views: readonly View[] = VIEWS): readonly { keys: string; what: string }[] {
+  return [
+    ...SHORTCUT_LIST.slice(0, 3),
+    { keys: views.map((_, i) => String(i + 1)).join('  '), what: views.map((v) => VIEW_NAMES[v]).join(', ') },
+    ...SHORTCUT_LIST.slice(4),
+  ];
+}
+
 export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Ctrl Space', what: 'Log, note or find anything' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
-  { keys: '1  2  3  4  5', what: 'Desk, Day, Timesheet, Notes, Settings' },
+  { keys: '1  2  3  4  5  6  7', what: 'Desk, Day, Timesheet, Notes, Repeating, Lists, Settings' },
   { keys: '↑  ↓', what: 'Move between entries' },
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },

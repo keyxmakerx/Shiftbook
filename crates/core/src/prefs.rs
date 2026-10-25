@@ -7,6 +7,7 @@ use serde::{Serialize, Serializer};
 use time::Weekday;
 
 use crate::error::{preview, CoreError};
+use crate::home::UseMode;
 use crate::notes::{AUTO_ARCHIVE_CHOICES, DEFAULT_AUTO_ARCHIVE_DAYS};
 use crate::sheet::{CommentFormat, GroupBy};
 use crate::timer::PausedTimer;
@@ -48,6 +49,10 @@ pub const KEY_WINDOWS: &str = "ui.windows";
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
 /// Where the Desk's "Done today" pile sits, `x y` in canvas units, or blank for automatic.
 pub const KEY_DONE_PILE: &str = "desk.done_pile";
+/// What Shiftbook is for: `work`, `home` or `both` (see [`crate::home`]).
+pub const KEY_USE_MODE: &str = "use.mode";
+/// The last day Shiftbook was open (`YYYY-MM-DD`), for "While you were away".
+pub const KEY_LAST_OPEN: &str = "app.last_open";
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -177,6 +182,8 @@ pub struct Prefs {
     pub windows: Vec<crate::windows::WindowSpot>,
     /// Where the Desk's "Done today" pile sits; `None` places it automatically.
     pub done_pile: Option<(i32, i32)>,
+    /// What Shiftbook is for (round 15).
+    pub use_mode: UseMode,
 }
 
 impl Prefs {
@@ -204,6 +211,7 @@ impl Default for Prefs {
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
             done_pile: None,
+            use_mode: UseMode::Work,
         }
     }
 }
@@ -315,6 +323,12 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                     .ok_or_else(|| invalid(value))
             }
         }
+        KEY_USE_MODE => UseMode::parse(v)
+            .map(|m| m.as_str().to_string())
+            .ok_or_else(|| invalid(value)),
+        KEY_LAST_OPEN => crate::dates::parse_date(v)
+            .map(crate::dates::format_date)
+            .map_err(|_| invalid(value)),
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -379,6 +393,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             }
             KEY_WINDOWS => prefs.windows = crate::windows::parse_windows(&v),
             KEY_DONE_PILE => prefs.done_pile = parse_spot(&v),
+            KEY_USE_MODE => prefs.use_mode = UseMode::parse(&v).unwrap_or_default(),
             _ => {}
         }
     }
@@ -388,6 +403,20 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn use_mode_and_last_open() {
+        assert_eq!(validate_pref(KEY_USE_MODE, " home "), Ok("home".into()));
+        assert!(validate_pref(KEY_USE_MODE, "garden").is_err());
+        let p = prefs_from_settings(&[(KEY_USE_MODE, "both")]);
+        assert_eq!(p.use_mode, UseMode::Both);
+        assert_eq!(Prefs::default().use_mode, UseMode::Work);
+        assert_eq!(
+            validate_pref(KEY_LAST_OPEN, "2026-10-25"),
+            Ok("2026-10-25".into())
+        );
+        assert!(validate_pref(KEY_LAST_OPEN, "yesterday").is_err());
+    }
 
     #[test]
     fn the_done_pile_spot_is_kept_on_the_canvas() {

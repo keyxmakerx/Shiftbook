@@ -26,11 +26,14 @@ pub mod extras;
 mod fsutil;
 pub mod hex;
 mod items;
+pub mod home;
+pub mod lists;
 pub mod meetings;
 pub mod notes;
 pub mod piles;
 pub mod pins;
 pub mod recovery;
+pub mod recurring;
 pub mod repo;
 pub mod vault;
 pub mod wipe;
@@ -65,6 +68,8 @@ pub(crate) mod test_rt {
 
 #[cfg(test)]
 mod canvas_tests;
+#[cfg(test)]
+mod home_tests;
 #[cfg(test)]
 mod notes_tests;
 #[cfg(test)]

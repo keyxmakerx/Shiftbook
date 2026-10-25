@@ -1,6 +1,9 @@
 <script lang="ts">
   // Hold Ctrl (⌘ on a Mac) on its own for a moment to see every shortcut; let go to hide it.
-  import { HOLD_MS, SHORTCUT_LIST, startsHold } from '../lib/keys';
+  import { HOLD_MS, shortcutList, startsHold } from '../lib/keys';
+  import { shownViews } from '../lib/store.svelte';
+
+  const list = $derived(shortcutList(shownViews()));
 
   let shown = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -32,7 +35,7 @@
 <div class="paper keys" class:on={shown} aria-hidden={!shown}>
   <h2>Shortcuts</h2>
   <dl>
-    {#each SHORTCUT_LIST as s, i (i)}
+    {#each list as s, i (i)}
       <dt><span class="kbd">{s.keys}</span></dt>
       <dd>{s.what}</dd>
     {/each}

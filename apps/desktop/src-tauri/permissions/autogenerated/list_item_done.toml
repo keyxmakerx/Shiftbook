@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-item-done"
+description = "Enables the list_item_done command without any pre-configured scope."
+commands.allow = ["list_item_done"]
+
+[[permission]]
+identifier = "deny-list-item-done"
+description = "Denies the list_item_done command without any pre-configured scope."
+commands.deny = ["list_item_done"]

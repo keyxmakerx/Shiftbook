@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-save"
+description = "Enables the recurring_save command without any pre-configured scope."
+commands.allow = ["recurring_save"]
+
+[[permission]]
+identifier = "deny-recurring-save"
+description = "Denies the recurring_save command without any pre-configured scope."
+commands.deny = ["recurring_save"]

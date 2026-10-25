@@ -4,6 +4,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { toApiError } from './DataApi';
 import type {
+  AwayList,
+  Frequency,
+  MarkedDone,
+  Recurring,
+  RecurringInput,
+  ShopList,
+  UseMode,
   AppInfo,
   BackupFile,
   BackupSummary,
@@ -423,5 +430,62 @@ export class TauriApi implements DataApi {
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {
     return call('search', { query, today, commands });
+  }
+
+  recurring(today: IsoDate): Promise<Recurring[]> {
+    return call('recurring_list', { today });
+  }
+  saveRecurring(id: string | null, input: RecurringInput): Promise<void> {
+    return call('recurring_save', { id, input });
+  }
+  recurringDone(id: string, date: IsoDate): Promise<MarkedDone> {
+    return call('recurring_done', { id, date });
+  }
+  recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone> {
+    return call('recurring_renewed', { id, expires, date });
+  }
+  recurringUndo(marked: MarkedDone): Promise<void> {
+    return call('recurring_undo', { marked });
+  }
+  setRecurringDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('recurring_set_deleted', { id, deleted });
+  }
+  recurringChoices(): Promise<{ frequencies: Frequency[]; kinds: string[] }> {
+    return call('recurring_choices');
+  }
+
+  lists(): Promise<ShopList[]> {
+    return call('lists');
+  }
+  createList(title: string, items: string): Promise<ShopList> {
+    return call('list_create', { title, items });
+  }
+  renameList(id: string, title: string): Promise<ShopList> {
+    return call('list_rename', { id, title });
+  }
+  setListDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('list_set_deleted', { id, deleted });
+  }
+  addListItems(id: string, text: string): Promise<ShopList> {
+    return call('list_add_items', { id, text });
+  }
+  listItemDone(itemId: string, done: boolean): Promise<ShopList> {
+    return call('list_item_done', { id: itemId, done });
+  }
+  listItemText(itemId: string, text: string): Promise<ShopList> {
+    return call('list_item_text', { id: itemId, text });
+  }
+  listItemDeleted(itemId: string, deleted: boolean): Promise<ShopList> {
+    return call('list_item_deleted', { id: itemId, deleted });
+  }
+  resetList(id: string): Promise<ShopList> {
+    return call('list_reset', { id });
+  }
+
+  setUseMode(mode: UseMode): Promise<Prefs> {
+    return call('set_use_mode', { mode });
+  }
+  whileAway(today: IsoDate, now: number): Promise<AwayList> {
+    return call('while_away', { today, now });
   }
 }

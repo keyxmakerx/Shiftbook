@@ -2,7 +2,7 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
-## Round 15 — 25 Oct 2026
+## Round 15 — 25 Oct 2026 (one item per ticket)
 - **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
   write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
   tray tickets, entry tickets and later tasks and chores point at, with one done tick, one
@@ -16,6 +16,32 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   unlock: the newest row decides done and project, and different notepads are merged under
   "Earlier note" lines so none is lost. A ticket number that comes back later is the same
   ticket, reopened, with its old notes (recommended pick on the card).
+## Round 15 — 25 Oct 2026 (home use and repeating things)
+- **What's Shiftbook for?** (r15-home): a real goal, not a side mode. First run asks **Work,
+  Home or Both** after the recovery key; Settings → Look can change it any time. Home turns the
+  hours targets off (0 every day), locks after 60 minutes instead of 15, hides the Timesheet
+  (keys become 1 to 6) and the week-pack day options, shows home starter categories (Home,
+  Money, Health, Family, Car, Admin, Errands) and repeating kinds (Bills, Home upkeep, Car,
+  Health, Documents, Birthdays), and swaps words (Tickets → References, Meetings → Regular
+  events, MOP → Step-by-step guide, Log work → "Done something?"). Values the user added are
+  never touched. Both keeps the work words and adds the home pieces. Rules: `core::home`.
+- **Done without time** (r15-home): in Home and Both, Log work has a **✓ Done** button that saves
+  the line with no minutes; such entries show a tick instead of 0h. With no hours target the
+  Desk and Day count "things done" instead of the hours ring.
+- **Lists** (r15-home, built with Tasks/M4): reusable checklists (shopping, packing, before we go
+  away) on their own screen (key 6, or 5 at home). Paste several lines to add them all; **Reset
+  for next time** unticks everything and keeps the items. Stored as tasks with `is_list` and their
+  checklist items (migration 0016).
+- **Repeating things** (r15-recurring): the M3 recurring screen is built now (key 5, or 4 at
+  home): things that repeat (pick how often and when it's next due) or expire on a date (with how
+  often they renew). **Mark done** adds a no-time Done entry on the day, with Undo; things that
+  expire ask for the new expiry date. Overdue and due-soon things show on the Desk (**Due soon**)
+  and in the bell with Done. **Yearly** (already a starter frequency) covers birthdays and renewals.
+- **While you were away** (r15-recurring): on unlock (and when the day changes) the bell opens on
+  what came due, or what you said to chase, since Shiftbook was last open. No new plugin and no
+  system notifications. Last-open day is kept in prefs (`app.last_open`).
+- **Keys:** 1 Desk, 2 Day, 3 Timesheet, 4 Notes, 5 Repeating, 6 Lists, 7 Settings (at home the
+  Timesheet is hidden and the rest move up one).
 
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a

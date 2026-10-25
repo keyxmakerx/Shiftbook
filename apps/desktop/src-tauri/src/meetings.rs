@@ -2,14 +2,15 @@
 //! `shiftbook_core::meetings` and `shiftbook_core::bell`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::bell::{bell_items, BellItem};
+use shiftbook_core::bell::{bell_items, with_due, BellItem};
 use shiftbook_core::dates::parse_date;
-use shiftbook_core::ids::MeetingSeriesId;
+use shiftbook_core::ids::{MeetingSeriesId, OwnerId};
 use shiftbook_core::meetings::meeting_note_title;
 use shiftbook_core::model::MeetingSeries;
 use shiftbook_core::notes::NoteKind;
 use shiftbook_storage::meetings::SeriesInput;
 use shiftbook_storage::notes::NoteInput;
+use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::OffsetDateTime;
 
@@ -148,6 +149,16 @@ pub async fn meeting_note(
 pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Vec<BellItem>> {
     let (store, owner) = s.data().await?;
     let today = parse_date(&today).map_err(|_| CommandError::InvalidInput)?;
+    bell_for(&store, owner, today, now).await
+}
+
+/// Everything in the bell at `now` on `today`, repeating things included (round 15).
+pub async fn bell_for(
+    store: &SqliteStore,
+    owner: OwnerId,
+    today: time::Date,
+    now: u32,
+) -> Res<Vec<BellItem>> {
     let meetings = store.meeting_series(owner).await?;
     let next_up = store.next_up_all(owner).await?;
     let mut open: Vec<String> = store
@@ -171,7 +182,7 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
             open.push(t);
         }
     }
-    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(&store, owner, today)
+    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(store, owner, today)
         .await?
         .into_iter()
         .filter_map(|(p, title)| {
@@ -179,12 +190,14 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
                 .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
         })
         .collect();
-    Ok(bell_items(
+    let items = bell_items(
         &meetings,
         &next_up,
         &chase,
         &open,
         today,
         now.min(24 * 60 - 1),
-    ))
+    );
+    let due = crate::home::due_things(store, owner, today).await?;
+    Ok(with_due(items, &due, today))
 }

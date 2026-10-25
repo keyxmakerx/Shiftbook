@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-choices"
+description = "Enables the recurring_choices command without any pre-configured scope."
+commands.allow = ["recurring_choices"]
+
+[[permission]]
+identifier = "deny-recurring-choices"
+description = "Denies the recurring_choices command without any pre-configured scope."
+commands.deny = ["recurring_choices"]
