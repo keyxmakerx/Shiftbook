@@ -136,7 +136,7 @@
     await load();
     toast(archived ? 'Archived. Search still finds it.' : 'Back with your notes.', 'Undo', () => {
       void attempt(() => api.setNoteArchived(n.id, !archived)).then(() => refreshOpen(n.id)).then(load);
-    });
+    }, () => void attempt(() => api.setNoteArchived(n.id, archived)).then(() => refreshOpen(n.id)).then(load));
   }
 
   async function keep(n: Note) {
@@ -168,7 +168,7 @@
         await load();
         await openById(n.id);
       });
-    });
+    }, () => void attempt(() => api.setNoteDeleted(n.id, true)).then(load));
   }
 
   async function refreshOpen(id: string) {

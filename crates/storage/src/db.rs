@@ -89,6 +89,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
     ),
     (15, "items", include_str!("../migrations/0015_items.sql")),
     (16, "lists", include_str!("../migrations/0016_lists.sql")),
+    (
+        17,
+        "meeting length, project and logged day",
+        include_str!("../migrations/0017_meeting_log.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {

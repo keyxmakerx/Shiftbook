@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bring-up-days"
+description = "Enables the bring_up_days command without any pre-configured scope."
+commands.allow = ["bring_up_days"]
+
+[[permission]]
+identifier = "deny-bring-up-days"
+description = "Denies the bring_up_days command without any pre-configured scope."
+commands.deny = ["bring_up_days"]

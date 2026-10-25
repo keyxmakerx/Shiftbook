@@ -3,11 +3,16 @@
   // yesterday". The app reads it as you type (crates/core/src/capture.rs) and shows chips.
   // A line with hours logs on Enter. Anything else is a search (round 7): matching
   // entries, Inbox scraps and commands appear below, ranked by crates/core/src/search.rs.
-  // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox.
+  // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox. Round 15: "/" opens
+  // it too, every action the app has is a command here (grouped Go to / Do / Settings), a
+  // day such as "last friday" or "12 oct" offers that day, and "help" lists everything.
   import { api } from '../lib/api';
-  import type { Capture, Entry, InboxItem, Note, TrayItem } from '../lib/api';
+  import type { Capture, Entry, InboxItem, MeetingSeries, Note, TrayItem } from '../lib/api';
+  import { openBoard } from '../lib/boards.svelte';
+  import { toIsoDate } from '../lib/dates';
   import { KIND_LABEL } from '../lib/notes';
-  import { dayOfMonth, fmtMinutes, relativeDay, weekdayShort } from '../lib/format';
+  import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
+  import type { SettingsSection } from '../lib/keys';
   import { allowCapture, protectNow } from '../lib/protection.svelte';
   import {
     app,
@@ -19,38 +24,142 @@
     projectColor,
     refresh,
     refreshInbox,
+    ribbonDay,
+    ribbonWeekOf,
     selectDay,
     setView,
   } from '../lib/store.svelte';
-  import { toast } from '../lib/toast.svelte';
+  import { copyStandup } from '../lib/standup';
+  import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
+  import { changes, toast, undoBack } from '../lib/toast.svelte';
+  import { agoText, type Change } from '../lib/undoHistory';
   import { trapTab } from '../lib/trap';
   import { openWindow } from '../lib/windows.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
 
-  type Command = { label: string; keys?: string; run: () => void | Promise<void> };
+  type Group = 'Go to' | 'Do' | 'Settings';
+  type Command = {
+    label: string;
+    group: Group;
+    keys?: string;
+    /** Extra words Find matches but doesn't show. */
+    words?: string;
+    run: () => void | Promise<void>;
+  };
   type Hit =
     | { kind: 'entry'; entry: Entry }
     | { kind: 'scrap'; item: InboxItem }
     | { kind: 'note'; note: Note }
     | { kind: 'ticket'; ticket: TrayItem }
+    | { kind: 'day'; date: string; sheet: boolean }
+    | { kind: 'change'; change: Change; after: number }
     | { kind: 'command'; command: Command };
 
-  const COMMANDS: Command[] = [
-    { label: 'Go to Desk', keys: '1', run: () => setView('desk') },
-    { label: 'Go to Day', keys: '2', run: () => setView('day') },
-    { label: 'Go to Timesheet', keys: '3', run: () => setView('timesheet') },
-    { label: 'Go to Notes', keys: '4', run: () => setView('notes') },
-    { label: 'Go to Settings', keys: '5', run: () => setView('settings') },
-    { label: 'New note', run: () => openNote(null) },
-    { label: 'Lock now', keys: 'Ctrl L', run: () => onLock() },
-    { label: 'Book today as holiday (8 h)', run: () => holiday() },
+  const GROUPS: Group[] = ['Go to', 'Do', 'Settings'];
+  /** Most commands shown for a search; "help" shows them all. */
+  const MAX_COMMANDS = 8;
+
+  const SETTINGS: { id: SettingsSection; label: string; words: string }[] = [
+    { id: 'look', label: 'Look', words: 'theme colour color dark light text size motion' },
+    { id: 'day', label: 'Your day', words: 'target hours wrap-up timer stand-up time buttons' },
+    { id: 'projects', label: 'Projects', words: 'colours archive' },
+    { id: 'timesheet', label: 'Timesheet', words: 'codes grouping' },
+    { id: 'notes', label: 'Notes', words: 'kinds templates' },
+    { id: 'fields', label: 'Fields', words: 'custom' },
+    { id: 'responses', label: 'Responses', words: 'canned replies' },
+    { id: 'meetings', label: 'Meetings', words: 'series bell' },
+    { id: 'backups', label: 'Backups', words: 'restore import export' },
+    { id: 'security', label: 'Security', words: 'password recovery key lock pin' },
+  ];
+
+  let series = $state<MeetingSeries[]>([]);
+
+  function onDesk(ask: 'fit' | 'tidy' | 'timeline') {
+    setView('desk');
+    app.deskAsk = ask;
+  }
+
+  function settings(id: SettingsSection) {
+    app.settingsSection = id;
+    setView('settings');
+  }
+
+  async function backupNow() {
+    const name = await attempt(() => api.backupNow(toIsoDate(new Date())));
+    if (name) toast(`Backup saved as “${name}”.`);
+  }
+
+  function wrapUp() {
+    app.wrapupClosed = '';
+    app.wrapupNow = app.today;
+    if (app.view !== 'desk' && app.view !== 'day') setView('desk');
+    void selectDay(app.today);
+  }
+
+  async function timerCommand() {
+    if (running.target) {
+      await stopTimer();
+      return;
+    }
+    const today = (await attempt(() => api.listEntries(app.today, app.today))) ?? [];
+    const last = today.filter((e) => !e.isTray).pop();
+    if (last) await startTimer(last);
+    else toast('Log something today first, then the timer can run on it.');
+  }
+
+  const commands = $derived.by((): Command[] => [
+    { label: 'Go to Desk', group: 'Go to', keys: '1', run: () => setView('desk') },
+    { label: 'Go to Day', group: 'Go to', keys: '2', run: () => setView('day') },
+    { label: 'Go to Timesheet', group: 'Go to', keys: '3', run: () => setView('timesheet') },
+    { label: 'Go to Notes', group: 'Go to', keys: '4', run: () => setView('notes') },
+    { label: 'Go to Settings', group: 'Go to', keys: '5', run: () => setView('settings') },
+    { label: 'Boards', group: 'Go to', words: 'full screen projects meetings', run: () => openBoard('desk') },
+    { label: 'Daily notes', group: 'Go to', words: 'board', run: () => openBoard('daily') },
+    { label: 'Done tickets', group: 'Go to', words: 'board closed', run: () => openBoard('done', 'list') },
+    { label: 'Archive', group: 'Go to', words: 'board archived', run: () => openBoard('archive') },
+    ...app.projects
+      .filter((p) => !p.archived)
+      .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', run: () => openBoard(`project:${p.id}`) })),
+    ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', run: () => openBoard(`series:${m.id}`) })),
+    { label: 'New note', group: 'Do', run: () => openNote(null) },
+    { label: 'Wrap up the day', group: 'Do', words: 'end of day wrap-up', run: wrapUp },
+    { label: 'Back up now', group: 'Do', words: 'backup save', run: backupNow },
+    { label: 'Copy for stand-up', group: 'Do', words: 'yesterday standup clipboard', run: copyStandup },
+    { label: 'Fit everything', group: 'Do', words: 'desk zoom', run: () => onDesk('fit') },
+    { label: 'Tidy the Desk', group: 'Do', words: 'pile loose cards by project', run: () => onDesk('tidy') },
+    { label: 'Timeline', group: 'Do', words: 'desk lay out', run: () => onDesk('timeline') },
+    {
+      label: app.justToday ? 'Show every card again' : 'Just today on the Desk',
+      group: 'Do',
+      words: 'fade focus today',
+      run: () => {
+        setView('desk');
+        app.justToday = !app.justToday;
+      },
+    },
+    ...(app.prefs?.timer
+      ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
+      : []),
+    { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
+    { label: 'Book today as holiday (8 h)', group: 'Do', words: 'leave vacation', run: () => holiday() },
     {
       label: 'Allow screenshots for 10 minutes',
+      group: 'Do',
       run: () => attempt(allowCapture).then(() => toast('Screenshots and copying are allowed for 10 minutes.')),
     },
-    { label: 'Protect now (block screenshots)', run: () => attempt(protectNow).then(() => toast('Protected again.')) },
-  ];
+    {
+      label: 'Protect now (block screenshots)',
+      group: 'Do',
+      run: () => attempt(protectNow).then(() => toast('Protected again.')),
+    },
+    ...SETTINGS.map((p): Command => ({ label: `Settings: ${p.label}`, group: 'Settings', words: p.words, run: () => settings(p.id) })),
+  ]);
+
+  /** Commands in their groups' order, keeping the ranking inside each group. */
+  function grouped(list: Command[]): Command[] {
+    return GROUPS.flatMap((g) => list.filter((c) => c.group === g));
+  }
 
   let text = $state('');
   let seen = $state<Capture | null>(null);
@@ -69,6 +178,7 @@
       hits = [];
       sel = 0;
       queueMicrotask(() => input?.focus());
+      void api.meetingSeries().then((list) => (series = list), () => {});
     }
   });
 
@@ -80,31 +190,52 @@
       hits = [];
       return;
     }
+    if (now.trim().toLowerCase() === 'undo') {
+      seen = null;
+      const list = [...changes.list].reverse();
+      hits = list.map((change, after): Hit => ({ kind: 'change', change, after }));
+      sel = 0;
+      return;
+    }
+    if (now.trim().toLowerCase() === 'help') {
+      seen = null;
+      hits = grouped(commands).map((command): Hit => ({ kind: 'command', command }));
+      sel = 0;
+      return;
+    }
     timer = setTimeout(async () => {
-      const [c, found] = await Promise.all([
+      const list = commands;
+      const [c, found, day] = await Promise.all([
         api.parseCapture(now, app.today).catch(() => null),
         api
           .search(
             now,
             app.today,
-            COMMANDS.map((c) => c.label),
+            list.map((c) => (c.words ? `${c.label} ${c.words}` : c.label)),
           )
           .catch(() => null),
+        api.findDay(now, app.today).catch(() => null),
       ]);
       if (text !== now) return;
       seen = c;
-      hits = found
-        ? [
-            ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
-            ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
-            ...found.notes.map((note): Hit => ({ kind: 'note', note })),
-            ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
-            ...found.commands.flatMap((i): Hit[] => {
-              const command = COMMANDS[i];
-              return command ? [{ kind: 'command', command }] : [];
-            }),
-          ]
-        : [];
+      const ranked = (found?.commands ?? []).flatMap((i) => list[i] ?? []).slice(0, MAX_COMMANDS);
+      hits = [
+        ...(day
+          ? [
+              { kind: 'day', date: day, sheet: false },
+              { kind: 'day', date: day, sheet: true },
+            ]
+          : []),
+        ...(found
+          ? [
+              ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
+              ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
+              ...found.notes.map((note): Hit => ({ kind: 'note', note })),
+              ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
+            ]
+          : []),
+        ...grouped(ranked).map((command): Hit => ({ kind: 'command', command })),
+      ] as Hit[];
       sel = 0;
     }, 90);
   }
@@ -128,7 +259,7 @@
     flashEntry(entry.id);
     toast('Today booked as holiday', 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   async function toInbox(line: string) {
@@ -138,13 +269,18 @@
     await attempt(refreshInbox);
     toast('Saved to the Inbox', 'Undo', () => {
       void attempt(() => api.setInboxDeleted(item.id, true)).then(() => attempt(refreshInbox));
-    });
+    }, () => void attempt(() => api.setInboxDeleted(item.id, false)).then(() => attempt(refreshInbox)));
   }
 
   async function open(hit: Hit) {
     close();
     if (hit.kind === 'command') {
       await hit.command.run();
+    } else if (hit.kind === 'change') {
+      undoBack(hit.change.id);
+    } else if (hit.kind === 'day') {
+      await selectDay(hit.date);
+      setView(hit.sheet ? 'timesheet' : 'day');
     } else if (hit.kind === 'note') {
       openNote(hit.note.id);
     } else if (hit.kind === 'ticket') {
@@ -165,6 +301,8 @@
   async function submit(toInboxAnyway: boolean) {
     const line = text.trim();
     if (!line) return;
+    // "undo" and "help" are words for Find, not something to keep.
+    if (!toInboxAnyway && hits.length === 0 && ['undo', 'help'].includes(line.toLowerCase())) return;
     if (!toInboxAnyway && !logging && hits[sel]) {
       await open(hits[sel]);
       return;
@@ -184,7 +322,7 @@
     const when = entry.date === app.today ? 'today' : `on ${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
     toast(`Logged ${fmtMinutes(parsed.minutes)} ${when}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   function move(step: number) {
@@ -206,7 +344,11 @@
           ? 'Notes'
           : hit.kind === 'scrap'
             ? 'Inbox'
-            : 'Commands';
+            : hit.kind === 'day'
+              ? 'Days'
+              : hit.kind === 'change'
+                ? 'Recent changes, newest first'
+              : hit.command.group;
   }
 </script>
 
@@ -261,6 +403,8 @@
       {#if seen.description}
         <span class="tok" style:--c="var(--ink)"><em>what</em>{seen.description}</span>
       {/if}
+    {:else if text.trim().toLowerCase() === 'undo' && hits.length === 0}
+      <span class="none">Nothing to undo yet. Changes with an Undo button show here.</span>
     {:else if text.trim() && hits.length === 0}
       <span class="none">Nothing found. <span class="kbd">Enter</span> saves it to the Inbox; add a time like 30m to log it.</span>
     {/if}
@@ -299,6 +443,20 @@
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
             <span class="what"><b>{hit.note.title}</b>
               <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}</small></span>
+          {:else if hit.kind === 'change'}
+            <i class="dot cmd" aria-hidden="true">↶</i>
+            <span class="what"><b>Undo: {hit.change.text}</b>
+              <small>{agoText(hit.change.at, Date.now())}{hit.after ? ` · also undoes the ${hit.after === 1 ? 'one' : hit.after} after it` : ''}</small></span>
+          {:else if hit.kind === 'day'}
+            <i class="dot cmd" aria-hidden="true">›</i>
+            {#if hit.sheet}
+              {@const wk = ribbonWeekOf(hit.date)}
+              <span class="what"><b>Timesheet, {wk ? `week of ${dayMonth(wk.weekStart)}` : 'that week'}</b>
+                {#if wk}<small>{wk.hours} h logged</small>{/if}</span>
+            {:else}
+              {@const rd = ribbonDay(hit.date)}
+              <span class="what"><b>Go to {longDay(hit.date)}</b><small>Day{rd ? ` · ${rd.hours} h` : ''}</small></span>
+            {/if}
           {:else if hit.kind === 'scrap'}
             <i class="dot" style:--c="var(--warn)"></i>
             <span class="what"><b>{hit.item.text}</b><small>Inbox · Enter puts it in Log work</small></span>
@@ -322,7 +480,7 @@
     {/if}
     <span><span class="kbd">Ctrl Enter</span> to Inbox</span>
     <span><span class="kbd">Esc</span> close</span>
-    <span class="tip">Add a time like 30m and it logs instead</span>
+    <span class="tip">Type “help” for everything Find can do</span>
   </div>
 </div>
 

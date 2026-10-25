@@ -17,7 +17,9 @@
 
   const at = $derived(app.prefs?.wrapupAt ?? null);
   const show = $derived(
-    !!at && app.selected === app.today && app.wrapupClosed !== app.today && isWrapupTime(now, at),
+    app.selected === app.today &&
+      app.wrapupClosed !== app.today &&
+      (app.wrapupNow === app.today || (!!at && isWrapupTime(now, at))),
   );
 
   let lines = $state(['']);

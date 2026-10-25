@@ -46,6 +46,12 @@ export const app = $state({
   logFocus: { serial: 0, text: '' },
   /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
   wrapupClosed: '',
+  /** The date "Wrap up the day" was asked for in Find, so the wrap-up shows before its time. */
+  wrapupNow: '',
+  /** "Just today" on the Desk (round 15): cards from other days fade. */
+  justToday: false,
+  /** Something Find asked the Desk to do once it shows. */
+  deskAsk: null as 'fit' | 'tidy' | 'timeline' | null,
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
   /** The "Where was I?" card on the Desk, while it's showing. */
@@ -56,7 +62,26 @@ export const app = $state({
   noteOpen: { id: null as string | null, serial: 0 },
   /** The Settings section to open next time Settings shows. */
   settingsSection: 'look' as SettingsSection,
+  /** The days "Bring up…" offers from today, the next work day first. */
+  bringUpDays: [] as string[],
 });
+
+/** The time buttons everyone starts with (`shiftbook_core::prefs::DEFAULT_TIME_BUTTONS`). */
+export const DEFAULT_TIMES = [15, 30, 45, 60, 120];
+
+/** The time buttons in Log work and on jots (Settings → Your day). */
+export function timeButtons(): number[] {
+  return app.prefs?.timeButtons ?? DEFAULT_TIMES;
+}
+
+/**
+ * The "time on it so far?" choices for tickets: your own time buttons, or with the defaults
+ * the usual list that starts at 5 minutes.
+ */
+export function ticketTimes(): number[] {
+  const own = timeButtons();
+  return own.join() === DEFAULT_TIMES.join() ? [5, ...DEFAULT_TIMES] : own;
+}
 
 /** Run an API call; on failure show a plain message and resolve undefined. */
 export async function attempt<T>(work: () => Promise<T>): Promise<T | undefined> {
@@ -115,7 +140,13 @@ export async function savePref(key: PrefKey, value: string): Promise<Prefs | und
   if (!p) return undefined;
   app.prefs = p;
   applyPrefs(p);
+  // Targets and the week start decide which days "Bring up…" offers.
+  void refreshBringUpDays();
   return p;
+}
+
+export async function refreshBringUpDays(): Promise<void> {
+  app.bringUpDays = (await attempt(() => api.bringUpDays(app.today))) ?? [];
 }
 
 export async function refreshDay(): Promise<void> {
@@ -159,7 +190,7 @@ export async function loadAll(): Promise<void> {
   app.codes = codes;
   app.fields = fields;
   app.inbox = inbox;
-  await Promise.all([refreshDay(), refreshRibbon()]);
+  await Promise.all([refreshDay(), refreshRibbon(), refreshBringUpDays()]);
   app.ready = true;
 }
 
@@ -221,6 +252,6 @@ export async function rollDay(): Promise<boolean> {
   const wasToday = app.selected === app.today;
   app.today = now;
   if (wasToday) app.selected = now;
-  await refresh();
+  await Promise.all([refresh(), refreshBringUpDays()]);
   return true;
 }

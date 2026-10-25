@@ -3,6 +3,7 @@
   // comments, totals, warnings, the copy text) comes ready-made from the app
   // (crates/core/src/sheet.rs); this page shows it and remembers the tick-offs.
   import { api } from '../lib/api';
+  import { refreshBell } from '../lib/bell.svelte';
   import type { GroupBy, SheetDay, SheetWarning, Tick, WeekSheet } from '../lib/api';
   import { addDays, dayMonth, dayOfMonth, isWeekend, weekdayLong, weekdayShort } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
@@ -54,6 +55,7 @@
     const others = ticks.filter((t) => !(t.day === d.date && t.lineKey === key));
     ticks = [...others, { day: d.date, lineKey: key, done: value }];
     await attempt(() => api.setTick(week, d.date, key, value));
+    void refreshBell();
     if (!wasAll && allDone(d)) {
       toast(`${weekdayLong(d.date)} is entered. Nice.`);
       setTimeout(() => (shut[d.date] = true), 450);

@@ -80,6 +80,10 @@ export interface Prefs {
   windows: WindowSpot[];
   /** Where the Desk's "Done today" pile sits; null places it automatically. */
   donePile: [number, number] | null;
+  /** The headings of "Copy for stand-up": what was done, what's next. */
+  standupWords: [string, string];
+  /** Your own time buttons (round 15), shortest first. */
+  timeButtons: number[];
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -179,6 +183,10 @@ export interface MeetingSeries {
   at: number;
   /** Minutes ahead the bell starts reminding. */
   remindMinutes: number;
+  /** How long it usually lasts, in minutes (5 to 480); "Log 30m" offers this. */
+  lengthMinutes: number;
+  /** The project its time is logged to. */
+  projectId: string | null;
 }
 
 export type SeriesInput = Omit<MeetingSeries, 'id'>;
@@ -192,6 +200,8 @@ export interface BellItem {
   title: string;
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
+    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
+    | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'brought_up'; id: string; from: IsoDate }
     | { kind: 'chase'; card: string; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
@@ -242,7 +252,9 @@ export type PrefKey =
   | 'timer.paused'
   | 'notes.auto_archive_days'
   | 'ui.windows'
-  | 'desk.done_pile';
+  | 'desk.done_pile'
+  | 'day.standup_words'
+  | 'day.time_buttons';
 
 export interface Project {
   id: string;
@@ -530,6 +542,8 @@ export interface CanvasCard {
   workHours: string | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
+  /** Stays bright under "Just today": from today, still open, brought up for today or pinned. */
+  justToday: boolean;
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */
@@ -900,6 +914,10 @@ export interface DataApi {
 
   // ----- meetings and the bell -----
   meetingSeries(): Promise<MeetingSeries[]>;
+  /** "Log 30m" on a meeting that just finished: an entry in its project, linked to the day's meeting note. */
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry>;
+  /** "Skip" on a meeting that just finished, or with `skip` false offer it again. */
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void>;
   /** Add a series (`id` null) or change one. */
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries>;
   /** Remove a series, or with `deleted` false bring it back (Undo). Its notes stay. */
@@ -1001,8 +1019,19 @@ export interface DataApi {
   // ----- next up -----
   /** The wrap-up's "next up" list, in order. */
   nextUp(): Promise<NextUpItem[]>;
-  /** "Bring up tomorrow": the card comes up first on the next work day after `today`. */
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem>;
+  /**
+   * "Bring up…": the card comes up first on `on` (moved to the next work day if it isn't
+   * one), or without `on` on the next work day after `today`.
+   */
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
+  /** The tickets in text pasted on the Desk, or null when it isn't only tickets. */
+  pastedTickets(text: string): Promise<string[] | null>;
+  /** The day Find's text names ("fri", "last friday", "12 oct"), or null. */
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null>;
+  /** "Copy for stand-up": the last day with work, then what you start with today. */
+  standup(today: IsoDate): Promise<string>;
+  /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
+  bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;

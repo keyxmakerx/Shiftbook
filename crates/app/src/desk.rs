@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, ticket_home, timeline, tray_place,
+    area_at, auto_links, auto_place, box_status, is_recent, stays_in_just_today, ticket_home, timeline, tray_place,
     work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState, TrayPlace,
     ORIGIN, RECENT_DAYS,
 };
@@ -65,6 +65,9 @@ pub struct CardView {
     pub work_hours: Option<String>,
     /// Tickets from the Tickets tray with a number this work has, folded into this card.
     pub folded: Vec<TrayCardView>,
+    /// Stays bright under "Just today" (round 15): from today, still open, brought up for
+    /// today or pinned.
+    pub just_today: bool,
 }
 
 /// A project's area.
@@ -211,6 +214,7 @@ pub fn blank(kind: CardKind, id: Uuid) -> CardView {
         work: Vec::new(),
         work_hours: None,
         folded: Vec::new(),
+        just_today: false,
     }
 }
 
@@ -736,7 +740,26 @@ pub async fn desk(
         .filter_map(|i| i.about)
         .collect();
     let mut members: Vec<Vec<MemberState>> = vec![Vec::new(); boxes.len()];
+    let brought_today: HashSet<(CardKind, Uuid)> = store
+        .next_up_all(owner)
+        .await?
+        .into_iter()
+        .filter(|i| i.done_at.is_none() && i.show_from.is_some_and(|d| d <= today))
+        .filter_map(|i| i.about)
+        .collect();
+    let pinned: HashSet<(CardKind, Uuid)> = store
+        .pins(owner)
+        .await?
+        .into_iter()
+        .map(|p| (p.kind, p.record_id))
+        .collect();
     for p in placed.iter_mut() {
+        let state = MemberState {
+            open: p.open,
+            brought_up: brought_today.contains(&(p.kind, p.id)),
+            today: p.date == today,
+        };
+        p.card.just_today = stays_in_just_today(state, pinned.contains(&(p.kind, p.id)));
         if let Some(b) = area_at(&boxes, (p.card.x, p.card.y)) {
             members[b].push(MemberState {
                 open: p.open,

@@ -3,7 +3,7 @@
 // its tickets and bring it up tomorrow, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { Entry } from './api';
-import { bringUp } from './bringUp';
+import { bringUp, bringUpSection } from './bringUp';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
 import { pinMenuItem } from './pins.svelte';
@@ -93,7 +93,7 @@ export async function removeEntry(entry: Entry): Promise<void> {
   await refresh();
   toast(`Deleted “${title}”`, 'Undo', () => {
     void attempt(() => api.restoreEntry(id)).then(refresh);
-  });
+  }, () => void attempt(() => api.deleteEntry(id)).then(refresh));
 }
 
 async function logAgainToday(entry: Entry) {
@@ -108,7 +108,7 @@ async function logAgainToday(entry: Entry) {
   flashEntry(created.id);
   toast(`Logged 0.5 h of “${created.description}” today`, 'Undo', () => {
     void attempt(() => api.deleteEntry(created.id)).then(refresh);
-  });
+  }, () => void attempt(() => api.restoreEntry(created.id)).then(refresh));
 }
 
 async function copyTickets(entry: Entry) {
@@ -152,6 +152,7 @@ export function entryMenu(entry: Entry): MenuSpec {
   ];
   const sections: MenuSpec['sections'] = [
     { head: entry.description || 'Untitled', items: main },
+    bringUpSection('entry', entry.id, entry.description),
     { head: 'Project', choices },
   ];
   if (project) {

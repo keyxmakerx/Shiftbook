@@ -107,7 +107,7 @@
     flashEntry(entry.id);
     toast(`${weekdayShort(date)} ${dayOfMonth(date)} booked as holiday`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   function openDay(date: string, gap = false) {

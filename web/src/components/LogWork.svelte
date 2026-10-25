@@ -6,11 +6,11 @@
   import type { Entry } from '../lib/api';
   import { addDays, fmtMinutes, weekdayLong } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
-  import { app, attempt, flashEntry, projectById, projectColor, refresh, words } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectById, projectColor, refresh, timeButtons, words } from '../lib/store.svelte';
   import { hasHome, hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
 
-  const TIMES = [15, 30, 45, 60, 120];
+  const TIMES = $derived(timeButtons());
 
   let text = $state('');
   let seen = $state<Capture | null>(null);
@@ -115,7 +115,7 @@
     flashEntry(entry.id);
     toast(`Logged ${fmtMinutes(e.minutes)} of ${e.description}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   async function log(minutes: number, line = text) {

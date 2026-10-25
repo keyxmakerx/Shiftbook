@@ -17,7 +17,7 @@
   import { noticeReturn } from '../lib/resume';
   import { restoreTimer, timerActivity } from '../lib/timer.svelte';
   import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView, shownViews } from '../lib/store.svelte';
-  import { toast } from '../lib/toast.svelte';
+  import { redoLast, toast, undoLatest } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import BoardScreen from '../components/BoardScreen.svelte';
   import BottomBar from '../components/BottomBar.svelte';
@@ -29,6 +29,7 @@
   import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
+  import DayPrompt from '../components/DayPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
   import Day from '../views/Day.svelte';
@@ -127,10 +128,23 @@
         event.preventDefault();
         onLock();
         break;
+      case 'undo':
+        event.preventDefault();
+        if (!undoLatest()) toast('Nothing to undo.');
+        break;
+      case 'redo':
+        event.preventDefault();
+        if (!redoLast()) toast('Nothing to redo.');
+        break;
       case 'escape':
         if (menuOpen()) closeMenu();
         else if (app.captureOpen) app.captureOpen = false;
         else if (app.drawer) app.drawer = null;
+        break;
+      case 'just-today':
+        if (app.view !== 'desk' || menuOpen() || app.captureOpen || app.drawer) return;
+        event.preventDefault();
+        app.justToday = !app.justToday;
         break;
       case 'focus-log':
         if (menuOpen() || app.captureOpen || app.drawer) return;
@@ -200,6 +214,7 @@
 <Drawer />
 <PaperMenu />
 <Toast />
+<DayPrompt />
 <ShortcutOverlay />
 
 <style>

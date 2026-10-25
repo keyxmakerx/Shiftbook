@@ -223,6 +223,12 @@ export class TauriApi implements DataApi {
   meetingSeries(): Promise<MeetingSeries[]> {
     return call('meeting_series');
   }
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry> {
+    return call('log_meeting', { seriesId, today, minutes });
+  }
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void> {
+    return call('skip_meeting', { seriesId, today, skip });
+  }
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries> {
     return call('save_meeting_series', { id, input });
   }
@@ -387,8 +393,20 @@ export class TauriApi implements DataApi {
   setNextUp(items: string[]): Promise<NextUpItem[]> {
     return call('set_next_up', { items });
   }
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem> {
-    return call('bring_up', { today, kind, id, title });
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem> {
+    return call('bring_up', { today, kind, id, title, on: on ?? null });
+  }
+  pastedTickets(text: string): Promise<string[] | null> {
+    return call('pasted_tickets', { text });
+  }
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null> {
+    return call('find_day', { text, today });
+  }
+  standup(today: IsoDate): Promise<string> {
+    return call('standup', { today });
+  }
+  bringUpDays(today: IsoDate): Promise<IsoDate[]> {
+    return call('bring_up_days', { today });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });

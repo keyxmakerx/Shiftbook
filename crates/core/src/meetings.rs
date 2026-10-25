@@ -18,6 +18,12 @@ pub const MAX_REMIND_MINUTES: u32 = 120;
 pub const DEFAULT_REMIND_MINUTES: u32 = 15;
 /// A meeting still shows as on for this long after it starts.
 pub const STARTED_SHOWS_MINUTES: u32 = 15;
+/// Shortest a meeting can usually last.
+pub const MIN_LENGTH_MINUTES: u32 = 5;
+/// Longest a meeting can usually last: 8 hours.
+pub const MAX_LENGTH_MINUTES: u32 = 8 * 60;
+/// How long a meeting usually lasts unless set otherwise.
+pub const DEFAULT_LENGTH_MINUTES: u32 = 30;
 /// Short weekday names in stored order (Monday first).
 pub const DAY_NAMES: [&str; 7] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -72,6 +78,34 @@ pub fn validate_series(
         });
     }
     Ok(name)
+}
+
+/// Check how long a series usually lasts: [`MIN_LENGTH_MINUTES`] to [`MAX_LENGTH_MINUTES`].
+pub fn validate_length(length_minutes: u32) -> Result<(), CoreError> {
+    if (MIN_LENGTH_MINUTES..=MAX_LENGTH_MINUTES).contains(&length_minutes) {
+        Ok(())
+    } else {
+        Err(CoreError::OutOfRange {
+            field: "Usually lasts",
+            min: i64::from(MIN_LENGTH_MINUTES),
+            max: i64::from(MAX_LENGTH_MINUTES),
+        })
+    }
+}
+
+/// True when today's meeting of a series is over (its usual length has passed) and its
+/// time hasn't been logged or skipped today, so the bell offers "Log 30m".
+pub fn meeting_finished(
+    days: &[bool; 7],
+    at: u32,
+    length_minutes: u32,
+    handled_on: Option<Date>,
+    today: Date,
+    now: u32,
+) -> bool {
+    days[usize::from(today.weekday().number_days_from_monday())]
+        && now >= at + length_minutes
+        && handled_on != Some(today)
 }
 
 /// Where today's meeting of a series stands at `now` (minutes since local midnight).
@@ -178,6 +212,35 @@ mod tests {
             meeting_today(&mon, at, 0, MON, at - 1),
             Some(MeetingToday::Later)
         );
+    }
+
+    #[test]
+    fn a_meeting_is_finished_once_its_length_has_passed_until_logged() {
+        let mon = [true, false, false, false, false, false, false];
+        let at = 10 * 60;
+        assert!(!meeting_finished(&mon, at, 30, None, MON, at + 29));
+        assert!(meeting_finished(&mon, at, 30, None, MON, at + 30));
+        assert!(meeting_finished(&mon, at, 30, None, MON, 23 * 60));
+        assert!(meeting_finished(
+            &mon,
+            at,
+            30,
+            Some(date!(2026 - 10 - 12)),
+            MON,
+            at + 30
+        ));
+        assert!(!meeting_finished(&mon, at, 30, Some(MON), MON, at + 30));
+        assert!(!meeting_finished(
+            &mon,
+            at,
+            30,
+            None,
+            date!(2026 - 10 - 20),
+            at + 30
+        ));
+        assert!(validate_length(30).is_ok());
+        assert!(validate_length(4).is_err());
+        assert!(validate_length(MAX_LENGTH_MINUTES + 1).is_err());
     }
 
     #[test]
