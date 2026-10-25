@@ -298,4 +298,8 @@ changing the password or recovery key ends the window.
 - **Lock-screen text:** the timer notification, the timer tile, the due reminder and the wrap-up
   nudge show counts and times only, never titles, projects or tickets.
 - **Shared text and shortcuts** only say why the app was opened; they're acted on after unlock.
+- **Sync files** (`.shiftsync`) are backups by format: XChaCha20-Poly1305 with the database key,
+  a copy of the vault in the header, everything checked before anything changes. Bringing one in
+  makes a safety backup first and merges in one transaction. The last swap time is kept in a
+  small file next to the vault (`last-swap`, a timestamp only) so it never travels.
 

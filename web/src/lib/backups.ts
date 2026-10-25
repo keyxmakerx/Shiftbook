@@ -1,9 +1,9 @@
 // Plain words for the Backups screen. The backups themselves are made and checked by the app.
 import type { BackupFile, BackupSummary } from './api/DataApi';
 
-/** "Automatic backup" or "Saved before a restore". */
+/** "Automatic backup" or "Saved before a restore or a swap". */
 export function backupLabel(kind: BackupFile['kind']): string {
-  return kind === 'automatic' ? 'Automatic backup' : 'Saved before a restore';
+  return kind === 'automatic' ? 'Automatic backup' : 'Saved before a restore or a swap';
 }
 
 /** A file size people can read: "820 KB", "3.4 MB". */

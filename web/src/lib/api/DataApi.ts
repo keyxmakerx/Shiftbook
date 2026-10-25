@@ -69,6 +69,29 @@ export interface PhoneLaunch {
   text: string | null;
 }
 
+/** What bringing a sync file in does. Mirrors `shiftbook_storage::sync::SyncReport`. */
+export interface SyncReport {
+  /** When the sync file was made (UTC, RFC 3339). */
+  createdAt: string;
+  newEntries: number;
+  changedEntries: number;
+  newNotes: number;
+  changedNotes: number;
+  newProjects: number;
+  changedProjects: number;
+  /** Everything else new or changed (tickets, the tray, scraps, codes…). */
+  other: number;
+  /** Deleted there and still here; they can be brought back. */
+  deleted: number;
+  /** Edited more recently here, so they stay. */
+  keptHere: number;
+  /** Clashed with something here and left out. */
+  leftOut: number;
+  /** Edited on both devices since the last swap (the first few). */
+  clashes: { title: string; winner: 'here' | 'there'; at: string }[];
+  clashCount: number;
+}
+
 /** Mirrors the desktop crate's `phone::FingerprintStatus`. */
 export interface FingerprintStatus {
   /** This phone can (Android 11 or newer with a fingerprint set up). */
@@ -787,6 +810,7 @@ export type ApiErrorCode =
   | 'backup_needs_secret'
   | 'backup_too_new'
   | 'fingerprint_failed'
+  | 'sync_not_paired'
   | 'unknown';
 
 const KNOWN_CODES: readonly ApiErrorCode[] = [
@@ -806,6 +830,7 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   'backup_needs_secret',
   'backup_too_new',
   'fingerprint_failed',
+  'sync_not_paired',
 ];
 
 /** Every DataApi failure is one of these: a short code, never details or secrets. */
@@ -1112,6 +1137,22 @@ export interface DataApi {
   phoneAllowNotifications(): Promise<boolean>;
   /** Plan the next due reminder and wrap-up nudge. Tauri: `plan_nudges`. */
   planNudges(today: IsoDate, now: number): Promise<void>;
+  // ----- sync files: swapping changes between a phone and a computer -----
+  /** When this device last made or brought in a sync file, or null. Tauri: `last_swap`. */
+  lastSwap(): Promise<string | null>;
+  /** Make a sync file where the user picks; its name, or null if cancelled. Tauri: `make_sync_file`. */
+  makeSyncFile(today: IsoDate): Promise<string | null>;
+  /** Pick a sync file from the other device; its name, or null. Tauri: `pick_sync_file`. */
+  pickSyncFile(): Promise<string | null>;
+  /**
+   * What bringing the picked sync file in would do; changes nothing. Rejects with
+   * `backup_needs_secret` when it needs the other device's password or recovery key.
+   * Tauri: `check_sync_file`.
+   */
+  checkSyncFile(secret?: string, kind?: SecretKind): Promise<SyncReport>;
+  /** Bring its changes in, after a safety backup. Reload afterwards. Tauri: `bring_in_sync_file`. */
+  bringInSyncFile(secret?: string, kind?: SecretKind): Promise<SyncReport>;
+
   /** Fingerprint unlock: possible here, turned on, and working now. Tauri: `fingerprint_status`. */
   fingerprintStatus(): Promise<FingerprintStatus>;
   /** Turn fingerprint unlock on (checks the password, then asks for a fingerprint). Tauri: `fingerprint_on`. */

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-check-sync-file"
+description = "Enables the check_sync_file command without any pre-configured scope."
+commands.allow = ["check_sync_file"]
+
+[[permission]]
+identifier = "deny-check-sync-file"
+description = "Denies the check_sync_file command without any pre-configured scope."
+commands.deny = ["check_sync_file"]

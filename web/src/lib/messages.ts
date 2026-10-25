@@ -21,6 +21,8 @@ const MESSAGES: Record<ApiErrorCode, string> = {
     'This backup was made with a different password. Enter the password or recovery key from when it was made.',
   backup_too_new: 'This backup was made by a newer version of Shiftbook. Update Shiftbook, then try again.',
   fingerprint_failed: "Fingerprint didn't unlock it. Use your password.",
+  sync_not_paired:
+    "This sync file is from a Shiftbook that was set up separately. Restore a backup from the other device first (Settings → Backups), then swap sync files.",
   unknown: 'Something went wrong. Please try again.',
 };
 

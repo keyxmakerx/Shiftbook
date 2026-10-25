@@ -17,6 +17,7 @@ import type {
   Capture,
   PhoneLaunch,
   FingerprintStatus,
+  SyncReport,
   CategoryCode,
   CodeInput,
   CustomField,
@@ -453,6 +454,21 @@ export class TauriApi implements DataApi {
   }
   planNudges(today: IsoDate, now: number): Promise<void> {
     return call('plan_nudges', { today, now });
+  }
+  lastSwap(): Promise<string | null> {
+    return call('last_swap');
+  }
+  makeSyncFile(today: IsoDate): Promise<string | null> {
+    return call('make_sync_file', { today });
+  }
+  pickSyncFile(): Promise<string | null> {
+    return call('pick_sync_file');
+  }
+  checkSyncFile(secret?: string, kind?: SecretKind): Promise<SyncReport> {
+    return call('check_sync_file', { secret: secret ?? null, kind: kind ?? null });
+  }
+  bringInSyncFile(secret?: string, kind?: SecretKind): Promise<SyncReport> {
+    return call('bring_in_sync_file', { secret: secret ?? null, kind: kind ?? null });
   }
   fingerprintStatus(): Promise<FingerprintStatus> {
     return call('fingerprint_status');

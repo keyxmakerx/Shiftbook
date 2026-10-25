@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Settings: Look, Your day, Projects, Timesheet, Notes, Fields, Responses, Meetings, Backups
-  // and Security.
+  // Settings: Look, Your day, Projects, Timesheet, Notes, Fields, Responses, Meetings, Backups,
+  // Phone and computer, and Security.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
   import type { SettingsSection } from '../lib/keys';
@@ -14,6 +14,7 @@
   import Responses from './customize/Responses.svelte';
   import Meetings from './customize/Meetings.svelte';
   import Security from './customize/Security.svelte';
+  import Sync from './customize/Sync.svelte';
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
   import YourDay from './customize/YourDay.svelte';
 
@@ -27,6 +28,7 @@
     { id: 'responses', label: 'Responses', icon: 'copy' },
     { id: 'meetings', label: 'Meetings', icon: 'meeting' },
     { id: 'backups', label: 'Backups', icon: 'archive' },
+    { id: 'sync', label: 'Phone and computer', icon: 'restore' },
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
 
@@ -71,6 +73,8 @@
           <Meetings />
         {:else if section === 'backups'}
           <Backups />
+        {:else if section === 'sync'}
+          <Sync />
         {:else}
           <Security />
         {/if}

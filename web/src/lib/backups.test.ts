@@ -4,7 +4,7 @@ import { backupLabel, fileSize, holds, madeAt } from './backups';
 describe('backup words', () => {
   it('names each kind', () => {
     expect(backupLabel('automatic')).toBe('Automatic backup');
-    expect(backupLabel('before_restore')).toBe('Saved before a restore');
+    expect(backupLabel('before_restore')).toBe('Saved before a restore or a swap');
   });
 
   it('shows sizes simply', () => {

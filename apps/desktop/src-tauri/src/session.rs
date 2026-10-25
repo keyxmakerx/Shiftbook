@@ -18,6 +18,7 @@ use shiftbook_storage::backup::{
 };
 use shiftbook_storage::db::{database_path, open_encrypted};
 use shiftbook_storage::repo::SettingsRepository;
+use shiftbook_storage::sync;
 use shiftbook_storage::{
     create_private_dir, delete_local_data, ExposeSecret, PinWrap, SecretString, SqliteStore,
     StorageError, Vault, VaultDir, VaultError,
@@ -80,6 +81,8 @@ pub enum CommandError {
     BackupTooNew,
     /// Fingerprint unlock was cancelled, didn't match, or no longer works (phone).
     FingerprintFailed,
+    /// A sync file from a copy of Shiftbook that wasn't set up from this one.
+    SyncNotPaired,
     /// Anything else (disk, database, randomness). Details stay in the app.
     StorageError,
 }
@@ -92,6 +95,7 @@ impl From<BackupError> for CommandError {
             BackupError::UnlockFailed => CommandError::UnlockFailed,
             BackupError::TooNew => CommandError::BackupTooNew,
             BackupError::Storage(e) => e.into(),
+            BackupError::NotPaired => CommandError::SyncNotPaired,
             BackupError::Io(_) | BackupError::Vault => CommandError::StorageError,
         }
     }
@@ -220,6 +224,8 @@ struct Inner {
     full_unlock: Option<FullUnlock>,
     /// Quick unlock's window, while it is open.
     pin: Option<PinWindow>,
+    /// A sync file the user picked, until it is brought in.
+    picked_sync: Option<PathBuf>,
 }
 
 /// The `source` that means "the file picked with the dialog".
@@ -719,8 +725,18 @@ impl VaultSession {
         source: &str,
         secret: Option<(SecretString, SecretKind)>,
     ) -> Result<backup::OpenedBackup, CommandError> {
-        let session = inner.session.as_ref().ok_or(CommandError::Locked)?;
         let path = self.source_path(inner, source)?;
+        self.open_file(inner, path, secret).await
+    }
+
+    /// Read and decrypt a backup or sync file at `path`.
+    async fn open_file(
+        &self,
+        inner: &mut Inner,
+        path: PathBuf,
+        secret: Option<(SecretString, SecretKind)>,
+    ) -> Result<backup::OpenedBackup, CommandError> {
+        let session = inner.session.as_ref().ok_or(CommandError::Locked)?;
         let schema = backup::current_schema_version(&session.store).await?;
         let vault = Arc::clone(&session.vault);
         let vault_dir = self.vault_dir()?;
@@ -785,6 +801,74 @@ impl VaultSession {
             inner.picked_backup = None;
         }
         Ok(opened.summary())
+    }
+}
+
+impl VaultSession {
+    /// When this device last swapped a sync file (UTC, RFC 3339), if ever.
+    pub async fn last_swap(&self) -> Result<Option<String>, CommandError> {
+        if self.inner.lock().await.session.is_none() {
+            return Err(CommandError::Locked);
+        }
+        let dir = self.data_dir()?;
+        Ok(blocking(move || sync::last_swap(&dir))
+            .await?
+            .map(shiftbook_core::dates::format_timestamp))
+    }
+
+    /// Make a sync file (a backup of everything; the other side merges it) at `path`.
+    pub async fn sync_file_to(&self, path: PathBuf) -> Result<(), CommandError> {
+        self.backup_to(path).await?;
+        let dir = self.data_dir()?;
+        let now = time::OffsetDateTime::now_utc();
+        blocking(move || sync::note_swap(&dir, now))
+            .await?
+            .map_err(|_| CommandError::StorageError)
+    }
+
+    /// Remember a sync file the user picked.
+    pub async fn set_picked_sync(&self, path: PathBuf) -> Result<(), CommandError> {
+        let mut inner = self.inner.lock().await;
+        if inner.session.is_none() {
+            return Err(CommandError::Locked);
+        }
+        inner.picked_sync = Some(path);
+        Ok(())
+    }
+
+    /// What bringing the picked sync file in would do (or, with `apply`, does: after a safety
+    /// backup, the same way as a restore).
+    pub async fn merge_sync(
+        &self,
+        secret: Option<(SecretString, SecretKind)>,
+        apply: bool,
+    ) -> Result<sync::SyncReport, CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        let path = inner.picked_sync.clone().ok_or(CommandError::NotFound)?;
+        let opened = self.open_file(&mut inner, path, secret).await?;
+        let session = inner.session.as_ref().ok_or(CommandError::Locked)?;
+        let dir = self.data_dir()?;
+        let check = dir.clone();
+        let last = blocking(move || sync::last_swap(&check)).await?;
+        if apply {
+            let safety = self.backup_bytes(session).await?;
+            let folder = backups_dir(&dir);
+            let now = time::OffsetDateTime::now_utc();
+            blocking(move || {
+                backup::save_in_folder(&folder, BackupKind::BeforeRestore, now, &safety)
+            })
+            .await?
+            .map_err(|_| CommandError::StorageError)?;
+        }
+        let report = sync::merge_backup(&session.store, &opened, last, apply).await?;
+        if apply {
+            let now = time::OffsetDateTime::now_utc();
+            blocking(move || sync::note_swap(&dir, now))
+                .await?
+                .map_err(|_| CommandError::StorageError)?;
+            inner.picked_sync = None;
+        }
+        Ok(report)
     }
 }
 
