@@ -209,29 +209,39 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   `vault.json` in a user's own file backup, together with recovered database blocks and the
   password of that time, would still open them (see "Old copies of `vault.json`" above).
 
-## Quick unlock with a PIN (proposed, not built)
-Proposed in sign-off round 15. Nothing here is built until the owner approves this section.
+## Quick unlock with a PIN
+Approved in sign-off round 15 and built then. Rules: `crates/core/src/quickunlock.rs`; the
+wrap: `PinWrap` in `crates/storage/src/vault.rs`; the window: `PinWindow` in
+`apps/desktop/src-tauri/src/session.rs`.
 
 **The problem.** Auto-lock after 15 minutes idle is the right default, but every unlock needs the
 full master password (12+ characters). On a day of short breaks people turn auto-lock off or
 raise it to hours, which leaves the app open for longer than a PIN would.
 
-**What it does.** An optional 6-digit PIN, set in Settings → Security (needs the password). After
+**What it does.** An optional 6-digit PIN, turned on in Settings → Security (needs the password). After
 an idle lock or Lock now, the unlock screen asks for the PIN instead of the password. It works
 only inside a **PIN window** that starts at a full unlock (password or recovery key) and ends at
 the first of: midnight, 10 hours after that unlock, the app quitting, the computer sleeping (the
 gap the page already detects), 3 wrong PINs, or "Use my password instead" on the unlock screen.
 Outside the window the unlock screen asks for the password as now.
 
+**Typing the PIN each day.** The PIN is never stored and the window ends at midnight, so the app
+has to be told the PIN once a day. After the day's first password unlock, a small box asks for
+today's PIN (Skip leaves locks on the password for the day); Settings → Security can set it too.
+Turning Quick unlock on stores only a flag (`security.quick_unlock`), never the PIN.
+
 **How the key is held during a PIN lock.** The database is closed and the DEK is wiped exactly as
-in a normal lock. Before wiping, the DEK is wrapped (XChaCha20-Poly1305, fresh random nonce) with
-a **PIN KEK** = Argon2id(PIN, random 16-byte salt, same parameters as the password KEK). The
+in a normal lock. When today's PIN is typed (while unlocked), the DEK is wrapped
+(XChaCha20-Poly1305, fresh random nonce, AAD purpose `pin`) with a **PIN KEK** = Argon2id(PIN,
+random 16-byte salt, same parameters as the password KEK), and the PIN and KEK are wiped at once;
+the wrap stays for the window. The
 wrapped DEK, salt and nonce are kept **in memory only**, in `zeroize` types in the Rust session.
 They are never written to disk, to `vault.json` or to backups. A PIN unlock derives the PIN KEK,
 unwraps the DEK and opens the database as a normal unlock does.
 
-**Wrong PINs.** The attempt count lives in the Rust session, not the page. The third wrong PIN
-wipes the wrapped DEK and the salt at once, so further guesses are impossible and only the
+**Wrong PINs.** The attempt count lives in the Rust session, not the page, and counts wrong PINs
+in a row (a right one starts it again). The third wrong PIN wipes the wrapped DEK and the salt at
+once, so further guesses are impossible and only the
 password or recovery key can open the app. There is no back-off delay for PINs; the hard limit of
 3 replaces it.
 
@@ -256,7 +266,12 @@ password or recovery key can open the app. There is no back-off delay for PINs; 
 - The OS keychain or Windows Hello: needs new plugins and behaves differently on each OS; the
   Android thread's fingerprint option can revisit this.
 
-**Tests before it ships.** PIN unlock inside the window; refusal after midnight, after 10 hours,
+**Sleep.** Two checks end the window after the computer sleeps: the page's own timer gap (as for
+auto-lock, on the unlock screen too), and in Rust the computer's clock running more than 60 s
+ahead of the app's monotonic clock since the full unlock (the monotonic clock stops during sleep
+on Linux and macOS).
+
+**Tests** (`quick_unlock_with_a_pin` in session.rs, plus core and vault tests). PIN unlock inside the window; refusal after midnight, after 10 hours,
 after quit and after a sleep gap; the third wrong PIN wipes the wrapped key (a fourth attempt with
 the right PIN fails); nothing PIN-related appears in `vault.json`, the database or a backup;
 changing the password or recovery key ends the window.

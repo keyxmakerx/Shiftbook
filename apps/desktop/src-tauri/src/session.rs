@@ -8,19 +8,21 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant, SystemTime};
 
 use serde::Serialize;
 use shiftbook_core::ids::OwnerId;
+use shiftbook_core::quickunlock::{valid_pin, window_open, PIN_TRIES};
 use shiftbook_storage::backup::{
     self, backups_dir, BackupError, BackupFile, BackupKey, BackupKind, BackupSummary,
 };
 use shiftbook_storage::db::{database_path, open_encrypted};
 use shiftbook_storage::repo::SettingsRepository;
 use shiftbook_storage::{
-    create_private_dir, delete_local_data, ExposeSecret, SecretString, SqliteStore, StorageError,
-    Vault, VaultDir, VaultError,
+    create_private_dir, delete_local_data, ExposeSecret, PinWrap, SecretString, SqliteStore,
+    StorageError, Vault, VaultDir, VaultError,
 };
+use time::Date;
 use tokio::sync::Mutex;
 use zeroize::Zeroizing;
 
@@ -156,12 +158,68 @@ struct Session {
     needs_new_password: bool,
 }
 
+/// When the last full unlock (password, recovery key or setup) happened, by the app's own
+/// clock and by the computer's. Quick unlock's window starts here.
+#[derive(Clone, Copy)]
+struct FullUnlock {
+    app: Instant,
+    wall: SystemTime,
+}
+
+impl FullUnlock {
+    fn now() -> Self {
+        Self {
+            app: Instant::now(),
+            wall: SystemTime::now(),
+        }
+    }
+
+    /// Seconds since, by the app's clock and by the wall clock.
+    fn elapsed(self) -> (u64, u64) {
+        let wall = SystemTime::now()
+            .duration_since(self.wall)
+            .map_or(u64::MAX, |d| d.as_secs());
+        (self.app.elapsed().as_secs(), wall)
+    }
+}
+
+/// Quick unlock's PIN window (SECURITY.md "Quick unlock with a PIN"): the DEK wrapped under
+/// the PIN, in memory only (wiped on drop), and the wrong PINs left.
+struct PinWindow {
+    wrap: PinWrap,
+    since: FullUnlock,
+    /// The local day it was set on; it ends at midnight.
+    day: Date,
+    tries_left: u8,
+}
+
+impl PinWindow {
+    fn open(&self, today: Date) -> bool {
+        let (app, wall) = self.since.elapsed();
+        window_open(self.day, today, app, wall)
+    }
+}
+
+/// What a PIN unlock did.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PinOutcome {
+    /// Open now.
+    pub unlocked: bool,
+    /// Wrong PINs left; 0 means the window has ended and only the password works.
+    pub tries_left: u8,
+}
+
 #[derive(Default)]
 struct Inner {
     session: Option<Session>,
     backoff: Backoff,
     /// A backup file the user picked with the file dialog, until it is restored.
     picked_backup: Option<PathBuf>,
+    /// The last full unlock, while the app runs.
+    full_unlock: Option<FullUnlock>,
+    /// Quick unlock's window, while it is open.
+    pin: Option<PinWindow>,
 }
 
 /// The `source` that means "the file picked with the dialog".
@@ -257,6 +315,7 @@ impl VaultSession {
         drop(key);
         inner.session = Some(self.open(vault).await?);
         inner.backoff.record_success();
+        inner.full_unlock = Some(FullUnlock::now());
         Ok(shown)
     }
 
@@ -297,6 +356,9 @@ impl VaultSession {
                 session.needs_new_password = kind == SecretKind::RecoveryKey;
                 let needs = session.needs_new_password;
                 inner.session = Some(session);
+                // A new window starts; today's PIN is asked for again.
+                inner.full_unlock = Some(FullUnlock::now());
+                inner.pin = None;
                 Ok(needs)
             }
             Err(VaultError::UnlockFailed) => {
@@ -360,6 +422,7 @@ impl VaultSession {
         match blocking(move || vault_dir.change_password(&current, &new)).await? {
             Ok(()) => {
                 inner.backoff.record_success();
+                inner.pin = None;
                 Ok(())
             }
             Err(VaultError::UnlockFailed) => {
@@ -385,6 +448,7 @@ impl VaultSession {
         let vault = Arc::clone(&session.vault);
         blocking(move || vault_dir.reset_password(&vault, &new)).await??;
         session.needs_new_password = false;
+        inner.pin = None;
         Ok(())
     }
 
@@ -402,12 +466,146 @@ impl VaultSession {
         match blocking(move || vault_dir.regenerate_recovery_key(&password)).await? {
             Ok(key) => {
                 inner.backoff.record_success();
+                inner.pin = None;
                 Ok(key.display())
             }
             Err(VaultError::UnlockFailed) => {
                 let delay = inner.backoff.record_failure();
                 Self::wait(delay).await;
                 Err(CommandError::UnlockFailed)
+            }
+            Err(other) => Err(other.into()),
+        }
+    }
+}
+
+impl VaultSession {
+    /// Start today's PIN window: wrap the open vault's key under `pin` and keep that in memory
+    /// until the window ends. Needs the app unlocked within the window of a full unlock.
+    pub async fn start_quick_unlock(
+        &self,
+        pin: SecretString,
+        today: Date,
+    ) -> Result<(), CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        let session = inner.session.as_ref().ok_or(CommandError::Locked)?;
+        if !valid_pin(pin.expose_secret()) {
+            return Err(CommandError::InvalidInput);
+        }
+        let since = inner.full_unlock.ok_or(CommandError::NotAllowed)?;
+        let (app, wall) = since.elapsed();
+        if !window_open(today, today, app, wall) {
+            return Err(CommandError::NotAllowed);
+        }
+        let vault = Arc::clone(&session.vault);
+        let vault_dir = self.vault_dir()?;
+        let wrap = blocking(move || vault_dir.wrap_for_pin(&vault, &pin)).await??;
+        inner.pin = Some(PinWindow {
+            wrap,
+            since,
+            day: today,
+            tries_left: PIN_TRIES,
+        });
+        Ok(())
+    }
+
+    /// Turn Quick unlock on from Settings: check the password, then start today's window.
+    pub async fn enable_quick_unlock(
+        &self,
+        password: SecretString,
+        pin: SecretString,
+        today: Date,
+    ) -> Result<(), CommandError> {
+        {
+            let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+            if inner.session.is_none() {
+                return Err(CommandError::Locked);
+            }
+            if !valid_pin(pin.expose_secret()) {
+                return Err(CommandError::InvalidInput);
+            }
+            let vault_dir = self.vault_dir()?;
+            match blocking(move || vault_dir.unlock_with_password(&password)).await? {
+                Ok(checked) => {
+                    drop(checked);
+                    inner.backoff.record_success();
+                }
+                Err(VaultError::UnlockFailed) => {
+                    let delay = inner.backoff.record_failure();
+                    Self::wait(delay).await;
+                    return Err(CommandError::UnlockFailed);
+                }
+                Err(other) => return Err(other.into()),
+            }
+        }
+        self.start_quick_unlock(pin, today).await
+    }
+
+    /// True when a PIN can open the app now (`today` is the local day).
+    pub async fn quick_unlock_ready(&self, today: Date) -> Result<bool, CommandError> {
+        let mut inner = self.inner.lock().await;
+        let open = inner.pin.as_ref().is_some_and(|w| w.open(today));
+        if !open {
+            inner.pin = None;
+        }
+        Ok(open)
+    }
+
+    /// End the window now ("Use my password instead", a sleep the page saw, or turning Quick
+    /// unlock off). The wrapped key is wiped.
+    pub async fn end_quick_unlock(&self) -> Result<(), CommandError> {
+        self.inner.lock().await.pin = None;
+        Ok(())
+    }
+
+    /// Unlock with the PIN inside the window. A wrong PIN uses up one of the tries; after the
+    /// last one the wrapped key is wiped and only the password or recovery key can open the
+    /// app. Outside the window: `NotAllowed`.
+    pub async fn unlock_with_pin(
+        &self,
+        pin: SecretString,
+        today: Date,
+    ) -> Result<PinOutcome, CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        if inner.session.is_some() {
+            return Ok(PinOutcome {
+                unlocked: true,
+                tries_left: PIN_TRIES,
+            });
+        }
+        let window = inner.pin.take().ok_or(CommandError::NotAllowed)?;
+        if !window.open(today) {
+            return Err(CommandError::NotAllowed);
+        }
+        let (result, mut window) = blocking(move || {
+            let result = if valid_pin(pin.expose_secret()) {
+                window.wrap.unlock(&pin)
+            } else {
+                Err(VaultError::UnlockFailed)
+            };
+            (result, window)
+        })
+        .await?;
+        match result {
+            Ok(vault) => {
+                inner.session = Some(self.open(vault).await?);
+                window.tries_left = PIN_TRIES;
+                inner.pin = Some(window);
+                Ok(PinOutcome {
+                    unlocked: true,
+                    tries_left: PIN_TRIES,
+                })
+            }
+            Err(VaultError::UnlockFailed) => {
+                window.tries_left = window.tries_left.saturating_sub(1);
+                let tries_left = window.tries_left;
+                if tries_left > 0 {
+                    inner.pin = Some(window);
+                }
+                Ok(PinOutcome {
+                    unlocked: false,
+                    tries_left,
+                })
             }
             Err(other) => Err(other.into()),
         }
@@ -428,6 +626,8 @@ impl VaultSession {
             session.store.pool().close().await;
             drop(session);
         }
+        inner.pin = None;
+        inner.full_unlock = None;
         blocking(move || delete_local_data(&dir))
             .await?
             .map_err(|_| CommandError::StorageError)?;
@@ -861,6 +1061,131 @@ mod tests {
                 .unwrap()
                 .is_none());
             session.lock().await.unwrap();
+        });
+    }
+
+    /// Quick unlock with a PIN: the tests SECURITY.md lists, with real Argon2 parameters.
+    #[test]
+    fn quick_unlock_with_a_pin() {
+        let dir = TempDir::new("pin");
+        let session = VaultSession::new(Some(dir.0.clone()));
+        let mon = time::macros::date!(2026 - 10 - 19);
+        let tue = time::macros::date!(2026 - 10 - 20);
+        block_on(async {
+            session.setup(s("first password 1")).await.unwrap();
+            let vault_before = std::fs::read(dir.0.join("vault.json")).unwrap();
+
+            // Turning it on needs the password and a 6-digit PIN.
+            assert_eq!(
+                session
+                    .enable_quick_unlock(s("wrong password!!"), s("042917"), mon)
+                    .await,
+                Err(CommandError::UnlockFailed)
+            );
+            assert_eq!(
+                session
+                    .enable_quick_unlock(s("first password 1"), s("4291"), mon)
+                    .await,
+                Err(CommandError::InvalidInput)
+            );
+            session
+                .enable_quick_unlock(s("first password 1"), s("042917"), mon)
+                .await
+                .unwrap();
+
+            // Inside the window the PIN opens it, after Lock now too.
+            session.lock().await.unwrap();
+            assert_eq!(session.quick_unlock_ready(mon).await, Ok(true));
+            let opened = session.unlock_with_pin(s("042917"), mon).await.unwrap();
+            assert!(opened.unlocked);
+            assert_eq!(session.status().await, Ok(VaultStatus::Unlocked));
+            assert!(session.data().await.is_ok());
+
+            // Nothing PIN-related on disk: vault.json is unchanged.
+            assert_eq!(
+                std::fs::read(dir.0.join("vault.json")).unwrap(),
+                vault_before
+            );
+
+            // Three wrong PINs wipe the wrapped key: the right one then fails.
+            session.lock().await.unwrap();
+            for left in [2, 1, 0] {
+                let wrong = session.unlock_with_pin(s("000000"), mon).await.unwrap();
+                assert_eq!((wrong.unlocked, wrong.tries_left), (false, left));
+            }
+            assert_eq!(
+                session.unlock_with_pin(s("042917"), mon).await,
+                Err(CommandError::NotAllowed)
+            );
+            assert_eq!(session.quick_unlock_ready(mon).await, Ok(false));
+
+            // A password unlock starts a new window; today's PIN must be set again.
+            session
+                .unlock(s("first password 1"), SecretKind::Password)
+                .await
+                .unwrap();
+            assert_eq!(session.quick_unlock_ready(mon).await, Ok(false));
+            session.start_quick_unlock(s("042917"), mon).await.unwrap();
+            session.lock().await.unwrap();
+
+            // After midnight it asks for the password.
+            assert_eq!(
+                session.unlock_with_pin(s("042917"), tue).await,
+                Err(CommandError::NotAllowed)
+            );
+
+            // After a sleep (the wall clock ran on without the app) or 10 hours.
+            for (app_back, wall_back) in [(0, 20 * 60), (10 * 3600, 10 * 3600)] {
+                session
+                    .unlock(s("first password 1"), SecretKind::Password)
+                    .await
+                    .unwrap();
+                session.start_quick_unlock(s("042917"), mon).await.unwrap();
+                session.lock().await.unwrap();
+                {
+                    let mut inner = session.inner.lock().await;
+                    let w = inner.pin.as_mut().unwrap();
+                    // A computer up for less than 10 hours can't go back that far; the
+                    // wall clock still ends the window then.
+                    w.since.app = Instant::now()
+                        .checked_sub(Duration::from_secs(app_back))
+                        .unwrap_or_else(Instant::now);
+                    w.since.wall = SystemTime::now() - Duration::from_secs(wall_back);
+                }
+                assert_eq!(
+                    session.unlock_with_pin(s("042917"), mon).await,
+                    Err(CommandError::NotAllowed)
+                );
+            }
+
+            // Changing the password ends the window, and "Use my password instead" too.
+            session
+                .unlock(s("first password 1"), SecretKind::Password)
+                .await
+                .unwrap();
+            session.start_quick_unlock(s("042917"), mon).await.unwrap();
+            session
+                .change_password(s("first password 1"), s("second password 2"))
+                .await
+                .unwrap();
+            assert_eq!(session.quick_unlock_ready(mon).await, Ok(false));
+            session.start_quick_unlock(s("042917"), mon).await.unwrap();
+            session.end_quick_unlock().await.unwrap();
+            session.lock().await.unwrap();
+            assert_eq!(
+                session.unlock_with_pin(s("042917"), mon).await,
+                Err(CommandError::NotAllowed)
+            );
+        });
+
+        // Quitting the app ends it: a new session has no window.
+        let again = VaultSession::new(Some(dir.0.clone()));
+        block_on(async {
+            assert_eq!(again.quick_unlock_ready(mon).await, Ok(false));
+            assert_eq!(
+                again.unlock_with_pin(s("042917"), mon).await,
+                Err(CommandError::NotAllowed)
+            );
         });
     }
 }

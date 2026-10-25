@@ -14,6 +14,7 @@
   import { phone } from './lib/phone.svelte';
   import { timerBack, timerHidden } from './lib/timer.svelte';
   import { planNudges } from './lib/launch.svelte';
+  import TodayPin from './components/TodayPin.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
 
@@ -22,6 +23,8 @@
   // Held only between setup and "Continue" on the recovery key page.
   let recoveryKey = $state<string | null>(null);
   let locking = $state(false);
+  // Just unlocked with the password: offer to set today's PIN when Quick unlock is on.
+  let askPin = $state(false);
 
   $effect(() => {
     api
@@ -37,10 +40,12 @@
 
   const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'purpose' || screen === 'new-password');
 
-  async function lockNow() {
+  async function lockNow(slept = false) {
     if (locking) return;
     locking = true;
     recoveryKey = null;
+    // A sleep ends Quick unlock's window: the next unlock needs the password.
+    if (slept) await api.endQuickUnlock().catch(() => undefined);
     await lockAndReload();
   }
 
@@ -58,7 +63,7 @@
     const timer = setInterval(() => {
       const result = checkIdle(idle, Date.now(), idleMs);
       idle = result.state;
-      if (result.lock) void lockNow();
+      if (result.lock) void lockNow(result.lock === 'asleep');
     }, TICK_MS);
     return () => {
       clearInterval(timer);
@@ -128,13 +133,21 @@
 {:else if screen === 'purpose'}
   <Purpose onDone={() => (screen = 'app')} />
 {:else if screen === 'unlock'}
-  <Unlock onUnlocked={(mustSetPassword) => (screen = mustSetPassword ? 'new-password' : 'app')} />
+  <Unlock
+    onUnlocked={(mustSetPassword, withPin) => {
+      askPin = !withPin && !mustSetPassword;
+      screen = mustSetPassword ? 'new-password' : 'app';
+    }}
+  />
 {:else if screen === 'new-password'}
   <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
   {#if phone.on}
-    <PhoneShell onLock={lockNow} />
+    <PhoneShell onLock={() => void lockNow()} />
   {:else}
-    <Shell onLock={lockNow} />
+    <Shell onLock={() => void lockNow()} />
+  {/if}
+  {#if askPin && app.prefs?.quickUnlock}
+    <TodayPin onDone={() => (askPin = false)} />
   {/if}
 {/if}

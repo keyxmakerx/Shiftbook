@@ -2,7 +2,8 @@
 //! `shiftbook-storage` and translate results for the frontend's `TauriApi`.
 //!
 //! Vault commands (`vault_status`, `vault_setup`, `vault_confirm_recovery_saved`,
-//! `unlock`, `lock`, `change_password`, `delete_all_data`) go through [`session::VaultSession`]. Errors
+//! `unlock`, `lock`, `change_password`, `delete_all_data` and Quick unlock's
+//! `unlock_with_pin` and friends) go through [`session::VaultSession`]. Errors
 //! reach the WebView only as short codes such as `"unlock_failed"`.
 
 mod api;
@@ -157,6 +158,73 @@ async fn lock(
     guard.end_allow();
     let _ = phone::set_protected(&window, true);
     state.lock().await
+}
+
+/// Unlock with today's PIN (Quick unlock, round 15). A wrong PIN answers with the tries left
+/// rather than an error. Maps to `DataApi.unlockWithPin()`.
+#[tauri::command]
+async fn unlock_with_pin(
+    app: AppHandle,
+    state: State<'_, VaultSession>,
+    pin: String,
+    today: String,
+) -> Result<session::PinOutcome, CommandError> {
+    let pin = take_secret(pin);
+    let outcome = state.unlock_with_pin(pin, api::date_arg(&today)?).await?;
+    if outcome.unlocked {
+        start_automatic_backup(app);
+    }
+    Ok(outcome)
+}
+
+/// True when a PIN can open the app now. Maps to `DataApi.quickUnlockReady()`.
+#[tauri::command]
+async fn quick_unlock_ready(
+    state: State<'_, VaultSession>,
+    today: String,
+) -> Result<bool, CommandError> {
+    state.quick_unlock_ready(api::date_arg(&today)?).await
+}
+
+/// Set today's PIN after a password unlock. Maps to `DataApi.startQuickUnlock()`.
+#[tauri::command]
+async fn start_quick_unlock(
+    state: State<'_, VaultSession>,
+    pin: String,
+    today: String,
+) -> Result<(), CommandError> {
+    state
+        .start_quick_unlock(take_secret(pin), api::date_arg(&today)?)
+        .await
+}
+
+/// Turn Quick unlock on in Settings → Security (checks the password, sets today's PIN).
+/// Maps to `DataApi.enableQuickUnlock()`.
+#[tauri::command]
+async fn enable_quick_unlock(
+    state: State<'_, VaultSession>,
+    password: String,
+    pin: String,
+    today: String,
+) -> Result<(), CommandError> {
+    state
+        .enable_quick_unlock(
+            take_secret(password),
+            take_secret(pin),
+            api::date_arg(&today)?,
+        )
+        .await?;
+    let (store, owner) = state.data().await?;
+    store
+        .set_pref(owner, shiftbook_core::prefs::KEY_QUICK_UNLOCK, "true")
+        .await?;
+    Ok(())
+}
+
+/// End the PIN window now (wipes the wrapped key). Maps to `DataApi.endQuickUnlock()`.
+#[tauri::command]
+async fn end_quick_unlock(state: State<'_, VaultSession>) -> Result<(), CommandError> {
+    state.end_quick_unlock().await
 }
 
 /// Set a new password straight after a recovery-key unlock (no old password).
@@ -411,6 +479,11 @@ pub fn run() {
             unlock,
             lock,
             change_password,
+            unlock_with_pin,
+            quick_unlock_ready,
+            start_quick_unlock,
+            enable_quick_unlock,
+            end_quick_unlock,
             delete_all_data,
             set_new_password,
             regenerate_recovery_key,

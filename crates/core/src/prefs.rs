@@ -64,6 +64,8 @@ pub const KEY_LAST_OPEN: &str = "app.last_open";
 pub const KEY_STANDUP_WORDS: &str = "day.standup_words";
 /// Longest stand-up heading.
 pub const MAX_STANDUP_WORD_CHARS: usize = 20;
+/// Quick unlock with a PIN is turned on (round 15). Only a flag: the PIN is never stored.
+pub const KEY_QUICK_UNLOCK: &str = "security.quick_unlock";
 /// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
 pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The time buttons everyone starts with.
@@ -203,6 +205,8 @@ pub struct Prefs {
     pub remind_at: Option<String>,
     /// Phone: a wrap-up nudge at the wrap-up time.
     pub wrapup_nudge: bool,
+    /// Quick unlock with a PIN is turned on.
+    pub quick_unlock: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -243,6 +247,7 @@ impl Default for Prefs {
             remind_at: None,
             wrapup_nudge: false,
             timer: false,
+            quick_unlock: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
@@ -338,7 +343,9 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK => {
+            ok(&["true", "false"])
+        }
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -474,6 +481,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_TIMER => prefs.timer = v == "true",
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
+            KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)

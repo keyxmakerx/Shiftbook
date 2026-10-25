@@ -43,7 +43,7 @@ pub use error::StorageError;
 pub use fsutil::create_private_dir;
 pub use recovery::RecoveryKey;
 pub use repo::SqliteStore;
-pub use vault::{Dek, Vault, VaultDir, VaultError};
+pub use vault::{Dek, PinWrap, Vault, VaultDir, VaultError};
 pub use wipe::delete_local_data;
 
 /// The secret string type used for passwords and typed recovery keys.
