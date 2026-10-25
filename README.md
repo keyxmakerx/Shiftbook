@@ -30,7 +30,8 @@ Prerequisites: Rust (stable), Node.js LTS, and the
 `librsvg2-dev`, `libsoup-3.0-dev`, `libjavascriptcoregtk-4.1-dev`, `build-essential`, `pkg-config`).
 Node is only used to build the UI; the app itself ships without it.
 
-Layout: `crates/core` (rules), `crates/storage` (database), `apps/desktop/src-tauri` (Tauri app),
+Layout: `crates/core` (rules), `crates/storage` (database), `crates/app` (views shared by
+desktop and server), `apps/desktop/src-tauri` (Tauri app),
 `web/` (Svelte UI), `apps/server/` (Phase 2 placeholder). All npm commands run in `web/`.
 
 ```bash

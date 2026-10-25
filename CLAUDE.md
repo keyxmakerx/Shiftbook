@@ -24,6 +24,7 @@ Every design decision must keep Phase 2 cheap — see "Non-negotiable rules".
 ```
 crates/core/        domain models, validation, calculations (alerts, due dates, totals)
 crates/storage/     repository traits + SQLite implementation, SQL migrations
+crates/app/         views built from storage + core (the Desk), shared by desktop and server
 apps/desktop/       Tauri app (src-tauri) — thin layer: commands call core + storage
 apps/server/        Phase 2 only (Axum). Leave a README placeholder until Phase 2 starts.
 web/                Svelte SPA. All data access goes through web/src/lib/api/

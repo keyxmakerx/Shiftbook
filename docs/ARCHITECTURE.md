@@ -11,6 +11,9 @@
 │ apps/desktop/src-tauri   │ apps/server   │  thin adapters: auth, transport, config
 │  (Tauri commands)        │  (Axum, P2)   │
 ├──────────────────────────────────────────┤
+│ crates/app — views put together from     │  shared: the Desk, record views
+│   storage + core (no transport)          │
+├──────────────────────────────────────────┤
 │ crates/core   — models, rules, validation (pure, no I/O)
 ├──────────────────────────────────────────┤
 │ crates/storage — Repository traits + sqlx impl (SQLite now, Postgres later)
@@ -25,6 +28,11 @@
 - **Owner scoping everywhere.** Every repository method takes an `OwnerId`. Desktop passes the
   single local user; the server passes the authenticated user. This is what makes multi-user a
   configuration change, not a rewrite.
+- **Views in `crates/app`.** Anything that puts several records together for a screen (the
+  Desk today) lives in `crates/app`, which knows storage and core but no transport, so a Tauri
+  command and a future HTTP handler both call the same function. `desk::desk` is tested against
+  a real encrypted database from the desktop crate (`canvas::tests`), where the vault can be set
+  up.
 - **Rules in core.** Dashboard numbers and alert states are computed in `crates/core` and returned
   ready to display, so desktop and server always agree.
 - **IDs:** UUID v7 (time-ordered) generated in Rust. Safe to merge desktop data into a server.
@@ -227,7 +235,7 @@ plugin is `dialog`, called from Rust (the WebView gets no dialog permission).
 | `protect.rs` | Screenshot protection and the timed allow |
 | `api.rs` | Preferences, projects, entries and tickets, Log work, capture and Find, the tray, ribbon, crib sheet, timesheet codes, custom fields, Inbox, responses, next up, Where was I?, the timer |
 | `notes.rs` | Notes |
-| `canvas.rs`, `boards.rs` | The Desk (cards, areas, boxes, links, piles, drawers, Tidy) and boards |
+| `canvas.rs`, `boards.rs` | The Desk (cards, areas, boxes, links, piles, drawers, Tidy) and boards; the Desk itself is built by `shiftbook_app::desk` |
 | `meetings.rs`, `pins.rs` | Meeting series and the bell; pins |
 
 Each command's doc comment names the `DataApi` method it serves. Errors reach the WebView only
