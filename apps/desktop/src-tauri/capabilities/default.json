@@ -129,6 +129,11 @@
     "allow-fingerprint-status",
     "allow-fingerprint-on",
     "allow-fingerprint-off",
-    "allow-fingerprint-unlock"
+    "allow-fingerprint-unlock",
+    "allow-last-swap",
+    "allow-make-sync-file",
+    "allow-pick-sync-file",
+    "allow-check-sync-file",
+    "allow-bring-in-sync-file"
   ]
 }

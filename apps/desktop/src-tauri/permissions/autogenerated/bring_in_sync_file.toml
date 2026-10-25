@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-bring-in-sync-file"
+description = "Enables the bring_in_sync_file command without any pre-configured scope."
+commands.allow = ["bring_in_sync_file"]
+
+[[permission]]
+identifier = "deny-bring-in-sync-file"
+description = "Denies the bring_in_sync_file command without any pre-configured scope."
+commands.deny = ["bring_in_sync_file"]

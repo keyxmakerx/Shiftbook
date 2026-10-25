@@ -10,6 +10,7 @@
 //! - [`notes`]: notes, the archive and auto-archive.
 //! - [`canvas`]: where the owner put each card on the Canvas.
 //! - [`boards`]: where the owner put each card on a board's own canvas.
+//! - [`sync`]: swap changes with another copy of Shiftbook through a sync file.
 //! - [`wipe`]: delete all local data to start again.
 //!
 //! Secrets live only in `secrecy`/`zeroize` types and never implement `Debug`
@@ -31,6 +32,7 @@ pub mod piles;
 pub mod pins;
 pub mod recovery;
 pub mod repo;
+pub mod sync;
 pub mod vault;
 pub mod wipe;
 pub mod work;

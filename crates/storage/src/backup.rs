@@ -90,6 +90,9 @@ pub enum BackupError {
     /// The vault couldn't be read, or keys couldn't be prepared.
     #[error("The backup couldn't be prepared.")]
     Vault,
+    /// A sync file from a copy of Shiftbook that wasn't set up from this one.
+    #[error("This sync file is from a Shiftbook that wasn't set up from this one.")]
+    NotPaired,
 }
 
 impl From<sqlx::Error> for BackupError {
@@ -122,17 +125,17 @@ struct Header {
 /// One table: column names and rows of values in that order.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct TableDump {
-    columns: Vec<String>,
-    rows: Vec<Vec<Value>>,
+pub(crate) struct TableDump {
+    pub(crate) columns: Vec<String>,
+    pub(crate) rows: Vec<Vec<Value>>,
 }
 
 /// The encrypted payload.
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Contents {
+pub(crate) struct Contents {
     schema_version: i64,
-    tables: BTreeMap<String, TableDump>,
+    pub(crate) tables: BTreeMap<String, TableDump>,
 }
 
 /// What a backup holds, shown before restoring.
@@ -151,8 +154,8 @@ pub struct BackupSummary {
 
 /// A backup that has been checked and decrypted, ready to restore.
 pub struct OpenedBackup {
-    created_at: String,
-    contents: Contents,
+    pub(crate) created_at: String,
+    pub(crate) contents: Contents,
 }
 
 /// How to open a backup.
@@ -164,7 +167,7 @@ pub enum BackupKey<'a> {
     Secret(&'a SecretString, SecretKind),
 }
 
-fn table_names_sql() -> &'static str {
+pub(crate) fn table_names_sql() -> &'static str {
     "SELECT name FROM sqlite_master WHERE type = 'table' \
      AND name NOT LIKE '\\_%' ESCAPE '\\' AND name NOT LIKE 'sqlite%' ORDER BY name"
 }
@@ -176,7 +179,7 @@ async fn schema_version(store: &SqliteStore) -> Result<i64, BackupError> {
     Ok(v.unwrap_or(0))
 }
 
-async fn table_columns(
+pub(crate) async fn table_columns(
     conn: &mut sqlx::SqliteConnection,
     table: &str,
 ) -> Result<Vec<String>, BackupError> {
@@ -188,11 +191,11 @@ async fn table_columns(
     )
 }
 
-fn quote_ident(name: &str) -> String {
+pub(crate) fn quote_ident(name: &str) -> String {
     format!("\"{}\"", name.replace('"', "\"\""))
 }
 
-fn cell(row: &SqliteRow, i: usize) -> Result<Value, BackupError> {
+pub(crate) fn cell(row: &SqliteRow, i: usize) -> Result<Value, BackupError> {
     let raw = row.try_get_raw(i)?;
     if raw.is_null() {
         return Ok(Value::Null);
@@ -493,24 +496,33 @@ pub async fn restore_backup(store: &SqliteStore, backup: &OpenedBackup) -> Resul
             quote_ident(name)
         );
         for row in &table.rows {
-            let mut q = sqlx::query(sqlx::AssertSqlSafe(sql.as_str()));
-            for v in row {
-                q = match v {
-                    Value::Null => q.bind(None::<String>),
-                    Value::String(s) => q.bind(s.as_str()),
-                    Value::Number(n) => match (n.as_i64(), n.as_f64()) {
-                        (Some(i), _) => q.bind(i),
-                        (None, Some(f)) => q.bind(f),
-                        _ => return Err(BackupError::Invalid),
-                    },
-                    _ => return Err(BackupError::Invalid),
-                };
-            }
-            q.execute(&mut *tx).await?;
+            bind_values(sqlx::query(sqlx::AssertSqlSafe(sql.as_str())), row)?
+                .execute(&mut *tx)
+                .await?;
         }
     }
     tx.commit().await?;
     Ok(())
+}
+
+/// Bind a dumped row's values to a query, in order.
+pub(crate) fn bind_values<'q>(
+    mut q: sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments>,
+    row: &'q [Value],
+) -> Result<sqlx::query::Query<'q, sqlx::Sqlite, sqlx::sqlite::SqliteArguments>, BackupError> {
+    for v in row {
+        q = match v {
+            Value::Null => q.bind(None::<String>),
+            Value::String(s) => q.bind(s.as_str()),
+            Value::Number(n) => match (n.as_i64(), n.as_f64()) {
+                (Some(i), _) => q.bind(i),
+                (None, Some(f)) => q.bind(f),
+                _ => return Err(BackupError::Invalid),
+            },
+            _ => return Err(BackupError::Invalid),
+        };
+    }
+    Ok(q)
 }
 
 // ---------- the backups folder ----------

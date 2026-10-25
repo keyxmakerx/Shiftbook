@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-make-sync-file"
+description = "Enables the make_sync_file command without any pre-configured scope."
+commands.allow = ["make_sync_file"]
+
+[[permission]]
+identifier = "deny-make-sync-file"
+description = "Denies the make_sync_file command without any pre-configured scope."
+commands.deny = ["make_sync_file"]

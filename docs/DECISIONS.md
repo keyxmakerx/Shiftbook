@@ -33,6 +33,15 @@ the screens are on the card and still need sign-off.
 - **Nudges** (due reminder, wrap-up): off by default, work days only, counts and times never
   titles (`core::nudge`). The app plans the next one each time it's opened; Android shows it
   then. Turning one on is when Android asks for permission to notify.
+- **Sync file** (Settings → Phone and computer, on both): "Make a sync file" saves a
+  `.shiftsync` (the backup format and encryption, everything in it); "Open a sync file" shows
+  what it would bring in, then merges after a safety backup. Rows match by id, the newer edit
+  wins, deletes travel (and can be brought back), settings stay on each device. Edits made on
+  both since the last swap are listed by name. Only copies that started from the same data can
+  swap: set the phone up by restoring a computer backup. A file from another key asks for that
+  device's password or recovery key, as a backup does. Something that clashes with a different
+  record here on a "one per day" rule (both used the same day's Tickets tray) is left out and
+  counted.
 - **No new packages for the phone so far:** notifications, the tile, shortcuts, sharing and the
   file picker are a little Kotlin of our own (`gen/android/.../PhonePlugin.kt` and friends)
   instead of the notification plugin.

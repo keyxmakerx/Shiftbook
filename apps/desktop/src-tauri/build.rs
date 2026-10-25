@@ -127,6 +127,11 @@ fn main() {
             "fingerprint_on",
             "fingerprint_off",
             "fingerprint_unlock",
+            "last_swap",
+            "make_sync_file",
+            "pick_sync_file",
+            "check_sync_file",
+            "bring_in_sync_file",
         ]),
     ))
     .expect("failed to run tauri-build");

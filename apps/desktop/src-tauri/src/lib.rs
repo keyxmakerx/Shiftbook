@@ -18,6 +18,7 @@ mod session;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
+use shiftbook_storage::sync::{SyncReport, SYNC_EXTENSION};
 use shiftbook_storage::{ExposeSecret, SecretString};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
@@ -383,6 +384,122 @@ async fn restore_backup(
     state.restore_backup(&source, secret).await
 }
 
+// ---------- sync files (round 15): swapping changes between a phone and a computer ----------
+
+/// Maps to `DataApi.lastSwap()`: when this device last made or brought in a sync file.
+#[tauri::command]
+async fn last_swap(state: State<'_, VaultSession>) -> Result<Option<String>, CommandError> {
+    state.last_swap().await
+}
+
+/// Make a sync file where the user picks (a save dialog, or Android's file picker). Returns
+/// its name, or `None` if cancelled. Maps to `DataApi.makeSyncFile()`.
+#[tauri::command]
+async fn make_sync_file(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+    today: String,
+) -> Result<Option<String>, CommandError> {
+    let today = shiftbook_core::dates::parse_date(&today)
+        .map(shiftbook_core::dates::format_date)
+        .map_err(|_| CommandError::InvalidInput)?;
+    let dialog = app.dialog().file();
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let file_name = format!("Shiftbook sync {today}.{SYNC_EXTENSION}");
+    let dialog = dialog
+        .set_title("Make a sync file")
+        .set_file_name(&file_name);
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook sync file", &[SYNC_EXTENSION]);
+    match dialog_pick(move || dialog.blocking_save_file()).await? {
+        None => Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(mut path)) => {
+            if path.extension().is_none_or(|e| e != SYNC_EXTENSION) {
+                path.set_extension(SYNC_EXTENSION);
+            }
+            let name = file_name_of(&path);
+            state.sync_file_to(path).await?;
+            Ok(Some(name))
+        }
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "outgoing.shiftsync")?;
+            let made = state.sync_file_to(temp.clone()).await;
+            let copied = made.and_then(|()| {
+                phone::copy_to_uri(&app, &temp, url.as_str())
+                    .map_err(|()| CommandError::StorageError)
+            });
+            let _ = std::fs::remove_file(&temp);
+            copied?;
+            Ok(Some(
+                phone::display_name(&app, url.as_str()).unwrap_or(file_name),
+            ))
+        }
+    }
+}
+
+/// Pick a sync file made by the other device. Returns its name, or `None` if cancelled.
+/// Maps to `DataApi.pickSyncFile()`.
+#[tauri::command]
+async fn pick_sync_file(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+) -> Result<Option<String>, CommandError> {
+    let dialog = app.dialog().file();
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let dialog = dialog.set_title("Open a sync file");
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook sync file", &[SYNC_EXTENSION]);
+    let (path, name) = match dialog_pick(move || dialog.blocking_pick_file()).await? {
+        None => return Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(path)) => {
+            let name = file_name_of(&path);
+            (path, name)
+        }
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "incoming.shiftsync")?;
+            phone::copy_from_uri(&app, url.as_str(), &temp)
+                .map_err(|()| CommandError::StorageError)?;
+            let name = phone::display_name(&app, url.as_str())
+                .unwrap_or_else(|| "the sync file".to_owned());
+            (temp, name)
+        }
+    };
+    state.set_picked_sync(path).await?;
+    Ok(Some(name))
+}
+
+/// What bringing the picked sync file in would do; changes nothing. A file made with another
+/// key needs that device's password or recovery key. Maps to `DataApi.checkSyncFile()`.
+#[tauri::command]
+async fn check_sync_file(
+    state: State<'_, VaultSession>,
+    secret: Option<String>,
+    kind: Option<String>,
+) -> Result<SyncReport, CommandError> {
+    let secret = backup_secret(secret, kind)?;
+    state.merge_sync(secret, false).await
+}
+
+/// Bring the picked sync file's changes in, after a safety backup. The frontend reloads
+/// everything next. Maps to `DataApi.bringInSyncFile()`.
+#[tauri::command]
+async fn bring_in_sync_file(
+    state: State<'_, VaultSession>,
+    secret: Option<String>,
+    kind: Option<String>,
+) -> Result<SyncReport, CommandError> {
+    let secret = backup_secret(secret, kind)?;
+    state.merge_sync(secret, true).await
+}
+
 /// Starts the desktop app.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -485,6 +602,11 @@ pub fn run() {
             fingerprint_on,
             fingerprint_off,
             fingerprint_unlock,
+            last_swap,
+            make_sync_file,
+            pick_sync_file,
+            check_sync_file,
+            bring_in_sync_file,
             notes::list_notes,
             notes::get_note,
             notes::create_note,

@@ -18,6 +18,7 @@ export type SettingsSection =
   | 'responses'
   | 'meetings'
   | 'backups'
+  | 'sync'
   | 'security';
 
 export type Shortcut =
