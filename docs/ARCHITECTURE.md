@@ -40,8 +40,8 @@
   with the DEK into a `.shiftbak` file (SECURITY.md "Backup file format"). Restore replaces every
   table in one transaction. Commands: `backup_now`, `list_backups`, `pick_backup_file`,
   `check_backup`, `restore_backup`; the daily automatic backup starts after `unlock`.
-- Plugins allowed: `dialog` (pick backup/import file, called from Rust commands only; the
-  WebView gets no dialog permission), `fs` scoped to app data + user-picked paths.
+- Plugins: `dialog` (pick a backup file, called from Rust commands only; the WebView gets no
+  dialog permission). `fs` (scoped to app data + user-picked paths) is allowed if export needs it.
   Not allowed: `shell`, `http`, `opener` for remote URLs, updater (until signing is set up).
 
 ## Server specifics (Phase 2 — plan only)
@@ -67,22 +67,23 @@
 | `hours` | Hours box parsing (`parse_hours`) and display (`format_hours`, `format_hours_minutes`) |
 | `week` | Week of, with a configurable start day (Monday by default) |
 | `group` | Group label |
-| `model` | Plain serde records from SPEC §3 |
-| `project` | Hours logged/left, % used, project alert |
-| `recurring` | Last done, next due, days left, alert state |
-| `task` | Task overdue rule |
-| `timesheet` | Timesheet code resolution and code × day totals |
-| `tickets` | Splitting pasted ticket text |
+| `model` | Plain serde records (SPEC §3 plus everything added since) |
+| `error`, `validate` | `CoreError` with plain-English messages; input checks |
 | `seed` | Generic default lists and frequencies (no timesheet codes) |
-| `validate` | Input checks returning `CoreError` |
-| `error` | `CoreError` with plain-English messages |
-| `capture` | One-line capture parser (`parse_capture`): hours, tickets, `#project`, day words, description |
-| `quicklog` | Log work: reuse the same day's entry for a known ticket, or plan a new entry |
-| `tray` | Done tickets tray: minutes per ticket, paste splitting, per-day roll-up plan |
-| `sheet` | Timesheet crib sheet (`build_week_sheet`): lines per day by code or project, comments, effort, warnings, tab-separated week |
-| `ribbon` | The last four weeks as days of minutes per project, with week totals |
+| `project`, `recurring`, `task` | Project hours and alerts, recurring next-due and alert state, task overdue (SPEC §4) |
+| `timesheet`, `sheet` | Timesheet code resolution and totals; the weekly crib sheet (`build_week_sheet`) |
+| `tickets`, `tray` | Splitting pasted tickets; the Tickets tray (minutes per ticket, still open, per-day roll-up plan) |
+| `capture`, `search`, `quicklog` | The one-line capture parser, Find, and Log work (reuse an entry or plan a new one) |
+| `ribbon` | The last four weeks as days of minutes per project |
 | `fields` | Custom field kinds, option lists, value checks, ticket prefixes and link building |
-| `prefs` | Preferences (theme, motion, accent, grouping, comment format, week start day, auto-lock) with defaults; project colour palette |
+| `prefs` | Preferences with defaults; project colour palette |
+| `notes` | Note kinds, tags, titles, auto-archive, turning a jot into an entry |
+| `canvas` | The Desk: which cards show, auto-placing, areas and boxes, links, timeline, piles, the same work folded into one card, the tickets box (`work_tickets`) |
+| `boards` | Boards you step into from the Desk (projects, meeting series, Daily notes, folders, Archive) |
+| `nextup`, `resume` | The wrap-up's next-up list and Bring up; when "Where was I?" shows and what it offers |
+| `bell`, `meetings`, `pins` | What the bell lists; repeating meetings and their reminders; pins on the bottom bar |
+| `windows`, `timer` | Pop-out windows; the optional Now doing timer |
+| `responses`, `wipe` | Saved responses; the word that confirms Delete all data |
 
 Interpretations made where the spec is silent:
 - **Hours rounding:** decimal hours round to the nearest whole minute, halves up (`0.01` → 1 min,
@@ -125,14 +126,17 @@ Interpretations made where the spec is silent:
 | Module | What it holds |
 |---|---|
 | `vault` | `VaultDir` (create, unlock with password or recovery key, change password, regenerate recovery key), `Vault`/`Dek` (the unlocked key, wiped on drop), `VaultError` |
-| `wipe` | `delete_local_data`: delete the database, its side files and the vault (vault last) to start again |
 | `recovery` | `RecoveryKey`: 256 random bits shown as 13 groups of 4 Crockford base32 characters; forgiving parser |
+| `wipe` | `delete_local_data`: delete the database, its side files and the vault (vault last) to start again |
 | `db` | `open_encrypted(path, dek)`: SQLCipher pool with the key pragma first, then migrations |
+| `backup` | Encrypted `.shiftbak` backups: write, check, restore (desktop only: reads SQLite's own table list) |
 | `repo` | Repository traits + `SqliteStore` (local user, settings, list options, frequencies) |
-| `work` | Projects, time entries, tickets, the Done tickets tray and its roll-up, Log work |
-| `extras` | Timesheet codes and category defaults, crib sheet tick-offs, custom fields and values, Inbox, preferences |
-| `fsutil` | Private folders/files and atomic replace (temp file → fsync → rename → fsync folder) |
-| `hex` | Tiny hex helpers |
+| `work` | Projects, time entries, tickets, the Tickets tray and its roll-up, Log work |
+| `extras` | Timesheet codes and category defaults, crib sheet tick-offs, custom fields and values, Inbox, preferences, saved responses, next up |
+| `notes` | Notes, the archive and auto-archive |
+| `canvas`, `piles`, `boards` | Where each card sits on the Desk, areas, boxes and links; piles and drawers; spots on each board |
+| `meetings`, `pins` | Meeting series; pins |
+| `fsutil`, `hex`, `error` | Private folders/files and atomic replace; hex helpers; `StorageError` |
 
 - **Vault file** (`vault.json`): `{version, kdf, kdf_params, salts, nonces, wrapped_dek_password,
   wrapped_dek_recovery}`, bytes as lowercase hex. Argon2id parameters are calibrated at setup to
@@ -180,63 +184,64 @@ the back-off wait) the others answer `busy`. The frontend locks on `Lock now`, `
 without keyboard/mouse activity, and when its timer notices a gap of a minute or more (the
 computer slept); after locking it reloads the page.
 
-## Alpha: tables, commands and UI
+## Where things live (alpha)
+This section is a map, not a full list: each file's opening comment says what it holds, and
+`docs/DECISIONS.md` says why.
 
-### Migration 0002 (`crates/storage/migrations/0002_alpha.sql`)
-- `projects.color` (`#rrggbb`) and `projects.archived`.
-- `time_entries.source`: `NULL` for entries the user logged, `'tray'` for a day's roll-up of the
-  Done tickets tray, with a partial unique index so there is at most one live roll-up per day.
-- `ticket_tray` (date, ticket_number, minutes 0–480, note). **Why a table of its own:** the
-  existing `tickets` table requires a time entry, and SQLite can't drop a `NOT NULL` without a
-  table rebuild (not portable). Tray tickets exist before any entry, so they live in their own
-  table and every tray change re-plans the day's roll-up entry in the same transaction
-  (`shiftbook_core::tray::plan_rollup`): create it, update its minutes and tickets, or remove
-  it when the tray is empty. Its title, project and notes stay editable; deleting it empties the
-  tray and restoring brings both back.
-- `custom_fields` (applies_to entry/ticket/project, name, kind text/number/choice/link,
-  options one per line, link_template, ticket_prefix, sort_order, hidden) and `custom_values`
-  (field_id, record_id, value; one live value per field and record).
-- `timesheet_ticks` (week_start, day, line_key, done): crib sheet tick-offs.
-- `inbox_items` (text): scraps saved from capture.
+### Migrations (`crates/storage/migrations/`)
+One file per step, all portable SQL (see "Storage" above). Each starts with a comment saying
+what it adds and why.
 
-Repositories for the alpha are inherent async methods on `SqliteStore` (`work.rs`, `extras.rs`);
-like the M1 ones they take the `OwnerId`, bind every value and soft-delete. They become traits
-when the Postgres implementation arrives.
-
-### Desktop commands (`apps/desktop/src-tauri/src/api.rs`, `protect.rs`, `lib.rs`)
-Each command has its own `allow-<command>` permission (declared in `build.rs`, granted in
-`capabilities/default.json`); no plugins are used.
-
-| Area | Commands |
+| File | Adds |
 |---|---|
-| Vault | `vault_status`, `vault_setup`, `vault_confirm_recovery_saved`, `unlock` (returns `mustSetPassword`), `lock` (also re-protects), `change_password`, `set_new_password` (only straight after a recovery-key unlock), `regenerate_recovery_key` (needs the password; returns the key once), `delete_all_data` (needs the typed word `DELETE`; works locked or unlocked) |
-| Protection | `allow_capture` (content protection off for 10 minutes; a timer in the app turns it back on, only the latest allow counts), `protect_capture` |
-| Preferences | `load_prefs`, `save_pref` |
-| Projects | `list_projects`, `create_project`, `update_project` |
-| Entries | `list_entries`, `create_entry`, `update_entry`, `add_entry_minutes`, `delete_entry`, `restore_entry`, `add_entry_tickets`, `remove_ticket`, `quick_log` |
-| Capture | `parse_capture_line`, `capture_log` |
-| Tray | `tray_day`, `tray_add`, `tray_set_minutes`, `tray_remove`, `tray_restore` |
-| Ribbon, crib sheet | `ribbon`, `week_sheet`, `list_ticks`, `set_tick` |
-| Timesheet codes | `list_timesheet_codes`, `save_timesheet_code`, `category_codes`, `set_category_code` |
-| Custom fields | `list_custom_fields`, `save_custom_field`, `delete_custom_field`, `list_custom_values`, `set_custom_value` |
-| Inbox | `list_inbox`, `add_inbox`, `set_inbox_deleted` |
+| `0001_initial_schema` | The SPEC §3 tables |
+| `0002_alpha` | Project colours and archive, `time_entries.source` (the tray's roll-up), `ticket_tray`, custom fields and values, crib sheet tick-offs, the Inbox |
+| `0003_next_up` | The wrap-up's next-up list |
+| `0004_notes` | Notes and their tags |
+| `0005_saved_responses` | Saved responses |
+| `0006_canvas`, `0007_canvas_areas_links` | Card spots on the Desk; project areas and links |
+| `0008_tickets_open_and_bring_up` | Still-open tray tickets, Bring up |
+| `0009_meeting_series` | Repeating meetings |
+| `0010_canvas_boxes`, `0011_stacks_drawers`, `0012_board_spots` | Folding and labelled boxes; piles and drawers; spots on boards |
+| `0013_pins` | Pins |
+| `0014_ticket_done` | Done / still open on tickets that belong to entries |
 
-New error codes: `invalid_input`, `not_found`, `duplicate`, `tray_managed`, `not_allowed`.
-The UI passes the user's local date (`today`) because the app computes week-of and day words
-from it. Ticket chips carry ready-made links from link fields whose prefix matches.
+**Why `ticket_tray` is its own table:** the `tickets` table requires a time entry, and SQLite
+can't drop a `NOT NULL` without a table rebuild (not portable). Tray tickets exist before any
+entry, so they live apart and every tray change re-plans the day's roll-up entry in the same
+transaction (`shiftbook_core::tray::plan_rollup`). Since round 14 both tables carry done and a
+notepad, and the Desk shows them as one (`shiftbook_core::canvas::work_tickets`).
+
+Repositories added since M1 are inherent async methods on `SqliteStore`; like the M1 ones they
+take the `OwnerId`, bind every value, soft-delete and wrap multi-step changes in a transaction.
+They become traits (or a second store type) when the Postgres implementation arrives.
+
+### Desktop commands (`apps/desktop/src-tauri/src/`)
+Every command has its own `allow-<command>` permission, declared in `build.rs` and granted in
+`capabilities/default.json`; `lib.rs` registers them. A new command needs all three. The only
+plugin is `dialog`, called from Rust (the WebView gets no dialog permission).
+
+| File | Commands for |
+|---|---|
+| `lib.rs`, `session.rs`, `backoff.rs` | The vault: setup, unlock (with back-off), lock, change password, recovery key, delete all data; backups |
+| `protect.rs` | Screenshot protection and the timed allow |
+| `api.rs` | Preferences, projects, entries and tickets, Log work, capture and Find, the tray, ribbon, crib sheet, timesheet codes, custom fields, Inbox, responses, next up, Where was I?, the timer |
+| `notes.rs` | Notes |
+| `canvas.rs`, `boards.rs` | The Desk (cards, areas, boxes, links, piles, drawers, Tidy) and boards |
+| `meetings.rs`, `pins.rs` | Meeting series and the bell; pins |
+
+Each command's doc comment names the `DataApi` method it serves. Errors reach the WebView only
+as codes (see `session.rs` and `web/src/lib/messages.ts`). The UI passes the user's local date
+(`today`) because the app computes week-of and day words from it.
 
 ### Web UI (`web/src/`)
-- `App.svelte` — setup / recovery key / unlock / new password / app; idle lock uses the
-  auto-lock preference.
-- `pages/Shell.svelte` — ribbon, the current view (sliding left or right by view order), the
-  overlays, keyboard shortcuts (`lib/keys.ts`) and the copy guard (`lib/protection.svelte.ts`).
-- `components/` — `Ribbon`, `LogWork`, `EntryRow`, `TicketChip`, `TrayCard`, `InboxCard`,
-  `Drawer`, `Capture`, `PaperMenu`, `Toast`, `Icon` (inline SVG paths in `lib/icons.ts`).
-- `views/` — `Desk`, `Timesheet`, `Settings` with `customize/Look|Projects|TimesheetSettings|
-  Fields|FieldEditor|Security`.
-- `lib/store.svelte.ts` — shared state filled only from `DataApi`; `lib/menu.svelte.ts` and
-  `lib/menuPlacement.ts` (pure, tested) for the paper menu; `lib/motion.ts` scales animation by
-  the Motion setting and turns it off for Still or the system's reduced-motion setting.
+- `App.svelte`: setup, recovery key, unlock, new password, then the app (`pages/`).
+- `pages/Shell.svelte`: the ribbon, the current view (sliding by view order), overlays, keyboard
+  shortcuts (`lib/keys.ts`) and the copy guard (`lib/protection.svelte.ts`).
+- `views/`: `Canvas` (the Desk), `Day`, `Timesheet`, `Notes`, `Settings` with `customize/*`.
+- `components/`: cards, panels, windows, the bottom bar and bell, the paper menu and the rest.
+- `lib/api/`: the only place that talks to the app (`DataApi`, `TauriApi`). `lib/*.svelte.ts`
+  hold shared state filled from it; plain `lib/*.ts` files are small helpers, most with tests.
 - **CSP:** styles are the compiled stylesheet plus CSSOM changes (Svelte `style:` directives,
   `element.style`), never inline `style` attributes, so `style-src 'self'` holds. Animations use
   CSS and the Web Animations API.

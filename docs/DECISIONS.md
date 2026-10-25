@@ -37,6 +37,11 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
   slide-out, the wheel scrolls that instead.
 
+## Round 13
+- **Desk steps 3 and 4** (boxes, the toolbox and folding boxes up; piles, drawers and Tidy
+  into stacks): shown as built, with nothing new to decide. Changes asked for after trying
+  them are in round 14.
+
 ## Round 12 — 19 Oct 2026
 - **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)
   slides out a panel underneath with the everyday things: notepad, tickets, project, Bring up
