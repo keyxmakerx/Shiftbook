@@ -30,6 +30,8 @@ fn main() {
             "save_meeting_series",
             "set_meeting_series_deleted",
             "meeting_note",
+            "log_meeting",
+            "skip_meeting",
             "bell",
             "add_entry_minutes",
             "add_entry_time",

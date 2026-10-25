@@ -110,6 +110,10 @@ export interface MeetingSeries {
   at: number;
   /** Minutes ahead the bell starts reminding. */
   remindMinutes: number;
+  /** How long it usually lasts, in minutes (5 to 480); "Log 30m" offers this. */
+  lengthMinutes: number;
+  /** The project its time is logged to. */
+  projectId: string | null;
 }
 
 export type SeriesInput = Omit<MeetingSeries, 'id'>;
@@ -123,6 +127,7 @@ export interface BellItem {
   title: string;
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
+    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
     | { kind: 'brought_up'; id: string; from: IsoDate }
     | { kind: 'chase'; card: string; on: IsoDate }
     | { kind: 'still_open'; tickets: string[] };
@@ -832,6 +837,10 @@ export interface DataApi {
 
   // ----- meetings and the bell -----
   meetingSeries(): Promise<MeetingSeries[]>;
+  /** "Log 30m" on a meeting that just finished: an entry in its project, linked to the day's meeting note. */
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry>;
+  /** "Skip" on a meeting that just finished, or with `skip` false offer it again. */
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void>;
   /** Add a series (`id` null) or change one. */
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries>;
   /** Remove a series, or with `deleted` false bring it back (Undo). Its notes stay. */

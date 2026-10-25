@@ -1,15 +1,18 @@
 <script lang="ts">
   // The bell's panel (round 12): slides in from the right over the work area. Now first
-  // (meetings about to start), then Today (later meetings, things brought up for today, pins
+  // (meetings about to start, and since round 15 one that just finished, offering to log its
+  // time), then Today (later meetings, things brought up for today, pins
   // due to chase, tickets still open). Each line has the button that does the obvious thing. Click outside
   // or press Esc to close it.
   import { fly } from 'svelte/transition';
   import { api } from '../lib/api';
   import type { BellItem, CardKind } from '../lib/api';
   import { bell, refreshBell } from '../lib/bell.svelte';
-  import { addDays, relativeDay } from '../lib/format';
+  import { addDays, fmtMinutes, relativeDay } from '../lib/format';
+  import { openMenu } from '../lib/menu.svelte';
   import { chaseOn } from '../lib/pins.svelte';
-  import { app, attempt, setView } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectName, refresh, setView, timeButtons } from '../lib/store.svelte';
+  import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
 
@@ -26,6 +29,38 @@
     if (!note) return;
     openWindow('note', note.id);
     close();
+  }
+
+  async function logMeeting(series: string, title: string, minutes: number) {
+    const day = app.today;
+    const entry = await attempt(() => api.logMeeting(series, day, minutes));
+    if (!entry) return;
+    await Promise.all([refresh(), refreshBell()]);
+    flashEntry(entry.id);
+    toast(
+      `Logged ${fmtMinutes(minutes)} of ${title}`,
+      'Undo',
+      () => void attempt(() => api.deleteEntry(entry.id).then(() => api.skipMeeting(series, day, false))).then(() => Promise.all([refresh(), refreshBell()])),
+      () => void attempt(() => api.restoreEntry(entry.id).then(() => api.skipMeeting(series, day, true))).then(() => Promise.all([refresh(), refreshBell()])),
+    );
+  }
+
+  function otherTime(e: MouseEvent, series: string, title: string) {
+    openMenu(e.currentTarget as HTMLElement, {
+      sections: [
+        {
+          head: 'How long was it?',
+          choices: timeButtons().map((m) => ({ label: fmtMinutes(m), color: null, checked: false, act: () => void logMeeting(series, title, m) })),
+        },
+      ],
+    });
+  }
+
+  async function skipMeeting(series: string) {
+    const day = app.today;
+    if (!(await attempt(() => api.skipMeeting(series, day, true).then(() => true)))) return;
+    await refreshBell();
+    toast('Skipped. Nothing logged.', 'Undo', () => void attempt(() => api.skipMeeting(series, day, false)).then(refreshBell));
   }
 
   async function done(id: string) {
@@ -45,6 +80,10 @@
 
   function detail(i: BellItem): string {
     switch (i.about.kind) {
+      case 'meeting_done':
+        return i.about.project
+          ? `Just finished · logs to ${projectName(i.about.project)}, with the meeting note linked`
+          : 'Just finished · logs your time, with the meeting note linked';
       case 'meeting':
         return i.about.state.state === 'later' ? 'Your meeting note opens from here' : 'Open your meeting note';
       case 'brought_up':
@@ -81,11 +120,16 @@
           {#each list as BellItem[] as i, n (i.title + n)}
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} style:--i={n}>
               <span class="ico" aria-hidden="true">
-                <Icon name={i.about.kind === 'meeting' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : 'clock'} size={16} />
+                <Icon name={i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : 'clock'} size={16} />
               </span>
               <span class="txt"><b>{i.title}</b><small>{detail(i)}</small></span>
               <span class="btns">
-                {#if i.about.kind === 'meeting'}
+                {#if i.about.kind === 'meeting_done'}
+                  {@const { series, name, minutes } = i.about}
+                  <button type="button" class="btn primary" onclick={() => void logMeeting(series, name, minutes)}>Log {fmtMinutes(minutes)}</button>
+                  <button type="button" class="btn" onclick={(e) => otherTime(e, series, name)}>Other time…</button>
+                  <button type="button" class="btn" onclick={() => void skipMeeting(series)}>Skip</button>
+                {:else if i.about.kind === 'meeting'}
                   {@const series = i.about.series}
                   <button type="button" class="btn primary" onclick={() => void openMeetingNote(series)}>Open note</button>
                 {:else if i.about.kind === 'brought_up'}

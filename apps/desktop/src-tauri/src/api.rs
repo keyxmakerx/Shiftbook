@@ -409,7 +409,11 @@ pub(crate) async fn links_for(store: &SqliteStore, owner: OwnerId) -> Res<Vec<Cu
     Ok(link_fields(&store.list_custom_fields(owner).await?))
 }
 
-async fn one_entry(store: &SqliteStore, owner: OwnerId, rec: EntryRecord) -> Res<EntryView> {
+pub(crate) async fn one_entry(
+    store: &SqliteStore,
+    owner: OwnerId,
+    rec: EntryRecord,
+) -> Res<EntryView> {
     Ok(entry_view(rec, &links_for(store, owner).await?))
 }
 

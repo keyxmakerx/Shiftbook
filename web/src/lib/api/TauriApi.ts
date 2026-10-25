@@ -216,6 +216,12 @@ export class TauriApi implements DataApi {
   meetingSeries(): Promise<MeetingSeries[]> {
     return call('meeting_series');
   }
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry> {
+    return call('log_meeting', { seriesId, today, minutes });
+  }
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void> {
+    return call('skip_meeting', { seriesId, today, skip });
+  }
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries> {
     return call('save_meeting_series', { id, input });
   }

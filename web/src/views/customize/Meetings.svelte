@@ -1,16 +1,18 @@
 <script lang="ts">
   // Settings → Meetings (round 12): meetings that repeat, so the bell reminds you before they
-  // start and opens the day's meeting note. Changes save as you make them.
+  // start and opens the day's meeting note. Changes save as you make them. Round 15: how long
+  // each usually lasts and its project, so the bell can offer "Log 30m" when it finishes.
   import { onMount } from 'svelte';
   import Icon from '../../components/Icon.svelte';
   import { api } from '../../lib/api';
   import type { MeetingSeries, SeriesInput } from '../../lib/api';
   import { refreshBell } from '../../lib/bell.svelte';
-  import { attempt } from '../../lib/store.svelte';
+  import { app, attempt } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
 
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const REMIND = [0, 5, 10, 15, 30, 60];
+  const LASTS = [15, 30, 45, 60, 90, 120];
 
   type Row = SeriesInput & { id: string | null; key: number };
   let rows = $state<Row[]>([]);
@@ -29,13 +31,20 @@
   });
 
   function add() {
-    rows.push({ id: null, key: next++, name: '', days: [true, false, false, false, false, false, false], at: 600, remindMinutes: 15 });
+    rows.push({ id: null, key: next++, name: '', days: [true, false, false, false, false, false, false], at: 600, remindMinutes: 15, lengthMinutes: 30, projectId: null });
   }
 
   /** Save a row once it has a name and a day; a new one is added the first time. */
   async function save(r: Row) {
     if (!r.name.trim() || !r.days.some(Boolean)) return;
-    const input: SeriesInput = { name: r.name, days: r.days, at: r.at, remindMinutes: r.remindMinutes };
+    const input: SeriesInput = {
+      name: r.name,
+      days: r.days,
+      at: r.at,
+      remindMinutes: r.remindMinutes,
+      lengthMinutes: r.lengthMinutes,
+      projectId: r.projectId,
+    };
     const saved = await attempt(() => api.saveMeetingSeries(r.id, input));
     if (!saved) return;
     r.id = saved.id;
@@ -62,7 +71,7 @@
   <h3>Meetings</h3>
   <p class="sub">
     Meetings that repeat. The bell in the bottom bar reminds you before each one starts and opens
-    that day's meeting note. Nothing leaves Shiftbook: there are no pop-ups outside the app.
+    that day's meeting note. When one finishes, the bell offers to log its usual length. Nothing leaves Shiftbook: there are no pop-ups outside the app.
   </p>
   {#each rows as r (r.key)}
     <div class="series">
@@ -113,6 +122,37 @@
           }}
         >
           {#each REMIND as m (m)}<option value={m}>{m === 0 ? 'at the start' : `${m} min before`}</option>{/each}
+        </select>
+      </label>
+      <label class="at">
+        lasts
+        <select
+          class="text-in"
+          value={r.lengthMinutes}
+          aria-label="Usually lasts"
+          onchange={(e) => {
+            r.lengthMinutes = Number((e.currentTarget as HTMLSelectElement).value);
+            void save(r);
+          }}
+        >
+          {#each LASTS.includes(r.lengthMinutes) ? LASTS : [...LASTS, r.lengthMinutes].sort((a, b) => a - b) as m (m)}
+            <option value={m}>{m < 60 ? `${m} min` : `${m / 60} h`}</option>
+          {/each}
+        </select>
+      </label>
+      <label class="at">
+        log to
+        <select
+          class="text-in"
+          value={r.projectId ?? ''}
+          aria-label="Log its time to"
+          onchange={(e) => {
+            r.projectId = (e.currentTarget as HTMLSelectElement).value || null;
+            void save(r);
+          }}
+        >
+          <option value="">No project</option>
+          {#each app.projects.filter((p) => !p.archived || p.id === r.projectId) as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
         </select>
       </label>
       <button type="button" class="ib" aria-label="Remove {r.name || 'this meeting'}" onclick={() => void remove(r)}>

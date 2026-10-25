@@ -314,6 +314,8 @@ pub fn run() {
             meetings::save_meeting_series,
             meetings::set_meeting_series_deleted,
             meetings::meeting_note,
+            meetings::log_meeting,
+            meetings::skip_meeting,
             meetings::bell,
             api::add_entry_minutes,
             api::add_entry_time,
