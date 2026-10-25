@@ -1052,3 +1052,144 @@ fn meeting_series_are_kept_and_checked() {
         assert_eq!(s.meeting_series(me).await.unwrap().len(), 2);
     });
 }
+
+async fn item_count(s: &SqliteStore, me: OwnerId) -> i64 {
+    sqlx::query_scalar("SELECT count(*) FROM items WHERE owner_id = $1")
+        .bind(me.to_string())
+        .fetch_one(s.pool())
+        .await
+        .unwrap()
+}
+
+#[test]
+fn one_item_per_ticket_number() {
+    let dir = TestDir::new("items");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mon = date!(2026 - 10 - 19);
+        let tue = date!(2026 - 10 - 20);
+        let wed = date!(2026 - 10 - 21);
+        let net = s
+            .create_project(me, "Network refresh", None)
+            .await
+            .unwrap()
+            .id;
+        // Monday on an entry, Tuesday in the tray (any case): one item.
+        let rec = s
+            .create_entry(me, &input(mon, 60, "Switch swap"), "INC0045678")
+            .await
+            .unwrap();
+        let on_entry = rec.tickets[0].id;
+        let day = s.tray_add(me, tue, "inc0045678").await.unwrap();
+        let tray_row = day.items[0].id;
+        assert_eq!(item_count(&s, me).await, 1);
+
+        // One notepad: written on the entry, it shows in the tray, and back again.
+        s.set_ticket_note(me, on_entry, "Waiting on the PSU")
+            .await
+            .unwrap();
+        let day = s.tray_day(me, tue).await.unwrap();
+        assert_eq!(day.items[0].note.as_deref(), Some("Waiting on the PSU"));
+        s.tray_set_note(me, tray_row, "PSU arrived").await.unwrap();
+        let rec = s.get_entry(me, rec.entry.id).await.unwrap();
+        assert_eq!(rec.tickets[0].note.as_deref(), Some("PSU arrived"));
+
+        // One tick: done in the tray, done on the entry.
+        s.tray_set_done(me, tray_row, true).await.unwrap();
+        assert!(s.get_entry(me, rec.entry.id).await.unwrap().tickets[0].done);
+        assert!(s.open_entry_tickets(me).await.unwrap().is_empty());
+
+        // Reopened on Tuesday: Tuesday on is open again, Monday keeps its tick.
+        s.tray_set_done(me, tray_row, false).await.unwrap();
+        assert!(!s.tray_day(me, tue).await.unwrap().items[0].done);
+        assert!(s.get_entry(me, rec.entry.id).await.unwrap().tickets[0].done);
+
+        // Ticked on the entry: the tray row finishes too.
+        s.set_ticket_done(me, on_entry, true).await.unwrap();
+        assert!(s.tray_day(me, tue).await.unwrap().items[0].done);
+
+        // Pasted again on Wednesday: still one item, open again, with its notepad and the
+        // project it was last given. Tuesday is left as it was.
+        s.tray_set_project(me, tray_row, Some(net)).await.unwrap();
+        let day = s.tray_add(me, wed, "INC0045678").await.unwrap();
+        assert_eq!(item_count(&s, me).await, 1);
+        assert!(!day.items[0].done);
+        assert_eq!(day.items[0].note.as_deref(), Some("PSU arrived"));
+        assert_eq!(day.items[0].project_id, Some(net));
+        assert!(s.tray_day(me, tue).await.unwrap().items[0].done);
+
+        // Another owner's ticket with the same number is theirs alone.
+        s.tray_add(other, wed, "INC0045678").await.unwrap();
+        assert_eq!(item_count(&s, me).await, 1);
+        assert_eq!(item_count(&s, other).await, 1);
+        assert!(s.tray_day(other, wed).await.unwrap().items[0]
+            .note
+            .is_none());
+
+        // A day's "Tickets" roll-up only mirrors the tray: its tickets have no item.
+        let rollup_tickets: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE e.source = 'tray' AND t.item_id IS NOT NULL",
+        )
+        .fetch_one(s.pool())
+        .await
+        .unwrap();
+        assert_eq!(rollup_tickets, 0);
+    });
+}
+
+#[test]
+fn tickets_from_before_items_join_them_on_unlock() {
+    let dir = TestDir::new("items-link");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let mon = date!(2026 - 10 - 19);
+        let tue = date!(2026 - 10 - 20);
+        let rec = s
+            .create_entry(me, &input(mon, 60, "Laptop"), "RITM0012345")
+            .await
+            .unwrap();
+        s.tray_add(me, mon, "INC0045678").await.unwrap();
+        s.tray_add(me, tue, "INC0045678 INC0045690").await.unwrap();
+        // Make it look like data from before items: no links, per-row states and notes.
+        for sql in [
+            "UPDATE ticket_tray SET item_id = NULL",
+            "UPDATE tickets SET item_id = NULL",
+            "DELETE FROM items",
+            "UPDATE ticket_tray SET note = 'Rang the user' WHERE date = '2026-10-19'",
+            "UPDATE ticket_tray SET note = 'Rang the user. Fixed.', done = TRUE \
+             WHERE date = '2026-10-20' AND ticket_number = 'INC0045678'",
+            "UPDATE tickets SET note = 'Old laptop', done = FALSE",
+            // The unlock links the first user's tickets; setup's second user came first.
+            "DELETE FROM users WHERE display_name = 'Other'",
+        ] {
+            sqlx::query(sql).execute(s.pool()).await.unwrap();
+        }
+        s.initialize_local_owner("Me").await.unwrap();
+        assert_eq!(item_count(&s, me).await, 3);
+        let unlinked: i64 = sqlx::query_scalar(
+            "SELECT (SELECT count(*) FROM ticket_tray WHERE item_id IS NULL) + \
+             (SELECT count(*) FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+              WHERE t.item_id IS NULL AND e.source IS NULL)",
+        )
+        .fetch_one(s.pool())
+        .await
+        .unwrap();
+        assert_eq!(unlinked, 0);
+        // Done on its newest day, so Monday's open row is finished too; the copied-forward
+        // note merged into the newest.
+        let monday = s.tray_day(me, mon).await.unwrap();
+        assert!(monday.items[0].done);
+        assert_eq!(
+            monday.items[0].note.as_deref(),
+            Some("Rang the user. Fixed.")
+        );
+        // The entry's ticket keeps its state and note.
+        let rec = s.get_entry(me, rec.entry.id).await.unwrap();
+        assert!(!rec.tickets[0].done);
+        assert_eq!(rec.tickets[0].note.as_deref(), Some("Old laptop"));
+        // Running it again changes nothing.
+        s.initialize_local_owner("Me").await.unwrap();
+        assert_eq!(item_count(&s, me).await, 3);
+    });
+}

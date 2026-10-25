@@ -129,6 +129,10 @@ typed_id!(
     TrayItemId
 );
 typed_id!(
+    /// An item (round 15): one ticket, task or chore, however many days and entries it's on.
+    ItemId
+);
+typed_id!(
     /// A user-defined custom field.
     CustomFieldId
 );

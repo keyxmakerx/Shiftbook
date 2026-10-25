@@ -25,6 +25,7 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::error::StorageError;
+use crate::items::link_items;
 
 pub(crate) type Result<T> = std::result::Result<T, StorageError>;
 
@@ -459,6 +460,8 @@ impl SqliteStore {
             }
             upsert_setting(&mut tx, user.id, SEED_VERSION_KEY, SEED_VERSION).await?;
         }
+        // Tickets from before items (round 15), or brought back by a restore, join theirs.
+        link_items(&mut tx, user.id).await?;
         tx.commit().await?;
         Ok(user)
     }

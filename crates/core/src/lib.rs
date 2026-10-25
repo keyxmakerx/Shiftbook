@@ -15,6 +15,7 @@ pub mod fields;
 pub mod group;
 pub mod hours;
 pub mod ids;
+pub mod items;
 pub mod meetings;
 pub mod minutes;
 pub mod model;

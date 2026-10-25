@@ -2,8 +2,8 @@
   // The tickets of a Desk card, opened from the strip on it (round 14): a box that floats
   // over the Desk with the work first (and its days, when the same work spans several), then
   // a card per ticket. A ticket number shows once even when it's on several days' entries or
-  // also in the Tickets tray (lib/workTickets.ts); its round tick ticks it everywhere and its
-  // notepad is the newest one. Their time is the work's. More tickets can be attached at the
+  // also in the Tickets tray (lib/workTickets.ts); it's one item, so its round tick and its
+  // notepad are the same everywhere. Their time is the work's. More tickets can be attached at the
   // bottom. Esc or ✕ folds it away.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
@@ -27,14 +27,14 @@
   const days = $derived([entry, ...card.work]);
   const stillOpen = $derived(tickets.filter((t) => !t.done).length);
 
+  // A ticket is one item (round 15): ticking or writing on its newest place changes it
+  // everywhere it appears.
   async function tick(w: WorkTicket) {
     const done = !w.done;
+    const s = w.sources[0]!;
     const ok = await attempt(async () => {
-      for (const s of w.sources) {
-        if (s.done === done) continue;
-        if (s.kind === 'entry') await api.ticketSetDone(s.id, done);
-        else applyTray(await api.traySetDone(s.id, done));
-      }
+      if (s.kind === 'entry') await api.ticketSetDone(s.id, done);
+      else applyTray(await api.traySetDone(s.id, done));
       return true;
     });
     if (ok) onchanged();
@@ -56,7 +56,6 @@
     timer = null;
     const w = tickets.find((x) => x.number === open);
     if (!w || draft.trim() === (w.note ?? '').trim()) return;
-    // The note goes on the newest place the ticket appears.
     const s = w.sources[0]!;
     const text = draft;
     const ok = await attempt(async () => {

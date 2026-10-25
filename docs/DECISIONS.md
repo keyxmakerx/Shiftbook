@@ -2,6 +2,21 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 25 Oct 2026
+- **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
+  write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
+  tray tickets, entry tickets and later tasks and chores point at, with one done tick, one
+  notepad and one follow-up date. Projects stay as they are. Built in four steps; anything
+  visible waits for its mockup on the sign-off sheet (card `r15-things`), which the owner
+  asked for before any UI change.
+- **Step 1 (built, nothing visible moves):** one item per ticket number (ignoring case).
+  Ticking a ticket done finishes it everywhere it appears; unticking reopens it from that
+  day on; its notepad is the same everywhere; pasting it again finds it (open again, with its
+  notepad and the project it was last given). Tickets from before items join theirs on
+  unlock: the newest row decides done and project, and different notepads are merged under
+  "Earlier note" lines so none is lost. A ticket number that comes back later is the same
+  ticket, reopened, with its old notes (recommended pick on the card).
+
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a
   **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets
