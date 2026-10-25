@@ -1,0 +1,212 @@
+{
+ "cards": {
+  "r15-things": {
+   "area": "Tickets, plans and projects",
+   "round": 15,
+   "order": 40,
+   "version": 2,
+   "title": "One record per ticket, task or chore (with mockups)",
+   "body": [
+    "You liked the recommendations; these mockups show every place the change is visible, so you can check them before I build. Step 1 (one item per ticket number) changes nothing on screen, so I'm starting it now.",
+    "The full write-up is in [Tickets, plans and projects: one clearer model](https://claude.ai/artifact/KhY1cyvt1PcBJYiGYSzyEZ)."
+   ],
+   "bullets": [
+    "**The bell:** each item once, with Open, Tomorrow and Done, instead of separate brought-up, pin and still-open lines.",
+    "**Menus:** Bring up tomorrow and the pin's chase day become one **Follow up** submenu. A pin just keeps it on the bottom bar.",
+    "**Log work and the tray:** a title you've used before asks \"Add to ...?\"; a ticket Shiftbook knows shows its notepad, project and time so far.",
+    "**Items view:** every ticket, task and chore in one list (Open, Follow up, Done), filtered by project or kind. It takes over the Done tickets board.",
+    "**On the Desk:** tasks and chores become cards that sit in project boxes, with ticks and a Mark done."
+   ],
+   "figures": [
+    {
+     "caption": "The bell: now, and with items.",
+     "html_file": "mocks/r15-items.html",
+     "start": "bell"
+    },
+    {
+     "caption": "The right-click menu: Bring up tomorrow becomes Follow up.",
+     "html_file": "mocks/r15-items.html",
+     "start": "menu"
+    },
+    {
+     "caption": "Log work and the Tickets box recognise work you've done before.",
+     "html_file": "mocks/r15-items.html",
+     "start": "logwork"
+    },
+    {
+     "caption": "The Items view.",
+     "html_file": "mocks/r15-items.html",
+     "start": "list"
+    },
+    {
+     "caption": "Tasks and chores on the Desk, inside a project's box.",
+     "html_file": "mocks/r15-items.html",
+     "start": "desk"
+    }
+   ],
+   "questions": [
+    {
+     "id": "bell",
+     "legend": "The bell",
+     "options": [
+      {
+       "value": "Good",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "menu",
+     "legend": "One Follow up submenu",
+     "options": [
+      {
+       "value": "Good",
+       "rec": true
+      },
+      {
+       "value": "Keep Bring up tomorrow as its own line too"
+      }
+     ]
+    },
+    {
+     "id": "logwork",
+     "legend": "\"Add to ...?\" when a title matches",
+     "options": [
+      {
+       "value": "Ask me, as shown",
+       "rec": true,
+       "why": "A rename never splits work; two jobs with the same name never merge."
+      },
+      {
+       "value": "Just add it, like today"
+      }
+     ]
+    },
+    {
+     "id": "list",
+     "legend": "The Items view",
+     "options": [
+      {
+       "value": "Good, add it as a view",
+       "rec": true
+      },
+      {
+       "value": "Keep it inside Boards instead"
+      }
+     ]
+    },
+    {
+     "id": "desk",
+     "legend": "Tasks and chores on the Desk",
+     "options": [
+      {
+       "value": "Good",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. call it Follow-up date, not Follow up"
+    }
+   ]
+  },
+  "r15-items-extras": {
+   "area": "Tickets, plans and projects",
+   "round": 15,
+   "order": 41,
+   "version": 1,
+   "title": "Extras that items make easy",
+   "body": [
+    "You asked for more ideas. These all build on items, so they're small once step 1 is in. Tell me which to mock up; I'll bring mockups before building any of them."
+   ],
+   "bullets": [
+    "**Waiting on someone:** mark an item \"waiting on Sam\". It leaves your open count and comes back in the bell after 2 days (changeable).",
+    "**Ticket age:** still-open tickets show \"open 6 days\", turning orange after a week, so old ones don't hide.",
+    "**Project budget on its box:** \"6.5 h of 20 h\", and Over budget or Overdue in orange. The rules are already written and tested.",
+    "**Todos from notes:** a `[]` line in a meeting or daily note becomes a task item with one click, linked back to the note.",
+    "**Start my day from items:** Next up offers the items you're following up today and yesterday's still-open tickets as one-click lines."
+   ],
+   "questions": [
+    {
+     "id": "waiting",
+     "legend": "Waiting on someone",
+     "options": [
+      {
+       "value": "Mock it up",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "age",
+     "legend": "Ticket age",
+     "options": [
+      {
+       "value": "Mock it up",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "budget",
+     "legend": "Project budget on its box",
+     "options": [
+      {
+       "value": "Mock it up",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "todos",
+     "legend": "Todos from notes",
+     "options": [
+      {
+       "value": "Mock it up",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "startday",
+     "legend": "Start my day from items",
+     "options": [
+      {
+       "value": "Mock it up"
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Other ideas?",
+     "placeholder": "e.g. a weekly review of everything still open"
+    }
+   ]
+  }
+ }
+}

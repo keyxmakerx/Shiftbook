@@ -126,6 +126,83 @@ export interface Prefs {
   windows: WindowSpot[];
   /** Where the Desk's "Done today" pile sits; null places it automatically. */
   donePile: [number, number] | null;
+  /** The headings of "Copy for stand-up": what was done, what's next. */
+  standupWords: [string, string];
+  /** Your own time buttons (round 15), shortest first. */
+  timeButtons: number[];
+  /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
+  useMode: UseMode;
+}
+
+/** What Shiftbook is for. Mirrors `shiftbook_core::home::UseMode`. */
+export type UseMode = 'work' | 'home' | 'both';
+
+/** A repeating thing's state. Mirrors `shiftbook_core::recurring::RecurringState`. */
+export type RecurringState = 'inactive' | 'ongoing' | 'needs_date' | 'overdue' | 'due_soon' | 'renewed' | 'ok';
+
+/** A repeating thing with everything worked out (round 15). */
+export interface Recurring {
+  id: string;
+  name: string;
+  kind: string | null;
+  frequencyId: string | null;
+  /** "Every 6 months", or null. */
+  every: string | null;
+  /** True for things that expire on a date; false for things that come round again. */
+  expires: boolean;
+  expirationDate: IsoDate | null;
+  nextDue: IsoDate | null;
+  daysLeft: number | null;
+  /** "tomorrow", "3 days late", … */
+  dueWords: string | null;
+  state: RecurringState;
+  lastDone: IsoDate | null;
+  warnDays: number;
+  /** False for routine things that only collect time. */
+  alerts: boolean;
+  notes: string;
+  totalMinutes: number;
+}
+
+/** What the Repeating view sends to save one. */
+export interface RecurringInput {
+  name: string;
+  kind: string | null;
+  frequencyId: string | null;
+  /** True: `date` is the expiry date. False: `date` is when it next comes round. */
+  expires: boolean;
+  date: IsoDate | null;
+  /** Days ahead to warn; null means 30. */
+  warnDays: number | null;
+  alerts: boolean;
+  notes: string;
+}
+
+/** What Mark done did, for Undo. */
+export interface MarkedDone {
+  entryId: string;
+  created: boolean;
+}
+
+export interface Frequency {
+  id: string;
+  label: string;
+}
+
+/** A reusable list (round 15). */
+export interface ShopList {
+  id: string;
+  title: string;
+  items: { id: string; text: string; done: boolean }[];
+  done: number;
+  total: number;
+}
+
+/** What came due while Shiftbook was closed (round 15). */
+export interface AwayList {
+  /** The last day it was open. */
+  since: IsoDate | null;
+  items: BellItem[];
 }
 
 /** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
@@ -152,6 +229,10 @@ export interface MeetingSeries {
   at: number;
   /** Minutes ahead the bell starts reminding. */
   remindMinutes: number;
+  /** How long it usually lasts, in minutes (5 to 480); "Log 30m" offers this. */
+  lengthMinutes: number;
+  /** The project its time is logged to. */
+  projectId: string | null;
 }
 
 export type SeriesInput = Omit<MeetingSeries, 'id'>;
@@ -165,8 +246,11 @@ export interface BellItem {
   title: string;
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
+    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
+    | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'brought_up'; id: string; from: IsoDate }
     | { kind: 'chase'; card: string; on: IsoDate }
+    | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
     | { kind: 'still_open'; tickets: string[] };
 }
 
@@ -217,7 +301,9 @@ export type PrefKey =
   | 'timer.paused'
   | 'notes.auto_archive_days'
   | 'ui.windows'
-  | 'desk.done_pile';
+  | 'desk.done_pile'
+  | 'day.standup_words'
+  | 'day.time_buttons';
 
 export interface Project {
   id: string;
@@ -505,6 +591,8 @@ export interface CanvasCard {
   workHours: string | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
+  /** Stays bright under "Just today": from today, still open, brought up for today or pinned. */
+  justToday: boolean;
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */
@@ -879,6 +967,10 @@ export interface DataApi {
 
   // ----- meetings and the bell -----
   meetingSeries(): Promise<MeetingSeries[]>;
+  /** "Log 30m" on a meeting that just finished: an entry in its project, linked to the day's meeting note. */
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry>;
+  /** "Skip" on a meeting that just finished, or with `skip` false offer it again. */
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void>;
   /** Add a series (`id` null) or change one. */
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries>;
   /** Remove a series, or with `deleted` false bring it back (Undo). Its notes stay. */
@@ -980,8 +1072,19 @@ export interface DataApi {
   // ----- next up -----
   /** The wrap-up's "next up" list, in order. */
   nextUp(): Promise<NextUpItem[]>;
-  /** "Bring up tomorrow": the card comes up first on the next work day after `today`. */
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem>;
+  /**
+   * "Bring up…": the card comes up first on `on` (moved to the next work day if it isn't
+   * one), or without `on` on the next work day after `today`.
+   */
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
+  /** The tickets in text pasted on the Desk, or null when it isn't only tickets. */
+  pastedTickets(text: string): Promise<string[] | null>;
+  /** The day Find's text names ("fri", "last friday", "12 oct"), or null. */
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null>;
+  /** "Copy for stand-up": the last day with work, then what you start with today. */
+  standup(today: IsoDate): Promise<string>;
+  /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
+  bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;
@@ -1061,4 +1164,39 @@ export interface DataApi {
   // ----- find -----
   /** Entries, Inbox scraps, notes and the given command names that match `query`. */
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult>;
+
+  // ----- repeating things (round 15) -----
+  /** Every repeating thing, most urgent first. Tauri: `recurring_list`. */
+  recurring(today: IsoDate): Promise<Recurring[]>;
+  /** Add one (`id` null) or change one. Tauri: `recurring_save`. */
+  saveRecurring(id: string | null, input: RecurringInput): Promise<void>;
+  /** Mark done on `date` (a tick on that day). Tauri: `recurring_done`. */
+  recurringDone(id: string, date: IsoDate): Promise<MarkedDone>;
+  /** It was renewed on `date` and now runs to `expires`. Tauri: `recurring_renewed`. */
+  recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone>;
+  /** Take back a Mark done. Tauri: `recurring_undo`. */
+  recurringUndo(marked: MarkedDone): Promise<void>;
+  setRecurringDeleted(id: string, deleted: boolean): Promise<void>;
+  /** The form's pickers: frequencies and the kinds that show. Tauri: `recurring_choices`. */
+  recurringChoices(): Promise<{ frequencies: Frequency[]; kinds: string[] }>;
+
+  // ----- lists (round 15) -----
+  lists(): Promise<ShopList[]>;
+  /** Make a list; `items` one per line. */
+  createList(title: string, items: string): Promise<ShopList>;
+  renameList(id: string, title: string): Promise<ShopList>;
+  setListDeleted(id: string, deleted: boolean): Promise<void>;
+  /** Add items, one per line. */
+  addListItems(id: string, text: string): Promise<ShopList>;
+  listItemDone(itemId: string, done: boolean): Promise<ShopList>;
+  listItemText(itemId: string, text: string): Promise<ShopList>;
+  listItemDeleted(itemId: string, deleted: boolean): Promise<ShopList>;
+  /** Untick every item, keep them all. */
+  resetList(id: string): Promise<ShopList>;
+
+  // ----- Work / Home / Both (round 15) -----
+  /** Pick what Shiftbook is for; puts that mode's defaults in place. Tauri: `set_use_mode`. */
+  setUseMode(mode: UseMode): Promise<Prefs>;
+  /** What came due since Shiftbook was last open; remembers today. Tauri: `while_away`. */
+  whileAway(today: IsoDate, now: number): Promise<AwayList>;
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-renewed"
+description = "Enables the recurring_renewed command without any pre-configured scope."
+commands.allow = ["recurring_renewed"]
+
+[[permission]]
+identifier = "deny-recurring-renewed"
+description = "Denies the recurring_renewed command without any pre-configured scope."
+commands.deny = ["recurring_renewed"]

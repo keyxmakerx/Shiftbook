@@ -86,6 +86,17 @@
       {/each}
     </div>
   {/if}
+  {#if app.view === 'desk'}
+    <button
+      type="button"
+      class="today"
+      class:on={app.justToday}
+      aria-pressed={app.justToday}
+      title="Fade cards that aren't from today, still open, brought up or pinned (T)"
+      onclick={() => (app.justToday = !app.justToday)}
+    >◐ Just today <span class="kbd">T</span></button>
+    {#if app.justToday}<span class="hint" role="status">Showing today, still open, brought up and pinned</span>{/if}
+  {/if}
   <span class="hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> for shortcuts</span>
   <span class="hours mono" title="Logged today">{fmtHours(today)} h today</span>
   <button
@@ -116,6 +127,27 @@
     backdrop-filter: blur(10px);
     position: relative;
     z-index: 45;
+  }
+
+  .today {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: none;
+    color: var(--ink-2);
+    font: 600 12.5px var(--ui);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .today.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
   }
 
   .wins {

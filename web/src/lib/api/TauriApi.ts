@@ -4,6 +4,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { toApiError } from './DataApi';
 import type {
+  AwayList,
+  Frequency,
+  MarkedDone,
+  Recurring,
+  RecurringInput,
+  ShopList,
+  UseMode,
   AppInfo,
   BackupFile,
   BackupSummary,
@@ -219,6 +226,12 @@ export class TauriApi implements DataApi {
   meetingSeries(): Promise<MeetingSeries[]> {
     return call('meeting_series');
   }
+  logMeeting(seriesId: string, today: IsoDate, minutes: number): Promise<Entry> {
+    return call('log_meeting', { seriesId, today, minutes });
+  }
+  skipMeeting(seriesId: string, today: IsoDate, skip: boolean): Promise<void> {
+    return call('skip_meeting', { seriesId, today, skip });
+  }
   saveMeetingSeries(id: string | null, input: SeriesInput): Promise<MeetingSeries> {
     return call('save_meeting_series', { id, input });
   }
@@ -383,8 +396,20 @@ export class TauriApi implements DataApi {
   setNextUp(items: string[]): Promise<NextUpItem[]> {
     return call('set_next_up', { items });
   }
-  bringUp(today: IsoDate, kind: CardKind, id: string, title: string): Promise<NextUpItem> {
-    return call('bring_up', { today, kind, id, title });
+  bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem> {
+    return call('bring_up', { today, kind, id, title, on: on ?? null });
+  }
+  pastedTickets(text: string): Promise<string[] | null> {
+    return call('pasted_tickets', { text });
+  }
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null> {
+    return call('find_day', { text, today });
+  }
+  standup(today: IsoDate): Promise<string> {
+    return call('standup', { today });
+  }
+  bringUpDays(today: IsoDate): Promise<IsoDate[]> {
+    return call('bring_up_days', { today });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });
@@ -472,5 +497,62 @@ export class TauriApi implements DataApi {
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {
     return call('search', { query, today, commands });
+  }
+
+  recurring(today: IsoDate): Promise<Recurring[]> {
+    return call('recurring_list', { today });
+  }
+  saveRecurring(id: string | null, input: RecurringInput): Promise<void> {
+    return call('recurring_save', { id, input });
+  }
+  recurringDone(id: string, date: IsoDate): Promise<MarkedDone> {
+    return call('recurring_done', { id, date });
+  }
+  recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone> {
+    return call('recurring_renewed', { id, expires, date });
+  }
+  recurringUndo(marked: MarkedDone): Promise<void> {
+    return call('recurring_undo', { marked });
+  }
+  setRecurringDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('recurring_set_deleted', { id, deleted });
+  }
+  recurringChoices(): Promise<{ frequencies: Frequency[]; kinds: string[] }> {
+    return call('recurring_choices');
+  }
+
+  lists(): Promise<ShopList[]> {
+    return call('lists');
+  }
+  createList(title: string, items: string): Promise<ShopList> {
+    return call('list_create', { title, items });
+  }
+  renameList(id: string, title: string): Promise<ShopList> {
+    return call('list_rename', { id, title });
+  }
+  setListDeleted(id: string, deleted: boolean): Promise<void> {
+    return call('list_set_deleted', { id, deleted });
+  }
+  addListItems(id: string, text: string): Promise<ShopList> {
+    return call('list_add_items', { id, text });
+  }
+  listItemDone(itemId: string, done: boolean): Promise<ShopList> {
+    return call('list_item_done', { id: itemId, done });
+  }
+  listItemText(itemId: string, text: string): Promise<ShopList> {
+    return call('list_item_text', { id: itemId, text });
+  }
+  listItemDeleted(itemId: string, deleted: boolean): Promise<ShopList> {
+    return call('list_item_deleted', { id: itemId, deleted });
+  }
+  resetList(id: string): Promise<ShopList> {
+    return call('list_reset', { id });
+  }
+
+  setUseMode(mode: UseMode): Promise<Prefs> {
+    return call('set_use_mode', { mode });
+  }
+  whileAway(today: IsoDate, now: number): Promise<AwayList> {
+    return call('while_away', { today, now });
   }
 }

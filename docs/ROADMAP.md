@@ -14,8 +14,10 @@ Each milestone should end with passing tests and a working build on all three OS
 - **M2 Time log + tickets:** Today screen quick log, hours parsing, + time, ticket chips (multi-paste),
   Time Log week view with muted past days, edit/delete (soft).
 - **M3 Projects + recurring:** CRUD screens, calculated fields, alert badges, "Mark done",
-  alerts_enabled toggle for routine items.
+  alerts_enabled toggle for routine items. *(Round 15: the Repeating screen, Mark done, Due soon
+  on the Desk and in the bell, and "While you were away" are built.)*
 - **M4 Tasks:** list + board views, link to project/recurring, log time from task, checklists.
+  *(Round 15: reusable Lists with Reset for next time are built on the tasks table.)*
 - **M5 Dashboard + timesheet:** cards, SVG charts; timesheet codes (user-defined,
   category defaults, project/recurring defaults, per-entry override, Unassigned warnings),
   Holiday quick entry, code × day timesheet grid with copy / .xlsx / .csv export.
@@ -46,18 +48,18 @@ the README for what it does.
   capture only works while the Shiftbook window has focus.
 - **Export and import** (xlsx/csv/json, Import JSON/Excel) — M6. Encrypted backups are in:
   automatic once a day after unlock (last 14 kept), Back up now and Restore. Still to do for
-  backups: a backup on app close, a setting for how many to keep, and a restore test in CI.
+  backups: a backup on app close, and a setting for how many to keep.
 - **Picture editor** for notes.
 - **Bundled fonts:** the look uses Fraunces / Instrument Sans / JetBrains Mono where installed
   and otherwise Georgia, Segoe UI/system-ui and Consolas/monospace. Bundling the OFL fonts
   inside the app (no network) is a follow-up.
 - **Code signing** (Windows Authenticode, Apple notarisation) and the portable builds.
-- Smaller gaps: recurring work, tasks and the dashboard (M3–M5) have no screens yet (the bell
-  shows recurring tasks once they do); custom
+- Smaller gaps: tasks and the dashboard (M4–M5) have no screens yet (recurring work and Lists
+  came in round 15); custom
   fields on tickets and projects can be defined (link fields already work on tickets) but values
   can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
   given a project rolls up under it); the Planner
-  has no keyboard shortcut yet (1 to 5 are Desk, Day, Timesheet, Notes, Settings).
+  has no keyboard shortcut yet (1 to 7 are Desk, Day, Timesheet, Notes, Repeating, Lists, Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)
 - **S1** `apps/server` with Axum reusing core/storage; Postgres migrations verified in CI.

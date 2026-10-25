@@ -3,7 +3,7 @@
 // roll over at midnight, keep the bell and pins fresh, and guard copying.
 
 import { untrack } from 'svelte';
-import { refreshBell } from './bell.svelte';
+import { openAway, refreshBell } from './bell.svelte';
 import { errorMessage } from './messages';
 import { refreshPins } from './pins.svelte';
 import { installCopyGuard } from './protection.svelte';
@@ -17,7 +17,7 @@ export function startShell(onProblem: (message: string) => void): () => void {
   loadAll()
     .then(() => {
       loadWindows();
-      return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins()]);
+      return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins(), openAway()]);
     })
     .catch((e: unknown) => onProblem(errorMessage(e)));
   const unguard = installCopyGuard();
@@ -33,7 +33,10 @@ export function startShell(onProblem: (message: string) => void): () => void {
   const events = ['keydown', 'pointerdown', 'pointermove', 'wheel'] as const;
   for (const name of events) window.addEventListener(name, onActivity, { passive: true });
   const timer = setInterval(async () => {
-    if (app.ready && (await rollDay())) void checkResume('new_day');
+    if (app.ready && (await rollDay())) {
+      void checkResume('new_day');
+      void openAway();
+    }
     if (app.ready) void refreshBell();
     if (app.ready) void refreshPins();
   }, 60_000);

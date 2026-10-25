@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-set-deleted"
+description = "Enables the list_set_deleted command without any pre-configured scope."
+commands.allow = ["list_set_deleted"]
+
+[[permission]]
+identifier = "deny-list-set-deleted"
+description = "Denies the list_set_deleted command without any pre-configured scope."
+commands.deny = ["list_set_deleted"]

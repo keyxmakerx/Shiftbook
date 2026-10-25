@@ -1,7 +1,10 @@
 <script lang="ts">
-  // Settings → Look: theme, motion, accent and project colours. Changes show at once.
+  // Settings → Look: what Shiftbook is for (round 15), theme, motion, accent and project
+  // colours. Changes show at once.
+  import UseModeChoice from '../../components/UseModeChoice.svelte';
   import { api } from '../../lib/api';
-  import type { PrefKey, Project } from '../../lib/api';
+  import type { PrefKey, Project, UseMode } from '../../lib/api';
+  import { toast } from '../../lib/toast.svelte';
   import { TEXT_SIZES } from '../../lib/keys';
   import { ACCENTS, SWATCHES } from '../../lib/palette';
   import { app, applyPrefs, attempt, refreshProjects } from '../../lib/store.svelte';
@@ -15,6 +18,26 @@
     app.prefs = p;
     applyPrefs(p);
   }
+
+  async function setMode(mode: UseMode) {
+    if (mode === app.prefs?.useMode) return;
+    const p = await attempt(() => api.setUseMode(mode));
+    if (!p) return;
+    app.prefs = p;
+    applyPrefs(p);
+    toast(
+      mode === 'home'
+        ? 'Home: the Timesheet is hidden, the hours ring is off and auto-lock is 60 minutes. Change those in Your day and Security.'
+        : mode === 'both'
+          ? 'Both: work and home on one Desk. Home categories and kinds of repeating things are added.'
+          : 'Work: the Timesheet and the 8 h ring are back, and auto-lock is 15 minutes.',
+    );
+  }
+
+  let modeChoice = $state<UseMode>('work');
+  $effect(() => {
+    modeChoice = app.prefs?.useMode ?? 'work';
+  });
 
   async function colour(p: Project, color: string) {
     const saved = await attempt(() =>
@@ -32,6 +55,12 @@
 </script>
 
 {#if prefs}
+  <article class="paper cz-card">
+    <h3>What's Shiftbook for?</h3>
+    <p class="sub">Changes the words, what shows and a few defaults (daily targets, auto-lock). Nothing you've saved changes.</p>
+    <UseModeChoice bind:mode={modeChoice} onpick={(m) => void setMode(m)} />
+  </article>
+
   <article class="paper cz-card">
     <h3>Theme</h3>
     <div class="seg" role="group" aria-label="Theme">

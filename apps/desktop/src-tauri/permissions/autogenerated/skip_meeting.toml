@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-skip-meeting"
+description = "Enables the skip_meeting command without any pre-configured scope."
+commands.allow = ["skip_meeting"]
+
+[[permission]]
+identifier = "deny-skip-meeting"
+description = "Denies the skip_meeting command without any pre-configured scope."
+commands.deny = ["skip_meeting"]

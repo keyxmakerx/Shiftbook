@@ -8,6 +8,8 @@ data/
 local-data/
 backups/
 *.shiftbak
+# ...except the made-up test fixture (test password, no real data).
+!crates/storage/tests/fixtures/*.shiftbak
 exports/
 *-export*.json
 tracker-import.json

@@ -140,7 +140,7 @@
     await refresh();
     toast(`Deleted “${e.description || 'the entry'}”`, 'Undo', () => {
       void attempt(() => api.restoreEntry(e.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.deleteEntry(e.id)).then(refresh));
   }
 
   function close() {

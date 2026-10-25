@@ -3,14 +3,14 @@
   // slides in from the direction you move, the windows floating over it and the bottom bar
   // with the bell, and the overlays (capture, drawer, paper menu, toast). Also the keyboard
   // shortcuts and the copy guard.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { boards } from '../lib/boards.svelte';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
-  import { app, focusLog, savePref, setView } from '../lib/store.svelte';
+  import { app, focusLog, savePref, setView, shownViews } from '../lib/store.svelte';
   import { followDay, startShell } from '../lib/shellLife.svelte';
-  import { toast } from '../lib/toast.svelte';
+  import { redoLast, toast, undoLatest } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import BoardScreen from '../components/BoardScreen.svelte';
   import BottomBar from '../components/BottomBar.svelte';
@@ -22,11 +22,14 @@
   import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
+  import DayPrompt from '../components/DayPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
   import Day from '../views/Day.svelte';
   import Timesheet from '../views/Timesheet.svelte';
   import Notes from '../views/Notes.svelte';
+  import Repeating from '../views/Repeating.svelte';
+  import Lists from '../views/Lists.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
@@ -34,11 +37,16 @@
   onMount(() => startShell((message) => (problem = message)));
   followDay();
 
+  // At home the Timesheet is hidden: leave it if the mode changes while it's open.
+  $effect(() => {
+    if (app.ready && !shownViews().includes(app.view)) untrack(() => setView('desk'));
+  });
+
   function order(v: View): number {
     return VIEWS.indexOf(v);
   }
 
-  /** The views slide in the direction you move (Desk → Day → Timesheet → Notes → Settings). */
+  /** The views slide in the direction you move (Desk → Day → … → Settings). */
   function slide(_node: Element, { out }: { out: boolean }) {
     const k = scale();
     const dir = order(app.view) > order(app.previousView) ? 1 : -1;
@@ -62,7 +70,7 @@
       altKey: event.altKey,
       shiftKey: event.shiftKey,
       typing,
-    });
+    }, shownViews());
     if (!s) return;
     switch (s.kind) {
       case 'capture':
@@ -74,10 +82,23 @@
         event.preventDefault();
         onLock();
         break;
+      case 'undo':
+        event.preventDefault();
+        if (!undoLatest()) toast('Nothing to undo.');
+        break;
+      case 'redo':
+        event.preventDefault();
+        if (!redoLast()) toast('Nothing to redo.');
+        break;
       case 'escape':
         if (menuOpen()) closeMenu();
         else if (app.captureOpen) app.captureOpen = false;
         else if (app.drawer) app.drawer = null;
+        break;
+      case 'just-today':
+        if (app.view !== 'desk' || menuOpen() || app.captureOpen || app.drawer) return;
+        event.preventDefault();
+        app.justToday = !app.justToday;
         break;
       case 'focus-log':
         if (menuOpen() || app.captureOpen || app.drawer) return;
@@ -122,6 +143,10 @@
             <Timesheet />
           {:else if app.view === 'notes'}
             <Notes />
+          {:else if app.view === 'repeating'}
+            <Repeating />
+          {:else if app.view === 'lists'}
+            <Lists />
           {:else}
             <Settings />
           {/if}
@@ -143,6 +168,7 @@
 <Drawer />
 <PaperMenu />
 <Toast />
+<DayPrompt />
 <ShortcutOverlay />
 
 <style>

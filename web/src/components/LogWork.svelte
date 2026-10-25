@@ -4,12 +4,13 @@
   import { api } from '../lib/api';
   import type { Capture } from '../lib/api';
   import type { Entry } from '../lib/api';
-  import { addDays, fmtMinutes } from '../lib/format';
+  import { addDays, fmtMinutes, weekdayLong } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
-  import { app, attempt, flashEntry, projectById, projectColor, refresh } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectById, projectColor, refresh, timeButtons, words } from '../lib/store.svelte';
+  import { hasHome, hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
 
-  const TIMES = [15, 30, 45, 60, 120];
+  const TIMES = $derived(timeButtons());
 
   let text = $state('');
   let seen = $state<Capture | null>(null);
@@ -36,7 +37,13 @@
     };
   });
 
+  // Home and Both (round 15): a Done button saves the line with no time; time stays optional.
+  const home = $derived(hasHome(app.prefs?.useMode));
+  const workToo = $derived(hasWork(app.prefs?.useMode));
+
   const repeats = $derived(repeatCandidates(app.selected, earlier, app.entries));
+  // The repeats come from the last day with work, which on a Monday is usually Friday.
+  const repeatDay = $derived(repeats[0] && repeats[0].date !== addDays(app.selected, -1) ? weekdayLong(repeats[0].date) : 'yesterday');
 
   $effect(() => {
     const serial = app.logFocus.serial;
@@ -108,7 +115,7 @@
     flashEntry(entry.id);
     toast(`Logged ${fmtMinutes(e.minutes)} of ${e.description}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   async function log(minutes: number, line = text) {
@@ -128,7 +135,11 @@
     flashEntry(entry.id);
     const existed = before.has(entry.id);
     toast(
-      existed
+      minutes === 0
+        ? existed
+          ? `${entry.description} is already down for today`
+          : `Done: ${entry.description}`
+        : existed
         ? `Added ${fmtMinutes(minutes)} to ${entry.description}`
         : `Logged ${fmtMinutes(minutes)}${entry.tickets.length ? ' on ' + entry.tickets.map((t) => t.number).join(', ') : ''}`,
       'Undo',
@@ -141,7 +152,15 @@
 </script>
 
 <div class="quick">
-  <label class="lbl" for="log-work">Log work · paste a ticket or say what you did, add a time or pick one</label>
+  <label class="lbl" for="log-work">
+    {#if home && !workToo}
+      {words().logWork} · type what you did and press Done; a time is optional
+    {:else if home}
+      Log work · say what you did and press Done, or paste a ticket and pick a time
+    {:else}
+      Log work · paste a ticket or say what you did, add a time or pick one
+    {/if}
+  </label>
   <div class="in">
     <input
       id="log-work"
@@ -158,11 +177,14 @@
           timesEl?.querySelector<HTMLButtonElement>('button')?.focus();
         }
       }}
-      placeholder="e.g. “patched print server 45m”"
+      placeholder={home && !workToo ? 'e.g. “paid the water bill”' : 'e.g. “patched print server 45m”'}
       autocomplete="off"
       spellcheck="false"
     />
     <span class="times" role="toolbar" tabindex="-1" aria-label="Log it as" bind:this={timesEl} onkeydown={timesKey}>
+      {#if home}
+        <button type="button" class="hbtn donebtn" disabled={working} onclick={() => log(0)} title="Save it with no time">✓ Done</button>
+      {/if}
       {#each TIMES as m (m)}
         <button type="button" class="hbtn" disabled={working} onclick={() => log(m)}>{fmtMinutes(m)}</button>
       {/each}
@@ -182,13 +204,13 @@
       {#if seen.minutes}
         <span class="lbl pick"><b class="mono">{fmtMinutes(seen.minutes)}</b> · <span class="kbd">Enter</span> logs it</span>
       {:else}
-        <span class="lbl pick">pick a time, or <span class="kbd">Enter</span> to jump to them</span>
+        <span class="lbl pick">{home ? 'press Done, or pick a time' : 'pick a time'}, or <span class="kbd">Enter</span> to jump to them</span>
       {/if}
     {/if}
   </div>
   {#if repeats.length > 0}
     <div class="repeat">
-      <span class="lbl">Same as yesterday</span>
+      <span class="lbl">Same as {repeatDay}</span>
       {#each repeats as r (r.id)}
         <button type="button" class="btn rep" disabled={working} onclick={() => repeat(r)} title="Log {fmtMinutes(r.minutes)} of {r.description} again">
           <span class="chip" style:--c={projectColor(r.projectId)}>{fmtMinutes(r.minutes)}</span>{r.description}
@@ -230,6 +252,11 @@
     gap: 6px;
     flex-wrap: wrap;
     align-items: center;
+  }
+
+  .donebtn {
+    font-weight: 700;
+    color: var(--ok);
   }
 
   .pick {

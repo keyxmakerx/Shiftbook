@@ -10,8 +10,8 @@ use shiftbook_storage::SqliteStore;
 use tauri::State;
 use uuid::Uuid;
 
-use crate::canvas::skip_missing;
 use crate::session::{CommandError, VaultSession};
+use shiftbook_app::desk::skip_missing;
 
 type Res<T> = Result<T, CommandError>;
 

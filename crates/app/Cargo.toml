@@ -1,0 +1,13 @@
+[package]
+name = "shiftbook-app"
+description = "Shiftbook app layer: views built from storage and core, shared by desktop and server."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+shiftbook-core.workspace = true
+shiftbook-storage.workspace = true
+serde.workspace = true
+uuid.workspace = true
+time.workspace = true

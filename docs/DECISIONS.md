@@ -2,6 +2,47 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 25 Oct 2026 (one item per ticket)
+- **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
+  write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
+  tray tickets, entry tickets and later tasks and chores point at, with one done tick, one
+  notepad and one follow-up date. Projects stay as they are. Built in four steps; anything
+  visible waits for its mockup on the sign-off sheet (card `r15-things`), which the owner
+  asked for before any UI change.
+- **Step 1 (built, nothing visible moves):** one item per ticket number (ignoring case).
+  Ticking a ticket done finishes it everywhere it appears; unticking reopens it from that
+  day on; its notepad is the same everywhere; pasting it again finds it (open again, with its
+  notepad and the project it was last given). Tickets from before items join theirs on
+  unlock: the newest row decides done and project, and different notepads are merged under
+  "Earlier note" lines so none is lost. A ticket number that comes back later is the same
+  ticket, reopened, with its old notes (recommended pick on the card).
+## Round 15 — 25 Oct 2026 (home use and repeating things)
+- **What's Shiftbook for?** (r15-home): a real goal, not a side mode. First run asks **Work,
+  Home or Both** after the recovery key; Settings → Look can change it any time. Home turns the
+  hours targets off (0 every day), locks after 60 minutes instead of 15, hides the Timesheet
+  (keys become 1 to 6) and the week-pack day options, shows home starter categories (Home,
+  Money, Health, Family, Car, Admin, Errands) and repeating kinds (Bills, Home upkeep, Car,
+  Health, Documents, Birthdays), and swaps words (Tickets → References, Meetings → Regular
+  events, MOP → Step-by-step guide, Log work → "Done something?"). Values the user added are
+  never touched. Both keeps the work words and adds the home pieces. Rules: `core::home`.
+- **Done without time** (r15-home): in Home and Both, Log work has a **✓ Done** button that saves
+  the line with no minutes; such entries show a tick instead of 0h. With no hours target the
+  Desk and Day count "things done" instead of the hours ring.
+- **Lists** (r15-home, built with Tasks/M4): reusable checklists (shopping, packing, before we go
+  away) on their own screen (key 6, or 5 at home). Paste several lines to add them all; **Reset
+  for next time** unticks everything and keeps the items. Stored as tasks with `is_list` and their
+  checklist items (migration 0016).
+- **Repeating things** (r15-recurring): the M3 recurring screen is built now (key 5, or 4 at
+  home): things that repeat (pick how often and when it's next due) or expire on a date (with how
+  often they renew). **Mark done** adds a no-time Done entry on the day, with Undo; things that
+  expire ask for the new expiry date. Overdue and due-soon things show on the Desk (**Due soon**)
+  and in the bell with Done. **Yearly** (already a starter frequency) covers birthdays and renewals.
+- **While you were away** (r15-recurring): on unlock (and when the day changes) the bell opens on
+  what came due, or what you said to chase, since Shiftbook was last open. No new plugin and no
+  system notifications. Last-open day is kept in prefs (`app.last_open`).
+- **Keys:** 1 Desk, 2 Day, 3 Timesheet, 4 Notes, 5 Repeating, 6 Lists, 7 Settings (at home the
+  Timesheet is hidden and the rest move up one).
+
 ## Round 15 — Android — 25 Oct 2026
 Proposal: [Shiftbook in your pocket](https://claude.ai/artifact/CufAB8vtd1KpGsRzwTH967);
 cards `r15-android` and `r15-android-ideas` (`tools/signoff/rounds/r15-android.json`). The
@@ -80,6 +121,11 @@ the screens are on the card and still need sign-off.
 - **Scroll wheel:** on the Desk it zooms around the pointer (was Ctrl + scroll; round 4).
   Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
   slide-out, the wheel scrolls that instead.
+
+## Round 13
+- **Desk steps 3 and 4** (boxes, the toolbox and folding boxes up; piles, drawers and Tidy
+  into stacks): shown as built, with nothing new to decide. Changes asked for after trying
+  them are in round 14.
 
 ## Round 12 — 19 Oct 2026
 - **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)

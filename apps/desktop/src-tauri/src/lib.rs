@@ -9,12 +9,15 @@ mod api;
 mod backoff;
 mod boards;
 mod canvas;
+mod home;
 mod meetings;
 mod notes;
 mod phone;
 mod pins;
 mod protect;
 mod session;
+#[cfg(test)]
+mod test_support;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
@@ -545,6 +548,8 @@ pub fn run() {
             meetings::save_meeting_series,
             meetings::set_meeting_series_deleted,
             meetings::meeting_note,
+            meetings::log_meeting,
+            meetings::skip_meeting,
             meetings::bell,
             api::add_entry_minutes,
             api::add_entry_time,
@@ -588,6 +593,10 @@ pub fn run() {
             api::set_next_up,
             api::tick_next_up,
             api::bring_up,
+            api::bring_up_days,
+            api::standup,
+            api::pasted_tickets,
+            api::find_day,
             api::list_responses,
             api::save_responses,
             api::where_was_i,
@@ -647,9 +656,36 @@ pub fn run() {
             pick_backup_file,
             check_backup,
             restore_backup,
+            home::recurring_list,
+            home::recurring_save,
+            home::recurring_done,
+            home::recurring_renewed,
+            home::recurring_undo,
+            home::recurring_set_deleted,
+            home::recurring_choices,
+            home::lists,
+            home::list_create,
+            home::list_rename,
+            home::list_set_deleted,
+            home::list_add_items,
+            home::list_item_done,
+            home::list_item_text,
+            home::list_item_deleted,
+            home::list_reset,
+            home::set_use_mode,
+            home::while_away,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Shiftbook");
+        .build(tauri::generate_context!())
+        .expect("error while building Shiftbook")
+        .run(|app, event| {
+            // Close the database before the process ends, so no connection is still
+            // closing on its own thread while the encryption library shuts down.
+            if let tauri::RunEvent::Exit = event {
+                if let Some(state) = app.try_state::<VaultSession>() {
+                    let _ = tauri::async_runtime::block_on(state.lock());
+                }
+            }
+        });
 }
 
 #[cfg(test)]

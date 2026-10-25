@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/core", "crates/storage", "apps/desktop/src-tauri"]
+members = ["crates/core", "crates/storage", "crates/app", "apps/desktop/src-tauri"]
 
 [workspace.package]
 version = "0.3.0"
@@ -10,6 +10,7 @@ publish = false
 [workspace.dependencies]
 shiftbook-core = { path = "crates/core" }
 shiftbook-storage = { path = "crates/storage" }
+shiftbook-app = { path = "crates/app" }
 serde = { version = "1.0.229", features = ["derive"] }
 uuid = { version = "1.28.0", features = ["v7", "serde"] }
 time = { version = "0.3.55", features = ["serde", "macros", "formatting", "parsing"] }

@@ -14,6 +14,8 @@ export const CARD_W = 220;
 export const CARD_H = 120;
 
 export const HOME: CanvasView = { x: 0, y: 0, zoom: 1 };
+/** The view the Desk opens with: shifted right so the first cards clear the toolbox and the Drawers button. */
+export const START: CanvasView = { x: 104, y: 0, zoom: 1 };
 
 const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 

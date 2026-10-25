@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-undo"
+description = "Enables the recurring_undo command without any pre-configured scope."
+commands.allow = ["recurring_undo"]
+
+[[permission]]
+identifier = "deny-recurring-undo"
+description = "Denies the recurring_undo command without any pre-configured scope."
+commands.deny = ["recurring_undo"]

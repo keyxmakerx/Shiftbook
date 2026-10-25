@@ -5,6 +5,7 @@
   // decided by the app (crates/core/src/resume.rs).
   import { api } from '../lib/api';
   import { cardLead, cardTitle, carryOnText, lastLogged } from '../lib/resume';
+  import { copyStandup } from '../lib/standup';
   import { app, attempt, focusLog, projectById, projectColor } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import TicketChip from './TicketChip.svelte';
@@ -75,6 +76,9 @@
       <button class="btn primary" type="button" onclick={carryOn}>Carry on</button>
       <button class="btn" type="button" onclick={somethingElse}>Something else</button>
       <button class="btn" type="button" onclick={later}>Later</button>
+      <button class="btn standup" type="button" title="Copies what you did on your last day and what you start with" onclick={() => void copyStandup()}>
+        Copy for stand-up
+      </button>
     </div>
   </section>
 {/if}

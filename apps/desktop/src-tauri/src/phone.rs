@@ -243,7 +243,7 @@ pub async fn plan_nudges<R: Runtime>(
     let prefs = store.prefs(owner).await?;
     let mut nudges = Vec::new();
     if let Some((date, at)) = nudge::due_reminder_at(&prefs, today, now) {
-        let count = crate::meetings::bell_on(&store, owner, date, at)
+        let count = crate::meetings::bell_for(&store, owner, date, at)
             .await?
             .len();
         nudges.extend(nudge::due_nudge(date, at, count));

@@ -10,7 +10,8 @@
   import { isSideways, slide, SWIPE_DONE_PX, SWIPE_MAX_PX, SWIPE_START_PX, swipeEnd } from '../lib/swipe';
   import { paperMenu } from '../lib/menu.svelte';
   import { closePanel, panel, togglePanel } from '../lib/panel.svelte';
-  import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, putEntry, refresh, words } from '../lib/store.svelte';
+  import { hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import ItemPanel from './ItemPanel.svelte';
@@ -172,11 +173,16 @@
   }}
   use:paperMenu={menu}
 >
-  <span class="h">{entry.hours}</span>
+  {#if entry.minutes === 0 && !entry.isTray}
+    <!-- Done without time (round 15): a tick, not "0h". -->
+    <span class="h done" title="Done">✓</span>
+  {:else}
+    <span class="h">{entry.hours}</span>
+  {/if}
   <span class="t">
     <b>{entry.description || 'Untitled'}</b>
     <small>
-      {project?.name ?? 'No project'}{#if entry.isTray}{' · from the Tickets tray'}{/if}{#if entry.notes}{` · ✎ ${firstLine(entry.notes)}`}{/if}
+      {project?.name ?? (hasWork(app.prefs?.useMode) ? 'No project' : 'Done')}{#if entry.isTray}{` · from the ${words().tickets} tray`}{/if}{#if entry.notes}{` · ✎ ${firstLine(entry.notes)}`}{/if}
     </small>
   </span>
   <span class="chips">
@@ -303,6 +309,11 @@
     color: var(--c);
     text-align: right;
     transition: color 0.4s;
+  }
+
+  .h.done {
+    color: var(--ok);
+    font-size: 18px;
   }
 
   .t {

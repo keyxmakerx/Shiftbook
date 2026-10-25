@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-item-text"
+description = "Enables the list_item_text command without any pre-configured scope."
+commands.allow = ["list_item_text"]
+
+[[permission]]
+identifier = "deny-list-item-text"
+description = "Denies the list_item_text command without any pre-configured scope."
+commands.deny = ["list_item_text"]

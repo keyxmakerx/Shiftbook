@@ -8,13 +8,14 @@
   import RecoveryKey from './pages/RecoveryKey.svelte';
   import Unlock from './pages/Unlock.svelte';
   import NewPassword from './pages/NewPassword.svelte';
+  import Purpose from './pages/Purpose.svelte';
   import Shell from './pages/Shell.svelte';
   import PhoneShell from './pages/PhoneShell.svelte';
   import { phone } from './lib/phone.svelte';
   import { timerBack, timerHidden } from './lib/timer.svelte';
   import { planNudges } from './lib/launch.svelte';
 
-  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
+  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
 
   let screen = $state<Screen>('loading');
   let problem = $state('');
@@ -34,7 +35,7 @@
       });
   });
 
-  const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'new-password');
+  const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'purpose' || screen === 'new-password');
 
   async function lockNow() {
     if (locking) return;
@@ -121,9 +122,11 @@
     {recoveryKey}
     onDone={() => {
       recoveryKey = null;
-      screen = 'app';
+      screen = 'purpose';
     }}
   />
+{:else if screen === 'purpose'}
+  <Purpose onDone={() => (screen = 'app')} />
 {:else if screen === 'unlock'}
   <Unlock onUnlocked={(mustSetPassword) => (screen = mustSetPassword ? 'new-password' : 'app')} />
 {:else if screen === 'new-password'}

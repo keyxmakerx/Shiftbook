@@ -2,13 +2,17 @@
 //! bottom bar. **Now** holds meetings about to start or just started; **Today** holds the
 //! rest of today's meetings, the things brought up for today, pins due to chase and the
 //! tickets still open.
-//! The badge counts everything in the panel. Recurring tasks join once they have screens.
+//! The badge counts everything in the panel. Repeating things that are overdue, due soon or
+//! need their expiry date moved join them (round 15), and after a day or more away the
+//! things that came due meanwhile open the panel as "While you were away".
 
 use serde::Serialize;
 use time::Date;
 
-use crate::meetings::{meeting_today, MeetingToday};
+use crate::dates::{format_date, parse_date};
+use crate::meetings::{meeting_finished, meeting_today, MeetingToday};
 use crate::model::{MeetingSeries, NextUpItem};
+use crate::recurring::{came_due_since, due_words, RecurringState};
 
 /// Which part of the panel an item is in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
@@ -33,6 +37,27 @@ pub enum BellAbout {
         /// Where it stands.
         state: MeetingToday,
     },
+    /// A meeting that just finished: log its usual length, other time, or skip (round 15).
+    MeetingDone {
+        /// The series.
+        series: String,
+        /// Its name, what the entry is called.
+        name: String,
+        /// How long it usually lasts, the time "Log" offers.
+        minutes: u32,
+        /// The project its time goes to, if set.
+        project: Option<String>,
+    },
+    /// This week's timesheet isn't entered yet (round 15, see `crate::reminder`).
+    #[serde(rename_all = "camelCase")]
+    Timesheet {
+        /// The week's first day.
+        week_start: String,
+        /// Logged in the week, as decimal hours.
+        hours: String,
+        /// Entries with no timesheet code yet.
+        uncoded: usize,
+    },
     /// A thing brought up for today ("Bring up tomorrow").
     BroughtUp {
         /// The list item.
@@ -46,6 +71,17 @@ pub enum BellAbout {
         card: String,
         /// Its chase date.
         on: String,
+    },
+    /// A repeating thing that needs attention (round 15).
+    Due {
+        /// The repeating thing's id.
+        id: String,
+        /// Overdue, due soon or renewed.
+        state: RecurringState,
+        /// When it is due, `YYYY-MM-DD`.
+        next_due: String,
+        /// Its warning window in days.
+        warn: u32,
     },
     /// Tickets worked on but not finished.
     StillOpen {
@@ -70,7 +106,7 @@ pub struct BellItem {
 pub type ChasePin = (String, String, Date);
 
 /// Everything for the bell at `now` (minutes after local midnight on `today`): meetings in
-/// start order, then things brought up (oldest first), then pins due to chase (longest
+/// start order (one that just finished offers to log its time instead), then things brought up (oldest first), then pins due to chase (longest
 /// waiting first), then still-open tickets as one item.
 pub fn bell_items(
     meetings: &[MeetingSeries],
@@ -81,9 +117,31 @@ pub fn bell_items(
     now: u32,
 ) -> Vec<BellItem> {
     let mut items: Vec<BellItem> = Vec::new();
-    let mut todays: Vec<(&MeetingSeries, MeetingToday)> = meetings
-        .iter()
-        .filter(|m| m.deleted_at.is_none())
+    let live = meetings.iter().filter(|m| m.deleted_at.is_none());
+    let mut finished: Vec<&MeetingSeries> = live
+        .clone()
+        .filter(|m| meeting_finished(&m.days, m.at, m.length_minutes, m.handled_on, today, now))
+        .collect();
+    finished.sort_by_key(|m| (m.at, m.name.to_lowercase()));
+    for m in &finished {
+        items.push(BellItem {
+            when: BellWhen::Now,
+            title: format!(
+                "{}, {} to {}",
+                m.name,
+                clock(m.at),
+                clock(m.at + m.length_minutes)
+            ),
+            about: BellAbout::MeetingDone {
+                series: m.id.to_string(),
+                name: m.name.clone(),
+                minutes: m.length_minutes,
+                project: m.project_id.map(|p| p.to_string()),
+            },
+        });
+    }
+    let mut todays: Vec<(&MeetingSeries, MeetingToday)> = live
+        .filter(|m| now < m.at + m.length_minutes)
         .filter_map(|m| meeting_today(&m.days, m.at, m.remind_minutes, today, now).map(|s| (m, s)))
         .collect();
     todays.sort_by_key(|(m, _)| (m.at, m.name.to_lowercase()));
@@ -151,6 +209,93 @@ pub fn bell_items(
     items
 }
 
+/// A repeating thing for the bell: its name, id, state, next due date and warning days.
+pub type DueThing = (String, String, RecurringState, Date, u32);
+
+/// The bell's line for a repeating thing, or `None` when it needs nothing yet.
+fn due_item(thing: &DueThing, today: Date) -> Option<BellItem> {
+    let (name, id, state, next, warn) = thing;
+    let left = crate::dates::days_between(today, *next);
+    let title = match state {
+        RecurringState::Overdue => format!("{name}: {}", due_words(left)),
+        RecurringState::DueSoon => format!("{name}: due {}", due_words(left)),
+        RecurringState::Renewed => format!("{name}: put in the new expiry date"),
+        _ => return None,
+    };
+    Some(BellItem {
+        when: BellWhen::Today,
+        title,
+        about: BellAbout::Due {
+            id: id.clone(),
+            state: *state,
+            next_due: format_date(*next),
+            warn: *warn,
+        },
+    })
+}
+
+/// `items` with the repeating things that need attention added, most urgent first, just
+/// before the still-open tickets.
+pub fn with_due(mut items: Vec<BellItem>, due: &[DueThing], today: Date) -> Vec<BellItem> {
+    let mut sorted: Vec<&DueThing> = due.iter().collect();
+    sorted.sort_by_key(|(name, _, state, next, _)| {
+        (
+            crate::recurring::attention_order(*state),
+            *next,
+            name.to_lowercase(),
+        )
+    });
+    let lines: Vec<BellItem> = sorted
+        .into_iter()
+        .filter_map(|t| due_item(t, today))
+        .collect();
+    let at = items
+        .iter()
+        .position(|i| matches!(i.about, BellAbout::StillOpen { .. }))
+        .unwrap_or(items.len());
+    items.splice(at..at, lines);
+    items
+}
+
+/// "While you were away" (round 15): the bell's items that came due after `last_open` and
+/// by `today`: repeating things whose warning window opened or that went overdue, pins
+/// whose chase day came and things brought up for a day in between. Meetings and open
+/// tickets are left out. Empty when Shiftbook was last open today (or never).
+pub fn while_away(items: &[BellItem], last_open: Option<Date>, today: Date) -> Vec<BellItem> {
+    let Some(last) = last_open.filter(|d| *d < today) else {
+        return Vec::new();
+    };
+    let new_day = |text: &str| parse_date(text).is_ok_and(|d| d > last && d <= today);
+    items
+        .iter()
+        .filter(|i| match &i.about {
+            BellAbout::Due { next_due, warn, .. } => {
+                parse_date(next_due).is_ok_and(|d| came_due_since(d, *warn, last, today))
+            }
+            BellAbout::Chase { on, .. } => new_day(on),
+            BellAbout::BroughtUp { from, .. } => new_day(from),
+            BellAbout::Meeting { .. }
+            | BellAbout::StillOpen { .. }
+            | BellAbout::MeetingDone { .. }
+            | BellAbout::Timesheet { .. } => false,
+        })
+        .cloned()
+        .collect()
+}
+
+/// The timesheet reminder, shown first under Now.
+pub fn timesheet_item(week_start: Date, hours: &str, uncoded: usize) -> BellItem {
+    BellItem {
+        when: BellWhen::Now,
+        title: "This week's timesheet isn't entered yet".into(),
+        about: BellAbout::Timesheet {
+            week_start: crate::dates::format_date(week_start),
+            hours: hours.into(),
+            uncoded,
+        },
+    }
+}
+
 /// `HH:MM` for minutes after midnight.
 pub fn clock(minutes: u32) -> String {
     format!("{:02}:{:02}", minutes / 60 % 24, minutes % 60)
@@ -172,6 +317,9 @@ mod tests {
             days: [true, false, true, false, false, false, false],
             at,
             remind_minutes: 15,
+            length_minutes: 30,
+            project_id: None,
+            handled_on: None,
             created_at: datetime!(2026-10-01 09:00 UTC),
             updated_at: datetime!(2026-10-01 09:00 UTC),
             deleted_at: None,
@@ -217,6 +365,33 @@ mod tests {
     }
 
     #[test]
+    fn a_finished_meeting_offers_to_log_its_time_until_handled() {
+        let mut ops = series("Weekly ops", 10 * 60);
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 31);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].when, BellWhen::Now);
+        assert_eq!(items[0].title, "Weekly ops, 10:00 to 10:30");
+        assert_eq!(
+            items[0].about,
+            BellAbout::MeetingDone {
+                series: ops.id.to_string(),
+                name: "Weekly ops".into(),
+                minutes: 30,
+                project: None
+            }
+        );
+        // A short meeting shows as finished rather than started.
+        ops.length_minutes = 10;
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 12);
+        assert!(matches!(
+            items[0].about,
+            BellAbout::MeetingDone { minutes: 10, .. }
+        ));
+        ops.handled_on = Some(MON);
+        assert!(bell_items(&[ops], &[], &[], &[], MON, 10 * 60 + 12).is_empty());
+    }
+
+    #[test]
     fn quiet_when_nothing_is_due() {
         let mut gone = series("Old", 10 * 60);
         gone.deleted_at = Some(datetime!(2026-10-10 09:00 UTC));
@@ -235,6 +410,97 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].title, "1 ticket still open");
         assert_eq!(clock(9 * 60 + 5), "09:05");
+    }
+
+    fn thing(name: &str, state: RecurringState, next: Date, warn: u32) -> DueThing {
+        (name.into(), format!("id-{name}"), state, next, warn)
+    }
+
+    #[test]
+    fn repeating_things_go_before_open_tickets() {
+        let open = vec!["INC1".to_string()];
+        let base = bell_items(&[], &[], &[], &open, MON, 600);
+        let due = [
+            thing(
+                "Bins out",
+                RecurringState::DueSoon,
+                date!(2026 - 10 - 20),
+                1,
+            ),
+            thing(
+                "Boiler filter",
+                RecurringState::Overdue,
+                date!(2026 - 10 - 16),
+                7,
+            ),
+            thing("Passport", RecurringState::Ok, date!(2029 - 08 - 12), 180),
+            thing(
+                "Car insurance",
+                RecurringState::Renewed,
+                date!(2027 - 11 - 06),
+                30,
+            ),
+        ];
+        let items = with_due(base, &due, MON);
+        let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            [
+                "Boiler filter: 3 days late",
+                "Car insurance: put in the new expiry date",
+                "Bins out: due tomorrow",
+                "1 ticket still open"
+            ]
+        );
+    }
+
+    #[test]
+    fn while_away_keeps_only_what_came_due_meanwhile() {
+        let last = date!(2026 - 10 - 16);
+        let next_up = [
+            brought("old news", date!(2026 - 10 - 15)),
+            brought("ring the garage", date!(2026 - 10 - 18)),
+        ];
+        let pins = [(
+            "Claim 77812".to_string(),
+            "tray:c".to_string(),
+            date!(2026 - 10 - 17),
+        )];
+        let base = bell_items(
+            &[series("Weekly ops", 600)],
+            &next_up,
+            &pins,
+            &["INC1".into()],
+            MON,
+            590,
+        );
+        let due = [
+            thing(
+                "Bins out",
+                RecurringState::Overdue,
+                date!(2026 - 10 - 17),
+                1,
+            ),
+            thing(
+                "Seen before",
+                RecurringState::DueSoon,
+                date!(2026 - 10 - 25),
+                20,
+            ),
+        ];
+        let items = with_due(base, &due, MON);
+        let away = while_away(&items, Some(last), MON);
+        let titles: Vec<&str> = away.iter().map(|i| i.title.as_str()).collect();
+        assert_eq!(
+            titles,
+            [
+                "ring the garage",
+                "Chase: Claim 77812",
+                "Bins out: 2 days late"
+            ]
+        );
+        assert!(while_away(&items, Some(MON), MON).is_empty());
+        assert!(while_away(&items, None, MON).is_empty());
     }
 
     #[test]
