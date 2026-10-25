@@ -6,9 +6,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, stays_in_just_today, ticket_home, timeline, tray_place,
-    work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState, TrayPlace,
-    ORIGIN, RECENT_DAYS,
+    area_at, auto_links, auto_place, box_status, is_recent, stays_in_just_today, ticket_home,
+    timeline, tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText,
+    MemberState, TrayPlace, ORIGIN, RECENT_DAYS,
 };
 use shiftbook_core::dates::format_date;
 use shiftbook_core::hours::format_hours;
