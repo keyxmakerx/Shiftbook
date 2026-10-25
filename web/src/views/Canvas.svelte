@@ -928,7 +928,7 @@
     await load();
     toast('Pasted as a jot. It’s in Notes too.', 'Undo', () => {
       void attempt(() => api.setNoteDeleted(note.id, true)).then(load);
-    });
+    }, () => void attempt(() => api.setNoteDeleted(note.id, false)).then(load));
   }
 
   async function pastedTime(minutes: number) {

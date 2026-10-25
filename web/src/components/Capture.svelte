@@ -31,7 +31,8 @@
   } from '../lib/store.svelte';
   import { copyStandup } from '../lib/standup';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
-  import { toast } from '../lib/toast.svelte';
+  import { changes, toast, undoBack } from '../lib/toast.svelte';
+  import { agoText, type Change } from '../lib/undoHistory';
   import { trapTab } from '../lib/trap';
   import { openWindow } from '../lib/windows.svelte';
 
@@ -52,6 +53,7 @@
     | { kind: 'note'; note: Note }
     | { kind: 'ticket'; ticket: TrayItem }
     | { kind: 'day'; date: string; sheet: boolean }
+    | { kind: 'change'; change: Change; after: number }
     | { kind: 'command'; command: Command };
 
   const GROUPS: Group[] = ['Go to', 'Do', 'Settings'];
@@ -179,6 +181,13 @@
       hits = [];
       return;
     }
+    if (now.trim().toLowerCase() === 'undo') {
+      seen = null;
+      const list = [...changes.list].reverse();
+      hits = list.map((change, after): Hit => ({ kind: 'change', change, after }));
+      sel = 0;
+      return;
+    }
     if (now.trim().toLowerCase() === 'help') {
       seen = null;
       hits = grouped(commands).map((command): Hit => ({ kind: 'command', command }));
@@ -241,7 +250,7 @@
     flashEntry(entry.id);
     toast('Today booked as holiday', 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   async function toInbox(line: string) {
@@ -251,13 +260,15 @@
     await attempt(refreshInbox);
     toast('Saved to the Inbox', 'Undo', () => {
       void attempt(() => api.setInboxDeleted(item.id, true)).then(() => attempt(refreshInbox));
-    });
+    }, () => void attempt(() => api.setInboxDeleted(item.id, false)).then(() => attempt(refreshInbox)));
   }
 
   async function open(hit: Hit) {
     close();
     if (hit.kind === 'command') {
       await hit.command.run();
+    } else if (hit.kind === 'change') {
+      undoBack(hit.change.id);
     } else if (hit.kind === 'day') {
       await selectDay(hit.date);
       setView(hit.sheet ? 'timesheet' : 'day');
@@ -281,6 +292,8 @@
   async function submit(toInboxAnyway: boolean) {
     const line = text.trim();
     if (!line) return;
+    // "undo" and "help" are words for Find, not something to keep.
+    if (!toInboxAnyway && hits.length === 0 && ['undo', 'help'].includes(line.toLowerCase())) return;
     if (!toInboxAnyway && !logging && hits[sel]) {
       await open(hits[sel]);
       return;
@@ -300,7 +313,7 @@
     const when = entry.date === app.today ? 'today' : `on ${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
     toast(`Logged ${fmtMinutes(parsed.minutes)} ${when}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   function move(step: number) {
@@ -324,6 +337,8 @@
             ? 'Inbox'
             : hit.kind === 'day'
               ? 'Days'
+              : hit.kind === 'change'
+                ? 'Recent changes, newest first'
               : hit.command.group;
   }
 </script>
@@ -379,6 +394,8 @@
       {#if seen.description}
         <span class="tok" style:--c="var(--ink)"><em>what</em>{seen.description}</span>
       {/if}
+    {:else if text.trim().toLowerCase() === 'undo' && hits.length === 0}
+      <span class="none">Nothing to undo yet. Changes with an Undo button show here.</span>
     {:else if text.trim() && hits.length === 0}
       <span class="none">Nothing found. <span class="kbd">Enter</span> saves it to the Inbox; add a time like 30m to log it.</span>
     {/if}
@@ -417,6 +434,10 @@
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
             <span class="what"><b>{hit.note.title}</b>
               <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}</small></span>
+          {:else if hit.kind === 'change'}
+            <i class="dot cmd" aria-hidden="true">↶</i>
+            <span class="what"><b>Undo: {hit.change.text}</b>
+              <small>{agoText(hit.change.at, Date.now())}{hit.after ? ` · also undoes the ${hit.after === 1 ? 'one' : hit.after} after it` : ''}</small></span>
           {:else if hit.kind === 'day'}
             <i class="dot cmd" aria-hidden="true">›</i>
             {#if hit.sheet}

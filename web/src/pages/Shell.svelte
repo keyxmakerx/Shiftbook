@@ -16,7 +16,7 @@
   import { noticeReturn } from '../lib/resume';
   import { restoreTimer, timerActivity } from '../lib/timer.svelte';
   import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
-  import { toast } from '../lib/toast.svelte';
+  import { redoLast, toast, undoLatest } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import BoardScreen from '../components/BoardScreen.svelte';
   import BottomBar from '../components/BottomBar.svelte';
@@ -116,6 +116,14 @@
       case 'lock':
         event.preventDefault();
         onLock();
+        break;
+      case 'undo':
+        event.preventDefault();
+        if (!undoLatest()) toast('Nothing to undo.');
+        break;
+      case 'redo':
+        event.preventDefault();
+        if (!redoLast()) toast('Nothing to redo.');
         break;
       case 'escape':
         if (menuOpen()) closeMenu();

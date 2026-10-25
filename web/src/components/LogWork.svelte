@@ -108,7 +108,7 @@
     flashEntry(entry.id);
     toast(`Logged ${fmtMinutes(e.minutes)} of ${e.description}`, 'Undo', () => {
       void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    });
+    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
   async function log(minutes: number, line = text) {

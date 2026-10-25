@@ -93,7 +93,7 @@ export async function removeEntry(entry: Entry): Promise<void> {
   await refresh();
   toast(`Deleted “${title}”`, 'Undo', () => {
     void attempt(() => api.restoreEntry(id)).then(refresh);
-  });
+  }, () => void attempt(() => api.deleteEntry(id)).then(refresh));
 }
 
 async function logAgainToday(entry: Entry) {
@@ -108,7 +108,7 @@ async function logAgainToday(entry: Entry) {
   flashEntry(created.id);
   toast(`Logged 0.5 h of “${created.description}” today`, 'Undo', () => {
     void attempt(() => api.deleteEntry(created.id)).then(refresh);
-  });
+  }, () => void attempt(() => api.restoreEntry(created.id)).then(refresh));
 }
 
 async function copyTickets(entry: Entry) {

@@ -1,6 +1,7 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–5 switch views, Ctrl+L locks, Ctrl +/−/0
+// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–5 switch views, Ctrl+L locks,
+// Ctrl+Z undoes and Ctrl+Shift+Z redoes, Ctrl +/−/0
 // change the text size, Esc closes
 // the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
@@ -27,7 +28,9 @@ export type Shortcut =
   | { kind: 'view'; view: View }
   | { kind: 'escape' }
   | { kind: 'zoom'; step: -1 | 0 | 1 }
-  | { kind: 'menu-key' };
+  | { kind: 'menu-key' }
+  | { kind: 'undo' }
+  | { kind: 'redo' };
 
 export interface KeyInfo {
   key: string;
@@ -47,6 +50,9 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
   if (mod && !e.altKey && (e.key === '=' || e.key === '+')) return { kind: 'zoom', step: 1 };
   if (mod && !e.altKey && (e.key === '-' || e.key === '_')) return { kind: 'zoom', step: -1 };
   if (mod && !e.altKey && e.key === '0') return { kind: 'zoom', step: 0 };
+  // In a text box Ctrl+Z stays the box's own undo.
+  if (mod && !e.altKey && !e.typing && e.key.toLowerCase() === 'z') return { kind: e.shiftKey ? 'redo' : 'undo' };
+  if (mod && !e.altKey && !e.typing && e.key.toLowerCase() === 'y') return { kind: 'redo' };
   if (e.key === 'Escape') return { kind: 'escape' };
   if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) return { kind: 'menu-key' };
   if (mod || e.altKey || e.typing) return null;
@@ -70,6 +76,8 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },
   { keys: 'Ctrl +  Ctrl −', what: 'Bigger or smaller text (Ctrl 0 for normal)' },
+  { keys: 'Ctrl Z', what: 'Undo the last change (type "undo" in Find for the list)' },
+  { keys: 'Ctrl Shift Z', what: 'Redo it' },
   { keys: 'Ctrl L', what: 'Lock now' },
   { keys: 'Esc', what: 'Close the top menu or panel' },
 ];

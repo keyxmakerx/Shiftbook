@@ -26,6 +26,7 @@ export async function setTrayDone(item: TrayItem, done: boolean): Promise<void> 
     done ? `${item.ticket} is done` : `${item.ticket} is still open. It comes back each day until you tick it.`,
     'Undo',
     () => void attempt(() => api.traySetDone(item.id, !done)).then(applyTray),
+    () => void attempt(() => api.traySetDone(item.id, done)).then(applyTray),
   );
 }
 
@@ -48,7 +49,7 @@ export async function removeTray(item: TrayItem): Promise<void> {
   await applyTray(await attempt(() => api.trayRemove(item.id)));
   toast(`Took ${item.ticket} out of the tray`, 'Undo', () => {
     void attempt(() => api.trayRestore(item.id)).then(applyTray);
-  });
+  }, () => void attempt(() => api.trayRemove(item.id)).then(applyTray));
 }
 
 async function stepTray(item: TrayItem, by: number) {

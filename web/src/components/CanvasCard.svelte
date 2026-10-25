@@ -222,7 +222,7 @@
                     onchanged();
                     toast(`Archived “${note.title}”`, 'Undo', () => {
                       void attempt(() => api.setNoteArchived(note.id, false)).then(onchanged);
-                    });
+                    }, () => void attempt(() => api.setNoteArchived(note.id, true)).then(onchanged));
                   }),
               },
             ],
@@ -251,7 +251,7 @@
                     void attempt(refreshInbox);
                     toast('Removed from the Inbox', 'Undo', () => {
                       void attempt(() => api.setInboxDeleted(scrap.id, false)).then(() => attempt(refreshInbox));
-                    });
+                    }, () => void attempt(() => api.setInboxDeleted(scrap.id, true)).then(() => attempt(refreshInbox)));
                   }),
               },
             ],
