@@ -1333,6 +1333,13 @@ pub async fn bring_up(
     Ok(next_up_views(vec![item]).remove(0))
 }
 
+/// Maps to `DataApi.pastedTickets()`: the tickets in text pasted on the Desk, or `None`
+/// when it isn't only tickets (then it becomes a jot).
+#[tauri::command]
+pub fn pasted_tickets(text: String) -> Option<Vec<String>> {
+    shiftbook_core::capture::pasted_tickets(&text)
+}
+
 /// Maps to `DataApi.standup()`: "Copy for stand-up" from `today`. "Done" is the last day
 /// before today with entries (within two weeks), "next" what you start with today: things
 /// brought up for today, then the wrap-up list.

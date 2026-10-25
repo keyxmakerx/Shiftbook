@@ -78,6 +78,7 @@
     "allow-bring-up",
     "allow-bring-up-days",
     "allow-standup",
+    "allow-pasted-tickets",
     "allow-list-responses",
     "allow-save-responses",
     "allow-where-was-i",

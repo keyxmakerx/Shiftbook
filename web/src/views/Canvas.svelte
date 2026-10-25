@@ -33,6 +33,7 @@
     CanvasStack,
     CardKind,
     CardRef,
+    TrayItem,
   } from '../lib/api';
   import {
     areaAt,
@@ -55,12 +56,14 @@
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
   import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
-  import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { menuOpen, openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BoxPrompt from '../components/BoxPrompt.svelte';
+  import PastePrompt from '../components/PastePrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
   import CanvasPile from '../components/CanvasPile.svelte';
   import DrawerPanel from '../components/DrawerPanel.svelte';
@@ -115,6 +118,13 @@
   let anchorAt = $state({ x: 0, y: 0 });
   let jot = $state<{ x: number; y: number; text: string } | null>(null);
   let panning = $state(false);
+  /** The pointer's last spot over the Desk, in board pixels, for pasting there. */
+  let pointer = { sx: 0, sy: 0, over: false };
+  /** Tickets just pasted on the Desk, asking "Time on them so far?". */
+  let pasted = $state<{ sx: number; sy: number; ids: string[] } | null>(null);
+  const pastedItems = $derived(
+    pasted ? pasted.ids.map((id) => app.tray?.items.find((i) => i.id === id)).filter((i): i is TrayItem => !!i) : [],
+  );
 
   $effect(() => {
     lastView = view;
@@ -879,6 +889,48 @@
     toast('Jotted down. It’s in Notes too.');
   }
 
+  // ----- paste anywhere on the Desk (round 15) -----
+  // Ctrl+V while nothing is being typed in: only tickets → the Tickets tray, asking the time
+  // so far; anything else → a jot where the pointer is. Which is which: crates/core.
+  async function pasteOnDesk(e: ClipboardEvent) {
+    if (!board || app.captureOpen || menuOpen() || jot || drawn) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    const spot = pointer.over ? pointer : { sx: board.clientWidth / 2, sy: board.clientHeight / 3 };
+    const tickets = await attempt(() => api.pastedTickets(text));
+    if (tickets === undefined) return;
+    if (tickets) {
+      const before = new Set(app.tray?.date === app.today ? app.tray.items.map((i) => i.id) : []);
+      const day = await attempt(() => api.trayAdd(app.today, tickets.join('\n')));
+      if (!day) return;
+      const added = day.items.filter((i) => !before.has(i.id) && tickets.includes(i.ticket)).map((i) => i.id);
+      await applyTray(day);
+      await load();
+      if (added.length) pasted = { sx: Math.min(spot.sx, board.clientWidth - 320), sy: Math.min(spot.sy, board.clientHeight - 150), ids: added };
+      else toast(tickets.length === 1 ? `${tickets[0]} is already in the tray.` : 'Those tickets are already in the tray.');
+      return;
+    }
+    const at = toCanvas(view, spot.sx, spot.sy);
+    const note = await attempt(() => api.createNote({ kind: 'jot', title: '', body: text.trim(), projectId: null, tags: '' }));
+    if (!note) return;
+    await attempt(() => api.canvasMove('note' as CardKind, note.id, Math.round(at.x), Math.round(at.y)));
+    await load();
+    toast('Pasted as a jot. It’s in Notes too.', 'Undo', () => {
+      void attempt(() => api.setNoteDeleted(note.id, true)).then(load);
+    });
+  }
+
+  async function pastedTime(minutes: number) {
+    const items = pastedItems;
+    pasted = null;
+    for (const item of items) {
+      if (item.minutes !== minutes) await applyTray(await attempt(() => api.traySetMinutes(item.id, minutes)));
+    }
+  }
+
   async function emptyMenu(e: MouseEvent) {
     e.preventDefault();
     const { sx, sy } = boardPoint(e);
@@ -911,6 +963,8 @@
   }
 </script>
 
+<svelte:window onpaste={(e) => void pasteOnDesk(e)} />
+
 <div class="desk" class:closed={!panel} class:dragging>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -919,6 +973,11 @@
     class:drawing={mode === 'free' && tool !== 'hand'}
     bind:this={board}
     onpointerdown={panStart}
+    onpointermove={(e) => {
+      const p = boardPoint(e);
+      pointer = { ...p, over: true };
+    }}
+    onpointerleave={() => (pointer.over = false)}
     ondragstart={(e) => e.preventDefault()}
     ondblclick={(e) => {
       if ((e.target as HTMLElement).closest('.tools')) return;
@@ -1035,6 +1094,9 @@
     {#if band}
       {@const r = rectFrom({ x: band.x0, y: band.y0 }, { x: band.x1, y: band.y1 })}
       <span class="band" class:drawing={band.drawing} style:left="{r.x}px" style:top="{r.y}px" style:width="{r.w}px" style:height="{r.h}px"></span>
+    {/if}
+    {#if pasted && pastedItems.length}
+      <PastePrompt x={pasted.sx} y={pasted.sy} items={pastedItems} onpick={(m) => void pastedTime(m)} onclose={() => (pasted = null)} />
     {/if}
     {#if drawn}
       {@const r = drawn.rect}

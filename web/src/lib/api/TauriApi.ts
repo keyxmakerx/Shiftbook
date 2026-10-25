@@ -383,6 +383,9 @@ export class TauriApi implements DataApi {
   bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem> {
     return call('bring_up', { today, kind, id, title, on: on ?? null });
   }
+  pastedTickets(text: string): Promise<string[] | null> {
+    return call('pasted_tickets', { text });
+  }
   standup(today: IsoDate): Promise<string> {
     return call('standup', { today });
   }

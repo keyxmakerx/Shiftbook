@@ -935,6 +935,8 @@ export interface DataApi {
    * one), or without `on` on the next work day after `today`.
    */
   bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
+  /** The tickets in text pasted on the Desk, or null when it isn't only tickets. */
+  pastedTickets(text: string): Promise<string[] | null>;
   /** "Copy for stand-up": the last day with work, then what you start with today. */
   standup(today: IsoDate): Promise<string>;
   /** The days "Bring up…" offers from `today`: a few work days and next week's first. */

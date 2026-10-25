@@ -227,6 +227,22 @@ fn tickets_in_word(word: &str) -> Option<Vec<String>> {
     parts.into_iter().map(ticket).collect()
 }
 
+/// The tickets in pasted text when every word is a ticket (`INC1 INC2`, one per line, or
+/// `INC1, INC2`), upper-cased and without repeats; `None` when any word isn't one or there
+/// are none. Used by "paste anywhere on the Desk" (round 15): tickets go to the Tickets
+/// tray, anything else becomes a jot.
+pub fn pasted_tickets(text: &str) -> Option<Vec<String>> {
+    let mut out: Vec<String> = Vec::new();
+    for word in text.split_whitespace() {
+        for t in tickets_in_word(word)? {
+            if !out.contains(&t) {
+                out.push(t);
+            }
+        }
+    }
+    (!out.is_empty()).then_some(out)
+}
+
 /// One ticket, upper-cased, if `text` looks like one (see the module docs).
 pub fn ticket(text: &str) -> Option<String> {
     let text = trim_punctuation(text);
@@ -561,5 +577,19 @@ mod tests {
         assert_eq!(json["hoursText"], "1h");
         assert_eq!(json["date"], "2026-10-15");
         assert_eq!(json["tickets"][0], "INC0045678");
+    }
+
+    #[test]
+    fn pasted_text_is_tickets_only_when_every_word_is_one() {
+        assert_eq!(
+            pasted_tickets("INC0045712\nritm0012399, INC0045712"),
+            Some(vec!["INC0045712".into(), "RITM0012399".into()])
+        );
+        assert_eq!(pasted_tickets("guest wifi drops again INC0045712"), None);
+        assert_eq!(pasted_tickets("   "), None);
+        assert_eq!(
+            pasted_tickets("PROJ-123 (CHG0012345)"),
+            Some(vec!["PROJ-123".into(), "CHG0012345".into()])
+        );
     }
 }

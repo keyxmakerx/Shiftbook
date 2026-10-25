@@ -359,6 +359,7 @@ pub fn run() {
             api::bring_up,
             api::bring_up_days,
             api::standup,
+            api::pasted_tickets,
             api::list_responses,
             api::save_responses,
             api::where_was_i,
