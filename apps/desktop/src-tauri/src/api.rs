@@ -1333,6 +1333,54 @@ pub async fn bring_up(
     Ok(next_up_views(vec![item]).remove(0))
 }
 
+/// Maps to `DataApi.standup()`: "Copy for stand-up" from `today`. "Done" is the last day
+/// before today with entries (within two weeks), "next" what you start with today: things
+/// brought up for today, then the wrap-up list.
+#[tauri::command]
+pub async fn standup(s: State<'_, VaultSession>, today: String) -> Res<String> {
+    use shiftbook_core::standup::{standup_text, DoneLine};
+    let today = date_arg(&today)?;
+    let (store, owner) = s.data().await?;
+    let prefs = store.prefs(owner).await?;
+    let earlier = store
+        .list_entries(owner, add_days(today, -14), add_days(today, -1))
+        .await?;
+    let last_day = earlier.iter().map(|r| r.entry.date).max();
+    let mut done = Vec::new();
+    let mut closed = 0;
+    if let Some(day) = last_day {
+        done = earlier
+            .iter()
+            .filter(|r| r.entry.date == day && !r.is_tray)
+            .map(|r| DoneLine {
+                title: r.entry.description.clone(),
+                tickets: r.tickets.iter().map(|t| t.ticket_number.clone()).collect(),
+            })
+            .collect();
+        closed = store
+            .tray_day(owner, day)
+            .await?
+            .items
+            .iter()
+            .filter(|i| i.done)
+            .count();
+    }
+    let open: Vec<_> = store
+        .next_up_all(owner)
+        .await?
+        .into_iter()
+        .filter(|i| i.done_at.is_none() && i.show_from.is_none_or(|d| d <= today))
+        .collect();
+    let next: Vec<String> = open
+        .iter()
+        .filter(|i| i.show_from.is_some())
+        .chain(open.iter().filter(|i| i.show_from.is_none()))
+        .map(|i| i.text.clone())
+        .collect();
+    let words = &prefs.standup_words;
+    Ok(standup_text((&words.0, &words.1), &done, closed, &next))
+}
+
 /// Maps to `DataApi.tickNextUp()`.
 #[tauri::command]
 pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) -> Res<()> {

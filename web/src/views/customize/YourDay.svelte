@@ -1,6 +1,7 @@
 <script lang="ts">
   // Settings → Your day: the Day ring's target for each weekday, the optional
-  // end-of-day wrap-up (round 7) and the optional timer (off by default).
+  // end-of-day wrap-up (round 7), the optional timer (off by default) and the headings of
+  // "Copy for stand-up" (round 15).
   import { app, savePref } from '../../lib/store.svelte';
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -18,6 +19,11 @@
     const targets = [...prefs.dayTargets];
     targets[day] = Math.round(hours * 60);
     await savePref('day.targets', targets.join(','));
+  }
+
+  async function setWords(done: string, next: string) {
+    if (!done.trim() || !next.trim()) return;
+    await savePref('day.standup_words', `${done.trim()}|${next.trim()}`);
   }
 
   let wrapTime = $state('17:00');
@@ -92,6 +98,34 @@
       Show the timer
     </label>
   </article>
+
+  <article class="paper cz-card">
+    <h3>Copy for stand-up</h3>
+    <p class="sub">
+      "Copy for stand-up" on Where was I? (or in Find) copies what you did on your last day with
+      work, then what you start with today. Name the two parts the way your team says them.
+    </p>
+    <div class="cz-row">
+      <label class="word">
+        <span>What you did</span>
+        <input
+          class="text-in"
+          maxlength="20"
+          value={prefs.standupWords[0]}
+          onchange={(e) => setWords((e.currentTarget as HTMLInputElement).value, prefs.standupWords[1])}
+        />
+      </label>
+      <label class="word">
+        <span>What's next</span>
+        <input
+          class="text-in"
+          maxlength="20"
+          value={prefs.standupWords[1]}
+          onchange={(e) => setWords(prefs.standupWords[0], (e.currentTarget as HTMLInputElement).value)}
+        />
+      </label>
+    </div>
+  </article>
 {/if}
 
 <style>
@@ -126,5 +160,17 @@
 
   .time {
     width: 120px;
+  }
+
+  .word {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+
+  .word input {
+    width: 160px;
   }
 </style>

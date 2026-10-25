@@ -80,6 +80,8 @@ export interface Prefs {
   windows: WindowSpot[];
   /** Where the Desk's "Done today" pile sits; null places it automatically. */
   donePile: [number, number] | null;
+  /** The headings of "Copy for stand-up": what was done, what's next. */
+  standupWords: [string, string];
 }
 
 /** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
@@ -168,7 +170,8 @@ export type PrefKey =
   | 'timer.paused'
   | 'notes.auto_archive_days'
   | 'ui.windows'
-  | 'desk.done_pile';
+  | 'desk.done_pile'
+  | 'day.standup_words';
 
 export interface Project {
   id: string;
@@ -932,6 +935,8 @@ export interface DataApi {
    * one), or without `on` on the next work day after `today`.
    */
   bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
+  /** "Copy for stand-up": the last day with work, then what you start with today. */
+  standup(today: IsoDate): Promise<string>;
   /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
   bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */

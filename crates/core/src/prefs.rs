@@ -48,6 +48,10 @@ pub const KEY_WINDOWS: &str = "ui.windows";
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
 /// Where the Desk's "Done today" pile sits, `x y` in canvas units, or blank for automatic.
 pub const KEY_DONE_PILE: &str = "desk.done_pile";
+/// The two headings of "Copy for stand-up", `done|next` (e.g. `Yesterday|Today`).
+pub const KEY_STANDUP_WORDS: &str = "day.standup_words";
+/// Longest stand-up heading.
+pub const MAX_STANDUP_WORD_CHARS: usize = 20;
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -177,6 +181,8 @@ pub struct Prefs {
     pub windows: Vec<crate::windows::WindowSpot>,
     /// Where the Desk's "Done today" pile sits; `None` places it automatically.
     pub done_pile: Option<(i32, i32)>,
+    /// The headings of "Copy for stand-up": what was done, what's next.
+    pub standup_words: (String, String),
 }
 
 impl Prefs {
@@ -204,6 +210,10 @@ impl Default for Prefs {
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
             done_pile: None,
+            standup_words: (
+                crate::standup::DEFAULT_WORDS.0.to_string(),
+                crate::standup::DEFAULT_WORDS.1.to_string(),
+            ),
         }
     }
 }
@@ -242,6 +252,19 @@ fn parse_spot(value: &str) -> Option<(i32, i32)> {
         x.trim().parse().ok()?,
         y.trim().parse().ok()?,
     ))
+}
+
+/// Read a `day.standup_words` value: two short headings split by `|`.
+fn parse_standup_words(value: &str) -> Option<(String, String)> {
+    let (a, b) = value.split_once('|')?;
+    let ok = |w: &str| {
+        let w = w.trim();
+        let n = w.chars().count();
+        ((1..=MAX_STANDUP_WORD_CHARS).contains(&n)
+            && !w.chars().any(|c| c.is_control() || c == '|'))
+        .then(|| w.to_string())
+    };
+    Some((ok(a)?, ok(b)?))
 }
 
 /// Check a preference before saving. Returns the value to store. Unknown keys
@@ -315,6 +338,9 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                     .ok_or_else(|| invalid(value))
             }
         }
+        KEY_STANDUP_WORDS => parse_standup_words(v)
+            .map(|(a, b)| format!("{a}|{b}"))
+            .ok_or_else(|| invalid(value)),
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -379,6 +405,11 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             }
             KEY_WINDOWS => prefs.windows = crate::windows::parse_windows(&v),
             KEY_DONE_PILE => prefs.done_pile = parse_spot(&v),
+            KEY_STANDUP_WORDS => {
+                if let Some(words) = parse_standup_words(&v) {
+                    prefs.standup_words = words;
+                }
+            }
             _ => {}
         }
     }
@@ -401,6 +432,20 @@ mod tests {
         let p = prefs_from_settings(&[(KEY_DONE_PILE, far.as_str())]);
         assert!(p.done_pile.unwrap().0 < 99_999_999);
         assert_eq!(Prefs::default().done_pile, None);
+    }
+
+    #[test]
+    fn stand_up_words_are_two_short_headings() {
+        assert_eq!(
+            validate_pref(KEY_STANDUP_WORDS, " Done | Next "),
+            Ok("Done|Next".into())
+        );
+        assert!(validate_pref(KEY_STANDUP_WORDS, "Done").is_err());
+        assert!(validate_pref(KEY_STANDUP_WORDS, "|Next").is_err());
+        assert!(validate_pref(KEY_STANDUP_WORDS, &format!("{}|x", "a".repeat(21))).is_err());
+        let p = prefs_from_settings(&[(KEY_STANDUP_WORDS, "Done|Next")]);
+        assert_eq!(p.standup_words, ("Done".into(), "Next".into()));
+        assert_eq!(Prefs::default().standup_words.0, "Yesterday");
     }
 
     #[test]

@@ -31,6 +31,7 @@ pub mod ribbon;
 pub mod search;
 pub mod seed;
 pub mod sheet;
+pub mod standup;
 pub mod task;
 pub mod tickets;
 pub mod timer;
