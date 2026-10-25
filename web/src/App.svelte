@@ -9,6 +9,8 @@
   import Unlock from './pages/Unlock.svelte';
   import NewPassword from './pages/NewPassword.svelte';
   import Shell from './pages/Shell.svelte';
+  import PhoneShell from './pages/PhoneShell.svelte';
+  import { phone } from './lib/phone.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
 
@@ -100,5 +102,9 @@
 {:else if screen === 'new-password'}
   <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
-  <Shell onLock={lockNow} />
+  {#if phone.on}
+    <PhoneShell onLock={lockNow} />
+  {:else}
+    <Shell onLock={lockNow} />
+  {/if}
 {/if}

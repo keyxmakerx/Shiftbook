@@ -5,6 +5,7 @@
 import { api } from './api';
 import type { CardKind, WindowMode, WindowSpot } from './api';
 import { app } from './store.svelte';
+import { phone } from './phone.svelte';
 
 /** Most windows at once; opening one more closes the oldest (same as the core rule). */
 const MAX_WINDOWS = 12;
@@ -72,13 +73,15 @@ export function openWindow(kind: CardKind, id: string): void {
   const key = `${kind}:${id}`;
   const there = find(key);
   if (there) {
-    if (there.mode === 'min' || there.mode === 'rolled') there.mode = 'open';
+    // A phone has room for one window at a time: it opens full screen.
+    if (phone.on) there.mode = 'full';
+    else if (there.mode === 'min' || there.mode === 'rolled') there.mode = 'open';
     focusWindow(key);
     return;
   }
   // Cascade new windows from the top left of the work area.
   const n = windows.list.filter((w) => w.mode === 'open').length;
-  const spot: WindowSpot = { kind, id, mode: 'open', x: 80 + (n % 6) * 28, y: 40 + (n % 6) * 28, ...SIZE };
+  const spot: WindowSpot = { kind, id, mode: phone.on ? 'full' : 'open', x: 80 + (n % 6) * 28, y: 40 + (n % 6) * 28, ...SIZE };
   windows.list.push(spot);
   while (windows.list.length > MAX_WINDOWS) windows.list.shift();
   windows.front = key;

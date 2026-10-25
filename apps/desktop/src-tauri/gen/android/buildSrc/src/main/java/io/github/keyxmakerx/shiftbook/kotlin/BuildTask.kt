@@ -55,7 +55,8 @@ abstract class BuildTask : DefaultTask() {
         val rootDirRel = rootDirRel ?: throw GradleException("rootDirRel cannot be null")
         val target = target ?: throw GradleException("target cannot be null")
         val release = release ?: throw GradleException("release cannot be null")
-        val args = listOf("tauri", "android", "android-studio-script");
+        // The Tauri CLI is a build-time npm package in web/ (rootDir is apps/desktop/src-tauri).
+        val args = listOf("../../../web/node_modules/@tauri-apps/cli/tauri.js", "android", "android-studio-script");
 
         execOperations.exec {
             workingDir(File(projectDir, rootDirRel))

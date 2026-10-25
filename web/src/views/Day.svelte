@@ -11,6 +11,7 @@
   import TrayCard from '../components/TrayCard.svelte';
   import WhereWasI from '../components/WhereWasI.svelte';
   import WrapUp from '../components/WrapUp.svelte';
+  import { phone } from '../lib/phone.svelte';
 
   const RING = 119.4;
 
@@ -44,27 +45,30 @@
 
 <div class="desk">
   <article class="paper todaycard rise">
-    <div class="sum">
-      <div class="when">
-        <span class="lbl">{relativeDay(app.selected, app.today)}</span>
-        <h1>{longDay(app.selected)}</h1>
+    <!-- On a phone the date and hours sit in the header above (PhoneShell). -->
+    {#if !phone.on}
+      <div class="sum">
+        <div class="when">
+          <span class="lbl">{relativeDay(app.selected, app.today)}</span>
+          <h1>{longDay(app.selected)}</h1>
+        </div>
+        <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
+          <svg viewBox="0 0 46 46" aria-hidden="true">
+            <circle class="track" cx="23" cy="23" r="19" />
+            <circle
+              class="fill"
+              cx="23"
+              cy="23"
+              r="19"
+              stroke-dasharray={RING}
+              stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
+            />
+          </svg>
+          <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
+        </div>
+        <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
       </div>
-      <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
-        <svg viewBox="0 0 46 46" aria-hidden="true">
-          <circle class="track" cx="23" cy="23" r="19" />
-          <circle
-            class="fill"
-            cx="23"
-            cy="23"
-            r="19"
-            stroke-dasharray={RING}
-            stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
-          />
-        </svg>
-        <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
-      </div>
-      <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
-    </div>
+    {/if}
 
     <WhereWasI />
 
@@ -75,8 +79,12 @@
         <EntryRow {entry} index={i} />
       {:else}
         <p class="empty-note">
-          Nothing logged for this day yet. Type in the box above, paste finished tickets into the tray,
-          or press Ctrl+Space anywhere.
+          {#if phone.on}
+            Nothing logged for this day yet. Type in the box above, or tap + to log or jot something.
+          {:else}
+            Nothing logged for this day yet. Type in the box above, paste finished tickets into the tray,
+            or press Ctrl+Space anywhere.
+          {/if}
         </p>
       {/each}
     </div>

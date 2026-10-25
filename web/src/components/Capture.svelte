@@ -25,6 +25,7 @@
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
   import { openWindow } from '../lib/windows.svelte';
+  import { phone } from '../lib/phone.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
 
@@ -62,9 +63,50 @@
 
   const logging = $derived(!!seen && seen.minutes !== null);
 
+  // Phone (round 15, idea B): tap a time and a recent project instead of typing them.
+  const TIMES = ['15m', '30m', '45m', '1h', '2h', '4h'];
+  let pickedTime = $state('');
+  let pickedProject = $state('');
+  /** Projects you logged to lately, newest first (from the ribbon), then the rest. */
+  const recentProjects = $derived.by(() => {
+    const ids: string[] = [];
+    for (const day of app.ribbon.flatMap((w) => w.days).reverse()) {
+      for (const part of day.parts) if (part.projectId && !ids.includes(part.projectId)) ids.push(part.projectId);
+    }
+    return ids
+      .map((id) => projectById(id))
+      .filter((p) => !!p && !p.archived)
+      .slice(0, 4) as NonNullable<ReturnType<typeof projectById>>[];
+  });
+
+  function swapWord(old: string, next: string): string {
+    const words = text.split(/\s+/).filter((w) => w && w !== old);
+    if (next) words.push(next);
+    return words.join(' ') + ' ';
+  }
+
+  function pickTime(t: string) {
+    const next = pickedTime === t ? '' : t;
+    text = swapWord(pickedTime, next);
+    pickedTime = next;
+    read();
+    input?.focus();
+  }
+
+  function pickProject(name: string) {
+    const tag = '#' + name.replace(/\s+/g, '');
+    const next = pickedProject === tag ? '' : tag;
+    text = swapWord(pickedProject, next);
+    pickedProject = next;
+    read();
+    input?.focus();
+  }
+
   $effect(() => {
     if (app.captureOpen) {
       text = '';
+      pickedTime = '';
+      pickedProject = '';
       seen = null;
       hits = [];
       sel = 0;
@@ -216,6 +258,7 @@
   bind:this={box}
   class="paper capture"
   class:on={app.captureOpen}
+  class:sheet={phone.on}
   role="dialog"
   aria-modal="true"
   aria-label="Log, note or find"
@@ -244,7 +287,10 @@
     aria-label="Log, note or find"
     aria-controls="capture-hits"
     aria-activedescendant={!logging && hits[sel] ? `hit-${sel}` : undefined}
-    placeholder="Log “1.5h printer INC0045678”, or find a ticket, a word or a command"
+    enterkeyhint="done"
+    placeholder={phone.on
+      ? 'What did you do? e.g. printer INC0045678'
+      : 'Log “1.5h printer INC0045678”, or find a ticket, a word or a command'}
   />
   <div class="toks" class:quiet={!logging && hits.length > 0} aria-live="polite">
     {#if seen && text.trim() && logging}
@@ -311,19 +357,47 @@
       {/each}
     </ul>
   {/if}
-  <div class="foot">
-    {#if logging}
-      <span><span class="kbd">Enter</span> log it</span>
-    {:else if hits.length > 0}
-      <span><span class="kbd">↑ ↓</span> choose</span>
-      <span><span class="kbd">Enter</span> open</span>
-    {:else}
-      <span><span class="kbd">Enter</span> log it, or save to the Inbox</span>
-    {/if}
-    <span><span class="kbd">Ctrl Enter</span> to Inbox</span>
-    <span><span class="kbd">Esc</span> close</span>
-    <span class="tip">Add a time like 30m and it logs instead</span>
-  </div>
+  {#if phone.on}
+    <div class="picks">
+      <span class="lbl">How long</span>
+      <div class="row">
+        {#each TIMES as t (t)}
+          <button type="button" class="pick mono" aria-pressed={pickedTime === t} tabindex={app.captureOpen ? 0 : -1} onclick={() => pickTime(t)}>{t}</button>
+        {/each}
+      </div>
+      {#if recentProjects.length}
+        <span class="lbl">Recent</span>
+        <div class="row">
+          {#each recentProjects as p (p.id)}
+            {@const tag = '#' + p.name.replace(/\s+/g, '')}
+            <button type="button" class="pick" aria-pressed={pickedProject === tag} tabindex={app.captureOpen ? 0 : -1} onclick={() => pickProject(p.name)}>
+              <i class="dot" style:--c={p.color ?? 'var(--none)'}></i>{p.name}
+            </button>
+          {/each}
+        </div>
+      {/if}
+      <div class="row acts">
+        <button type="button" class="btn" tabindex={app.captureOpen ? 0 : -1} disabled={!text.trim()} onclick={() => void submit(true)}>Save as scrap</button>
+        <button type="button" class="btn primary" tabindex={app.captureOpen ? 0 : -1} disabled={!text.trim()} onclick={() => void submit(false)}>
+          {logging ? `Log ${fmtMinutes(seen?.minutes ?? 0)}` : hits.length ? 'Open' : 'Save'}
+        </button>
+      </div>
+    </div>
+  {:else}
+    <div class="foot">
+      {#if logging}
+        <span><span class="kbd">Enter</span> log it</span>
+      {:else if hits.length > 0}
+        <span><span class="kbd">↑ ↓</span> choose</span>
+        <span><span class="kbd">Enter</span> open</span>
+      {:else}
+        <span><span class="kbd">Enter</span> log it, or save to the Inbox</span>
+      {/if}
+      <span><span class="kbd">Ctrl Enter</span> to Inbox</span>
+      <span><span class="kbd">Esc</span> close</span>
+      <span class="tip">Add a time like 30m and it logs instead</span>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -370,6 +444,74 @@
     transition:
       transform calc(0.35s * var(--m)) var(--spring),
       opacity 0.2s;
+  }
+
+  /* Phone: a sheet from the bottom, above the keyboard. */
+  .capture.sheet {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    border-radius: 18px 18px 0 0;
+    transform: translateY(100%);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .capture.sheet.on {
+    transform: none;
+  }
+
+  .sheet .hits {
+    max-height: 32vh;
+  }
+
+  .picks {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 14px 14px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .pick {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 99px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: var(--ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pick[aria-pressed='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-fg);
+  }
+
+  .pick .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c);
+  }
+
+  .acts {
+    margin-top: 6px;
+  }
+
+  .acts .btn {
+    flex: 1;
+    min-height: 46px;
+    justify-content: center;
+    text-align: center;
   }
 
   input {
