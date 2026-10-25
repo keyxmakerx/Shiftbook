@@ -52,6 +52,14 @@ pub const KEY_DONE_PILE: &str = "desk.done_pile";
 pub const KEY_STANDUP_WORDS: &str = "day.standup_words";
 /// Longest stand-up heading.
 pub const MAX_STANDUP_WORD_CHARS: usize = 20;
+/// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
+pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
+/// The time buttons everyone starts with.
+pub const DEFAULT_TIME_BUTTONS: [u32; 5] = [15, 30, 45, 60, 120];
+/// Most time buttons.
+pub const MAX_TIME_BUTTONS: usize = 5;
+/// Longest time a button can add: 12 hours.
+pub const MAX_TIME_BUTTON: u32 = 12 * 60;
 
 /// Text sizes offered, in percent of normal.
 pub const TEXT_SIZES: [u32; 4] = [90, 100, 115, 130];
@@ -183,6 +191,8 @@ pub struct Prefs {
     pub done_pile: Option<(i32, i32)>,
     /// The headings of "Copy for stand-up": what was done, what's next.
     pub standup_words: (String, String),
+    /// The time buttons in Log work, jots and tickets, shortest first.
+    pub time_buttons: Vec<u32>,
 }
 
 impl Prefs {
@@ -214,6 +224,7 @@ impl Default for Prefs {
                 crate::standup::DEFAULT_WORDS.0.to_string(),
                 crate::standup::DEFAULT_WORDS.1.to_string(),
             ),
+            time_buttons: DEFAULT_TIME_BUTTONS.to_vec(),
         }
     }
 }
@@ -265,6 +276,23 @@ fn parse_standup_words(value: &str) -> Option<(String, String)> {
         .then(|| w.to_string())
     };
     Some((ok(a)?, ok(b)?))
+}
+
+/// Read a `day.time_buttons` value: one to five minute counts, each from 1 minute to 12
+/// hours, kept shortest first without repeats.
+fn parse_time_buttons(value: &str) -> Option<Vec<u32>> {
+    let mut list: Vec<u32> = value
+        .split(',')
+        .map(|p| {
+            p.trim()
+                .parse::<u32>()
+                .ok()
+                .filter(|n| (1..=MAX_TIME_BUTTON).contains(n))
+        })
+        .collect::<Option<_>>()?;
+    list.sort_unstable();
+    list.dedup();
+    (1..=MAX_TIME_BUTTONS).contains(&list.len()).then_some(list)
 }
 
 /// Check a preference before saving. Returns the value to store. Unknown keys
@@ -341,6 +369,10 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_STANDUP_WORDS => parse_standup_words(v)
             .map(|(a, b)| format!("{a}|{b}"))
             .ok_or_else(|| invalid(value)),
+        KEY_TIME_BUTTONS if v.is_empty() => Ok(String::new()),
+        KEY_TIME_BUTTONS => parse_time_buttons(v)
+            .map(|l| l.iter().map(u32::to_string).collect::<Vec<_>>().join(","))
+            .ok_or_else(|| invalid(value)),
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -410,6 +442,11 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
                     prefs.standup_words = words;
                 }
             }
+            KEY_TIME_BUTTONS => {
+                if let Some(list) = parse_time_buttons(&v) {
+                    prefs.time_buttons = list;
+                }
+            }
             _ => {}
         }
     }
@@ -446,6 +483,25 @@ mod tests {
         let p = prefs_from_settings(&[(KEY_STANDUP_WORDS, "Done|Next")]);
         assert_eq!(p.standup_words, ("Done".into(), "Next".into()));
         assert_eq!(Prefs::default().standup_words.0, "Yesterday");
+    }
+
+    #[test]
+    fn time_buttons_are_one_to_five_short_times() {
+        assert_eq!(
+            validate_pref(KEY_TIME_BUTTONS, " 60, 10,20 ,10"),
+            Ok("10,20,60".into())
+        );
+        assert_eq!(validate_pref(KEY_TIME_BUTTONS, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_TIME_BUTTONS, "0").is_err());
+        assert!(validate_pref(KEY_TIME_BUTTONS, "721").is_err());
+        assert!(validate_pref(KEY_TIME_BUTTONS, "1,2,3,4,5,6").is_err());
+        assert!(validate_pref(KEY_TIME_BUTTONS, "ten").is_err());
+        let p = prefs_from_settings(&[(KEY_TIME_BUTTONS, "10,20,60,180")]);
+        assert_eq!(p.time_buttons, vec![10, 20, 60, 180]);
+        assert_eq!(
+            prefs_from_settings(&[(KEY_TIME_BUTTONS, "")]).time_buttons,
+            DEFAULT_TIME_BUTTONS.to_vec()
+        );
     }
 
     #[test]

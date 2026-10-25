@@ -82,6 +82,8 @@ export interface Prefs {
   donePile: [number, number] | null;
   /** The headings of "Copy for stand-up": what was done, what's next. */
   standupWords: [string, string];
+  /** Your own time buttons (round 15), shortest first. */
+  timeButtons: number[];
 }
 
 /** How a window shows. Mirrors `shiftbook_core::windows::WindowMode`. */
@@ -171,7 +173,8 @@ export type PrefKey =
   | 'notes.auto_archive_days'
   | 'ui.windows'
   | 'desk.done_pile'
-  | 'day.standup_words';
+  | 'day.standup_words'
+  | 'day.time_buttons';
 
 export interface Project {
   id: string;

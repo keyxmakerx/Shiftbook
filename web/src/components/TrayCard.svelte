@@ -10,7 +10,7 @@
   import { openMenu, paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, projectById, projectColor, setView } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, setView, ticketTimes } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
@@ -19,7 +19,7 @@
 
   const STEP = 5;
   /** Choices in the "time on it so far?" box. */
-  const SO_FAR = [5, 15, 30, 45, 60, 120];
+  const SO_FAR = $derived(ticketTimes());
   let text = $state('');
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);

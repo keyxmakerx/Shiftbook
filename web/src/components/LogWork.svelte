@@ -6,10 +6,10 @@
   import type { Entry } from '../lib/api';
   import { addDays, fmtMinutes } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
-  import { app, attempt, flashEntry, projectById, projectColor, refresh } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectById, projectColor, refresh, timeButtons } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
 
-  const TIMES = [15, 30, 45, 60, 120];
+  const TIMES = $derived(timeButtons());
 
   let text = $state('');
   let seen = $state<Capture | null>(null);

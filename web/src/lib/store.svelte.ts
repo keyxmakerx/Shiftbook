@@ -62,6 +62,23 @@ export const app = $state({
   bringUpDays: [] as string[],
 });
 
+/** The time buttons everyone starts with (`shiftbook_core::prefs::DEFAULT_TIME_BUTTONS`). */
+export const DEFAULT_TIMES = [15, 30, 45, 60, 120];
+
+/** The time buttons in Log work and on jots (Settings → Your day). */
+export function timeButtons(): number[] {
+  return app.prefs?.timeButtons ?? DEFAULT_TIMES;
+}
+
+/**
+ * The "time on it so far?" choices for tickets: your own time buttons, or with the defaults
+ * the usual list that starts at 5 minutes.
+ */
+export function ticketTimes(): number[] {
+  const own = timeButtons();
+  return own.join() === DEFAULT_TIMES.join() ? [5, ...DEFAULT_TIMES] : own;
+}
+
 /** Run an API call; on failure show a plain message and resolve undefined. */
 export async function attempt<T>(work: () => Promise<T>): Promise<T | undefined> {
   try {

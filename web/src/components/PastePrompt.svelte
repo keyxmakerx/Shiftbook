@@ -4,9 +4,10 @@
   // Enter keeps 15 minutes (what a new ticket starts with), Esc closes without changing.
   import type { TrayItem } from '../lib/api';
   import { fmtMinutes } from '../lib/format';
+  import { ticketTimes } from '../lib/store.svelte';
   import Icon from './Icon.svelte';
 
-  const SO_FAR = [5, 15, 30, 60, 120];
+  const SO_FAR = $derived(ticketTimes());
 
   let {
     x,

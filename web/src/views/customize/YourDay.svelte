@@ -1,8 +1,14 @@
 <script lang="ts">
   // Settings → Your day: the Day ring's target for each weekday, the optional
   // end-of-day wrap-up (round 7), the optional timer (off by default) and the headings of
-  // "Copy for stand-up" (round 15).
-  import { app, savePref } from '../../lib/store.svelte';
+  // "Copy for stand-up" and your own time buttons (round 15).
+  import { api } from '../../lib/api';
+  import { fmtMinutes } from '../../lib/format';
+  import { app, DEFAULT_TIMES, savePref, timeButtons } from '../../lib/store.svelte';
+  import { toast } from '../../lib/toast.svelte';
+
+  /** Most time buttons (`shiftbook_core::prefs::MAX_TIME_BUTTONS`). */
+  const MAX_TIMES = 5;
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -24,6 +30,29 @@
   async function setWords(done: string, next: string) {
     if (!done.trim() || !next.trim()) return;
     await savePref('day.standup_words', `${done.trim()}|${next.trim()}`);
+  }
+
+  const times = $derived(timeButtons());
+  const ownTimes = $derived(times.join() !== DEFAULT_TIMES.join());
+  let newTime = $state('');
+
+  async function saveTimes(list: number[]) {
+    await savePref('day.time_buttons', list.length ? list.join(',') : '');
+  }
+
+  async function addTime() {
+    const typed = newTime.trim();
+    if (!typed) return;
+    // "20" means minutes; "20m", "1.5h" and "1h 30m" read the same way Log work does.
+    const asTime = /^\d+$/.test(typed) ? `${typed}m` : typed;
+    const read = await api.parseCapture(asTime, app.today).catch(() => null);
+    const minutes = read?.minutes ?? null;
+    if (minutes === null || minutes < 1 || minutes > 720) {
+      toast('Type a time like 20m or 1.5h (up to 12 hours).');
+      return;
+    }
+    newTime = '';
+    if (!times.includes(minutes)) await saveTimes([...times, minutes]);
   }
 
   let wrapTime = $state('17:00');
@@ -55,6 +84,35 @@
         </label>
       {/each}
     </div>
+  </article>
+
+  <article class="paper cz-card">
+    <h3>Time buttons</h3>
+    <p class="sub">Up to five, in Log work, on jots and for tickets. Pick the times you really use.</p>
+    <div class="cz-row times">
+      {#each times as m (m)}
+        <button
+          type="button"
+          class="btn mono"
+          title="Take {fmtMinutes(m)} off"
+          aria-label="Take {fmtMinutes(m)} off"
+          disabled={times.length === 1}
+          onclick={() => saveTimes(times.filter((t) => t !== m))}
+        >{fmtMinutes(m)} ✕</button>
+      {/each}
+      {#if times.length < MAX_TIMES}
+        <form class="add" onsubmit={(e) => { e.preventDefault(); void addTime(); }}>
+          <input class="text-in mono" bind:value={newTime} placeholder="20m" aria-label="New time button, like 20m or 1.5h" />
+          <button type="submit" class="btn">+ Add</button>
+        </form>
+      {/if}
+      {#if ownTimes}
+        <button type="button" class="btn" onclick={() => saveTimes([])}>
+          Back to {DEFAULT_TIMES.map(fmtMinutes).join(' ')}
+        </button>
+      {/if}
+    </div>
+    <p class="sub preview">In Log work: {#each times as m (m)}<span class="hbtn mono">{fmtMinutes(m)}</span>{/each}</p>
   </article>
 
   <article class="paper cz-card">
@@ -160,6 +218,34 @@
 
   .time {
     width: 120px;
+  }
+
+  .times {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .add {
+    display: inline-flex;
+    gap: 6px;
+  }
+
+  .add input {
+    width: 80px;
+  }
+
+  .preview {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .hbtn {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 2px 8px;
+    color: var(--ink);
   }
 
   .word {
