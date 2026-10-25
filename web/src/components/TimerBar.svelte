@@ -3,12 +3,20 @@
   // after unlock, and after Stop what to add. Nothing is added without a click; no alarms.
   import { fmtMinutes } from '../lib/format';
   import { clockText } from '../lib/timerClock';
-  import { resumeTimer, settleTimer, stopTimer, timer } from '../lib/timer.svelte';
+  import { resumeTimer, settleAway, settleTimer, stopTimer, timer } from '../lib/timer.svelte';
 </script>
 
 {#if timer.target}
-  <div class="bar" class:asking={!!timer.offer} role="status" aria-live="polite">
-    {#if timer.offer}
+  <div class="bar" class:asking={!!timer.offer || !!timer.away} role="status" aria-live="polite">
+    {#if timer.away && !timer.offer}
+      <!-- Phone (round 15, idea E): the timer asks about time in the background, it doesn't guess. -->
+      <span class="what wrap">
+        You were away for <b>{fmtMinutes(timer.away.minutes)}</b>. Still working on <b>{timer.target.title}</b>?
+      </span>
+      <span class="grow"></span>
+      <button class="btn" type="button" onclick={() => settleAway(false)}>Leave it out</button>
+      <button class="btn primary" type="button" onclick={() => settleAway(true)}>Count it</button>
+    {:else if timer.offer}
       <span class="what">Add to <b>{timer.target.title}</b>:</span>
       {#if timer.offer.minutes > 0}
         <button class="btn primary" type="button" onclick={() => settleTimer(timer.offer?.minutes ?? 0)}>
@@ -58,6 +66,10 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 50ch;
+  }
+
+  .what.wrap {
+    white-space: normal;
   }
 
   .clock {

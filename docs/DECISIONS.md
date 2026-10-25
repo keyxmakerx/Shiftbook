@@ -18,6 +18,23 @@ the screens are on the card and still need sign-off.
 - **Install:** a signed APK from GitHub releases; no Play Store or F-Droid for now.
 - **First step:** a test build that sets up, locks and unlocks on an Android emulator, to prove
   SQLCipher builds for Android. If it can't, stop and ask (SECURITY.md).
+- **Ideas A–H all approved** (sign-off, 25 Oct): "do all these and push it, I'll test it". As
+  built: swipe right on an entry for +15 min, left for Timer and Delete (Undo on each);
+  hour and recent-project buttons in capture; Share → Shiftbook with a choice of the tray, one
+  entry or a scrap; long-press icon shortcuts (Log work, Start the timer, Jot a note); the timer
+  asks about time in the background from 5 minutes on (`core::timer::away_question`); a timer
+  tile and a quiet "Timer running" notification while Shiftbook is in the background; a
+  wrap-up nudge; "Where was I" as on the computer.
+- **Phone security defaults:** lock after leaving the app, default 1 minute (straight away, 1,
+  5 or 15); screenshots blocked (`FLAG_SECURE`) with the same Protected pill as the computer;
+  Android cloud backup and device transfer off; no INTERNET permission in release builds.
+  Password hashing on a phone stops at 256 MiB of memory and adds passes instead.
+- **Nudges** (due reminder, wrap-up): off by default, work days only, counts and times never
+  titles (`core::nudge`). The app plans the next one each time it's opened; Android shows it
+  then. Turning one on is when Android asks for permission to notify.
+- **No new packages for the phone so far:** notifications, the tile, shortcuts, sharing and the
+  file picker are a little Kotlin of our own (`gen/android/.../PhonePlugin.kt` and friends)
+  instead of the notification plugin.
 
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a

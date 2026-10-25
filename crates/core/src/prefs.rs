@@ -41,6 +41,11 @@ pub const KEY_TEXT_SIZE: &str = "ui.text_size";
 pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 /// The optional "Now doing" timer: `true` or `false` (off by default).
 pub const KEY_TIMER: &str = "day.timer";
+/// Phone: the quiet due reminder's time `HH:MM` on work days, or blank when it's off
+/// (off by default). See [`crate::nudge`].
+pub const KEY_REMIND_AT: &str = "phone.remind_at";
+/// Phone: a wrap-up nudge at the wrap-up time, `true` or `false` (off by default).
+pub const KEY_WRAPUP_NUDGE: &str = "phone.wrapup_nudge";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
 /// Open windows and where they are (see [`crate::windows`]), or blank.
@@ -177,6 +182,10 @@ pub struct Prefs {
     pub wrapup_at: Option<String>,
     /// The "Now doing" timer is turned on.
     pub timer: bool,
+    /// Phone: due reminder time `HH:MM`, `None` when off.
+    pub remind_at: Option<String>,
+    /// Phone: a wrap-up nudge at the wrap-up time.
+    pub wrapup_nudge: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -208,6 +217,8 @@ impl Default for Prefs {
             day_targets: DEFAULT_DAY_TARGETS,
             text_size: DEFAULT_TEXT_SIZE,
             wrapup_at: None,
+            remind_at: None,
+            wrapup_nudge: false,
             timer: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
@@ -268,7 +279,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE => ok(&["true", "false"]),
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -309,7 +320,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
             Ok(n) if AUTO_ARCHIVE_CHOICES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
         },
-        KEY_WRAPUP_AT => {
+        KEY_WRAPUP_AT | KEY_REMIND_AT => {
             if v.is_empty() {
                 Ok(String::new())
             } else {
@@ -389,6 +400,8 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
+            KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
+            KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
@@ -596,6 +609,15 @@ mod tests {
     fn timer_on_and_paused() {
         assert_eq!(validate_pref(KEY_TIMER, "true"), Ok("true".into()));
         assert!(validate_pref(KEY_TIMER, "yes").is_err());
+        assert_eq!(validate_pref(KEY_REMIND_AT, "8:00"), Ok("08:00".into()));
+        assert_eq!(validate_pref(KEY_REMIND_AT, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_REMIND_AT, "8am").is_err());
+        assert_eq!(validate_pref(KEY_WRAPUP_NUDGE, "true"), Ok("true".into()));
+        let p = prefs_from_settings(&[(KEY_REMIND_AT, "08:00"), (KEY_WRAPUP_NUDGE, "true")]);
+        assert_eq!(p.remind_at.as_deref(), Some("08:00"));
+        assert!(p.wrapup_nudge);
+        assert_eq!(Prefs::default().remind_at, None);
+        assert!(!Prefs::default().wrapup_nudge);
         let id = crate::ids::TimeEntryId::new();
         let stored = format!("{id} 3700 400,90");
         assert_eq!(validate_pref(KEY_TIMER_PAUSED, &stored), Ok(stored.clone()));

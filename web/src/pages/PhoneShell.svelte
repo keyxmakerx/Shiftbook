@@ -11,6 +11,8 @@
   import { followDay, startShell } from '../lib/shellLife.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import Capture from '../components/Capture.svelte';
+  import ShareSheet from '../components/ShareSheet.svelte';
+  import { openCapture, planNudges, takeLaunch } from '../lib/launch.svelte';
   import Drawer from '../components/Drawer.svelte';
   import Icon from '../components/Icon.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
@@ -27,6 +29,19 @@
 
   onMount(() => startShell((message) => (problem = message)));
   followDay();
+
+  // Why Android opened Shiftbook (shared text, a shortcut, the tile, a nudge): once loaded,
+  // and whenever it comes back to the front. The nudges are planned again once loaded.
+  $effect(() => {
+    if (!app.ready) return;
+    void takeLaunch();
+    void planNudges();
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') void takeLaunch();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  });
 
   const TABS: { id: View; label: string; icon: IconName }[] = [
     { id: 'desk', label: 'Desk', icon: 'desk' },
@@ -132,7 +147,7 @@
   </main>
 
   {#if app.ready && (app.view === 'desk' || app.view === 'day')}
-    <button class="fab" type="button" aria-label="Log or jot something" onclick={() => (app.captureOpen = true)}>
+    <button class="fab" type="button" aria-label="Log or jot something" onclick={() => openCapture()}>
       <Icon name="plus" size={28} />
     </button>
   {/if}
@@ -149,6 +164,7 @@
 <Capture {onLock} />
 <Drawer />
 <PaperMenu />
+<ShareSheet />
 <Toast />
 
 <style>

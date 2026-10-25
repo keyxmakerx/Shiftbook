@@ -60,6 +60,14 @@ pub fn timer_offer(seconds: u64, quiet: &[u64]) -> TimerOffer {
     }
 }
 
+/// Phone (round 15): Shiftbook was in the background for `seconds` while the timer ran.
+/// A short time away is simply counted; from [`AWAY_AFTER_SECONDS`] on, the timer asks
+/// whether to count it, and this is the whole minutes to ask about.
+pub fn away_question(seconds: u64) -> Option<Minutes> {
+    let seconds = seconds.min(MAX_TIMER_SECONDS);
+    (seconds >= AWAY_AFTER_SECONDS).then(|| Minutes(u32::try_from(seconds / 60).unwrap_or(0)))
+}
+
 /// A timer paused by locking: which entry, and what it had counted so far.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -112,6 +120,15 @@ mod tests {
     use super::*;
 
     const MIN: u64 = 60;
+
+    #[test]
+    fn away_asks_only_when_long() {
+        assert_eq!(away_question(0), None);
+        assert_eq!(away_question(4 * MIN + 59), None);
+        assert_eq!(away_question(5 * MIN), Some(Minutes(5)));
+        assert_eq!(away_question(25 * MIN + 30), Some(Minutes(25)));
+        assert_eq!(away_question(u64::MAX), Some(Minutes(24 * 60)));
+    }
 
     #[test]
     fn rounds_to_the_nearest_quarter_hour() {

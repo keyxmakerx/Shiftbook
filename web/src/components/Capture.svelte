@@ -26,6 +26,8 @@
   import { trapTab } from '../lib/trap';
   import { openWindow } from '../lib/windows.svelte';
   import { phone } from '../lib/phone.svelte';
+  import { launch } from '../lib/launch.svelte';
+  import { startTimer } from '../lib/timer.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
 
@@ -104,13 +106,17 @@
 
   $effect(() => {
     if (app.captureOpen) {
-      text = '';
+      text = launch.prefill;
+      launch.prefill = '';
       pickedTime = '';
       pickedProject = '';
       seen = null;
       hits = [];
       sel = 0;
+      if (text) read();
       queueMicrotask(() => input?.focus());
+    } else {
+      launch.timerCapture = false;
     }
   });
 
@@ -204,9 +210,26 @@
     }
   }
 
+  /** Phone: capture opened from "Start the timer": log the line with no time and time it. */
+  async function startOn(line: string) {
+    const parsed = seen ?? (await api.parseCapture(line, app.today).catch(() => null));
+    const entry = await attempt(() => api.captureLog(parsed?.minutes == null ? `${line} 0m` : line, app.today));
+    if (!entry) return;
+    close();
+    setView('desk');
+    await selectDay(entry.date);
+    await refresh();
+    flashEntry(entry.id);
+    if (entry.date === app.today) await startTimer(entry);
+  }
+
   async function submit(toInboxAnyway: boolean) {
     const line = text.trim();
     if (!line) return;
+    if (launch.timerCapture && !toInboxAnyway) {
+      await startOn(line);
+      return;
+    }
     if (!toInboxAnyway && !logging && hits[sel]) {
       await open(hits[sel]);
       return;
@@ -288,7 +311,9 @@
     aria-controls="capture-hits"
     aria-activedescendant={!logging && hits[sel] ? `hit-${sel}` : undefined}
     enterkeyhint="done"
-    placeholder={phone.on
+    placeholder={launch.timerCapture
+      ? 'What are you starting? e.g. printer INC0045678'
+      : phone.on
       ? 'What did you do? e.g. printer INC0045678'
       : 'Log “1.5h printer INC0045678”, or find a ticket, a word or a command'}
   />
@@ -379,7 +404,13 @@
       <div class="row acts">
         <button type="button" class="btn" tabindex={app.captureOpen ? 0 : -1} disabled={!text.trim()} onclick={() => void submit(true)}>Save as scrap</button>
         <button type="button" class="btn primary" tabindex={app.captureOpen ? 0 : -1} disabled={!text.trim()} onclick={() => void submit(false)}>
-          {logging ? `Log ${fmtMinutes(seen?.minutes ?? 0)}` : hits.length ? 'Open' : 'Save'}
+          {launch.timerCapture
+            ? 'Start the timer'
+            : logging
+              ? `Log ${fmtMinutes(seen?.minutes ?? 0)}`
+              : hits.length
+                ? 'Open'
+                : 'Save'}
         </button>
       </div>
     </div>

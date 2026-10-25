@@ -8,6 +8,7 @@ import type {
   BackupFile,
   BackupSummary,
   Capture,
+  PhoneLaunch,
   CategoryCode,
   CodeInput,
   CustomField,
@@ -391,6 +392,25 @@ export class TauriApi implements DataApi {
   }
   timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer> {
     return call('timer_offer', { seconds, quiet });
+  }
+  timerAwayQuestion(seconds: number): Promise<number | null> {
+    return call('timer_away_question', { seconds });
+  }
+
+  phoneLaunch(): Promise<PhoneLaunch | null> {
+    return call('phone_launch');
+  }
+  phoneAwaySeconds(): Promise<number> {
+    return call('phone_away_seconds');
+  }
+  phoneTimerAway(on: boolean, seconds: number): Promise<void> {
+    return call('phone_timer_away', { on, seconds });
+  }
+  phoneAllowNotifications(): Promise<boolean> {
+    return call('phone_allow_notifications');
+  }
+  planNudges(today: IsoDate, now: number): Promise<void> {
+    return call('plan_nudges', { today, now });
   }
 
   listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList> {

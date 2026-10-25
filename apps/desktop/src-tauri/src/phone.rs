@@ -109,3 +109,184 @@ pub fn display_name<R: Runtime>(app: &AppHandle<R>, uri: &str) -> Option<String>
         None
     }
 }
+
+// ---------- launches, time away, the timer notification and nudges (round 15, ideas C–G) ----------
+
+/// Longest shared text taken in; more is cut.
+#[cfg_attr(not(target_os = "android"), allow(dead_code))] // Used on Android; tested everywhere.
+pub const MAX_SHARED_CHARS: usize = 10_000;
+
+/// Why Shiftbook was opened, when it wasn't just its icon: text shared into it, a
+/// long-press shortcut, the timer tile or a nudge. Taken once.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Launch {
+    /// `share`, `log`, `timer`, `jot`, `due` or `wrapup`.
+    pub kind: String,
+    /// The shared text, for `share`.
+    pub text: Option<String>,
+}
+
+#[cfg_attr(not(target_os = "android"), allow(dead_code))] // Used on Android; tested everywhere.
+const LAUNCH_KINDS: [&str; 6] = ["share", "log", "timer", "jot", "due", "wrapup"];
+
+/// Check what Android handed over: a known kind, and text only with `share`.
+#[cfg_attr(not(target_os = "android"), allow(dead_code))] // Used on Android; tested everywhere.
+pub fn launch_from(kind: &str, text: Option<&str>) -> Option<Launch> {
+    if !LAUNCH_KINDS.contains(&kind) {
+        return None;
+    }
+    let text = (kind == "share")
+        .then(|| text.map(|t| t.chars().take(MAX_SHARED_CHARS).collect::<String>()))
+        .flatten()
+        .filter(|t| !t.trim().is_empty());
+    if kind == "share" && text.is_none() {
+        return None;
+    }
+    Some(Launch {
+        kind: kind.to_string(),
+        text,
+    })
+}
+
+/// Maps to `DataApi.phoneLaunch()`.
+#[tauri::command]
+pub fn phone_launch<R: Runtime>(app: AppHandle<R>) -> Option<Launch> {
+    #[cfg(target_os = "android")]
+    {
+        let v = call(&app, "takeLaunch", serde_json::json!({})).ok()?;
+        launch_from(
+            v.get("kind")?.as_str()?,
+            v.get("text").and_then(|t| t.as_str()),
+        )
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        None
+    }
+}
+
+/// Maps to `DataApi.phoneAwaySeconds()`: seconds since Shiftbook last went to the
+/// background, measured by Android, then forgotten. 0 when it hasn't been away.
+#[tauri::command]
+pub fn phone_away_seconds<R: Runtime>(app: AppHandle<R>) -> u64 {
+    #[cfg(target_os = "android")]
+    {
+        call(&app, "takeAway", serde_json::json!({}))
+            .ok()
+            .and_then(|v| v.get("seconds").and_then(|s| s.as_u64()))
+            .unwrap_or(0)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        0
+    }
+}
+
+/// Maps to `DataApi.phoneTimerAway()`: while Shiftbook is in the background with the timer
+/// running, a quiet notification and the timer tile show it runs and for how long (never
+/// what it's on). `on: false` takes them away.
+#[tauri::command]
+pub fn phone_timer_away<R: Runtime>(app: AppHandle<R>, on: bool, seconds: u64) {
+    #[cfg(target_os = "android")]
+    {
+        let seconds = seconds.min(shiftbook_core::timer::MAX_TIMER_SECONDS);
+        let _ = call(
+            &app,
+            "timerAway",
+            serde_json::json!({ "on": on, "seconds": seconds }),
+        );
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, on, seconds);
+    }
+}
+
+/// Maps to `DataApi.phoneAllowNotifications()`: ask Android for permission to notify (needed
+/// from Android 13). True when it's already allowed; otherwise Android asks the user.
+#[tauri::command]
+pub fn phone_allow_notifications<R: Runtime>(app: AppHandle<R>) -> bool {
+    #[cfg(target_os = "android")]
+    {
+        call(&app, "allowNotifications", serde_json::json!({}))
+            .ok()
+            .and_then(|v| v.get("allowed").and_then(|a| a.as_bool()))
+            .unwrap_or(false)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        false
+    }
+}
+
+/// Maps to `DataApi.planNudges()`: work out the next due reminder and wrap-up nudge
+/// (`shiftbook_core::nudge`) and hand them to Android, replacing any planned before. The
+/// due count is the bell's, for that day at the reminder time.
+#[tauri::command]
+pub async fn plan_nudges<R: Runtime>(
+    app: AppHandle<R>,
+    s: tauri::State<'_, crate::session::VaultSession>,
+    today: String,
+    now: u32,
+) -> Result<(), crate::session::CommandError> {
+    use shiftbook_core::nudge;
+    let (store, owner) = s.data().await?;
+    let today = shiftbook_core::dates::parse_date(&today)
+        .map_err(|_| crate::session::CommandError::InvalidInput)?;
+    let prefs = store.prefs(owner).await?;
+    let mut nudges = Vec::new();
+    if let Some((date, at)) = nudge::due_reminder_at(&prefs, today, now) {
+        let count = crate::meetings::bell_on(&store, owner, date, at)
+            .await?
+            .len();
+        nudges.extend(nudge::due_nudge(date, at, count));
+    }
+    nudges.extend(nudge::wrapup_nudge(&prefs, today, now));
+    #[cfg(target_os = "android")]
+    {
+        let list: Vec<serde_json::Value> = nudges
+            .iter()
+            .map(|n| {
+                serde_json::json!({
+                    "kind": n.kind,
+                    "date": shiftbook_core::dates::format_date(n.date),
+                    "at": n.at,
+                    "title": n.title,
+                    "body": n.body,
+                })
+            })
+            .collect();
+        let _ = call(&app, "planNudges", serde_json::json!({ "nudges": list }));
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, nudges);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn launches_are_checked() {
+        assert_eq!(
+            launch_from("log", Some("ignored")),
+            Some(Launch {
+                kind: "log".into(),
+                text: None
+            })
+        );
+        assert_eq!(launch_from("other", None), None);
+        assert_eq!(launch_from("share", None), None);
+        assert_eq!(launch_from("share", Some("  ")), None);
+        let long = "x".repeat(MAX_SHARED_CHARS + 5);
+        let got = launch_from("share", Some(&long)).unwrap();
+        assert_eq!(got.text.unwrap().chars().count(), MAX_SHARED_CHARS);
+    }
+}

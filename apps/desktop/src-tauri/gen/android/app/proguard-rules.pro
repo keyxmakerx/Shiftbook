@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Shiftbook's own Android code: PhonePlugin is found by name from Rust, the rest from the
+# manifest. Keep it whole.
+-keep class io.github.keyxmakerx.shiftbook.** { *; }

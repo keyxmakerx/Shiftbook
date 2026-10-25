@@ -11,6 +11,8 @@
   import Shell from './pages/Shell.svelte';
   import PhoneShell from './pages/PhoneShell.svelte';
   import { phone } from './lib/phone.svelte';
+  import { timerBack, timerHidden } from './lib/timer.svelte';
+  import { planNudges } from './lib/launch.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
 
@@ -72,11 +74,16 @@
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') {
         leftAt = Date.now();
+        // The timer goes into the notification first, so locking keeps it as away.
+        timerHidden();
+        if (screen === 'app') void planNudges();
         if (awayMs === 0) void lockNow();
       } else if (leftAt !== null && Date.now() - leftAt >= awayMs) {
+        // After unlock the timer picks up and asks about the time away.
         void lockNow();
       } else {
         leftAt = null;
+        void timerBack();
       }
     };
     document.addEventListener('visibilitychange', onVisibility);

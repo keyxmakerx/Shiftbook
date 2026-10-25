@@ -20,6 +20,7 @@ pub mod minutes;
 pub mod model;
 pub mod nextup;
 pub mod notes;
+pub mod nudge;
 pub mod pins;
 pub mod prefs;
 pub mod project;

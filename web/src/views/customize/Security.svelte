@@ -5,11 +5,12 @@
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';
   import { errorMessage } from '../../lib/messages';
   import { recoveryGroups } from '../../lib/recoveryKey';
-  import { app, attempt } from '../../lib/store.svelte';
+  import { app, attempt, savePref } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ChangePassword from '../../components/ChangePassword.svelte';
   import DeleteAllData from '../../components/DeleteAllData.svelte';
   import { phone } from '../../lib/phone.svelte';
+  import { planNudges } from '../../lib/launch.svelte';
 
   const LEAVE_CHOICES = [
     { minutes: 0, label: 'Straight away' },
@@ -34,6 +35,17 @@
       app.prefs = p;
       toast(`Shiftbook locks after ${p.autoLockMinutes} minutes without activity.`);
     }
+  }
+
+  let remindTime = $state(app.prefs?.remindAt ?? '08:00');
+
+  /** Turning a nudge on asks Android for permission to notify (from Android 13). */
+  async function setNudge(key: 'phone.remind_at' | 'phone.wrapup_nudge', value: string, on: boolean) {
+    if (!(await savePref(key, value))) return;
+    if (on && !(await api.phoneAllowNotifications().catch(() => false))) {
+      toast('Allow notifications for Shiftbook when Android asks, or in Android’s settings.');
+    }
+    await planNudges();
   }
 
   async function saveLeave(value: number) {
@@ -70,7 +82,11 @@
 
 <article class="paper cz-card">
   <h3>Lock automatically</h3>
-  <p class="sub">After this many minutes without keyboard or mouse use. Ctrl+L locks at once.</p>
+  <p class="sub">
+    {phone.on
+      ? 'After this many minutes without a tap, while Shiftbook is open. The lock button locks at once.'
+      : 'After this many minutes without keyboard or mouse use. Ctrl+L locks at once.'}
+  </p>
   <form
     class="cz-row"
     onsubmit={(e) => {
@@ -100,6 +116,48 @@
         >
       {/each}
     </div>
+  </article>
+
+  <article class="paper cz-card">
+    <h3>Reminders on this phone</h3>
+    <p class="sub">
+      Quiet notifications on work days (days with a target in Your day). They show a count or a
+      nudge, never what's due, so they're safe on the lock screen. Off unless you turn them on.
+    </p>
+    <div class="cz-row">
+      <label class="check-row">
+        <input
+          type="checkbox"
+          checked={!!app.prefs?.remindAt}
+          onchange={(e) => {
+            const on = (e.currentTarget as HTMLInputElement).checked;
+            void setNudge('phone.remind_at', on ? remindTime : '', on);
+          }}
+        />
+        Due reminder at
+      </label>
+      <input
+        class="text-in mono time"
+        type="time"
+        bind:value={remindTime}
+        aria-label="Due reminder time"
+        onchange={() => app.prefs?.remindAt && void setNudge('phone.remind_at', remindTime, false)}
+      />
+    </div>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={!!app.prefs?.wrapupNudge}
+        disabled={!app.prefs?.wrapupAt}
+        onchange={(e) => {
+          const on = (e.currentTarget as HTMLInputElement).checked;
+          void setNudge('phone.wrapup_nudge', on ? 'true' : 'false', on);
+        }}
+      />
+      Wrap-up nudge at {app.prefs?.wrapupAt ?? 'the wrap-up time'}
+    </label>
+    {#if !app.prefs?.wrapupAt}<p class="note">Turn on the wrap-up in Your day first.</p>{/if}
+    <p class="note">Shiftbook plans the next reminder each time you open it.</p>
   </article>
 {/if}
 
@@ -162,6 +220,10 @@
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
+  }
+
+  .time {
+    width: 120px;
   }
 
   .mins {

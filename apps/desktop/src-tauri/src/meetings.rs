@@ -4,12 +4,13 @@
 use serde::{Deserialize, Serialize};
 use shiftbook_core::bell::{bell_items, BellItem};
 use shiftbook_core::dates::parse_date;
-use shiftbook_core::ids::MeetingSeriesId;
+use shiftbook_core::ids::{MeetingSeriesId, OwnerId};
 use shiftbook_core::meetings::meeting_note_title;
 use shiftbook_core::model::MeetingSeries;
 use shiftbook_core::notes::NoteKind;
 use shiftbook_storage::meetings::SeriesInput;
 use shiftbook_storage::notes::NoteInput;
+use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::OffsetDateTime;
 
@@ -148,6 +149,16 @@ pub async fn meeting_note(
 pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Vec<BellItem>> {
     let (store, owner) = s.data().await?;
     let today = parse_date(&today).map_err(|_| CommandError::InvalidInput)?;
+    bell_on(&store, owner, today, now).await
+}
+
+/// The bell's items at `now` on `today` (also counted for the phone's due reminder).
+pub async fn bell_on(
+    store: &SqliteStore,
+    owner: OwnerId,
+    today: time::Date,
+    now: u32,
+) -> Res<Vec<BellItem>> {
     let meetings = store.meeting_series(owner).await?;
     let next_up = store.next_up_all(owner).await?;
     let mut open: Vec<String> = store
@@ -171,7 +182,7 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
             open.push(t);
         }
     }
-    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(&store, owner, today)
+    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(store, owner, today)
         .await?
         .into_iter()
         .filter_map(|(p, title)| {
