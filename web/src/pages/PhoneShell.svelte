@@ -7,7 +7,7 @@
   import { dayOfMonth, fmtHours, longDay, relativeDay, weekdayShort } from '../lib/format';
   import type { IconName } from '../lib/icons';
   import type { View } from '../lib/keys';
-  import { app, ribbonDay, ribbonWeekOf, selectDay, setView } from '../lib/store.svelte';
+  import { app, ribbonDay, ribbonWeekOf, selectDay, setView, shownViews } from '../lib/store.svelte';
   import { followDay, startShell } from '../lib/shellLife.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import Capture from '../components/Capture.svelte';
@@ -20,7 +20,9 @@
   import Toast from '../components/Toast.svelte';
   import WindowLayer from '../components/WindowLayer.svelte';
   import Day from '../views/Day.svelte';
+  import Lists from '../views/Lists.svelte';
   import Notes from '../views/Notes.svelte';
+  import Repeating from '../views/Repeating.svelte';
   import Settings from '../views/Settings.svelte';
   import Timesheet from '../views/Timesheet.svelte';
 
@@ -43,13 +45,28 @@
     return () => document.removeEventListener('visibilitychange', onVisible);
   });
 
-  const TABS: { id: View; label: string; icon: IconName }[] = [
-    { id: 'desk', label: 'Desk', icon: 'desk' },
-    { id: 'day', label: 'Day', icon: 'calendar' },
-    { id: 'notes', label: 'Notes', icon: 'note' },
-    { id: 'timesheet', label: 'Timesheet', icon: 'sheet' },
-    { id: 'settings', label: 'More', icon: 'more' },
-  ];
+  const VIEW_TABS: Record<View, { label: string; icon: IconName }> = {
+    desk: { label: 'Desk', icon: 'desk' },
+    day: { label: 'Day', icon: 'calendar' },
+    notes: { label: 'Notes', icon: 'note' },
+    timesheet: { label: 'Timesheet', icon: 'sheet' },
+    repeating: { label: 'Repeating', icon: 'repeat' },
+    lists: { label: 'Lists', icon: 'list' },
+    settings: { label: 'Settings', icon: 'sliders' },
+  };
+
+  // Four views on the bar (Timesheet at work, Repeating at home) and the rest under More.
+  const shown = $derived(shownViews());
+  const barViews = $derived(
+    (['desk', 'day', 'notes', 'timesheet', 'repeating'] as View[]).filter((v) => shown.includes(v)).slice(0, 4),
+  );
+  const moreViews = $derived(shown.filter((v) => !barViews.includes(v)));
+  let moreOpen = $state(false);
+
+  // A view this mode doesn't show (say Timesheet after switching to home) falls back to Desk.
+  $effect(() => {
+    if (app.ready && !shown.includes(app.view)) setView('desk');
+  });
 
   const todayMinutes = $derived(ribbonDay(app.today)?.minutes ?? 0);
   const weekMinutes = $derived(ribbonWeekOf(app.today)?.minutes ?? 0);
@@ -75,6 +92,7 @@
 
   function go(view: View) {
     bell.open = false;
+    moreOpen = false;
     setView(view);
   }
 </script>
@@ -133,6 +151,10 @@
           <Timesheet />
         {:else if app.view === 'notes'}
           <Notes />
+        {:else if app.view === 'repeating'}
+          <Repeating />
+        {:else if app.view === 'lists'}
+          <Lists />
         {:else}
           <Settings />
         {/if}
@@ -152,12 +174,31 @@
     </button>
   {/if}
 
+  {#if moreOpen}
+    <button class="scrim" type="button" aria-label="Close" onclick={() => (moreOpen = false)}></button>
+    <div class="more" role="menu" aria-label="More views">
+      {#each moreViews as v (v)}
+        <button type="button" role="menuitem" aria-current={app.view === v} onclick={() => go(v)}>
+          <Icon name={VIEW_TABS[v].icon} size={22} /><span>{VIEW_TABS[v].label}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
+
   <nav class="tabs" aria-label="Views">
-    {#each TABS as t (t.id)}
-      <button type="button" aria-pressed={app.view === t.id} onclick={() => go(t.id)}>
-        <Icon name={t.icon} size={22} /><span>{t.label}</span>
+    {#each barViews as v (v)}
+      <button type="button" aria-pressed={app.view === v} onclick={() => go(v)}>
+        <Icon name={VIEW_TABS[v].icon} size={22} /><span>{VIEW_TABS[v].label}</span>
       </button>
     {/each}
+    <button
+      type="button"
+      aria-pressed={moreViews.includes(app.view)}
+      aria-expanded={moreOpen}
+      onclick={() => (moreOpen = !moreOpen)}
+    >
+      <Icon name="more" size={22} /><span>More</span>
+    </button>
   </nav>
 </div>
 
@@ -316,6 +357,53 @@
     border-top: 1px solid var(--rule);
     padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
     z-index: 21;
+  }
+
+  .scrim {
+    position: fixed;
+    inset: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--ink) 18%, transparent);
+    z-index: 22;
+  }
+
+  .more {
+    position: fixed;
+    right: 10px;
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+    min-width: 200px;
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 14px;
+    box-shadow: var(--lift);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    z-index: 23;
+  }
+
+  .more button {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    color: var(--ink);
+    font-size: 16px;
+    text-align: left;
+  }
+
+  .more button[aria-current='true'] {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .more button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
 
   .tabs button {
