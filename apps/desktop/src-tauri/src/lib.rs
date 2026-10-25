@@ -180,10 +180,13 @@ async fn backup_now(
     let today = shiftbook_core::dates::parse_date(&today)
         .map(shiftbook_core::dates::format_date)
         .map_err(|_| CommandError::InvalidInput)?;
-    let dialog = app
-        .dialog()
-        .file()
-        .set_parent(&window)
+    let dialog = app.dialog().file();
+    // Phones have one window and no parent dialogs.
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let dialog = dialog
         .set_title("Save a backup")
         .add_filter("Shiftbook backup", &[BACKUP_EXTENSION])
         .set_file_name(format!("Shiftbook backup {today}.{BACKUP_EXTENSION}"));
@@ -212,10 +215,13 @@ async fn pick_backup_file(
     window: tauri::WebviewWindow,
     state: State<'_, VaultSession>,
 ) -> Result<Option<String>, CommandError> {
-    let dialog = app
-        .dialog()
-        .file()
-        .set_parent(&window)
+    let dialog = app.dialog().file();
+    // Phones have one window and no parent dialogs.
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let dialog = dialog
         .set_title("Restore from a backup")
         .add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
     let Some(path) = dialog_path(move || dialog.blocking_pick_file()).await? else {

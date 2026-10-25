@@ -1,0 +1,143 @@
+name: Android
+
+# Shiftbook on Android (round 15). Two jobs:
+# - storage: the vault and SQLCipher tests, built for Android and run on an emulator, proving the
+#   encrypted database works on a phone (SECURITY.md: stop and ask if it can't).
+# - apk: an installable APK for trying it on a phone, kept as a build artifact for 14 days.
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  storage:
+    name: Storage tests on an Android emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-storage
+
+      # The runner image ships the Android SDK and NDK. OpenSSL (built for SQLCipher) finds the
+      # NDK through ANDROID_NDK_ROOT and the clang wrappers on PATH.
+      - name: Point the build at the NDK
+        run: |
+          NDK="$ANDROID_NDK_LATEST_HOME"
+          BIN="$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          {
+            echo "ANDROID_NDK_ROOT=$NDK"
+            echo "ANDROID_NDK_HOME=$NDK"
+            echo "CC_x86_64_linux_android=$BIN/x86_64-linux-android24-clang"
+            echo "AR_x86_64_linux_android=$BIN/llvm-ar"
+            echo "CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$BIN/x86_64-linux-android24-clang"
+          } >> "$GITHUB_ENV"
+          echo "$BIN" >> "$GITHUB_PATH"
+
+      - name: Build the storage tests for Android
+        run: |
+          cargo test -p shiftbook-storage --target x86_64-linux-android --no-run --message-format=json \
+            | jq -r 'select(.profile.test == true and .executable != null) | .executable' > test-bins.txt
+          cat test-bins.txt
+          test -s test-bins.txt
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run them on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          script: |
+            for bin in $(cat test-bins.txt); do adb push "$bin" /data/local/tmp/sb-test && adb shell chmod 755 /data/local/tmp/sb-test && adb shell "cd /data/local/tmp && TMPDIR=/data/local/tmp ./sb-test; echo EXIT=\$?" | tee out.txt && grep -q '^EXIT=0' out.txt; done
+
+  apk:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android, x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: android-apk
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Point the build at the NDK and Java
+        run: |
+          NDK="$ANDROID_NDK_LATEST_HOME"
+          {
+            echo "JAVA_HOME=$JAVA_HOME_21_X64"
+            echo "NDK_HOME=$NDK"
+            echo "ANDROID_NDK_ROOT=$NDK"
+            echo "ANDROID_NDK_HOME=$NDK"
+          } >> "$GITHUB_ENV"
+          echo "$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
+
+      - name: npm ci
+        working-directory: web
+        run: npm ci
+
+      - name: Build the APK
+        working-directory: web
+        run: npm run tauri -- android build --apk --target aarch64 --target x86_64
+
+      # Release APKs must be signed to install. Until a release key is set up (round 15, step 7)
+      # each run signs with a throwaway key, so uninstall the old build before installing a new one.
+      - name: Sign the APK
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          IN=$(find apps/desktop/src-tauri/gen/android/app/build/outputs/apk -name '*-unsigned.apk' | head -1)
+          echo "Unsigned: $IN"
+          keytool -genkeypair -keystore test.jks -alias shiftbook -keyalg RSA -keysize 4096 -validity 30 \
+            -storepass testbuild -keypass testbuild -dname "CN=Shiftbook test build" -noprompt
+          "$BT/zipalign" -f -p 4 "$IN" aligned.apk
+          mkdir -p out
+          "$BT/apksigner" sign --ks test.jks --ks-pass pass:testbuild --key-pass pass:testbuild \
+            --out out/Shiftbook-test.apk aligned.apk
+          "$BT/apksigner" verify out/Shiftbook-test.apk
+          rm test.jks
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Shiftbook-android-test
+          path: out/Shiftbook-test.apk
+          retention-days: 14
