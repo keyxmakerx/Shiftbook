@@ -105,6 +105,8 @@
           <input class="text-in mono" bind:value={newTime} placeholder="20m" aria-label="New time button, like 20m or 1.5h" />
           <button type="submit" class="btn">+ Add</button>
         </form>
+      {:else}
+        <span class="note">Five is the most. Take one off to add another.</span>
       {/if}
       {#if ownTimes}
         <button type="button" class="btn" onclick={() => saveTimes([])}>
@@ -112,7 +114,7 @@
         </button>
       {/if}
     </div>
-    <p class="sub preview">In Log work: {#each times as m (m)}<span class="hbtn mono">{fmtMinutes(m)}</span>{/each}</p>
+    <p class="sub preview">In Log work: {#each times as m (m)}<span class="prev-btn mono">{fmtMinutes(m)}</span>{/each}</p>
   </article>
 
   <article class="paper cz-card">
@@ -241,7 +243,7 @@
     margin-top: 10px;
   }
 
-  .hbtn {
+  .prev-btn {
     border: 1px solid var(--line);
     border-radius: 8px;
     padding: 2px 8px;
