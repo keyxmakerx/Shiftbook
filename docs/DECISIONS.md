@@ -2,6 +2,23 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — Android — 25 Oct 2026
+Proposal: [Shiftbook in your pocket](https://claude.ai/artifact/CufAB8vtd1KpGsRzwTH967);
+cards `r15-android` and `r15-android-ideas` (`tools/signoff/rounds/r15-android.json`). The
+owner approved every recommendation in chat and asked for mockups before any UI is built, so
+the screens are on the card and still need sign-off.
+- **Scope:** the phone starts as a companion (log work, capture, today, the bell, reading
+  notes), not the full Desk canvas. Same Tauri 2 app, core and storage; no separate codebase.
+- **Phone and computer data:** an encrypted sync file each side makes and merges, moved by the
+  user any way they like. Shiftbook still never goes online. Merges by id and `updated_at`,
+  newer edit wins, safety backup first.
+- **Fingerprint unlock:** offered, off by default (`tauri-plugin-biometric`, approved).
+- **Due reminders:** local notifications that count what is due and never show titles
+  (`tauri-plugin-notification`, approved).
+- **Install:** a signed APK from GitHub releases; no Play Store or F-Droid for now.
+- **First step:** a test build that sets up, locks and unlocks on an Android emulator, to prove
+  SQLCipher builds for Android. If it can't, stop and ask (SECURITY.md).
+
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a
   **Done today** pile on the Desk; at the end of the day they leave the Desk. Still-open tickets
