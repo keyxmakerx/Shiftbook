@@ -78,7 +78,7 @@
 | `fields` | Custom field kinds, option lists, value checks, ticket prefixes and link building |
 | `prefs` | Preferences with defaults; project colour palette |
 | `notes` | Note kinds, tags, titles, auto-archive, turning a jot into an entry |
-| `canvas` | The Desk: which cards show, auto-placing, areas and boxes, links, timeline, piles, the same work folded into one card, the tickets box (`work_tickets`) |
+| `canvas` | The Desk: which cards show, auto-placing, areas and boxes, links, timeline, piles, the same work folded into one card |
 | `boards` | Boards you step into from the Desk (projects, meeting series, Daily notes, folders, Archive) |
 | `nextup`, `resume` | The wrap-up's next-up list and Bring up; when "Where was I?" shows and what it offers |
 | `bell`, `meetings`, `pins` | What the bell lists; repeating meetings and their reminders; pins on the bottom bar |
@@ -210,7 +210,7 @@ what it adds and why.
 can't drop a `NOT NULL` without a table rebuild (not portable). Tray tickets exist before any
 entry, so they live apart and every tray change re-plans the day's roll-up entry in the same
 transaction (`shiftbook_core::tray::plan_rollup`). Since round 14 both tables carry done and a
-notepad, and the Desk shows them as one (`shiftbook_core::canvas::work_tickets`).
+notepad; the Desk's tickets box shows each number once (`web/src/lib/workTickets.ts`).
 
 Repositories added since M1 are inherent async methods on `SqliteStore`; like the M1 ones they
 take the `OwnerId`, bind every value, soft-delete and wrap multi-step changes in a transaction.
