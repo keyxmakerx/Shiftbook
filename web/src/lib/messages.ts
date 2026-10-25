@@ -20,6 +20,7 @@ const MESSAGES: Record<ApiErrorCode, string> = {
   backup_needs_secret:
     'This backup was made with a different password. Enter the password or recovery key from when it was made.',
   backup_too_new: 'This backup was made by a newer version of Shiftbook. Update Shiftbook, then try again.',
+  fingerprint_failed: "Fingerprint didn't unlock it. Use your password.",
   unknown: 'Something went wrong. Please try again.',
 };
 

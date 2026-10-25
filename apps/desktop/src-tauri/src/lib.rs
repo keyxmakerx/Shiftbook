@@ -18,6 +18,7 @@ mod session;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
+use shiftbook_storage::{ExposeSecret, SecretString};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -79,8 +80,67 @@ async fn unlock(
     let secret = take_secret(secret);
     let kind = SecretKind::parse(&kind).ok_or(CommandError::UnlockFailed)?;
     let must_set_password = state.unlock(secret, kind).await?;
+    if kind == SecretKind::Password {
+        phone::password_typed(&app);
+    }
     start_automatic_backup(app);
     Ok(api::UnlockOutcome { must_set_password })
+}
+
+/// Phone: can this phone unlock with a fingerprint, and is it on and ready?
+#[tauri::command]
+fn fingerprint_status(app: AppHandle) -> phone::FingerprintStatus {
+    phone::fingerprint_status(&app)
+}
+
+/// Phone: turn fingerprint unlock on. Checks the password first, then Android asks for a
+/// fingerprint and keeps the password encrypted in the phone's secure hardware.
+#[tauri::command]
+async fn fingerprint_on(
+    app: AppHandle,
+    state: State<'_, VaultSession>,
+    password: String,
+) -> Result<(), CommandError> {
+    let password = take_secret(password);
+    let check = SecretString::from(password.expose_secret());
+    state.check_password(check).await?;
+    tauri::async_runtime::spawn_blocking(move || phone::fingerprint_on(&app, &password))
+        .await
+        .map_err(|_| CommandError::StorageError)?
+        .map_err(|_| CommandError::FingerprintFailed)
+}
+
+/// Phone: turn fingerprint unlock off.
+#[tauri::command]
+fn fingerprint_off(app: AppHandle) {
+    phone::fingerprint_off(&app);
+}
+
+/// Phone: unlock with a fingerprint. The stored password goes from Android straight to the
+/// vault, never through the page. If it no longer unlocks (changed elsewhere), fingerprint
+/// unlock turns off and the password is asked for.
+#[tauri::command]
+async fn fingerprint_unlock(
+    app: AppHandle,
+    state: State<'_, VaultSession>,
+) -> Result<api::UnlockOutcome, CommandError> {
+    let asking = app.clone();
+    let password =
+        tauri::async_runtime::spawn_blocking(move || phone::fingerprint_password(&asking))
+            .await
+            .map_err(|_| CommandError::StorageError)?
+            .ok_or(CommandError::FingerprintFailed)?;
+    match state.unlock(password, SecretKind::Password).await {
+        Ok(must_set_password) => {
+            start_automatic_backup(app);
+            Ok(api::UnlockOutcome { must_set_password })
+        }
+        Err(CommandError::UnlockFailed) => {
+            phone::fingerprint_off(&app);
+            Err(CommandError::FingerprintFailed)
+        }
+        Err(other) => Err(other),
+    }
 }
 
 /// Close the database and wipe the key, and turn screenshot protection back on.
@@ -99,10 +159,14 @@ async fn lock(
 /// Set a new password straight after a recovery-key unlock (no old password).
 #[tauri::command]
 async fn set_new_password(
+    app: AppHandle,
     state: State<'_, VaultSession>,
     new_password: String,
 ) -> Result<(), CommandError> {
-    state.set_new_password(take_secret(new_password)).await
+    state.set_new_password(take_secret(new_password)).await?;
+    // A stored fingerprint password would be the old one.
+    phone::fingerprint_off(&app);
+    Ok(())
 }
 
 /// Make a new recovery key (needs the password). Returns it once.
@@ -118,13 +182,17 @@ async fn regenerate_recovery_key(
 /// Change the master password (re-wraps the key; the data isn't re-encrypted).
 #[tauri::command]
 async fn change_password(
+    app: AppHandle,
     state: State<'_, VaultSession>,
     current_password: String,
     new_password: String,
 ) -> Result<(), CommandError> {
     state
         .change_password(take_secret(current_password), take_secret(new_password))
-        .await
+        .await?;
+    // A stored fingerprint password would be the old one: turn it on again with the new one.
+    phone::fingerprint_off(&app);
+    Ok(())
 }
 
 /// Delete all local data (database and vault) so the app starts again at setup.
@@ -413,6 +481,10 @@ pub fn run() {
             phone::phone_timer_away,
             phone::phone_allow_notifications,
             phone::plan_nudges,
+            fingerprint_status,
+            fingerprint_on,
+            fingerprint_off,
+            fingerprint_unlock,
             notes::list_notes,
             notes::get_note,
             notes::create_note,

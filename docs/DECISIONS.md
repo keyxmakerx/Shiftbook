@@ -12,9 +12,10 @@ the screens are on the card and still need sign-off.
 - **Phone and computer data:** an encrypted sync file each side makes and merges, moved by the
   user any way they like. Shiftbook still never goes online. Merges by id and `updated_at`,
   newer edit wins, safety backup first.
-- **Fingerprint unlock:** offered, off by default (`tauri-plugin-biometric`, approved).
-- **Due reminders:** local notifications that count what is due and never show titles
-  (`tauri-plugin-notification`, approved).
+- **Fingerprint unlock:** offered, off by default. Built on Android's own BiometricPrompt
+  (Android 11 or newer) rather than `tauri-plugin-biometric`, so no new package; see SECURITY.md.
+- **Due reminders:** local notifications that count what is due and never show titles. Built
+  with a little Kotlin of our own rather than `tauri-plugin-notification`.
 - **Install:** a signed APK from GitHub releases; no Play Store or F-Droid for now.
 - **First step:** a test build that sets up, locks and unlocks on an Android emulator, to prove
   SQLCipher builds for Android. If it can't, stop and ask (SECURITY.md).

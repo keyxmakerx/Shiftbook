@@ -119,6 +119,16 @@
     "allow-list-backups",
     "allow-pick-backup-file",
     "allow-check-backup",
-    "allow-restore-backup"
+    "allow-restore-backup",
+    "allow-timer-away-question",
+    "allow-phone-launch",
+    "allow-phone-away-seconds",
+    "allow-phone-timer-away",
+    "allow-phone-allow-notifications",
+    "allow-plan-nudges",
+    "allow-fingerprint-status",
+    "allow-fingerprint-on",
+    "allow-fingerprint-off",
+    "allow-fingerprint-unlock"
   ]
 }

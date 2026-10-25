@@ -6,6 +6,9 @@
 use std::path::Path;
 
 #[cfg(target_os = "android")]
+use shiftbook_storage::ExposeSecret;
+use shiftbook_storage::SecretString;
+#[cfg(target_os = "android")]
 use tauri::Manager;
 use tauri::{AppHandle, Runtime, WebviewWindow};
 
@@ -267,6 +270,99 @@ pub async fn plan_nudges<R: Runtime>(
         let _ = (app, nudges);
     }
     Ok(())
+}
+
+// ---------- fingerprint unlock (round 15), off until turned on ----------
+
+/// What the unlock screen and Security need to know.
+#[derive(Debug, Clone, Copy, Default, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FingerprintStatus {
+    /// This phone can do it (Android 11 or newer with a strong fingerprint sensor set up).
+    pub available: bool,
+    /// Turned on in Security.
+    pub on: bool,
+    /// On, and the password was typed since the phone last started.
+    pub ready: bool,
+}
+
+pub fn fingerprint_status<R: Runtime>(app: &AppHandle<R>) -> FingerprintStatus {
+    #[cfg(target_os = "android")]
+    {
+        let Ok(v) = call(app, "fingerprintStatus", serde_json::json!({})) else {
+            return FingerprintStatus::default();
+        };
+        let flag = |k: &str| v.get(k).and_then(|b| b.as_bool()).unwrap_or(false);
+        FingerprintStatus {
+            available: flag("available"),
+            on: flag("on"),
+            ready: flag("ready"),
+        }
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        FingerprintStatus::default()
+    }
+}
+
+/// Ask for a fingerprint and store the password, encrypted by the phone's secure hardware.
+/// Blocks until the user answers, so call it off the async runtime.
+pub fn fingerprint_on<R: Runtime>(app: &AppHandle<R>, password: &SecretString) -> Result<(), ()> {
+    #[cfg(target_os = "android")]
+    {
+        call(
+            app,
+            "fingerprintOn",
+            serde_json::json!({ "password": password.expose_secret() }),
+        )
+        .map(|_| ())
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = (app, password);
+        Err(())
+    }
+}
+
+/// Forget the stored password and its key. Quiet when it was off.
+pub fn fingerprint_off<R: Runtime>(app: &AppHandle<R>) {
+    #[cfg(target_os = "android")]
+    {
+        let _ = call(app, "fingerprintOff", serde_json::json!({}));
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+    }
+}
+
+/// Ask for a fingerprint; the stored password, which never goes to the page. Blocks until
+/// the user answers.
+pub fn fingerprint_password<R: Runtime>(app: &AppHandle<R>) -> Option<SecretString> {
+    #[cfg(target_os = "android")]
+    {
+        let v = call(app, "fingerprintUnlock", serde_json::json!({})).ok()?;
+        let text = v.get("password")?.as_str()?;
+        Some(SecretString::from(text))
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+        None
+    }
+}
+
+/// The password was typed: fingerprint unlock works again until the phone restarts.
+pub fn password_typed<R: Runtime>(app: &AppHandle<R>) {
+    #[cfg(target_os = "android")]
+    {
+        let _ = call(app, "noteBoot", serde_json::json!({}));
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let _ = app;
+    }
 }
 
 #[cfg(test)]

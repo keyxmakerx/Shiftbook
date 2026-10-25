@@ -9,6 +9,7 @@ import type {
   BackupSummary,
   Capture,
   PhoneLaunch,
+  FingerprintStatus,
   CategoryCode,
   CodeInput,
   CustomField,
@@ -411,6 +412,18 @@ export class TauriApi implements DataApi {
   }
   planNudges(today: IsoDate, now: number): Promise<void> {
     return call('plan_nudges', { today, now });
+  }
+  fingerprintStatus(): Promise<FingerprintStatus> {
+    return call('fingerprint_status');
+  }
+  fingerprintOn(password: string): Promise<void> {
+    return call('fingerprint_on', { password });
+  }
+  fingerprintOff(): Promise<void> {
+    return call('fingerprint_off');
+  }
+  fingerprintUnlock(): Promise<UnlockOutcome> {
+    return call('fingerprint_unlock');
   }
 
   listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList> {

@@ -117,6 +117,16 @@ fn main() {
             "pick_backup_file",
             "check_backup",
             "restore_backup",
+            "timer_away_question",
+            "phone_launch",
+            "phone_away_seconds",
+            "phone_timer_away",
+            "phone_allow_notifications",
+            "plan_nudges",
+            "fingerprint_status",
+            "fingerprint_on",
+            "fingerprint_off",
+            "fingerprint_unlock",
         ]),
     ))
     .expect("failed to run tauri-build");

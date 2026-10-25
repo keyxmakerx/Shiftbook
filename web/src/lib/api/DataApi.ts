@@ -62,6 +62,16 @@ export interface PhoneLaunch {
   text: string | null;
 }
 
+/** Mirrors the desktop crate's `phone::FingerprintStatus`. */
+export interface FingerprintStatus {
+  /** This phone can (Android 11 or newer with a fingerprint set up). */
+  available: boolean;
+  /** Turned on in Security. */
+  on: boolean;
+  /** On, and the password was typed since the phone last started. */
+  ready: boolean;
+}
+
 /** Mirrors `shiftbook_core::prefs::Prefs`. */
 export interface Prefs {
   theme: Theme;
@@ -678,6 +688,7 @@ export type ApiErrorCode =
   | 'backup_invalid'
   | 'backup_needs_secret'
   | 'backup_too_new'
+  | 'fingerprint_failed'
   | 'unknown';
 
 const KNOWN_CODES: readonly ApiErrorCode[] = [
@@ -696,6 +707,7 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   'backup_invalid',
   'backup_needs_secret',
   'backup_too_new',
+  'fingerprint_failed',
 ];
 
 /** Every DataApi failure is one of these: a short code, never details or secrets. */
@@ -977,6 +989,14 @@ export interface DataApi {
   phoneAllowNotifications(): Promise<boolean>;
   /** Plan the next due reminder and wrap-up nudge. Tauri: `plan_nudges`. */
   planNudges(today: IsoDate, now: number): Promise<void>;
+  /** Fingerprint unlock: possible here, turned on, and working now. Tauri: `fingerprint_status`. */
+  fingerprintStatus(): Promise<FingerprintStatus>;
+  /** Turn fingerprint unlock on (checks the password, then asks for a fingerprint). Tauri: `fingerprint_on`. */
+  fingerprintOn(password: string): Promise<void>;
+  /** Tauri: `fingerprint_off`. */
+  fingerprintOff(): Promise<void>;
+  /** Unlock with a fingerprint; the password never comes to the page. Tauri: `fingerprint_unlock`. */
+  fingerprintUnlock(): Promise<UnlockOutcome>;
 
   // ----- notes -----
   /**

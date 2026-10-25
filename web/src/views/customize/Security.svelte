@@ -2,6 +2,7 @@
   // Settings → Security: change password, auto-lock time, a new recovery key and deleting
   // all data.
   import { api } from '../../lib/api';
+  import type { FingerprintStatus } from '../../lib/api';
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';
   import { errorMessage } from '../../lib/messages';
   import { recoveryGroups } from '../../lib/recoveryKey';
@@ -38,6 +39,39 @@
   }
 
   let remindTime = $state(app.prefs?.remindAt ?? '08:00');
+
+  // Phone: fingerprint unlock, off until turned on here with the password.
+  let finger = $state<FingerprintStatus | null>(null);
+  let fingerPassword = $state('');
+  let fingerWorking = $state(false);
+  let fingerError = $state('');
+  $effect(() => {
+    if (phone.on) void api.fingerprintStatus().then((s) => (finger = s)).catch(() => undefined);
+  });
+
+  async function fingerOn(event: SubmitEvent) {
+    event.preventDefault();
+    if (!fingerPassword || fingerWorking) return;
+    const typed = fingerPassword;
+    fingerPassword = '';
+    fingerError = '';
+    fingerWorking = true;
+    try {
+      await api.fingerprintOn(typed);
+      toast('Fingerprint unlock is on. After the phone restarts, the password is asked for once.');
+    } catch (e) {
+      fingerError = errorMessage(e);
+    } finally {
+      fingerWorking = false;
+      finger = await api.fingerprintStatus().catch(() => finger);
+    }
+  }
+
+  async function fingerOff() {
+    await attempt(() => api.fingerprintOff());
+    finger = await api.fingerprintStatus().catch(() => finger);
+    toast('Fingerprint unlock is off.');
+  }
 
   /** Turning a nudge on asks Android for permission to notify (from Android 13). */
   async function setNudge(key: 'phone.remind_at' | 'phone.wrapup_nudge', value: string, on: boolean) {
@@ -99,6 +133,33 @@
     <button class="btn primary" type="submit">Save</button>
   </form>
 </article>
+
+{#if phone.on && finger?.available}
+  <article class="paper cz-card">
+    <h3>Unlock with fingerprint</h3>
+    {#if finger.on}
+      <p class="sub">On. After the phone restarts, Shiftbook asks for your password once.</p>
+      <div><button class="btn" type="button" onclick={() => void fingerOff()}>Turn off</button></div>
+    {:else}
+      <p class="sub">Off until you turn it on. Needs your password once.</p>
+      <form class="cz-row" onsubmit={fingerOn}>
+        <input
+          class="text-in cz-grow"
+          type="password"
+          bind:value={fingerPassword}
+          autocomplete="off"
+          placeholder="Your password"
+          aria-label="Your password"
+          disabled={fingerWorking}
+        />
+        <button class="btn primary" type="submit" disabled={!fingerPassword || fingerWorking}>
+          {fingerWorking ? 'Waiting for your fingerprint…' : 'Turn on'}
+        </button>
+      </form>
+      {#if fingerError}<p class="error" role="alert">{fingerError}</p>{/if}
+    {/if}
+  </article>
+{/if}
 
 {#if phone.on}
   <article class="paper cz-card">

@@ -148,4 +148,50 @@ class PhonePlugin(private val activity: Activity) : Plugin(activity) {
             invoke.reject("plan_failed", e)
         }
     }
+
+    /** Fingerprint unlock: can this phone do it, is it on, and does it work now (not straight after a restart)? */
+    @Command
+    fun fingerprintStatus(invoke: Invoke) {
+        val ret = JSObject()
+        ret.put("available", Fingerprint.available(activity))
+        ret.put("on", Fingerprint.isOn(activity))
+        ret.put("ready", Fingerprint.ready(activity))
+        invoke.resolve(ret)
+    }
+
+    /** Turn fingerprint unlock on with the (already checked) password. */
+    @Command
+    fun fingerprintOn(invoke: Invoke) {
+        val password = invoke.getArgs().getString("password")
+        Fingerprint.turnOn(activity, password) { ok ->
+            if (ok) invoke.resolve() else invoke.reject("fingerprint_failed")
+        }
+    }
+
+    @Command
+    fun fingerprintOff(invoke: Invoke) {
+        Fingerprint.off(activity)
+        invoke.resolve()
+    }
+
+    /** Ask for a fingerprint and hand the password to Rust. */
+    @Command
+    fun fingerprintUnlock(invoke: Invoke) {
+        Fingerprint.unlock(activity) { password ->
+            if (password == null) {
+                invoke.reject("fingerprint_failed")
+            } else {
+                val ret = JSObject()
+                ret.put("password", password)
+                invoke.resolve(ret)
+            }
+        }
+    }
+
+    /** The password was typed: fingerprint unlock works until the phone restarts. */
+    @Command
+    fun noteBoot(invoke: Invoke) {
+        Fingerprint.noteBoot(activity)
+        invoke.resolve()
+    }
 }
