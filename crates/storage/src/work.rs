@@ -743,23 +743,17 @@ async fn earlier_tray_row(
     row.as_ref().map(tray_from_row).transpose()
 }
 
-/// Close every still-open row of `ticket` up to and including `date`: finishing a ticket
-/// finishes it on the earlier days it came back on too.
-async fn close_open_rows(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    ticket: &str,
-    date: Date,
-) -> Result<()> {
+/// Close every still-open row of `ticket`: finishing a ticket finishes it on every day it
+/// came back on, including later days it was already carried into (ticking it on an older
+/// day's tray must not leave a newer copy open to keep coming back).
+async fn close_open_rows(conn: &mut SqliteConnection, owner: OwnerId, ticket: &str) -> Result<()> {
     sqlx::query(
         "UPDATE ticket_tray SET done = TRUE, updated_at = $1 WHERE owner_id = $2 \
-         AND lower(ticket_number) = lower($3) AND date <= $4 AND done = FALSE \
-         AND deleted_at IS NULL",
+         AND lower(ticket_number) = lower($3) AND done = FALSE AND deleted_at IS NULL",
     )
     .bind(now_text())
     .bind(owner.to_string())
     .bind(ticket)
-    .bind(format_date(date))
     .execute(&mut *conn)
     .await?;
     Ok(())
@@ -793,7 +787,7 @@ async fn insert_tray_row(
     .execute(&mut *conn)
     .await?;
     if done {
-        close_open_rows(conn, owner, ticket, date).await?;
+        close_open_rows(conn, owner, ticket).await?;
     }
     Ok(())
 }
@@ -1598,7 +1592,7 @@ impl SqliteStore {
     }
 
     /// Tick a tray ticket done, or untick it to keep it open. Ticking also finishes the
-    /// ticket on the earlier days it came back on.
+    /// ticket on the other days it came back on.
     pub async fn tray_set_done(
         &self,
         owner: OwnerId,
@@ -1608,7 +1602,7 @@ impl SqliteStore {
         let mut tx = self.pool.begin().await?;
         let item = live_tray_item(&mut tx, owner, id).await?;
         if done {
-            close_open_rows(&mut tx, owner, &item.ticket_number, item.date).await?;
+            close_open_rows(&mut tx, owner, &item.ticket_number).await?;
             // A ticket ticked done joins the Desk's "Done today" pile, so it gives up the spot
             // it had (unless it's filed in a drawer).
             sqlx::query(

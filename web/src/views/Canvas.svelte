@@ -1,9 +1,9 @@
 <script module lang="ts">
-  import { HOME, type CanvasView } from '../lib/canvasView';
+  import { START, type CanvasView } from '../lib/canvasView';
 
   // Where you left the view, the panel, the links switch and the toolbox, kept while the app
   // is open.
-  let lastView: CanvasView = HOME;
+  let lastView: CanvasView = START;
   let panelOpen = true;
   let linksShown = true;
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
@@ -1180,6 +1180,7 @@
   .board {
     position: relative;
     overflow: hidden;
+    container-type: inline-size;
     border-radius: 10px;
     background-color: var(--desk);
     background-image:
@@ -1490,6 +1491,13 @@
 
   .tools .wide {
     padding: 0 10px;
+  }
+
+  /* The hint shares the bottom edge with the toolbar; it steps aside when there's no room. */
+  @container (max-width: 1180px) {
+    .hint {
+      display: none;
+    }
   }
 
   .hint {

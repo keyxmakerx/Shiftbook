@@ -21,6 +21,8 @@ function schedule(ms: number): void {
   timer = setTimeout(() => {
     timer = null;
     toastState.on = false;
+    // A hidden toast's Undo must not run later (it stays in the page while it fades).
+    handler = null;
   }, ms);
 }
 
