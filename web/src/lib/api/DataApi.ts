@@ -467,6 +467,8 @@ export interface CanvasCard {
   workHours: string | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
+  /** Stays bright under "Just today": from today, still open, brought up for today or pinned. */
+  justToday: boolean;
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */

@@ -471,6 +471,12 @@ pub fn box_status(members: &[MemberState]) -> BoxStatus {
     }
 }
 
+/// "Just today" on the Desk (round 15): a card stays bright when it's from today, still
+/// open, brought up for today or pinned; the rest fade.
+pub fn stays_in_just_today(state: MemberState, pinned: bool) -> bool {
+    state.today || state.open || state.brought_up || pinned
+}
+
 /// Longest name on a pile or a folder.
 pub const MAX_PILE_NAME_CHARS: usize = 60;
 
@@ -846,5 +852,28 @@ mod tests {
         ];
         assert_eq!(tidy_groups(&projects), vec![vec![0, 3, 4]]);
         assert!(tidy_groups::<&str>(&[None, None]).is_empty());
+    }
+
+    #[test]
+    fn just_today_keeps_todays_open_brought_up_and_pinned_cards() {
+        let quiet = MemberState::default();
+        assert!(!stays_in_just_today(quiet, false));
+        assert!(stays_in_just_today(quiet, true));
+        for state in [
+            MemberState {
+                today: true,
+                ..quiet
+            },
+            MemberState {
+                open: true,
+                ..quiet
+            },
+            MemberState {
+                brought_up: true,
+                ..quiet
+            },
+        ] {
+            assert!(stays_in_just_today(state, false));
+        }
     }
 }

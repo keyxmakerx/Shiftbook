@@ -29,6 +29,7 @@ export type Shortcut =
   | { kind: 'escape' }
   | { kind: 'zoom'; step: -1 | 0 | 1 }
   | { kind: 'menu-key' }
+  | { kind: 'just-today' }
   | { kind: 'undo' }
   | { kind: 'redo' };
 
@@ -58,6 +59,7 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
   if (mod || e.altKey || e.typing) return null;
   if (e.key === 'n' || e.key === 'N') return { kind: 'focus-log' };
   if (e.key === '/') return { kind: 'capture' };
+  if (e.key === 't' || e.key === 'T') return { kind: 'just-today' };
   const n = Number(e.key);
   if (Number.isInteger(n) && n >= 1 && n <= VIEWS.length) {
     const view = VIEWS[n - 1];
@@ -76,6 +78,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },
   { keys: 'Ctrl +  Ctrl −', what: 'Bigger or smaller text (Ctrl 0 for normal)' },
+  { keys: 'T', what: 'On the Desk: just today (other days fade)' },
   { keys: 'Ctrl Z', what: 'Undo the last change (type "undo" in Find for the list)' },
   { keys: 'Ctrl Shift Z', what: 'Redo it' },
   { keys: 'Ctrl L', what: 'Lock now' },

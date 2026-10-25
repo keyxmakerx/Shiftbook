@@ -130,6 +130,11 @@
         else if (app.captureOpen) app.captureOpen = false;
         else if (app.drawer) app.drawer = null;
         break;
+      case 'just-today':
+        if (app.view !== 'desk' || menuOpen() || app.captureOpen || app.drawer) return;
+        event.preventDefault();
+        app.justToday = !app.justToday;
+        break;
       case 'focus-log':
         if (menuOpen() || app.captureOpen || app.drawer) return;
         event.preventDefault();

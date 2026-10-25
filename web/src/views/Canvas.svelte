@@ -1063,6 +1063,7 @@
           locked={mode === 'timeline'}
           linking={!!linkFrom}
           selected={selected.has(keyOf(card))}
+          faded={app.justToday && !card.justToday}
           dropping={hoverCard === keyOf(card)}
           extra={cardExtra(card)}
           ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}

@@ -31,6 +31,7 @@
     linking = false,
     selected = false,
     dropping = false,
+    faded = false,
     extra,
     ondrag,
     onmove,
@@ -54,6 +55,8 @@
     linking?: boolean;
     /** Part of the selection (they move together). */
     selected?: boolean;
+    /** "Just today" is on and this card isn't from today: it fades back. */
+    faded?: boolean;
     /** Something is being dragged onto it (it would make a pile). */
     dropping?: boolean;
     /** More menu sections from the Desk (filing, piles). */
@@ -272,6 +275,7 @@
   class:picking={linking}
   class:selected
   class:dropping
+  class:faded
   class:opened={open}
   bind:this={el}
   bind:offsetHeight={height}
@@ -369,6 +373,11 @@
 {/if}
 
 <style>
+  .card.faded:not(:hover, :focus-within, .lifted, .selected) {
+    opacity: 0.3;
+    filter: saturate(0.4);
+  }
+
   .card {
     position: absolute;
     width: 220px;

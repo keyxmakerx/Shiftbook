@@ -129,6 +129,15 @@
     { label: 'Fit everything', group: 'Do', words: 'desk zoom', run: () => onDesk('fit') },
     { label: 'Tidy the Desk', group: 'Do', words: 'pile loose cards by project', run: () => onDesk('tidy') },
     { label: 'Timeline', group: 'Do', words: 'desk lay out', run: () => onDesk('timeline') },
+    {
+      label: app.justToday ? 'Show every card again' : 'Just today on the Desk',
+      group: 'Do',
+      words: 'fade focus today',
+      run: () => {
+        setView('desk');
+        app.justToday = !app.justToday;
+      },
+    },
     ...(app.prefs?.timer
       ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
       : []),

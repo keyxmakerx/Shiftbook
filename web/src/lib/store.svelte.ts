@@ -46,6 +46,8 @@ export const app = $state({
   wrapupClosed: '',
   /** The date "Wrap up the day" was asked for in Find, so the wrap-up shows before its time. */
   wrapupNow: '',
+  /** "Just today" on the Desk (round 15): cards from other days fade. */
+  justToday: false,
   /** Something Find asked the Desk to do once it shows. */
   deskAsk: null as 'fit' | 'tidy' | 'timeline' | null,
   /** Entry to flash after it changed. */
