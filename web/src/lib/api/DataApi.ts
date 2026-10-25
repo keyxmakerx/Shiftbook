@@ -128,6 +128,7 @@ export interface BellItem {
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
     | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
+    | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'brought_up'; id: string; from: IsoDate }
     | { kind: 'chase'; card: string; on: IsoDate }
     | { kind: 'still_open'; tickets: string[] };

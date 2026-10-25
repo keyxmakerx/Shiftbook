@@ -2,7 +2,7 @@
 //! `shiftbook_core::meetings` and `shiftbook_core::bell`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::bell::{bell_items, BellItem};
+use shiftbook_core::bell::{bell_items, timesheet_item, BellItem};
 use shiftbook_core::canvas::CardKind;
 use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{MeetingSeriesId, ProjectId};
@@ -10,6 +10,8 @@ use shiftbook_core::meetings::meeting_note_title;
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::MeetingSeries;
 use shiftbook_core::notes::NoteKind;
+use shiftbook_core::reminder::{last_work_day, timesheet_due, uncoded_entries, week_entered};
+use shiftbook_core::week::week_of;
 use shiftbook_storage::meetings::SeriesInput;
 use shiftbook_storage::notes::NoteInput;
 use shiftbook_storage::work::EntryInput;
@@ -261,12 +263,34 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
                 .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
         })
         .collect();
-    Ok(bell_items(
-        &meetings,
-        &next_up,
-        &chase,
-        &open,
-        today,
-        now.min(24 * 60 - 1),
-    ))
+    let now = now.min(24 * 60 - 1);
+    let mut items = bell_items(&meetings, &next_up, &chase, &open, today, now);
+    if let Some(item) = timesheet_reminder(&store, owner, today, now).await? {
+        items.insert(0, item);
+    }
+    Ok(items)
+}
+
+/// The timesheet reminder (round 15), when it's due: see `shiftbook_core::reminder`.
+async fn timesheet_reminder(
+    store: &shiftbook_storage::SqliteStore,
+    owner: shiftbook_core::ids::OwnerId,
+    today: time::Date,
+    now: u32,
+) -> Res<Option<BellItem>> {
+    let prefs = store.prefs(owner).await?;
+    let start = week_of(today, prefs.week_start);
+    let last = last_work_day(start, |d| prefs.day_target(d) > 0);
+    if !timesheet_due(today, now, last, false) {
+        return Ok(None);
+    }
+    let sheet = crate::api::week_sheet_for(store, owner, today, today, None).await?;
+    let ticks = store.list_ticks(owner, start).await?;
+    let entered = week_entered(&sheet, |day, key| {
+        ticks
+            .iter()
+            .any(|t| t.day == day && t.line_key == key && t.done)
+    });
+    Ok((!entered && sheet.entry_count > 0)
+        .then(|| timesheet_item(start, &sheet.hours, uncoded_entries(&sheet))))
 }

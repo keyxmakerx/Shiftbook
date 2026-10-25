@@ -879,9 +879,19 @@ pub async fn week_sheet(
     group_by: Option<GroupBy>,
 ) -> Res<WeekSheet> {
     let (store, owner) = s.data().await?;
+    week_sheet_for(&store, owner, date_arg(&date)?, date_arg(&today)?, group_by).await
+}
+
+/// The crib sheet for the week holding `date` (also the timesheet reminder's).
+pub(crate) async fn week_sheet_for(
+    store: &SqliteStore,
+    owner: OwnerId,
+    date: Date,
+    today: Date,
+    group_by: Option<GroupBy>,
+) -> Res<WeekSheet> {
     let prefs = store.prefs(owner).await?;
-    let start = week_of(date_arg(&date)?, prefs.week_start);
-    let today = date_arg(&today)?;
+    let start = week_of(date, prefs.week_start);
     let projects = store.list_projects(owner).await?;
     let codes = store.list_timesheet_codes(owner).await?;
     let mappings = store.list_category_codes(owner).await?;

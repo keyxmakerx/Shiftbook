@@ -44,6 +44,16 @@ pub enum BellAbout {
         /// The project its time goes to, if set.
         project: Option<String>,
     },
+    /// This week's timesheet isn't entered yet (round 15, see `crate::reminder`).
+    #[serde(rename_all = "camelCase")]
+    Timesheet {
+        /// The week's first day.
+        week_start: String,
+        /// Logged in the week, as decimal hours.
+        hours: String,
+        /// Entries with no timesheet code yet.
+        uncoded: usize,
+    },
     /// A thing brought up for today ("Bring up tomorrow").
     BroughtUp {
         /// The list item.
@@ -182,6 +192,19 @@ pub fn bell_items(
     }
     items.sort_by_key(|i| i.when);
     items
+}
+
+/// The timesheet reminder, shown first under Now.
+pub fn timesheet_item(week_start: Date, hours: &str, uncoded: usize) -> BellItem {
+    BellItem {
+        when: BellWhen::Now,
+        title: "This week's timesheet isn't entered yet".into(),
+        about: BellAbout::Timesheet {
+            week_start: crate::dates::format_date(week_start),
+            hours: hours.into(),
+            uncoded,
+        },
+    }
 }
 
 /// `HH:MM` for minutes after midnight.

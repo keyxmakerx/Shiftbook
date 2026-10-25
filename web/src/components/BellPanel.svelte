@@ -7,11 +7,11 @@
   import { fly } from 'svelte/transition';
   import { api } from '../lib/api';
   import type { BellItem, CardKind } from '../lib/api';
-  import { bell, refreshBell } from '../lib/bell.svelte';
+  import { bell, nowMinutes, refreshBell, snoozeHour, snoozeSheet } from '../lib/bell.svelte';
   import { addDays, fmtMinutes, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { chaseOn } from '../lib/pins.svelte';
-  import { app, attempt, flashEntry, projectName, refresh, setView, timeButtons } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, projectName, refresh, selectDay, setView, timeButtons } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
@@ -67,6 +67,14 @@
     if (await attempt(() => api.tickNextUp(id, true).then(() => true))) await refreshBell();
   }
 
+  async function openSheet() {
+    await selectDay(app.today);
+    setView('timesheet');
+    close();
+  }
+
+  const clockText = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00`;
+
   function showDay() {
     setView('day');
     close();
@@ -80,6 +88,10 @@
 
   function detail(i: BellItem): string {
     switch (i.about.kind) {
+      case 'timesheet': {
+        const n = i.about.uncoded;
+        return `${i.about.hours} h logged${n ? ` · ${n} ${n === 1 ? 'entry needs' : 'entries need'} a code` : ''}`;
+      }
       case 'meeting_done':
         return i.about.project
           ? `Just finished · logs to ${projectName(i.about.project)}, with the meeting note linked`
@@ -120,11 +132,14 @@
           {#each list as BellItem[] as i, n (i.title + n)}
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} style:--i={n}>
               <span class="ico" aria-hidden="true">
-                <Icon name={i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : 'clock'} size={16} />
+                <Icon name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : 'clock'} size={16} />
               </span>
               <span class="txt"><b>{i.title}</b><small>{detail(i)}</small></span>
               <span class="btns">
-                {#if i.about.kind === 'meeting_done'}
+                {#if i.about.kind === 'timesheet'}
+                  <button type="button" class="btn primary" onclick={() => void openSheet()}>Open the crib sheet</button>
+                  <button type="button" class="btn" onclick={snoozeSheet}>Remind me at {clockText(snoozeHour(nowMinutes()))}</button>
+                {:else if i.about.kind === 'meeting_done'}
                   {@const { series, name, minutes } = i.about}
                   <button type="button" class="btn primary" onclick={() => void logMeeting(series, name, minutes)}>Log {fmtMinutes(minutes)}</button>
                   <button type="button" class="btn" onclick={(e) => otherTime(e, series, name)}>Other time…</button>
