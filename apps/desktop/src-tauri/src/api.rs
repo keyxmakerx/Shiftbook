@@ -1417,6 +1417,13 @@ pub fn timer_offer(seconds: u64, quiet: Vec<u64>) -> Res<TimerOffer> {
     Ok(shiftbook_core::timer::timer_offer(seconds, &quiet))
 }
 
+/// Maps to `DataApi.timerAwayQuestion()`: after time in the background with the timer
+/// running (phone), the minutes to ask about, or null when it's short enough to just count.
+#[tauri::command]
+pub fn timer_away_question(seconds: u64) -> Option<Minutes> {
+    shiftbook_core::timer::away_question(seconds)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

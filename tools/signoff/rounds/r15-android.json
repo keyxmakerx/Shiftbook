@@ -1,0 +1,216 @@
+{
+ "cards": {
+  "r15-android": {
+   "round": 15,
+   "order": 60,
+   "area": "Android",
+   "version": 2,
+   "archived": false,
+   "title": "Shiftbook on an Android phone",
+   "body": [
+    "**Approved in chat (25 Oct):** the phone starts as a companion, the phone and computer swap an encrypted sync file, fingerprint unlock is offered but off by default, due reminders never show titles, and it installs as a signed APK from GitHub releases.",
+    "**Check the screens before I build.** Seven phone screens below: the Desk as a list with a bottom bar and a + button, capture as a sheet, unlock with the optional fingerprint, the phone's security settings, the lock-screen reminder, and the two sync screens (making a file, and the check before merging). Swipe or scroll inside the mockup to see them all.",
+    "The full write-up is in [Shiftbook in your pocket](https://claude.ai/artifact/CufAB8vtd1KpGsRzwTH967). **First step either way:** a small test build that sets up, locks and unlocks on an Android emulator, which proves the encrypted database works on a phone."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-android-core.html",
+     "caption": "The phone screens for the approved choices. Made-up data."
+    }
+   ],
+   "questions": [
+    {
+     "id": "layout",
+     "legend": "1–2 · Desk as a list, bottom bar, + button and capture sheet",
+     "options": [
+      {
+       "value": "Looks right",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "unlock",
+     "legend": "3–4 · Unlock and the security settings",
+     "options": [
+      {
+       "value": "Looks right",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "remind",
+     "legend": "5 · Lock-screen reminder",
+     "options": [
+      {
+       "value": "Looks right",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "sync",
+     "legend": "6–7 · Making a sync file and the check before merging",
+     "options": [
+      {
+       "value": "Looks right",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. put Notes before Day on the bottom bar"
+    }
+   ],
+   "pick": "Next: the test build on an emulator, then the phone layout."
+  },
+  "r15-android-ideas": {
+   "round": 15,
+   "order": 61,
+   "area": "Android",
+   "version": 1,
+   "archived": false,
+   "title": "Ideas for the phone: small things that make it quicker",
+   "body": [
+    "You asked for more ideas. These eight are phone-only and aimed at logging in a few seconds with one thumb. Each one has a mockup. Pick the ones you want; none of them change the desktop app.",
+    "**Privacy holds for all of them:** anything on the lock screen or in the pull-down shows counts and times, never titles, projects or tickets. Anything that touches your data unlocks first.",
+    "C, D and F need a little Android code beside Tauri. F and G use the notification plugin you've already said yes to. No other new packages."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-android-ideas.html",
+     "caption": "Eight phone ideas, A to H. Made-up data."
+    }
+   ],
+   "questions": [
+    {
+     "id": "swipe",
+     "legend": "A · Swipe an entry for +15 min, timer or delete",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "hours",
+     "legend": "B · Hour buttons and recent projects in capture",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "share",
+     "legend": "C · Share into Shiftbook",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "icon",
+     "legend": "D · Long-press the icon",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "away",
+     "legend": "E · The timer asks about time away",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "tile",
+     "legend": "F · Timer tile and quiet notification",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "wrap",
+     "legend": "G · Wrap-up nudge (off by default)",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "resume",
+     "legend": "H · Where was I, on the phone",
+     "options": [
+      {
+       "value": "Yes, build it",
+       "rec": true
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to add or change?",
+     "placeholder": "e.g. a bigger + button, or swipe the other way"
+    }
+   ],
+   "pick": "I'd build B, A and E with the phone layout, then C and D, then F, G and H."
+  }
+ }
+}

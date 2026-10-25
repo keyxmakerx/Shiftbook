@@ -4,19 +4,12 @@
   // with the bell, and the overlays (capture, drawer, paper menu, toast). Also the keyboard
   // shortcuts and the copy guard.
   import { onMount, untrack } from 'svelte';
-  import { refreshBell } from '../lib/bell.svelte';
   import { boards } from '../lib/boards.svelte';
-  import { refreshPins } from '../lib/pins.svelte';
-  import { loadWindows } from '../lib/windows.svelte';
-  import { errorMessage } from '../lib/messages';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
-  import { openAway } from '../lib/bell.svelte';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
-  import { installCopyGuard } from '../lib/protection.svelte';
-  import { noticeReturn } from '../lib/resume';
-  import { restoreTimer, timerActivity } from '../lib/timer.svelte';
-  import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView, shownViews } from '../lib/store.svelte';
+  import { app, focusLog, savePref, setView, shownViews } from '../lib/store.svelte';
+  import { followDay, startShell } from '../lib/shellLife.svelte';
   import { redoLast, toast, undoLatest } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import BoardScreen from '../components/BoardScreen.svelte';
@@ -41,51 +34,12 @@
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
 
-  onMount(() => {
-    loadAll()
-      .then(() => {
-        loadWindows();
-        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins(), openAway()]);
-      })
-      .catch((e: unknown) => (problem = errorMessage(e)));
-    return installCopyGuard();
-  });
-
-  // "Where was I?" after a quiet stretch or when the day changes while open.
-  onMount(() => {
-    let last = Date.now();
-    const onActivity = () => {
-      timerActivity();
-      const seen = noticeReturn(last, Date.now());
-      last = seen.lastActivity;
-      if (seen.awayMinutes !== null && app.ready) void checkResume('break', seen.awayMinutes);
-    };
-    const events = ['keydown', 'pointerdown', 'pointermove', 'wheel'] as const;
-    for (const name of events) window.addEventListener(name, onActivity, { passive: true });
-    const timer = setInterval(async () => {
-      if (app.ready && (await rollDay())) {
-        void checkResume('new_day');
-        void openAway();
-      }
-      if (app.ready) void refreshBell();
-      if (app.ready) void refreshPins();
-    }, 60_000);
-    return () => {
-      clearInterval(timer);
-      for (const name of events) window.removeEventListener(name, onActivity);
-    };
-  });
+  onMount(() => startShell((message) => (problem = message)));
+  followDay();
 
   // At home the Timesheet is hidden: leave it if the mode changes while it's open.
   $effect(() => {
     if (app.ready && !shownViews().includes(app.view)) untrack(() => setView('desk'));
-  });
-
-  // The bell follows the day's changes (a ticket ticked, something brought up).
-  $effect(() => {
-    void app.tray;
-    void app.entries;
-    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins()]));
   });
 
   function order(v: View): number {

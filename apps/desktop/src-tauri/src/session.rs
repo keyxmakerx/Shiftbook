@@ -76,6 +76,8 @@ pub enum CommandError {
     BackupNeedsSecret,
     /// The backup was made by a newer version of Shiftbook.
     BackupTooNew,
+    /// Fingerprint unlock was cancelled, didn't match, or no longer works (phone).
+    FingerprintFailed,
     /// Anything else (disk, database, randomness). Details stay in the app.
     StorageError,
 }
@@ -320,6 +322,28 @@ impl VaultSession {
             drop(session);
         }
         Ok(())
+    }
+
+    /// Check the password while unlocked (to turn on fingerprint unlock). Failures count
+    /// towards the same wait as unlocking.
+    pub async fn check_password(&self, password: SecretString) -> Result<(), CommandError> {
+        let mut inner = self.inner.try_lock().map_err(|_| CommandError::Busy)?;
+        if inner.session.is_none() {
+            return Err(CommandError::Locked);
+        }
+        let vault_dir = self.vault_dir()?;
+        match blocking(move || vault_dir.unlock_with_password(&password).map(|_| ())).await? {
+            Ok(()) => {
+                inner.backoff.record_success();
+                Ok(())
+            }
+            Err(VaultError::UnlockFailed) => {
+                let delay = inner.backoff.record_failure();
+                Self::wait(delay).await;
+                Err(CommandError::UnlockFailed)
+            }
+            Err(other) => Err(other.into()),
+        }
     }
 
     /// Change the master password (needs the current one and an unlocked app).

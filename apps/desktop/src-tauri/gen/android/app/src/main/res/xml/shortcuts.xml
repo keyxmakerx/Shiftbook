@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the app icon (round 15, idea D). Each opens Shiftbook, which unlocks first. -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="log"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_log">
+        <intent
+            android:action="io.github.keyxmakerx.shiftbook.OPEN"
+            android:targetPackage="io.github.keyxmakerx.shiftbook"
+            android:targetClass="io.github.keyxmakerx.shiftbook.MainActivity">
+            <extra android:name="kind" android:value="log" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="timer"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_timer">
+        <intent
+            android:action="io.github.keyxmakerx.shiftbook.OPEN"
+            android:targetPackage="io.github.keyxmakerx.shiftbook"
+            android:targetClass="io.github.keyxmakerx.shiftbook.MainActivity">
+            <extra android:name="kind" android:value="timer" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="jot"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_jot">
+        <intent
+            android:action="io.github.keyxmakerx.shiftbook.OPEN"
+            android:targetPackage="io.github.keyxmakerx.shiftbook"
+            android:targetClass="io.github.keyxmakerx.shiftbook.MainActivity">
+            <extra android:name="kind" android:value="jot" />
+        </intent>
+    </shortcut>
+</shortcuts>

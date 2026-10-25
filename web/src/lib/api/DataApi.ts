@@ -55,6 +55,23 @@ export interface CommentFormat {
   separator: string;
 }
 
+/** Why the phone opened Shiftbook. Mirrors the desktop crate's `phone::Launch`. */
+export interface PhoneLaunch {
+  kind: 'share' | 'log' | 'timer' | 'jot' | 'due' | 'wrapup';
+  /** The shared text, for `share`. */
+  text: string | null;
+}
+
+/** Mirrors the desktop crate's `phone::FingerprintStatus`. */
+export interface FingerprintStatus {
+  /** This phone can (Android 11 or newer with a fingerprint set up). */
+  available: boolean;
+  /** Turned on in Security. */
+  on: boolean;
+  /** On, and the password was typed since the phone last started. */
+  ready: boolean;
+}
+
 /** Mirrors `shiftbook_core::prefs::Prefs`. */
 export interface Prefs {
   theme: Theme;
@@ -64,6 +81,8 @@ export interface Prefs {
   comment: CommentFormat;
   weekStart: WeekStartDay;
   autoLockMinutes: number;
+  /** Phone: minutes away from the app before it locks (0, 1, 5 or 15). */
+  leaveLockMinutes: number;
   /** Daily target in minutes, Monday first (seven numbers). */
   dayTargets: number[];
   /** Text size in percent: 90, 100, 115 or 130. */
@@ -72,6 +91,10 @@ export interface Prefs {
   wrapupAt: string | null;
   /** The optional "Now doing" timer is turned on (off by default). */
   timer: boolean;
+  /** Phone: the due reminder's time `HH:MM` on work days, or null when it's off. */
+  remindAt: string | null;
+  /** Phone: a wrap-up nudge at the wrap-up time (off by default). */
+  wrapupNudge: boolean;
   /** A timer paused by locking, to pick up after unlock. */
   pausedTimer: PausedTimer | null;
   /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
@@ -245,10 +268,13 @@ export type PrefKey =
   | 'timesheet.comment_separator'
   | 'calendar.week_start'
   | 'security.auto_lock_minutes'
+  | 'security.leave_lock_minutes'
   | 'day.targets'
   | 'ui.text_size'
   | 'day.wrapup_at'
   | 'day.timer'
+  | 'phone.remind_at'
+  | 'phone.wrapup_nudge'
   | 'timer.paused'
   | 'notes.auto_archive_days'
   | 'ui.windows'
@@ -750,6 +776,7 @@ export type ApiErrorCode =
   | 'backup_invalid'
   | 'backup_needs_secret'
   | 'backup_too_new'
+  | 'fingerprint_failed'
   | 'unknown';
 
 const KNOWN_CODES: readonly ApiErrorCode[] = [
@@ -768,6 +795,7 @@ const KNOWN_CODES: readonly ApiErrorCode[] = [
   'backup_invalid',
   'backup_needs_secret',
   'backup_too_new',
+  'fingerprint_failed',
 ];
 
 /** Every DataApi failure is one of these: a short code, never details or secrets. */
@@ -1047,6 +1075,31 @@ export interface DataApi {
    * noticed while it ran. Tauri: `timer_offer`.
    */
   timerOffer(seconds: number, quiet: number[]): Promise<TimerOffer>;
+  /**
+   * Phone: after `seconds` in the background with the timer running, the minutes to ask
+   * about ("count it?"), or null when it's short enough to just count. Tauri: `timer_away_question`.
+   */
+  timerAwayQuestion(seconds: number): Promise<number | null>;
+
+  // ----- phone (round 15); on a computer these do nothing -----
+  /** Why the phone opened Shiftbook (shared text, a shortcut, the tile, a nudge), once. Tauri: `phone_launch`. */
+  phoneLaunch(): Promise<PhoneLaunch | null>;
+  /** Seconds in the background since `phoneTimerAway(true, …)`, then forgotten. Tauri: `phone_away_seconds`. */
+  phoneAwaySeconds(): Promise<number>;
+  /** Show the running timer in the notification and the tile (or take it away). Tauri: `phone_timer_away`. */
+  phoneTimerAway(on: boolean, seconds: number): Promise<void>;
+  /** May Shiftbook notify? Asks the user the first time (Android 13 on). Tauri: `phone_allow_notifications`. */
+  phoneAllowNotifications(): Promise<boolean>;
+  /** Plan the next due reminder and wrap-up nudge. Tauri: `plan_nudges`. */
+  planNudges(today: IsoDate, now: number): Promise<void>;
+  /** Fingerprint unlock: possible here, turned on, and working now. Tauri: `fingerprint_status`. */
+  fingerprintStatus(): Promise<FingerprintStatus>;
+  /** Turn fingerprint unlock on (checks the password, then asks for a fingerprint). Tauri: `fingerprint_on`. */
+  fingerprintOn(password: string): Promise<void>;
+  /** Tauri: `fingerprint_off`. */
+  fingerprintOff(): Promise<void>;
+  /** Unlock with a fingerprint; the password never comes to the page. Tauri: `fingerprint_unlock`. */
+  fingerprintUnlock(): Promise<UnlockOutcome>;
 
   // ----- notes -----
   /**

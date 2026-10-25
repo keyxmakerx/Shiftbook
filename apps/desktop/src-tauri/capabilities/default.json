@@ -143,6 +143,16 @@
     "allow-list-item-deleted",
     "allow-list-reset",
     "allow-set-use-mode",
-    "allow-while-away"
+    "allow-while-away",
+    "allow-timer-away-question",
+    "allow-phone-launch",
+    "allow-phone-away-seconds",
+    "allow-phone-timer-away",
+    "allow-phone-allow-notifications",
+    "allow-plan-nudges",
+    "allow-fingerprint-status",
+    "allow-fingerprint-on",
+    "allow-fingerprint-off",
+    "allow-fingerprint-unlock"
   ]
 }

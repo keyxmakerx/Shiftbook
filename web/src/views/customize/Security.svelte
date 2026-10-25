@@ -2,13 +2,23 @@
   // Settings → Security: change password, auto-lock time, a new recovery key and deleting
   // all data.
   import { api } from '../../lib/api';
+  import type { FingerprintStatus } from '../../lib/api';
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';
   import { errorMessage } from '../../lib/messages';
   import { recoveryGroups } from '../../lib/recoveryKey';
-  import { app, attempt } from '../../lib/store.svelte';
+  import { app, attempt, savePref } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ChangePassword from '../../components/ChangePassword.svelte';
   import DeleteAllData from '../../components/DeleteAllData.svelte';
+  import { phone } from '../../lib/phone.svelte';
+  import { planNudges } from '../../lib/launch.svelte';
+
+  const LEAVE_CHOICES = [
+    { minutes: 0, label: 'Straight away' },
+    { minutes: 1, label: 'After 1 minute' },
+    { minutes: 5, label: 'After 5 minutes' },
+    { minutes: 15, label: 'After 15 minutes' },
+  ];
 
   let changing = $state(false);
   let minutes = $state(app.prefs?.autoLockMinutes ?? 15);
@@ -26,6 +36,55 @@
       app.prefs = p;
       toast(`Shiftbook locks after ${p.autoLockMinutes} minutes without activity.`);
     }
+  }
+
+  let remindTime = $state(app.prefs?.remindAt ?? '08:00');
+
+  // Phone: fingerprint unlock, off until turned on here with the password.
+  let finger = $state<FingerprintStatus | null>(null);
+  let fingerPassword = $state('');
+  let fingerWorking = $state(false);
+  let fingerError = $state('');
+  $effect(() => {
+    if (phone.on) void api.fingerprintStatus().then((s) => (finger = s)).catch(() => undefined);
+  });
+
+  async function fingerOn(event: SubmitEvent) {
+    event.preventDefault();
+    if (!fingerPassword || fingerWorking) return;
+    const typed = fingerPassword;
+    fingerPassword = '';
+    fingerError = '';
+    fingerWorking = true;
+    try {
+      await api.fingerprintOn(typed);
+      toast('Fingerprint unlock is on. After the phone restarts, the password is asked for once.');
+    } catch (e) {
+      fingerError = errorMessage(e);
+    } finally {
+      fingerWorking = false;
+      finger = await api.fingerprintStatus().catch(() => finger);
+    }
+  }
+
+  async function fingerOff() {
+    await attempt(() => api.fingerprintOff());
+    finger = await api.fingerprintStatus().catch(() => finger);
+    toast('Fingerprint unlock is off.');
+  }
+
+  /** Turning a nudge on asks Android for permission to notify (from Android 13). */
+  async function setNudge(key: 'phone.remind_at' | 'phone.wrapup_nudge', value: string, on: boolean) {
+    if (!(await savePref(key, value))) return;
+    if (on && !(await api.phoneAllowNotifications().catch(() => false))) {
+      toast('Allow notifications for Shiftbook when Android asks, or in Android’s settings.');
+    }
+    await planNudges();
+  }
+
+  async function saveLeave(value: number) {
+    const p = await attempt(() => api.savePref('security.leave_lock_minutes', String(value)));
+    if (p) app.prefs = p;
   }
 
   async function makeKey(event: SubmitEvent) {
@@ -57,7 +116,11 @@
 
 <article class="paper cz-card">
   <h3>Lock automatically</h3>
-  <p class="sub">After this many minutes without keyboard or mouse use. Ctrl+L locks at once.</p>
+  <p class="sub">
+    {phone.on
+      ? 'After this many minutes without a tap, while Shiftbook is open. The lock button locks at once.'
+      : 'After this many minutes without keyboard or mouse use. Ctrl+L locks at once.'}
+  </p>
   <form
     class="cz-row"
     onsubmit={(e) => {
@@ -70,6 +133,94 @@
     <button class="btn primary" type="submit">Save</button>
   </form>
 </article>
+
+{#if phone.on && finger?.available}
+  <article class="paper cz-card">
+    <h3>Unlock with fingerprint</h3>
+    {#if finger.on}
+      <p class="sub">On. After the phone restarts, Shiftbook asks for your password once.</p>
+      <div><button class="btn" type="button" onclick={() => void fingerOff()}>Turn off</button></div>
+    {:else}
+      <p class="sub">Off until you turn it on. Needs your password once.</p>
+      <form class="cz-row" onsubmit={fingerOn}>
+        <input
+          class="text-in cz-grow"
+          type="password"
+          bind:value={fingerPassword}
+          autocomplete="off"
+          placeholder="Your password"
+          aria-label="Your password"
+          disabled={fingerWorking}
+        />
+        <button class="btn primary" type="submit" disabled={!fingerPassword || fingerWorking}>
+          {fingerWorking ? 'Waiting for your fingerprint…' : 'Turn on'}
+        </button>
+      </form>
+      {#if fingerError}<p class="error" role="alert">{fingerError}</p>{/if}
+    {/if}
+  </article>
+{/if}
+
+{#if phone.on}
+  <article class="paper cz-card">
+    <h3>Lock after leaving the app</h3>
+    <p class="sub">When you switch to another app or turn the screen off.</p>
+    <div class="leave" role="radiogroup" aria-label="Lock after leaving the app">
+      {#each LEAVE_CHOICES as choice (choice.minutes)}
+        <button
+          class="btn"
+          class:primary={app.prefs?.leaveLockMinutes === choice.minutes}
+          type="button"
+          role="radio"
+          aria-checked={app.prefs?.leaveLockMinutes === choice.minutes}
+          onclick={() => void saveLeave(choice.minutes)}>{choice.label}</button
+        >
+      {/each}
+    </div>
+  </article>
+
+  <article class="paper cz-card">
+    <h3>Reminders on this phone</h3>
+    <p class="sub">
+      Quiet notifications on work days (days with a target in Your day). They show a count or a
+      nudge, never what's due, so they're safe on the lock screen. Off unless you turn them on.
+    </p>
+    <div class="cz-row">
+      <label class="check-row">
+        <input
+          type="checkbox"
+          checked={!!app.prefs?.remindAt}
+          onchange={(e) => {
+            const on = (e.currentTarget as HTMLInputElement).checked;
+            void setNudge('phone.remind_at', on ? remindTime : '', on);
+          }}
+        />
+        Due reminder at
+      </label>
+      <input
+        class="text-in mono time"
+        type="time"
+        bind:value={remindTime}
+        aria-label="Due reminder time"
+        onchange={() => app.prefs?.remindAt && void setNudge('phone.remind_at', remindTime, false)}
+      />
+    </div>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={!!app.prefs?.wrapupNudge}
+        disabled={!app.prefs?.wrapupAt}
+        onchange={(e) => {
+          const on = (e.currentTarget as HTMLInputElement).checked;
+          void setNudge('phone.wrapup_nudge', on ? 'true' : 'false', on);
+        }}
+      />
+      Wrap-up nudge at {app.prefs?.wrapupAt ?? 'the wrap-up time'}
+    </label>
+    {#if !app.prefs?.wrapupAt}<p class="note">Turn on the wrap-up in Your day first.</p>{/if}
+    <p class="note">Shiftbook plans the next reminder each time you open it.</p>
+  </article>
+{/if}
 
 <article class="paper cz-card">
   <h3>Recovery key</h3>
@@ -126,6 +277,16 @@
 </article>
 
 <style>
+  .leave {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .time {
+    width: 120px;
+  }
+
   .mins {
     width: 90px;
   }

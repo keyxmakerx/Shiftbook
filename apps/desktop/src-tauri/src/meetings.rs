@@ -236,7 +236,8 @@ pub async fn bell(s: State<'_, VaultSession>, today: String, now: u32) -> Res<Ve
     bell_for(&store, owner, today, now).await
 }
 
-/// Everything in the bell at `now` on `today`, repeating things included (round 15).
+/// Everything in the bell at `now` on `today`, repeating things included (round 15; also
+/// counted for the phone's due reminder).
 pub async fn bell_for(
     store: &SqliteStore,
     owner: OwnerId,

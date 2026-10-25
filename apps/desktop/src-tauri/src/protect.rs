@@ -4,7 +4,7 @@
 //! can allow captures for ten minutes; a timer in the app (not the page) turns
 //! protection back on, so it comes back even if the page is reloaded or locked.
 //! Each allow gets a number; only the timer of the latest allow re-protects.
-//! Works on Windows, partly on macOS, and does nothing on Linux.
+//! Works on Windows and Android, partly on macOS, and does nothing on Linux.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -48,14 +48,12 @@ pub fn allow_capture(
     guard: State<'_, CaptureGuard>,
 ) -> Result<u32, CommandError> {
     let n = guard.begin_allow();
-    window
-        .set_content_protected(false)
-        .map_err(|_| CommandError::StorageError)?;
+    crate::phone::set_protected(&window, false).map_err(|_| CommandError::StorageError)?;
     let guard = guard.inner().clone();
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(u64::from(ALLOW_SECONDS)));
         if guard.is_current(n) {
-            let _ = window.set_content_protected(true);
+            let _ = crate::phone::set_protected(&window, true);
         }
     });
     Ok(ALLOW_SECONDS)
@@ -68,9 +66,7 @@ pub fn protect_capture(
     guard: State<'_, CaptureGuard>,
 ) -> Result<(), CommandError> {
     guard.end_allow();
-    window
-        .set_content_protected(true)
-        .map_err(|_| CommandError::StorageError)
+    crate::phone::set_protected(&window, true).map_err(|_| CommandError::StorageError)
 }
 
 #[cfg(test)]

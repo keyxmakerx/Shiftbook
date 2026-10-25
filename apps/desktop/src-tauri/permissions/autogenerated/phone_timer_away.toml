@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-phone-timer-away"
+description = "Enables the phone_timer_away command without any pre-configured scope."
+commands.allow = ["phone_timer_away"]
+
+[[permission]]
+identifier = "deny-phone-timer-away"
+description = "Denies the phone_timer_away command without any pre-configured scope."
+commands.deny = ["phone_timer_away"]

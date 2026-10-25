@@ -10,6 +10,10 @@
   import NewPassword from './pages/NewPassword.svelte';
   import Purpose from './pages/Purpose.svelte';
   import Shell from './pages/Shell.svelte';
+  import PhoneShell from './pages/PhoneShell.svelte';
+  import { phone } from './lib/phone.svelte';
+  import { timerBack, timerHidden } from './lib/timer.svelte';
+  import { planNudges } from './lib/launch.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
 
@@ -62,6 +66,31 @@
     };
   });
 
+  // Phone: lock after being away from the app (another app, the home screen or the screen off)
+  // for the chosen time; 0 locks as soon as Shiftbook is left.
+  $effect(() => {
+    if (!unlocked || !phone.on) return;
+    const awayMs = (app.prefs?.leaveLockMinutes ?? 1) * 60 * 1000;
+    let leftAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        leftAt = Date.now();
+        // The timer goes into the notification first, so locking keeps it as away.
+        timerHidden();
+        if (screen === 'app') void planNudges();
+        if (awayMs === 0) void lockNow();
+      } else if (leftAt !== null && Date.now() - leftAt >= awayMs) {
+        // After unlock the timer picks up and asks about the time away.
+        void lockNow();
+      } else {
+        leftAt = null;
+        void timerBack();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  });
+
   function onKeydown(event: KeyboardEvent) {
     // In the app the Shell handles Ctrl+L; elsewhere while unlocked, lock here.
     if (screen === 'app' || !unlocked) return;
@@ -103,5 +132,9 @@
 {:else if screen === 'new-password'}
   <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
-  <Shell onLock={lockNow} />
+  {#if phone.on}
+    <PhoneShell onLock={lockNow} />
+  {:else}
+    <Shell onLock={lockNow} />
+  {/if}
 {/if}

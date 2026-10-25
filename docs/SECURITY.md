@@ -260,3 +260,27 @@ password or recovery key can open the app. There is no back-off delay for PINs; 
 after quit and after a sleep gap; the third wrong PIN wipes the wrapped key (a fourth attempt with
 the right PIN fails); nothing PIN-related appears in `vault.json`, the database or a backup;
 changing the password or recovery key ends the window.
+
+## Android additions (round 15)
+- **Same vault, same SQLCipher database** as the computer; the storage tests run on an Android
+  emulator in CI. Password hashing calibrates as on the computer but stops at 256 MiB of memory
+  on a phone and adds passes instead.
+- **Nothing leaves the phone:** no `INTERNET` permission in release builds (debug builds add it
+  for `tauri android dev` only); Android cloud backup and device-to-device transfer are off
+  (`allowBackup="false"`, `data_extraction_rules.xml` excludes everything); the FileProvider only
+  covers the app's cache.
+- **Screenshots:** `FLAG_SECURE` from the first frame, which also blanks the recent-apps preview;
+  the Protected pill turns it off for 10 minutes like the computer.
+- **Lock after leaving the app** (1 minute by default; straight away, 5 or 15 minutes). The timer
+  carries on in a notification that shows only "Timer running" and a clock.
+- **Fingerprint unlock** (off by default): turning it on checks the password, then Android asks for
+  a fingerprint and the password is encrypted with an AES-GCM key in the Android Keystore that
+  needs strong biometrics for every use and is wiped when a fingerprint is added. Unlocking hands
+  the decrypted password from Android to Rust, which unlocks the vault; it never reaches the
+  page. After the phone restarts the password must be typed once (boot count check). Changing the
+  password turns fingerprint unlock off. The password is a Kotlin string for a moment while it
+  is encrypted or decrypted, which can't be wiped; that's the same as any Android password field.
+- **Lock-screen text:** the timer notification, the timer tile, the due reminder and the wrap-up
+  nudge show counts and times only, never titles, projects or tickets.
+- **Shared text and shortcuts** only say why the app was opened; they're acted on after unlock.
+

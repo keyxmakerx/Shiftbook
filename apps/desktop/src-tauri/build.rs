@@ -141,6 +141,16 @@ fn main() {
             "list_reset",
             "set_use_mode",
             "while_away",
+            "timer_away_question",
+            "phone_launch",
+            "phone_away_seconds",
+            "phone_timer_away",
+            "phone_allow_notifications",
+            "plan_nudges",
+            "fingerprint_status",
+            "fingerprint_on",
+            "fingerprint_off",
+            "fingerprint_unlock",
         ]),
     ))
     .expect("failed to run tauri-build");

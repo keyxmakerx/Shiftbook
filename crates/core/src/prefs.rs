@@ -30,6 +30,8 @@ pub const KEY_COMMENT_SEPARATOR: &str = "timesheet.comment_separator";
 pub const KEY_WEEK_START: &str = "calendar.week_start";
 /// Minutes without activity before the app locks (1 to 240).
 pub const KEY_AUTO_LOCK: &str = "security.auto_lock_minutes";
+/// Phone: minutes away from the app before it locks, one of [`LEAVE_LOCK_CHOICES`].
+pub const KEY_LEAVE_LOCK: &str = "security.leave_lock_minutes";
 
 /// Daily target per weekday for the Desk ring: seven minute counts, Monday first,
 /// comma-separated (e.g. `480,480,480,480,240,0,0`).
@@ -40,6 +42,11 @@ pub const KEY_TEXT_SIZE: &str = "ui.text_size";
 pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 /// The optional "Now doing" timer: `true` or `false` (off by default).
 pub const KEY_TIMER: &str = "day.timer";
+/// Phone: the quiet due reminder's time `HH:MM` on work days, or blank when it's off
+/// (off by default). See [`crate::nudge`].
+pub const KEY_REMIND_AT: &str = "phone.remind_at";
+/// Phone: a wrap-up nudge at the wrap-up time, `true` or `false` (off by default).
+pub const KEY_WRAPUP_NUDGE: &str = "phone.wrapup_nudge";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
 /// Open windows and where they are (see [`crate::windows`]), or blank.
@@ -79,6 +86,10 @@ pub const MAX_DAY_TARGET: u32 = 24 * 60;
 pub const DEFAULT_AUTO_LOCK_MINUTES: u32 = 15;
 /// Largest auto-lock setting (4 hours).
 pub const MAX_AUTO_LOCK_MINUTES: u32 = 240;
+/// Phone: lock straight away, or after 1, 5 or 15 minutes away from the app.
+pub const LEAVE_LOCK_CHOICES: [u32; 4] = [0, 1, 5, 15];
+/// Phone: lock after a minute away (phones get lost more than computers).
+pub const DEFAULT_LEAVE_LOCK_MINUTES: u32 = 1;
 /// Longest comment separator.
 pub const MAX_SEPARATOR_CHARS: usize = 5;
 
@@ -178,6 +189,8 @@ pub struct Prefs {
     pub week_start: WeekStart,
     /// Minutes before auto-lock.
     pub auto_lock_minutes: u32,
+    /// Phone: minutes away from the app before it locks.
+    pub leave_lock_minutes: u32,
     /// Daily target in minutes, Monday first.
     pub day_targets: [u32; 7],
     /// Text size in percent.
@@ -186,6 +199,10 @@ pub struct Prefs {
     pub wrapup_at: Option<String>,
     /// The "Now doing" timer is turned on.
     pub timer: bool,
+    /// Phone: due reminder time `HH:MM`, `None` when off.
+    pub remind_at: Option<String>,
+    /// Phone: a wrap-up nudge at the wrap-up time.
+    pub wrapup_nudge: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -219,9 +236,12 @@ impl Default for Prefs {
             comment: CommentFormat::default(),
             week_start: WeekStart::default(),
             auto_lock_minutes: DEFAULT_AUTO_LOCK_MINUTES,
+            leave_lock_minutes: DEFAULT_LEAVE_LOCK_MINUTES,
             day_targets: DEFAULT_DAY_TARGETS,
             text_size: DEFAULT_TEXT_SIZE,
             wrapup_at: None,
+            remind_at: None,
+            wrapup_nudge: false,
             timer: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
@@ -318,7 +338,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE => ok(&["true", "false"]),
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -344,6 +364,10 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
                 max: i64::from(MAX_AUTO_LOCK_MINUTES),
             }),
         },
+        KEY_LEAVE_LOCK => match v.parse::<u32>() {
+            Ok(n) if LEAVE_LOCK_CHOICES.contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_DAY_TARGETS => parse_day_targets(v)
             .map(|t| t.map(|n| n.to_string()).join(","))
             .ok_or_else(|| invalid(value)),
@@ -355,7 +379,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
             Ok(n) if AUTO_ARCHIVE_CHOICES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
         },
-        KEY_WRAPUP_AT => {
+        KEY_WRAPUP_AT | KEY_REMIND_AT => {
             if v.is_empty() {
                 Ok(String::new())
             } else {
@@ -439,12 +463,17 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_AUTO_LOCK => {
                 prefs.auto_lock_minutes = v.parse().unwrap_or(DEFAULT_AUTO_LOCK_MINUTES)
             }
+            KEY_LEAVE_LOCK => {
+                prefs.leave_lock_minutes = v.parse().unwrap_or(DEFAULT_LEAVE_LOCK_MINUTES)
+            }
             KEY_DAY_TARGETS => {
                 prefs.day_targets = parse_day_targets(&v).unwrap_or(DEFAULT_DAY_TARGETS)
             }
             KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
+            KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
+            KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
@@ -600,6 +629,14 @@ mod tests {
         assert_eq!(validate_pref(KEY_AUTO_LOCK, "240"), Ok("240".into()));
         assert!(validate_pref(KEY_AUTO_LOCK, "241").is_err());
         assert!(validate_pref(KEY_AUTO_LOCK, "x").is_err());
+        assert_eq!(validate_pref(KEY_LEAVE_LOCK, " 5 "), Ok("5".into()));
+        assert_eq!(validate_pref(KEY_LEAVE_LOCK, "0"), Ok("0".into()));
+        assert!(validate_pref(KEY_LEAVE_LOCK, "2").is_err());
+        assert_eq!(Prefs::default().leave_lock_minutes, 1);
+        assert_eq!(
+            prefs_from_settings(&[(KEY_LEAVE_LOCK, "15")]).leave_lock_minutes,
+            15
+        );
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "------").is_err());
         assert!(validate_pref(KEY_COMMENT_SEPARATOR, "\n").is_err());
@@ -702,6 +739,15 @@ mod tests {
     fn timer_on_and_paused() {
         assert_eq!(validate_pref(KEY_TIMER, "true"), Ok("true".into()));
         assert!(validate_pref(KEY_TIMER, "yes").is_err());
+        assert_eq!(validate_pref(KEY_REMIND_AT, "8:00"), Ok("08:00".into()));
+        assert_eq!(validate_pref(KEY_REMIND_AT, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_REMIND_AT, "8am").is_err());
+        assert_eq!(validate_pref(KEY_WRAPUP_NUDGE, "true"), Ok("true".into()));
+        let p = prefs_from_settings(&[(KEY_REMIND_AT, "08:00"), (KEY_WRAPUP_NUDGE, "true")]);
+        assert_eq!(p.remind_at.as_deref(), Some("08:00"));
+        assert!(p.wrapup_nudge);
+        assert_eq!(Prefs::default().remind_at, None);
+        assert!(!Prefs::default().wrapup_nudge);
         let id = crate::ids::TimeEntryId::new();
         let stored = format!("{id} 3700 400,90");
         assert_eq!(validate_pref(KEY_TIMER_PAUSED, &stored), Ok(stored.clone()));

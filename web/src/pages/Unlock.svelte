@@ -3,6 +3,7 @@
   import type { SecretKind } from '../lib/api';
   import { errorMessage } from '../lib/messages';
   import DeleteAllData from '../components/DeleteAllData.svelte';
+  import { phone } from '../lib/phone.svelte';
 
   let { onUnlocked }: { onUnlocked: (mustSetPassword: boolean) => void } = $props();
 
@@ -13,6 +14,39 @@
   let input: HTMLInputElement | undefined = $state();
   // Lost both the password and the recovery key: offer to delete everything.
   let startingOver = $state(false);
+
+  // Phone: fingerprint unlock, once turned on in Security and the password was typed since
+  // the phone started. Asked for straight away; the button asks again.
+  let fingerprint = $state(false);
+  $effect(() => {
+    if (!phone.on) return;
+    void api
+      .fingerprintStatus()
+      .then((s) => {
+        fingerprint = s.ready;
+        if (s.ready) void touch();
+      })
+      .catch(() => undefined);
+  });
+
+  async function touch() {
+    if (working) return;
+    error = '';
+    working = true;
+    try {
+      const outcome = await api.fingerprintUnlock();
+      onUnlocked(outcome.mustSetPassword);
+    } catch (e) {
+      error = errorMessage(e);
+      fingerprint = await api
+        .fingerprintStatus()
+        .then((s) => s.ready)
+        .catch(() => false);
+      input?.focus();
+    } finally {
+      working = false;
+    }
+  }
 
   $effect(() => {
     // Focus the field on open and whenever the mode switches.
@@ -85,6 +119,11 @@
       <button type="submit" class="primary" disabled={working || secret.length === 0}>
         {working ? 'Unlocking…' : 'Unlock'}
       </button>
+      {#if fingerprint && kind === 'password'}
+        <button type="button" class="finger" onclick={() => void touch()} disabled={working}>
+          Touch to unlock with your fingerprint
+        </button>
+      {/if}
       <button type="button" class="link" onclick={switchKind} disabled={working}>
         {kind === 'password' ? 'Forgot your password? Use your recovery key' : 'Use your password instead'}
       </button>
@@ -96,3 +135,9 @@
     </form>
   {/if}
 </main>
+
+<style>
+  .finger {
+    min-height: 48px;
+  }
+</style>

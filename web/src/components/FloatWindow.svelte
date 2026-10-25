@@ -8,6 +8,7 @@
   import { app, attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
   import { closeWindow, focusWindow, moveWindow, resizeWindow, setWindowMode, windows, winKey } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
+  import { phone } from '../lib/phone.svelte';
 
   let { win }: { win: WindowSpot } = $props();
 
@@ -155,30 +156,33 @@
   <header
     class="bar"
     onpointerdown={(e) => drag(e, false)}
-    ondblclick={() => setWindowMode(key, win.mode === 'full' ? 'open' : 'full')}
+    ondblclick={() => !phone.on && setWindowMode(key, win.mode === 'full' ? 'open' : 'full')}
   >
     <span class="ic" aria-hidden="true"></span>
     <span class="ttl">{title || '…'}</span>
     <span class="sub">{sub}</span>
-    <button
-      type="button"
-      title={win.mode === 'rolled' ? 'Open it again' : 'Roll up to the title bar'}
-      aria-label={win.mode === 'rolled' ? 'Unroll' : 'Roll up'}
-      onclick={() => setWindowMode(key, win.mode === 'rolled' ? 'open' : 'rolled')}
-    >
-      <Icon name={win.mode === 'rolled' ? 'down' : 'up'} size={14} />
-    </button>
-    <button type="button" title="Minimise to the bottom bar" aria-label="Minimise" onclick={() => setWindowMode(key, 'min')}>
-      <Icon name="minus" size={14} />
-    </button>
-    <button
-      type="button"
-      title={win.mode === 'full' ? 'Back to a window' : 'Full screen'}
-      aria-label={win.mode === 'full' ? 'Restore' : 'Full screen'}
-      onclick={() => setWindowMode(key, win.mode === 'full' ? 'open' : 'full')}
-    >
-      <Icon name={win.mode === 'full' ? 'restore' : 'expand'} size={14} />
-    </button>
+    <!-- A phone shows one window at a time, full screen: only Close. -->
+    {#if !phone.on}
+      <button
+        type="button"
+        title={win.mode === 'rolled' ? 'Open it again' : 'Roll up to the title bar'}
+        aria-label={win.mode === 'rolled' ? 'Unroll' : 'Roll up'}
+        onclick={() => setWindowMode(key, win.mode === 'rolled' ? 'open' : 'rolled')}
+      >
+        <Icon name={win.mode === 'rolled' ? 'down' : 'up'} size={14} />
+      </button>
+      <button type="button" title="Minimise to the bottom bar" aria-label="Minimise" onclick={() => setWindowMode(key, 'min')}>
+        <Icon name="minus" size={14} />
+      </button>
+      <button
+        type="button"
+        title={win.mode === 'full' ? 'Back to a window' : 'Full screen'}
+        aria-label={win.mode === 'full' ? 'Restore' : 'Full screen'}
+        onclick={() => setWindowMode(key, win.mode === 'full' ? 'open' : 'full')}
+      >
+        <Icon name={win.mode === 'full' ? 'restore' : 'expand'} size={14} />
+      </button>
+    {/if}
     <button type="button" class="x" title="Close" aria-label="Close" onclick={() => closeWindow(key)}>
       <Icon name="x" size={14} />
     </button>

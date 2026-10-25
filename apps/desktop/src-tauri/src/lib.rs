@@ -12,6 +12,7 @@ mod canvas;
 mod home;
 mod meetings;
 mod notes;
+mod phone;
 mod pins;
 mod protect;
 mod session;
@@ -20,6 +21,7 @@ mod test_support;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
+use shiftbook_storage::{ExposeSecret, SecretString};
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -81,8 +83,67 @@ async fn unlock(
     let secret = take_secret(secret);
     let kind = SecretKind::parse(&kind).ok_or(CommandError::UnlockFailed)?;
     let must_set_password = state.unlock(secret, kind).await?;
+    if kind == SecretKind::Password {
+        phone::password_typed(&app);
+    }
     start_automatic_backup(app);
     Ok(api::UnlockOutcome { must_set_password })
+}
+
+/// Phone: can this phone unlock with a fingerprint, and is it on and ready?
+#[tauri::command]
+fn fingerprint_status(app: AppHandle) -> phone::FingerprintStatus {
+    phone::fingerprint_status(&app)
+}
+
+/// Phone: turn fingerprint unlock on. Checks the password first, then Android asks for a
+/// fingerprint and keeps the password encrypted in the phone's secure hardware.
+#[tauri::command]
+async fn fingerprint_on(
+    app: AppHandle,
+    state: State<'_, VaultSession>,
+    password: String,
+) -> Result<(), CommandError> {
+    let password = take_secret(password);
+    let check = SecretString::from(password.expose_secret());
+    state.check_password(check).await?;
+    tauri::async_runtime::spawn_blocking(move || phone::fingerprint_on(&app, &password))
+        .await
+        .map_err(|_| CommandError::StorageError)?
+        .map_err(|_| CommandError::FingerprintFailed)
+}
+
+/// Phone: turn fingerprint unlock off.
+#[tauri::command]
+fn fingerprint_off(app: AppHandle) {
+    phone::fingerprint_off(&app);
+}
+
+/// Phone: unlock with a fingerprint. The stored password goes from Android straight to the
+/// vault, never through the page. If it no longer unlocks (changed elsewhere), fingerprint
+/// unlock turns off and the password is asked for.
+#[tauri::command]
+async fn fingerprint_unlock(
+    app: AppHandle,
+    state: State<'_, VaultSession>,
+) -> Result<api::UnlockOutcome, CommandError> {
+    let asking = app.clone();
+    let password =
+        tauri::async_runtime::spawn_blocking(move || phone::fingerprint_password(&asking))
+            .await
+            .map_err(|_| CommandError::StorageError)?
+            .ok_or(CommandError::FingerprintFailed)?;
+    match state.unlock(password, SecretKind::Password).await {
+        Ok(must_set_password) => {
+            start_automatic_backup(app);
+            Ok(api::UnlockOutcome { must_set_password })
+        }
+        Err(CommandError::UnlockFailed) => {
+            phone::fingerprint_off(&app);
+            Err(CommandError::FingerprintFailed)
+        }
+        Err(other) => Err(other),
+    }
 }
 
 /// Close the database and wipe the key, and turn screenshot protection back on.
@@ -94,17 +155,21 @@ async fn lock(
     guard: State<'_, protect::CaptureGuard>,
 ) -> Result<(), CommandError> {
     guard.end_allow();
-    let _ = window.set_content_protected(true);
+    let _ = phone::set_protected(&window, true);
     state.lock().await
 }
 
 /// Set a new password straight after a recovery-key unlock (no old password).
 #[tauri::command]
 async fn set_new_password(
+    app: AppHandle,
     state: State<'_, VaultSession>,
     new_password: String,
 ) -> Result<(), CommandError> {
-    state.set_new_password(take_secret(new_password)).await
+    state.set_new_password(take_secret(new_password)).await?;
+    // A stored fingerprint password would be the old one.
+    phone::fingerprint_off(&app);
+    Ok(())
 }
 
 /// Make a new recovery key (needs the password). Returns it once.
@@ -120,13 +185,17 @@ async fn regenerate_recovery_key(
 /// Change the master password (re-wraps the key; the data isn't re-encrypted).
 #[tauri::command]
 async fn change_password(
+    app: AppHandle,
     state: State<'_, VaultSession>,
     current_password: String,
     new_password: String,
 ) -> Result<(), CommandError> {
     state
         .change_password(take_secret(current_password), take_secret(new_password))
-        .await
+        .await?;
+    // A stored fingerprint password would be the old one: turn it on again with the new one.
+    phone::fingerprint_off(&app);
+    Ok(())
 }
 
 /// Delete all local data (database and vault) so the app starts again at setup.
@@ -140,7 +209,7 @@ async fn delete_all_data(
     confirm: String,
 ) -> Result<(), CommandError> {
     guard.end_allow();
-    let _ = window.set_content_protected(true);
+    let _ = phone::set_protected(&window, true);
     state.delete_all_data(&confirm).await
 }
 
@@ -154,14 +223,23 @@ fn start_automatic_backup(app: AppHandle) {
     });
 }
 
-/// A dialog result as a path, off the main thread.
-async fn dialog_path(
+/// A dialog result, off the main thread.
+async fn dialog_pick(
     work: impl FnOnce() -> Option<tauri_plugin_dialog::FilePath> + Send + 'static,
-) -> Result<Option<std::path::PathBuf>, CommandError> {
-    let picked = tauri::async_runtime::spawn_blocking(work)
+) -> Result<Option<tauri_plugin_dialog::FilePath>, CommandError> {
+    tauri::async_runtime::spawn_blocking(work)
         .await
+        .map_err(|_| CommandError::StorageError)
+}
+
+/// A file of our own for passing a backup to or from a picked Android document.
+fn phone_temp(app: &AppHandle, name: &str) -> Result<std::path::PathBuf, CommandError> {
+    let dir = app
+        .path()
+        .app_cache_dir()
         .map_err(|_| CommandError::StorageError)?;
-    Ok(picked.and_then(|p| p.into_path().ok()))
+    shiftbook_storage::create_private_dir(&dir).map_err(|_| CommandError::StorageError)?;
+    Ok(dir.join(name))
 }
 
 fn file_name_of(path: &std::path::Path) -> String {
@@ -183,22 +261,42 @@ async fn backup_now(
     let today = shiftbook_core::dates::parse_date(&today)
         .map(shiftbook_core::dates::format_date)
         .map_err(|_| CommandError::InvalidInput)?;
-    let dialog = app
-        .dialog()
-        .file()
-        .set_parent(&window)
-        .set_title("Save a backup")
-        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION])
-        .set_file_name(format!("Shiftbook backup {today}.{BACKUP_EXTENSION}"));
-    let Some(mut path) = dialog_path(move || dialog.blocking_save_file()).await? else {
-        return Ok(None);
-    };
-    if path.extension().is_none_or(|e| e != BACKUP_EXTENSION) {
-        path.set_extension(BACKUP_EXTENSION);
+    let dialog = app.dialog().file();
+    // Phones have one window and no parent dialogs.
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let file_name = format!("Shiftbook backup {today}.{BACKUP_EXTENSION}");
+    let dialog = dialog.set_title("Save a backup").set_file_name(&file_name);
+    // Android picks by file type, and knows no type for .shiftbak.
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
+    match dialog_pick(move || dialog.blocking_save_file()).await? {
+        None => Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(mut path)) => {
+            if path.extension().is_none_or(|e| e != BACKUP_EXTENSION) {
+                path.set_extension(BACKUP_EXTENSION);
+            }
+            let name = file_name_of(&path);
+            state.backup_to(path).await?;
+            Ok(Some(name))
+        }
+        // Android: a document link. Make the backup in our cache, copy it there, remove ours.
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "outgoing.shiftbak")?;
+            let made = state.backup_to(temp.clone()).await;
+            let copied = made.and_then(|()| {
+                phone::copy_to_uri(&app, &temp, url.as_str())
+                    .map_err(|()| CommandError::StorageError)
+            });
+            let _ = std::fs::remove_file(&temp);
+            copied?;
+            Ok(Some(
+                phone::display_name(&app, url.as_str()).unwrap_or(file_name),
+            ))
+        }
     }
-    let name = file_name_of(&path);
-    state.backup_to(path).await?;
-    Ok(Some(name))
 }
 
 /// The automatic and safety backups. Maps to `DataApi.listBackups()`.
@@ -215,16 +313,31 @@ async fn pick_backup_file(
     window: tauri::WebviewWindow,
     state: State<'_, VaultSession>,
 ) -> Result<Option<String>, CommandError> {
-    let dialog = app
-        .dialog()
-        .file()
-        .set_parent(&window)
-        .set_title("Restore from a backup")
-        .add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
-    let Some(path) = dialog_path(move || dialog.blocking_pick_file()).await? else {
-        return Ok(None);
+    let dialog = app.dialog().file();
+    // Phones have one window and no parent dialogs.
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let dialog = dialog.set_title("Restore from a backup");
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Shiftbook backup", &[BACKUP_EXTENSION]);
+    let (path, name) = match dialog_pick(move || dialog.blocking_pick_file()).await? {
+        None => return Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(path)) => {
+            let name = file_name_of(&path);
+            (path, name)
+        }
+        // Android: copy the picked document into our cache; restore reads it from there.
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "incoming.shiftbak")?;
+            phone::copy_from_uri(&app, url.as_str(), &temp)
+                .map_err(|()| CommandError::StorageError)?;
+            let name =
+                phone::display_name(&app, url.as_str()).unwrap_or_else(|| "the backup".to_owned());
+            (temp, name)
+        }
     };
-    let name = file_name_of(&path);
     state.set_picked_backup(path).await?;
     Ok(Some(name))
 }
@@ -278,6 +391,7 @@ async fn restore_backup(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(phone::init())
         .setup(|app| {
             // Tauri's per-user app data folder; never a hard-coded path.
             let data_dir = app
@@ -370,6 +484,16 @@ pub fn run() {
             api::save_responses,
             api::where_was_i,
             api::timer_offer,
+            api::timer_away_question,
+            phone::phone_launch,
+            phone::phone_away_seconds,
+            phone::phone_timer_away,
+            phone::phone_allow_notifications,
+            phone::plan_nudges,
+            fingerprint_status,
+            fingerprint_on,
+            fingerprint_off,
+            fingerprint_unlock,
             notes::list_notes,
             notes::get_note,
             notes::create_note,
