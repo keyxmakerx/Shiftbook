@@ -155,7 +155,7 @@ fn parse_target_type(text: &str) -> Result<TargetType> {
     }
 }
 
-fn entry_from_row(row: &SqliteRow) -> Result<(TimeEntry, bool)> {
+pub(crate) fn entry_from_row(row: &SqliteRow) -> Result<(TimeEntry, bool)> {
     let target_type = parse_target_type(row.try_get("target_type")?)?;
     let target_id = opt_uuid(row.try_get("target_id")?)?;
     let source: Option<String> = row.try_get("source")?;
@@ -434,7 +434,7 @@ async fn check_links(
 
 /// Insert an entry. `source` marks a tray roll-up, and `tray_project` which project's
 /// tray tickets it rolls up (`None` for the plain "Tickets" entry and for user entries).
-async fn insert_entry(
+pub(crate) async fn insert_entry(
     conn: &mut SqliteConnection,
     entry: &TimeEntry,
     source: Option<&str>,
@@ -993,7 +993,11 @@ impl SqliteStore {
                 input.project = Some(project);
             }
         }
-        let checked = checked_entry(owner, &input)?;
+        let mut checked = checked_entry(owner, &input)?;
+        if input.project.is_none() && matches!(current.target, EntryTarget::Recurring(_)) {
+            // A repeating thing's entry has no project to pick; keep what it belongs to.
+            checked.target = current.target;
+        }
         check_links(&mut tx, owner, &input).await?;
         sqlx::query(
             "UPDATE time_entries SET date = $1, minutes = $2, target_type = $3, target_id = $4, \

@@ -9,6 +9,7 @@ mod api;
 mod backoff;
 mod boards;
 mod canvas;
+mod home;
 mod meetings;
 mod notes;
 mod pins;
@@ -401,6 +402,24 @@ pub fn run() {
             pick_backup_file,
             check_backup,
             restore_backup,
+            home::recurring_list,
+            home::recurring_save,
+            home::recurring_done,
+            home::recurring_renewed,
+            home::recurring_undo,
+            home::recurring_set_deleted,
+            home::recurring_choices,
+            home::lists,
+            home::list_create,
+            home::list_rename,
+            home::list_set_deleted,
+            home::list_add_items,
+            home::list_item_done,
+            home::list_item_text,
+            home::list_item_deleted,
+            home::list_reset,
+            home::set_use_mode,
+            home::while_away,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Shiftbook");

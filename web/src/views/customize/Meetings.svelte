@@ -6,7 +6,7 @@
   import { api } from '../../lib/api';
   import type { MeetingSeries, SeriesInput } from '../../lib/api';
   import { refreshBell } from '../../lib/bell.svelte';
-  import { attempt } from '../../lib/store.svelte';
+  import { attempt, words } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
 
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -59,7 +59,7 @@
 </script>
 
 <article class="paper cz-card">
-  <h3>Meetings</h3>
+  <h3>{words().meetings}</h3>
   <p class="sub">
     Meetings that repeat. The bell in the bottom bar reminds you before each one starts and opens
     that day's meeting note. Nothing leaves Shiftbook: there are no pop-ups outside the app.

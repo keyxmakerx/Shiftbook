@@ -4,7 +4,8 @@
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
   import type { SettingsSection } from '../lib/keys';
-  import { app } from '../lib/store.svelte';
+  import { app, words } from '../lib/store.svelte';
+  import { hasWork } from '../lib/words';
   import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
@@ -16,7 +17,7 @@
   import TimesheetSettings from './customize/TimesheetSettings.svelte';
   import YourDay from './customize/YourDay.svelte';
 
-  const SECTIONS: { id: SettingsSection; label: string; icon: IconName }[] = [
+  const ALL_SECTIONS: { id: SettingsSection; label: string; icon: IconName }[] = [
     { id: 'look', label: 'Look', icon: 'palette' },
     { id: 'day', label: 'Your day', icon: 'clock' },
     { id: 'projects', label: 'Projects', icon: 'folder' },
@@ -28,6 +29,13 @@
     { id: 'backups', label: 'Backups', icon: 'archive' },
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
+
+  // At home the Timesheet section hides and Meetings are called Regular events (round 15).
+  const SECTIONS = $derived(
+    ALL_SECTIONS.filter((s) => s.id !== 'timesheet' || hasWork(app.prefs?.useMode)).map((s) =>
+      s.id === 'meetings' ? { ...s, label: words().meetings } : s,
+    ),
+  );
 
   // Opens on the section asked for (e.g. from the tray's responses menu), then stays put.
   let section = $state<SettingsSection>(app.settingsSection);

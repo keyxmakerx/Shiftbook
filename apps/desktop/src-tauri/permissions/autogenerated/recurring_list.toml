@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-list"
+description = "Enables the recurring_list command without any pre-configured scope."
+commands.allow = ["recurring_list"]
+
+[[permission]]
+identifier = "deny-recurring-list"
+description = "Denies the recurring_list command without any pre-configured scope."
+commands.deny = ["recurring_list"]

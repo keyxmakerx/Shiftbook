@@ -10,12 +10,13 @@
   import { loadWindows } from '../lib/windows.svelte';
   import { errorMessage } from '../lib/messages';
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
+  import { openAway } from '../lib/bell.svelte';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
   import { installCopyGuard } from '../lib/protection.svelte';
   import { noticeReturn } from '../lib/resume';
   import { restoreTimer, timerActivity } from '../lib/timer.svelte';
-  import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView } from '../lib/store.svelte';
+  import { app, checkResume, focusLog, loadAll, rollDay, savePref, setView, shownViews } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
   import BoardScreen from '../components/BoardScreen.svelte';
@@ -33,6 +34,8 @@
   import Day from '../views/Day.svelte';
   import Timesheet from '../views/Timesheet.svelte';
   import Notes from '../views/Notes.svelte';
+  import Repeating from '../views/Repeating.svelte';
+  import Lists from '../views/Lists.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
@@ -41,7 +44,7 @@
     loadAll()
       .then(() => {
         loadWindows();
-        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins()]);
+        return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins(), openAway()]);
       })
       .catch((e: unknown) => (problem = errorMessage(e)));
     return installCopyGuard();
@@ -59,7 +62,10 @@
     const events = ['keydown', 'pointerdown', 'pointermove', 'wheel'] as const;
     for (const name of events) window.addEventListener(name, onActivity, { passive: true });
     const timer = setInterval(async () => {
-      if (app.ready && (await rollDay())) void checkResume('new_day');
+      if (app.ready && (await rollDay())) {
+        void checkResume('new_day');
+        void openAway();
+      }
       if (app.ready) void refreshBell();
       if (app.ready) void refreshPins();
     }, 60_000);
@@ -67,6 +73,11 @@
       clearInterval(timer);
       for (const name of events) window.removeEventListener(name, onActivity);
     };
+  });
+
+  // At home the Timesheet is hidden: leave it if the mode changes while it's open.
+  $effect(() => {
+    if (app.ready && !shownViews().includes(app.view)) untrack(() => setView('desk'));
   });
 
   // The bell follows the day's changes (a ticket ticked, something brought up).
@@ -80,7 +91,7 @@
     return VIEWS.indexOf(v);
   }
 
-  /** The views slide in the direction you move (Desk → Day → Timesheet → Notes → Settings). */
+  /** The views slide in the direction you move (Desk → Day → … → Settings). */
   function slide(_node: Element, { out }: { out: boolean }) {
     const k = scale();
     const dir = order(app.view) > order(app.previousView) ? 1 : -1;
@@ -104,7 +115,7 @@
       altKey: event.altKey,
       shiftKey: event.shiftKey,
       typing,
-    });
+    }, shownViews());
     if (!s) return;
     switch (s.kind) {
       case 'capture':
@@ -164,6 +175,10 @@
             <Timesheet />
           {:else if app.view === 'notes'}
             <Notes />
+          {:else if app.view === 'repeating'}
+            <Repeating />
+          {:else if app.view === 'lists'}
+            <Lists />
           {:else}
             <Settings />
           {/if}

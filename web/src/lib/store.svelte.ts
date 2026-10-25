@@ -17,10 +17,12 @@ import type {
   TrayDay,
 } from './api';
 import { toIso } from './format';
-import type { SettingsSection, View } from './keys';
+import { viewsFor, type SettingsSection, type View } from './keys';
 import { errorMessage } from './messages';
+import { useMopWord } from './notes';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
+import { hasWork, wordsFor, type Words } from './words';
 
 export const app = $state({
   ready: false,
@@ -166,6 +168,18 @@ export function openNote(id: string | null): void {
   app.noteOpen = { id, serial: app.noteOpen.serial + 1 };
   setView('notes');
 }
+
+/** The tabs that show, in order (no Timesheet at home). */
+export function shownViews(): readonly View[] {
+  return viewsFor(hasWork(app.prefs?.useMode));
+}
+
+/** The words for what Shiftbook is for (round 15). */
+export function words(): Words {
+  return wordsFor(app.prefs?.useMode);
+}
+
+useMopWord(() => words().mop);
 
 export function setView(view: View): void {
   if (view === app.view) return;

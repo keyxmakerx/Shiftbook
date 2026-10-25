@@ -10,7 +10,7 @@
   import { openMenu, paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, projectById, projectColor, setView } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, setView, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
@@ -99,7 +99,7 @@
 
 <article class="paper card">
   <h3>
-    <span class="title"><Icon name="tray" size={16} /> Tickets</span>
+    <span class="title"><Icon name="tray" size={16} /> {words().tickets}</span>
     <span class="right">
       <button
         type="button"

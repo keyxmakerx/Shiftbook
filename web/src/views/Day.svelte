@@ -4,6 +4,7 @@
   import { fmtHours, fromIso, longDay, relativeDay, weekdayLong } from '../lib/format';
   import { countTo } from '../lib/motion';
   import { app, ribbonDay, ribbonWeekOf } from '../lib/store.svelte';
+  import { hasHome } from '../lib/words';
   import EntryRow from '../components/EntryRow.svelte';
   import InboxCard from '../components/InboxCard.svelte';
   import LogWork from '../components/LogWork.svelte';
@@ -19,6 +20,10 @@
 
   const dayMinutes = $derived(ribbonDay(app.selected)?.minutes ?? 0);
   const weekMinutes = $derived(ribbonWeekOf(app.selected)?.minutes ?? 0);
+
+  // Home (round 15): with no hours to aim for, count what got done instead of a ring.
+  const countDone = $derived(hasHome(app.prefs?.useMode) && !target);
+  const doneCount = $derived(app.entries.filter((e) => !e.isTray).length);
 
   let shownDay = $state(0);
   let shownWeek = $state(0);
@@ -49,21 +54,28 @@
         <span class="lbl">{relativeDay(app.selected, app.today)}</span>
         <h1>{longDay(app.selected)}</h1>
       </div>
-      <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
-        <svg viewBox="0 0 46 46" aria-hidden="true">
-          <circle class="track" cx="23" cy="23" r="19" />
-          <circle
-            class="fill"
-            cx="23"
-            cy="23"
-            r="19"
-            stroke-dasharray={RING}
-            stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
-          />
-        </svg>
-        <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
-      </div>
-      <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
+      {#if countDone}
+        <div class="count" aria-live="polite">
+          <div class="big">{doneCount}</div>
+          <span class="lbl">{doneCount === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : 'this day'}</span>
+        </div>
+      {:else}
+        <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
+          <svg viewBox="0 0 46 46" aria-hidden="true">
+            <circle class="track" cx="23" cy="23" r="19" />
+            <circle
+              class="fill"
+              cx="23"
+              cy="23"
+              r="19"
+              stroke-dasharray={RING}
+              stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
+            />
+          </svg>
+          <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
+        </div>
+        <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
+      {/if}
     </div>
 
     <WhereWasI />
@@ -75,8 +87,12 @@
         <EntryRow {entry} index={i} />
       {:else}
         <p class="empty-note">
-          Nothing logged for this day yet. Type in the box above, paste finished tickets into the tray,
-          or press Ctrl+Space anywhere.
+          {#if hasHome(app.prefs?.useMode)}
+            Nothing down for this day yet. Type what you did in the box above and press Done, or press Ctrl+Space anywhere.
+          {:else}
+            Nothing logged for this day yet. Type in the box above, paste finished tickets into the tray,
+            or press Ctrl+Space anywhere.
+          {/if}
         </p>
       {/each}
     </div>
@@ -129,6 +145,12 @@
 
   .big.week {
     font-size: 20px;
+  }
+
+  .count {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
   }
 
   .ring {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nextTextSize, shortcutFor, startsHold, type KeyInfo } from './keys';
+import { nextTextSize, shortcutFor, shortcutList, startsHold, viewsFor, type KeyInfo } from './keys';
 
 function key(k: string, extra: Partial<KeyInfo> = {}): KeyInfo {
   return { key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, typing: false, ...extra };
@@ -16,7 +16,9 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('2'))).toEqual({ kind: 'view', view: 'day' });
     expect(shortcutFor(key('3'))).toEqual({ kind: 'view', view: 'timesheet' });
     expect(shortcutFor(key('4'))).toEqual({ kind: 'view', view: 'notes' });
-    expect(shortcutFor(key('5'))).toEqual({ kind: 'view', view: 'settings' });
+    expect(shortcutFor(key('5'))).toEqual({ kind: 'view', view: 'repeating' });
+    expect(shortcutFor(key('6'))).toEqual({ kind: 'view', view: 'lists' });
+    expect(shortcutFor(key('7'))).toEqual({ kind: 'view', view: 'settings' });
     expect(shortcutFor(key('Escape', { typing: true }))).toEqual({ kind: 'escape' });
     expect(shortcutFor(key('F10', { shiftKey: true }))).toEqual({ kind: 'menu-key' });
     expect(shortcutFor(key('ContextMenu'))).toEqual({ kind: 'menu-key' });
@@ -25,11 +27,23 @@ describe('keyboard shortcuts', () => {
   it('leaves typing alone', () => {
     expect(shortcutFor(key('n', { typing: true }))).toBeNull();
     expect(shortcutFor(key('2', { typing: true }))).toBeNull();
-    expect(shortcutFor(key('6'))).toBeNull();
+    expect(shortcutFor(key('8'))).toBeNull();
     expect(shortcutFor(key('0'))).toBeNull();
     expect(shortcutFor(key('n', { ctrlKey: true }))).toBeNull();
     expect(shortcutFor(key('l', { ctrlKey: true, altKey: true }))).toBeNull();
     expect(shortcutFor(key('x'))).toBeNull();
+  });
+});
+
+describe('views by mode', () => {
+  it('drops the Timesheet at home and renumbers', () => {
+    const home = viewsFor(false);
+    expect(home).not.toContain('timesheet');
+    expect(shortcutFor(key('3'), home)).toEqual({ kind: 'view', view: 'notes' });
+    expect(shortcutFor(key('6'), home)).toEqual({ kind: 'view', view: 'settings' });
+    expect(shortcutFor(key('7'), home)).toBeNull();
+    expect(viewsFor(true)).toContain('timesheet');
+    expect(shortcutList(home)[3]).toEqual({ keys: '1  2  3  4  5  6', what: 'Desk, Day, Notes, Repeating, Lists, Settings' });
   });
 });
 
