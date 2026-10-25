@@ -22,8 +22,8 @@ work data ending up in Git.
 7. **Git hygiene:** `.gitignore` blocks databases, exports, backups and `.env`. Branch protection on `main`.
    The repo holds code and docs only, never anyone's work data or employer details.
 8. **Backups:** automatic daily encrypted local backups, Backup now and Restore (see "Backup file
-   format"), plus manual Export later. Restores are tested by `cargo test`; a CI restore of a
-   fixture backup is still to do.
+   format"), plus manual Export later. Restores are tested by `cargo test`, including a checked-in
+   backup from an earlier version (`crates/storage/tests/fixtures`) that must keep restoring.
 9. **Encryption at rest is mandatory (from milestone M1)** — see "Encryption design" below.
    There is no unencrypted mode. Readable files only exist when the user explicitly exports.
 10. **Releases:** built only by GitHub Actions from tagged commits. Code signing (Windows

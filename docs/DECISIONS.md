@@ -2,6 +2,21 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 25 Oct 2026
+- **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
+  write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
+  tray tickets, entry tickets and later tasks and chores point at, with one done tick, one
+  notepad and one follow-up date. Projects stay as they are. Built in four steps; anything
+  visible waits for its mockup on the sign-off sheet (card `r15-things`), which the owner
+  asked for before any UI change.
+- **Step 1 (built, nothing visible moves):** one item per ticket number (ignoring case).
+  Ticking a ticket done finishes it everywhere it appears; unticking reopens it from that
+  day on; its notepad is the same everywhere; pasting it again finds it (open again, with its
+  notepad and the project it was last given). Tickets from before items join theirs on
+  unlock: the newest row decides done and project, and different notepads are merged under
+  "Earlier note" lines so none is lost. A ticket number that comes back later is the same
+  ticket, reopened, with its old notes (recommended pick on the card).
+
 ## Round 15 — 25 Oct 2026 (home use and repeating things)
 - **What's Shiftbook for?** (r15-home): a real goal, not a side mode. First run asks **Work,
   Home or Both** after the recovery key; Settings → Look can change it any time. Home turns the
@@ -63,6 +78,11 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 - **Scroll wheel:** on the Desk it zooms around the pointer (was Ctrl + scroll; round 4).
   Shift + scroll or dragging empty paper pans. Over a right-click menu, a drawer's list or a
   slide-out, the wheel scrolls that instead.
+
+## Round 13
+- **Desk steps 3 and 4** (boxes, the toolbox and folding boxes up; piles, drawers and Tidy
+  into stacks): shown as built, with nothing new to decide. Changes asked for after trying
+  them are in round 14.
 
 ## Round 12 — 19 Oct 2026
 - **Click and right-click:** one click on an entry or ticket (Desk card, Day row, tray ticket)

@@ -152,7 +152,9 @@ Common columns: `id UUID PK`, `owner_id UUID`, `created_at`, `updated_at`, `dele
 | recurring_tasks | name, type, frequency_id, expiration_date, warn_days_before, last_done_before_tracker, alerts_enabled, active, notes, default_timesheet_code_id |
 | time_entries | date, minutes, target_type (project/recurring/none), target_id, category, description, status, priority, next_step, timesheet_code_id (override, nullable), legacy_ticket_text |
 | timesheet_weeks | week_start, submitted_at |
-| tickets | time_entry_id, ticket_number, note |
+| items | kind (ticket/task/chore), number (unique per owner, ignoring case), title, done, note, project_id |
+| tickets | time_entry_id, ticket_number, note, done, item_id (copies its item's done and note) |
+| ticket_tray | date, ticket_number, minutes, project_id, note, done, item_id (as tickets) |
 | tasks | title, notes, project_id, recurring_task_id, status, priority, due_date, completed_at, sort_order |
 | task_checklist_items | task_id, text, done, sort_order |
 | settings | key, value (per owner) |

@@ -7,11 +7,10 @@
 use serde::{Deserialize, Serialize};
 use shiftbook_core::capture::{parse_capture, Capture, CaptureProject};
 use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
-use shiftbook_core::fields::{build_link, ticket_matches_prefix, AppliesTo, FieldKind};
+use shiftbook_core::fields::{build_link, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    CustomFieldId, InboxItemId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId,
-    TimesheetCodeId, TrayItemId,
+    CustomFieldId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
@@ -32,6 +31,10 @@ use shiftbook_storage::work::{EntryInput, EntryRecord, ProjectInput, TrayDay};
 use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::Date;
+
+pub(crate) use shiftbook_app::views::{
+    entry_view, inbox_view, links_for, tray_item_view, EntryView, InboxView, TrayItemView,
+};
 
 use crate::notes::{find_notes, NoteView};
 use crate::session::{CommandError, VaultSession};
@@ -81,58 +84,6 @@ impl From<Project> for ProjectView {
             archived: p.archived,
         }
     }
-}
-
-/// A link a ticket can be copied as (from a custom link field).
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LinkView {
-    field_name: String,
-    url: String,
-}
-
-/// A ticket chip.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TicketView {
-    id: String,
-    number: String,
-    links: Vec<LinkView>,
-    /// Ticked done; false while still open (round 14).
-    done: bool,
-    /// Its notepad.
-    note: Option<String>,
-}
-
-/// A time entry with its tickets.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EntryView {
-    id: TimeEntryId,
-    date: String,
-    minutes: Minutes,
-    hours: String,
-    description: String,
-    project_id: Option<ProjectId>,
-    category: Option<String>,
-    notes: Option<String>,
-    timesheet_code_id: Option<TimesheetCodeId>,
-    tickets: Vec<TicketView>,
-    is_tray: bool,
-}
-
-/// One tray ticket.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TrayItemView {
-    id: TrayItemId,
-    date: String,
-    ticket: String,
-    minutes: Minutes,
-    note: Option<String>,
-    done: bool,
-    project_id: Option<ProjectId>,
-    links: Vec<LinkView>,
 }
 
 /// A day's tray.
@@ -228,15 +179,6 @@ pub struct TickView {
     done: bool,
 }
 
-/// An Inbox scrap.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct InboxView {
-    id: InboxItemId,
-    text: String,
-    created_at: String,
-}
-
 /// One thing on the "next up" list.
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -321,72 +263,6 @@ pub struct FieldArgs {
 
 // ---------- helpers ----------
 
-/// Link fields that can turn a ticket into a link (template and prefix set).
-fn link_fields(fields: &[CustomField]) -> Vec<CustomField> {
-    fields
-        .iter()
-        .filter(|f| !f.hidden && f.link_template.is_some() && f.ticket_prefix.is_some())
-        .cloned()
-        .collect()
-}
-
-fn ticket_links(fields: &[CustomField], ticket: &str) -> Vec<LinkView> {
-    fields
-        .iter()
-        .filter_map(|f| {
-            let prefix = f.ticket_prefix.as_deref()?;
-            let template = f.link_template.as_deref()?;
-            ticket_matches_prefix(prefix, ticket).then(|| LinkView {
-                field_name: f.name.clone(),
-                url: build_link(template, ticket),
-            })
-        })
-        .collect()
-}
-
-pub(crate) fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
-    let project_id = match rec.entry.target {
-        EntryTarget::Project(p) => Some(p),
-        _ => None,
-    };
-    EntryView {
-        id: rec.entry.id,
-        date: format_date(rec.entry.date),
-        minutes: rec.entry.minutes,
-        hours: format_hours(rec.entry.minutes),
-        description: rec.entry.description,
-        project_id,
-        category: rec.entry.category,
-        notes: rec.entry.next_step,
-        timesheet_code_id: rec.entry.timesheet_code_id,
-        tickets: rec
-            .tickets
-            .into_iter()
-            .map(|t| TicketView {
-                id: t.id.to_string(),
-                done: t.done,
-                note: t.note,
-                links: ticket_links(fields, &t.ticket_number),
-                number: t.ticket_number,
-            })
-            .collect(),
-        is_tray: rec.is_tray,
-    }
-}
-
-pub(crate) fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
-    TrayItemView {
-        id: item.id,
-        date: format_date(item.date),
-        links: ticket_links(fields, &item.ticket_number),
-        ticket: item.ticket_number,
-        minutes: item.minutes,
-        note: item.note,
-        done: item.done,
-        project_id: item.project_id,
-    }
-}
-
 fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> TrayDayView {
     TrayDayView {
         date: format_date(day.date),
@@ -403,10 +279,6 @@ fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> Tr
         hours: format_hours(day.minutes),
         minutes: day.minutes,
     }
-}
-
-pub(crate) async fn links_for(store: &SqliteStore, owner: OwnerId) -> Res<Vec<CustomField>> {
-    Ok(link_fields(&store.list_custom_fields(owner).await?))
 }
 
 async fn one_entry(store: &SqliteStore, owner: OwnerId, rec: EntryRecord) -> Res<EntryView> {
@@ -1108,14 +980,6 @@ pub async fn set_custom_value(
 
 // ---------- inbox ----------
 
-pub(crate) fn inbox_view(i: shiftbook_core::model::InboxItem) -> InboxView {
-    InboxView {
-        id: i.id,
-        text: i.text,
-        created_at: format_timestamp(i.created_at),
-    }
-}
-
 /// How far back Find looks.
 const SEARCH_DAYS: i64 = 2 * 366;
 /// Most entries Find returns.
@@ -1451,43 +1315,6 @@ pub fn timer_offer(seconds: u64, quiet: Vec<u64>) -> Res<TimerOffer> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use shiftbook_core::ids::OwnerId;
-    use time::OffsetDateTime;
-
-    fn field(prefix: Option<&str>, template: Option<&str>, hidden: bool) -> CustomField {
-        let now = OffsetDateTime::now_utc();
-        CustomField {
-            id: CustomFieldId::new(),
-            owner_id: OwnerId::new(),
-            applies_to: AppliesTo::Ticket,
-            name: "Jira".into(),
-            kind: FieldKind::Link,
-            options: vec![],
-            link_template: template.map(String::from),
-            ticket_prefix: prefix.map(String::from),
-            sort_order: 0,
-            hidden,
-            created_at: now,
-            updated_at: now,
-            deleted_at: None,
-        }
-    }
-
-    #[test]
-    fn tickets_get_links_from_matching_fields() {
-        let t = Some("https://example.atlassian.net/browse/{ticket}");
-        let fields = link_fields(&[
-            field(Some("PROJ-"), t, false),
-            field(Some("PROJ-"), t, true),
-            field(None, t, false),
-            field(Some("OPS-"), None, false),
-        ]);
-        assert_eq!(fields.len(), 1);
-        let links = ticket_links(&fields, "proj-12");
-        assert_eq!(links.len(), 1);
-        assert_eq!(links[0].url, "https://example.atlassian.net/browse/proj-12");
-        assert!(ticket_links(&fields, "INC0045678").is_empty());
-    }
 
     #[test]
     fn arguments_are_checked() {

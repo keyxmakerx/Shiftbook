@@ -1,7 +1,9 @@
 # Sign-off sheet
 
 A live page where Claude brings decisions, mockups and screenshots, and the owner approves or asks
-for changes. Live copy: https://claude.ai/artifact/FDWT4t9XNKtL2n22wvJcx1 (private to the owner).
+for changes. Live copy: https://claude.ai/artifact/UxX7VX1HE8E53TR5VkEdiC (private to the owner; from round 15.
+Earlier rounds are on https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T and, before that,
+https://claude.ai/artifact/FDWT4t9XNKtL2n22wvJcx1).
 
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.

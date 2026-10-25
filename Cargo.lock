@@ -3205,6 +3205,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "shiftbook-app"
+version = "0.3.0"
+dependencies = [
+ "serde",
+ "shiftbook-core",
+ "shiftbook-storage",
+ "time",
+ "uuid",
+]
+
+[[package]]
 name = "shiftbook-core"
 version = "0.3.0"
 dependencies = [
@@ -3221,6 +3232,7 @@ version = "0.3.0"
 dependencies = [
  "serde",
  "serde_json",
+ "shiftbook-app",
  "shiftbook-core",
  "shiftbook-storage",
  "tauri",
