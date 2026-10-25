@@ -29,18 +29,15 @@
     { id: 'security', label: 'Security', icon: 'shield' },
   ];
 
-  // Opens on the section asked for (e.g. from the tray's responses menu), then stays put.
-  let section = $state<SettingsSection>(app.settingsSection);
-  $effect(() => {
-    app.settingsSection = section;
-  });
+  // Opens on the section asked for (e.g. from the tray's responses menu or Find), then stays put.
+  const section = $derived<SettingsSection>(app.settingsSection);
 </script>
 
 <div class="cz">
   <nav class="paper side" aria-label="Settings sections">
     <h2>Settings</h2>
     {#each SECTIONS as s (s.id)}
-      <button type="button" aria-current={section === s.id ? 'page' : undefined} onclick={() => (section = s.id)}>
+      <button type="button" aria-current={section === s.id ? 'page' : undefined} onclick={() => (app.settingsSection = s.id)}>
         <Icon name={s.icon} size={16} />{s.label}
       </button>
     {/each}

@@ -79,6 +79,7 @@
     "allow-bring-up-days",
     "allow-standup",
     "allow-pasted-tickets",
+    "allow-find-day",
     "allow-list-responses",
     "allow-save-responses",
     "allow-where-was-i",

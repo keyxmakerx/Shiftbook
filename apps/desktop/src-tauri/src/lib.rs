@@ -360,6 +360,7 @@ pub fn run() {
             api::bring_up_days,
             api::standup,
             api::pasted_tickets,
+            api::find_day,
             api::list_responses,
             api::save_responses,
             api::where_was_i,

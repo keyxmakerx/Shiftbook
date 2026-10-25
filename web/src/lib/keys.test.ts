@@ -9,6 +9,8 @@ describe('keyboard shortcuts', () => {
   it('maps the documented keys', () => {
     expect(shortcutFor(key(' ', { code: 'Space', ctrlKey: true }))).toEqual({ kind: 'capture' });
     expect(shortcutFor(key(' ', { code: 'Space', metaKey: true, typing: true }))).toEqual({ kind: 'capture' });
+    expect(shortcutFor(key('/'))).toEqual({ kind: 'capture' });
+    expect(shortcutFor(key('/', { typing: true }))).toBeNull();
     expect(shortcutFor(key('l', { ctrlKey: true }))).toEqual({ kind: 'lock' });
     expect(shortcutFor(key('L', { ctrlKey: true, typing: true }))).toEqual({ kind: 'lock' });
     expect(shortcutFor(key('n'))).toEqual({ kind: 'focus-log' });

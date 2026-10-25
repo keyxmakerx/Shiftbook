@@ -1340,6 +1340,19 @@ pub fn pasted_tickets(text: String) -> Option<Vec<String>> {
     shiftbook_core::capture::pasted_tickets(&text)
 }
 
+/// Maps to `DataApi.findDay()`: the day Find's text names ("fri", "last friday", "12 oct"),
+/// or `None`.
+#[tauri::command]
+pub async fn find_day(
+    s: State<'_, VaultSession>,
+    text: String,
+    today: String,
+) -> Res<Option<String>> {
+    let (store, owner) = s.data().await?;
+    let start = week_start(&store, owner).await?;
+    Ok(shiftbook_core::find::find_day(&text, date_arg(&today)?, start).map(format_date))
+}
+
 /// Maps to `DataApi.standup()`: "Copy for stand-up" from `today`. "Done" is the last day
 /// before today with entries (within two weeks), "next" what you start with today: things
 /// brought up for today, then the wrap-up list.

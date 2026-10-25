@@ -1,6 +1,6 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space opens capture, 1–5 switch views, Ctrl+L locks, Ctrl +/−/0
+// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–5 switch views, Ctrl+L locks, Ctrl +/−/0
 // change the text size, Esc closes
 // the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
@@ -51,6 +51,7 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
   if (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10')) return { kind: 'menu-key' };
   if (mod || e.altKey || e.typing) return null;
   if (e.key === 'n' || e.key === 'N') return { kind: 'focus-log' };
+  if (e.key === '/') return { kind: 'capture' };
   const n = Number(e.key);
   if (Number.isInteger(n) && n >= 1 && n <= VIEWS.length) {
     const view = VIEWS[n - 1];
@@ -61,7 +62,7 @@ export function shortcutFor(e: KeyInfo): Shortcut | null {
 
 /** Every shortcut, as shown on the hold-Ctrl overlay. Keep in step with `shortcutFor`. */
 export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
-  { keys: 'Ctrl Space', what: 'Log, note or find anything' },
+  { keys: 'Ctrl Space  or  /', what: 'Log, note or find anything (type "help" for everything)' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
   { keys: '1  2  3  4  5', what: 'Desk, Day, Timesheet, Notes, Settings' },

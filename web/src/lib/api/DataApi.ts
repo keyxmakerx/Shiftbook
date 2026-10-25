@@ -937,6 +937,8 @@ export interface DataApi {
   bringUp(today: IsoDate, kind: CardKind, id: string, title: string, on?: IsoDate): Promise<NextUpItem>;
   /** The tickets in text pasted on the Desk, or null when it isn't only tickets. */
   pastedTickets(text: string): Promise<string[] | null>;
+  /** The day Find's text names ("fri", "last friday", "12 oct"), or null. */
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null>;
   /** "Copy for stand-up": the last day with work, then what you start with today. */
   standup(today: IsoDate): Promise<string>;
   /** The days "Bring up…" offers from `today`: a few work days and next week's first. */

@@ -44,6 +44,10 @@ export const app = $state({
   logFocus: { serial: 0, text: '' },
   /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
   wrapupClosed: '',
+  /** The date "Wrap up the day" was asked for in Find, so the wrap-up shows before its time. */
+  wrapupNow: '',
+  /** Something Find asked the Desk to do once it shows. */
+  deskAsk: null as 'fit' | 'tidy' | 'timeline' | null,
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
   /** The "Where was I?" card on the Desk, while it's showing. */

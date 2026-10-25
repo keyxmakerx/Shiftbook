@@ -295,7 +295,7 @@ pub fn match_project(query: &str, projects: &[CaptureProject<'_>]) -> Option<Pro
         .find_map(|test| projects.iter().find(|p| test(p.name)).map(|p| p.id))
 }
 
-fn weekday_of(word: &str) -> Option<Weekday> {
+pub(crate) fn weekday_of(word: &str) -> Option<Weekday> {
     Some(match word {
         "mon" | "monday" => Weekday::Monday,
         "tue" | "tues" | "tuesday" => Weekday::Tuesday,

@@ -872,6 +872,14 @@
     view = fitAll(spots, board.clientWidth, board.clientHeight);
   }
 
+  // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.
+  $effect(() => {
+    const ask = app.deskAsk;
+    if (!ask || !loaded) return;
+    app.deskAsk = null;
+    void tick().then(() => (ask === 'fit' ? fit() : ask === 'tidy' ? tidy() : toggleTimeline()));
+  });
+
   // ----- jots on empty paper -----
   function startJot(sx: number, sy: number) {
     const at = toCanvas(view, sx, sy);

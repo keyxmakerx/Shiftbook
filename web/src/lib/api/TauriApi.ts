@@ -386,6 +386,9 @@ export class TauriApi implements DataApi {
   pastedTickets(text: string): Promise<string[] | null> {
     return call('pasted_tickets', { text });
   }
+  findDay(text: string, today: IsoDate): Promise<IsoDate | null> {
+    return call('find_day', { text, today });
+  }
   standup(today: IsoDate): Promise<string> {
     return call('standup', { today });
   }

@@ -76,6 +76,7 @@ fn main() {
             "bring_up_days",
             "standup",
             "pasted_tickets",
+            "find_day",
             "list_responses",
             "save_responses",
             "where_was_i",

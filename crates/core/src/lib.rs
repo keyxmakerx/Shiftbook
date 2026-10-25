@@ -12,6 +12,7 @@ pub mod capture;
 pub mod dates;
 pub mod error;
 pub mod fields;
+pub mod find;
 pub mod group;
 pub mod hours;
 pub mod ids;
