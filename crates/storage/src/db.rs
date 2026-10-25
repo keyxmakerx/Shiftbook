@@ -88,9 +88,9 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         include_str!("../migrations/0014_ticket_done.sql"),
     ),
     (
-        16,
+        17,
         "meeting length, project and logged day",
-        include_str!("../migrations/0016_meeting_log.sql"),
+        include_str!("../migrations/0017_meeting_log.sql"),
     ),
 ];
 
