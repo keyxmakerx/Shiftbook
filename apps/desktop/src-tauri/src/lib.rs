@@ -14,6 +14,8 @@ mod notes;
 mod pins;
 mod protect;
 mod session;
+#[cfg(test)]
+mod test_support;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};

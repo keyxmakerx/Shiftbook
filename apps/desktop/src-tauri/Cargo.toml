@@ -15,6 +15,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 shiftbook-core.workspace = true
 shiftbook-storage.workspace = true
+shiftbook-app.workspace = true
 tauri = { version = "2", features = [] }
 # Native save/open dialogs for Backup now and Restore, called from Rust only:
 # the WebView gets no dialog permission.

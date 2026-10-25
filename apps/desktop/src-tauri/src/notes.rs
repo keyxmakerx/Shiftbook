@@ -2,20 +2,19 @@
 //! views. Each maps 1:1 to a `DataApi` method in `web/src/lib/api/`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::boards::links_in;
-use shiftbook_core::dates::format_timestamp;
 use shiftbook_core::dates::parse_date;
-use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
+use shiftbook_core::ids::OwnerId;
 use shiftbook_core::model::{Note, Project};
 use shiftbook_core::notes::{
-    archive_outlook, daily_note_title, is_daily_note_for, join_tags, search_text, ArchiveOutlook,
-    NoteKind,
+    daily_note_title, is_daily_note_for, join_tags, search_text, NoteKind,
 };
 use shiftbook_core::search::rank;
-use shiftbook_storage::notes::{facts, NoteInput};
+use shiftbook_storage::notes::NoteInput;
 use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::OffsetDateTime;
+
+pub(crate) use shiftbook_app::views::{note_view, NoteView};
 
 use crate::session::{CommandError, VaultSession};
 
@@ -23,47 +22,6 @@ type Res<T> = Result<T, CommandError>;
 
 fn id_arg<T: std::str::FromStr>(text: &str) -> Res<T> {
     text.parse().map_err(|_| CommandError::InvalidInput)
-}
-
-/// A note as the UI sees it.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NoteView {
-    id: NoteId,
-    kind: NoteKind,
-    title: String,
-    body: String,
-    project_id: Option<ProjectId>,
-    tags: Vec<String>,
-    keep: bool,
-    archived: bool,
-    /// Days until auto-archive moves it, when its warning should show.
-    archive_in_days: Option<u32>,
-    created_at: String,
-    updated_at: String,
-    /// Web addresses written in it, in order.
-    links: Vec<String>,
-}
-
-pub(crate) fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
-    let archive_in_days = match archive_outlook(facts(&n), now, after_days) {
-        ArchiveOutlook::Soon { days_left } => Some(days_left),
-        ArchiveOutlook::Stays | ArchiveOutlook::Due => None,
-    };
-    NoteView {
-        links: links_in(&n.body),
-        id: n.id,
-        kind: n.kind,
-        title: n.title,
-        body: n.body,
-        project_id: n.project_id,
-        tags: n.tags,
-        keep: n.keep,
-        archived: n.archived_at.is_some(),
-        archive_in_days,
-        created_at: format_timestamp(n.created_at),
-        updated_at: format_timestamp(n.updated_at),
-    }
 }
 
 /// The notes list.

@@ -17,8 +17,10 @@ use time::{Date, Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::api::{date_arg, links_for};
-use crate::canvas::{card_for, entry_card, inbox_card, note_card, tray_card, CardView, Pending};
 use crate::session::{CommandError, VaultSession};
+use shiftbook_app::desk::{
+    card_for, entry_card, inbox_card, note_card, tray_card, CardView, Pending,
+};
 
 type Res<T> = Result<T, CommandError>;
 

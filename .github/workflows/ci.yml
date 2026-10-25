@@ -1,8 +1,11 @@
 name: CI
 
+# Pushes to main, and every pull request (a push to a PR branch would otherwise run twice).
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -80,6 +83,38 @@ jobs:
 
       - name: cargo test
         run: cargo test --workspace
+
+  postgres:
+    # Phase 2 runs on Postgres: every migration must apply there too (CLAUDE.md rule 5).
+    name: Migrations on Postgres
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: shiftbook
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Apply every migration in order
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ci
+          PGDATABASE: shiftbook
+        run: |
+          for f in crates/storage/migrations/*.sql; do
+            echo "::group::$f"
+            psql -v ON_ERROR_STOP=1 -q -f "$f"
+            echo "::endgroup::"
+          done
 
   audit:
     name: Dependency audit
