@@ -42,6 +42,7 @@
     "allow-add-entry-tickets",
     "allow-remove-ticket",
     "allow-ticket-set-done",
+    "allow-ticket-copies-set-done",
     "allow-ticket-set-note",
     "allow-quick-log",
     "allow-parse-capture-line",

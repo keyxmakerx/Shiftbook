@@ -174,6 +174,9 @@ export class TauriApi implements DataApi {
   }  ticketSetDone(id: string, done: boolean): Promise<Entry> {
     return call('ticket_set_done', { id, done });
   }
+  ticketCopiesSetDone(entryTickets: string[], trayTickets: string[], done: boolean): Promise<void> {
+    return call('ticket_copies_set_done', { entryTickets, trayTickets, done });
+  }
   ticketSetNote(id: string, note: string): Promise<Entry> {
     return call('ticket_set_note', { id, note });
   }

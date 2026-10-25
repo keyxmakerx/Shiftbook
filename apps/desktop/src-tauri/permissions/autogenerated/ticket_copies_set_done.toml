@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ticket-copies-set-done"
+description = "Enables the ticket_copies_set_done command without any pre-configured scope."
+commands.allow = ["ticket_copies_set_done"]
+
+[[permission]]
+identifier = "deny-ticket-copies-set-done"
+description = "Denies the ticket_copies_set_done command without any pre-configured scope."
+commands.deny = ["ticket_copies_set_done"]

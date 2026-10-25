@@ -371,6 +371,48 @@ fn tray_rolls_up_into_one_entry_per_day() {
 }
 
 #[test]
+fn ticket_copies_tick_together_or_not_at_all() {
+    let dir = TestDir::new("ticketcopies");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let rec = s
+            .create_entry(me, &input(DAY, 60, "Closet move"), "CHG0146615")
+            .await
+            .unwrap();
+        let entry_ticket = rec.tickets[0].id;
+        let tray = s.tray_add(me, DAY, "CHG0146615").await.unwrap().items[0].id;
+
+        s.set_ticket_copies_done(me, &[entry_ticket], &[tray], true)
+            .await
+            .unwrap();
+        assert!(s.get_entry(me, rec.entry.id).await.unwrap().tickets[0].done);
+        assert!(s.tray_day(me, DAY).await.unwrap().items[0].done);
+
+        // A copy that isn't found stops the lot: nothing is left half ticked.
+        let missing = shiftbook_core::ids::TrayItemId::new();
+        assert!(matches!(
+            s.set_ticket_copies_done(me, &[entry_ticket], &[tray, missing], false)
+                .await,
+            Err(StorageError::NotFound)
+        ));
+        assert!(s.get_entry(me, rec.entry.id).await.unwrap().tickets[0].done);
+        assert!(s.tray_day(me, DAY).await.unwrap().items[0].done);
+
+        // Someone else's tickets can't be ticked.
+        assert!(s
+            .set_ticket_copies_done(other, &[entry_ticket], &[], false)
+            .await
+            .is_err());
+
+        s.set_ticket_copies_done(me, &[entry_ticket], &[tray], false)
+            .await
+            .unwrap();
+        assert!(!s.get_entry(me, rec.entry.id).await.unwrap().tickets[0].done);
+        assert!(!s.tray_day(me, DAY).await.unwrap().items[0].done);
+    });
+}
+
+#[test]
 fn entry_tickets_have_a_state_and_a_notepad() {
     let dir = TestDir::new("entrytickets");
     block_on(async {

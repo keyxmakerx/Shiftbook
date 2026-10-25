@@ -20,7 +20,6 @@
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
-  import { workTickets } from '../lib/workTickets';
 
   let {
     card,
@@ -309,7 +308,7 @@
     </span>
     <span class="title">{e.description || 'Untitled'}</span>
     <span class="sub">{projectById(e.projectId)?.name ?? 'No project'}</span>
-    {@const all = workTickets(card)}
+    {@const all = card.tickets}
     {#if all.length}
       {@const still = all.filter((t) => !t.done).length}
       <button
