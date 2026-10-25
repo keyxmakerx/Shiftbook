@@ -687,80 +687,6 @@ async fn tray_day_in(conn: &mut SqliteConnection, owner: OwnerId, date: Date) ->
     })
 }
 
-/// The entry a ticket is on; tickets on the tray's roll-up entry are managed by the tray.
-async fn ticket_entry(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    ticket: TicketId,
-) -> Result<TimeEntryId> {
-    let entry: Option<String> = sqlx::query_scalar(
-        "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
-    )
-    .bind(ticket.to_string())
-    .bind(owner.to_string())
-    .fetch_optional(&mut *conn)
-    .await?;
-    let entry = TimeEntryId::from_uuid(parse_uuid(&entry.ok_or(StorageError::NotFound)?)?);
-    let (_, is_tray) = fetch_entry(conn, owner, entry).await?;
-    if is_tray {
-        return Err(StorageError::TrayManaged);
-    }
-    Ok(entry)
-}
-
-async fn set_entry_ticket_done(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    ticket: TicketId,
-    done: bool,
-    now: &str,
-) -> Result<()> {
-    sqlx::query("UPDATE tickets SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4")
-        .bind(done)
-        .bind(now)
-        .bind(ticket.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *conn)
-        .await?;
-    Ok(())
-}
-
-/// Tick a tray ticket done (finishing it on the earlier days it came back on too) or untick
-/// it. Returns its day.
-async fn set_tray_done(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    id: TrayItemId,
-    done: bool,
-) -> Result<Date> {
-    let item = live_tray_item(conn, owner, id).await?;
-    if done {
-        close_open_rows(conn, owner, &item.ticket_number, item.date).await?;
-        // A ticket ticked done joins the Desk's "Done today" pile, so it gives up the spot
-        // it had (unless it's filed in a drawer).
-        sqlx::query(
-            "UPDATE canvas_cards SET deleted_at = $1, updated_at = $1 \
-             WHERE owner_id = $2 AND record_kind = 'tray' AND record_id = $3 \
-             AND drawer IS NULL AND deleted_at IS NULL",
-        )
-        .bind(now_text())
-        .bind(owner.to_string())
-        .bind(id.to_string())
-        .execute(&mut *conn)
-        .await?;
-    } else {
-        sqlx::query(
-            "UPDATE ticket_tray SET done = FALSE, updated_at = $1 WHERE id = $2 AND owner_id = $3",
-        )
-        .bind(now_text())
-        .bind(id.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *conn)
-        .await?;
-    }
-    Ok(item.date)
-}
-
 async fn live_tray_item(
     conn: &mut SqliteConnection,
     owner: OwnerId,
@@ -1371,10 +1297,29 @@ impl SqliteStore {
         note: Option<Option<String>>,
     ) -> Result<EntryRecord> {
         let mut tx = self.pool.begin().await?;
-        let entry = ticket_entry(&mut tx, owner, ticket).await?;
+        let entry: Option<String> = sqlx::query_scalar(
+            "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(ticket.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let entry = TimeEntryId::from_uuid(parse_uuid(&entry.ok_or(StorageError::NotFound)?)?);
+        let (_, is_tray) = fetch_entry(&mut tx, owner, entry).await?;
+        if is_tray {
+            return Err(StorageError::TrayManaged);
+        }
         let now = now_text();
         if let Some(done) = done {
-            set_entry_ticket_done(&mut tx, owner, ticket, done, &now).await?;
+            sqlx::query(
+                "UPDATE tickets SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(done)
+            .bind(&now)
+            .bind(ticket.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
         }
         if let Some(note) = note {
             sqlx::query(
@@ -1661,33 +1606,34 @@ impl SqliteStore {
         done: bool,
     ) -> Result<TrayDay> {
         let mut tx = self.pool.begin().await?;
-        let date = set_tray_done(&mut tx, owner, id, done).await?;
-        let day = tray_day_in(&mut tx, owner, date).await?;
+        let item = live_tray_item(&mut tx, owner, id).await?;
+        if done {
+            close_open_rows(&mut tx, owner, &item.ticket_number, item.date).await?;
+            // A ticket ticked done joins the Desk's "Done today" pile, so it gives up the spot
+            // it had (unless it's filed in a drawer).
+            sqlx::query(
+                "UPDATE canvas_cards SET deleted_at = $1, updated_at = $1 \
+                 WHERE owner_id = $2 AND record_kind = 'tray' AND record_id = $3 \
+                 AND drawer IS NULL AND deleted_at IS NULL",
+            )
+            .bind(now_text())
+            .bind(owner.to_string())
+            .bind(id.to_string())
+            .execute(&mut *tx)
+            .await?;
+        } else {
+            sqlx::query(
+                "UPDATE ticket_tray SET done = FALSE, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+            )
+            .bind(now_text())
+            .bind(id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        let day = tray_day_in(&mut tx, owner, item.date).await?;
         tx.commit().await?;
         Ok(day)
-    }
-
-    /// Tick every copy of a ticket number on a piece of work (its entries' tickets and the
-    /// tray tickets folded into it) done, or mark them all still open, in one go: either all
-    /// change or none do.
-    pub async fn set_ticket_copies_done(
-        &self,
-        owner: OwnerId,
-        entry_tickets: &[TicketId],
-        tray_tickets: &[TrayItemId],
-        done: bool,
-    ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        let now = now_text();
-        for &ticket in entry_tickets {
-            ticket_entry(&mut tx, owner, ticket).await?;
-            set_entry_ticket_done(&mut tx, owner, ticket, done, &now).await?;
-        }
-        for &id in tray_tickets {
-            set_tray_done(&mut tx, owner, id, done).await?;
-        }
-        tx.commit().await?;
-        Ok(())
     }
 
     /// Give a tray ticket a project (its minutes then count under it), or `None` to put

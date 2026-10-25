@@ -6,10 +6,10 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 use shiftbook_core::canvas::{
     area_at, auto_links, auto_place, box_status, is_recent, ticket_home, tidy_groups, timeline,
-    tray_place, work_groups, work_tickets, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText,
-    MemberState, TicketCopy, TrayPlace, ORIGIN, RECENT_DAYS,
+    tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText, MemberState,
+    TrayPlace, ORIGIN, RECENT_DAYS,
 };
-use shiftbook_core::dates::{format_date, parse_date};
+use shiftbook_core::dates::format_date;
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
 use shiftbook_core::minutes::Minutes;
@@ -66,88 +66,6 @@ pub struct CardView {
     work_hours: Option<String>,
     /// Tickets from the Tickets tray with a number this work has, folded into this card.
     folded: Vec<TrayCardView>,
-    /// For an entry: its tickets box, each number once across `entry`, `work` and `folded`.
-    tickets: Vec<WorkTicketView>,
-}
-
-/// One ticket number in a work card's tickets box (`shiftbook_core::canvas::work_tickets`).
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WorkTicketView {
-    number: String,
-    /// Done only when every copy is done.
-    done: bool,
-    note: Option<String>,
-    /// Where it appears, newest day first; a new note goes on the first.
-    sources: Vec<TicketSourceView>,
-}
-
-/// One place a ticket number appears: an entry's ticket or a tray ticket.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TicketSourceView {
-    /// `entry` or `tray`.
-    kind: &'static str,
-    id: String,
-    done: bool,
-    note: Option<String>,
-    date: String,
-}
-
-impl CardView {
-    /// Fills `tickets` from the entry, the same work's other days and the folded tray tickets.
-    fn fill_tickets(&mut self) {
-        let Some(entry) = &self.entry else { return };
-        let mut sources: Vec<TicketSourceView> = Vec::new();
-        let mut numbers: Vec<&str> = Vec::new();
-        for e in std::iter::once(entry).chain(&self.work) {
-            for t in &e.tickets {
-                numbers.push(&t.number);
-                sources.push(TicketSourceView {
-                    kind: "entry",
-                    id: t.id.clone(),
-                    done: t.done,
-                    note: t.note.clone(),
-                    date: e.date.clone(),
-                });
-            }
-        }
-        for f in &self.folded {
-            numbers.push(&f.item.ticket);
-            sources.push(TicketSourceView {
-                kind: "tray",
-                id: f.item.id.to_string(),
-                done: f.item.done,
-                note: f.item.note.clone(),
-                date: f.date.clone(),
-            });
-        }
-        let dates: Vec<Date> = sources
-            .iter()
-            .map(|s| parse_date(&s.date).unwrap_or(Date::MIN))
-            .collect();
-        let copies: Vec<TicketCopy> = sources
-            .iter()
-            .zip(&numbers)
-            .zip(&dates)
-            .map(|((s, n), d)| TicketCopy {
-                number: n,
-                done: s.done,
-                note: s.note.as_deref(),
-                date: *d,
-            })
-            .collect();
-        let grouped = work_tickets(&copies);
-        self.tickets = grouped
-            .into_iter()
-            .map(|w| WorkTicketView {
-                number: w.number,
-                done: w.done,
-                note: w.note,
-                sources: w.copies.iter().map(|&i| sources[i].clone()).collect(),
-            })
-            .collect();
-    }
 }
 
 /// A project's area.
@@ -294,7 +212,6 @@ fn blank(kind: CardKind, id: Uuid) -> CardView {
         work: Vec::new(),
         work_hours: None,
         folded: Vec::new(),
-        tickets: Vec::new(),
     }
 }
 
@@ -320,7 +237,6 @@ pub(crate) fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
     let (title, minutes) = (rec.entry.description.clone(), rec.entry.minutes.0);
     let mut card = blank(CardKind::Entry, id);
     card.entry = Some(entry_view(rec, fields));
-    card.fill_tickets();
     Pending {
         kind: CardKind::Entry,
         id,
@@ -573,9 +489,6 @@ fn fold_same_work(
             }
         }
         others.push(p);
-    }
-    for p in &mut cards {
-        p.card.fill_tickets();
     }
     cards.extend(others);
     cards

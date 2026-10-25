@@ -113,63 +113,6 @@ pub fn ticket_home<S: AsRef<str>>(number: &str, cards: &[Vec<S>]) -> Option<usiz
     })
 }
 
-/// One place a ticket number appears on a piece of work: an entry's ticket or a tray ticket.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TicketCopy<'a> {
-    /// The ticket number.
-    pub number: &'a str,
-    /// Ticked done in this place.
-    pub done: bool,
-    /// Its notepad here.
-    pub note: Option<&'a str>,
-    /// The day of the entry or tray ticket.
-    pub date: Date,
-}
-
-/// A ticket number as the work's tickets box shows it (round 14).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkTicket {
-    /// The number as first seen.
-    pub number: String,
-    /// Done only when every copy is done.
-    pub done: bool,
-    /// The newest copy's non-blank note.
-    pub note: Option<String>,
-    /// Indexes into the copies, newest day first (ties keep their order); a new note goes on
-    /// the first.
-    pub copies: Vec<usize>,
-}
-
-/// Groups a card's ticket copies by number, ignoring case, in the order the numbers first
-/// appear. Ticking a [`WorkTicket`] ticks every copy.
-pub fn work_tickets(copies: &[TicketCopy]) -> Vec<WorkTicket> {
-    let mut out: Vec<WorkTicket> = Vec::new();
-    for (i, c) in copies.iter().enumerate() {
-        match out
-            .iter_mut()
-            .find(|w| w.number.eq_ignore_ascii_case(c.number))
-        {
-            Some(w) => w.copies.push(i),
-            None => out.push(WorkTicket {
-                number: c.number.to_owned(),
-                done: true,
-                note: None,
-                copies: vec![i],
-            }),
-        }
-    }
-    for w in &mut out {
-        w.copies.sort_by_key(|&i| std::cmp::Reverse(copies[i].date));
-        w.done = w.copies.iter().all(|&i| copies[i].done);
-        w.note = w
-            .copies
-            .iter()
-            .find_map(|&i| copies[i].note.filter(|n| !n.trim().is_empty()))
-            .map(str::to_owned);
-    }
-    out
-}
-
 /// Where a ticket from the Tickets tray goes on the Desk (round 14).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TrayPlace {
@@ -608,43 +551,6 @@ pub fn tidy_groups<K: PartialEq>(projects: &[Option<K>]) -> Vec<Vec<usize>> {
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn work_tickets_show_each_number_once_done_only_when_done_everywhere() {
-        use super::{work_tickets, TicketCopy};
-        use time::macros::date;
-        let copy = |number, done, note, date| TicketCopy {
-            number,
-            done,
-            note,
-            date,
-        };
-        let copies = [
-            copy("CHG0146615", true, None, date!(2026 - 10 - 22)),
-            copy(
-                "chg0146615",
-                true,
-                Some("closet keys"),
-                date!(2026 - 10 - 20),
-            ),
-            copy(
-                "CHG0146615",
-                false,
-                Some("waiting on vendor"),
-                date!(2026 - 10 - 21),
-            ),
-            copy("INC1", true, Some("  "), date!(2026 - 10 - 21)),
-        ];
-        let list = work_tickets(&copies);
-        assert_eq!(list.len(), 2);
-        assert_eq!(list[0].number, "CHG0146615");
-        assert!(!list[0].done);
-        assert_eq!(list[0].copies, [0, 2, 1]);
-        assert_eq!(list[0].note.as_deref(), Some("waiting on vendor"));
-        assert!(list[1].done);
-        assert_eq!(list[1].note, None);
-        assert!(work_tickets(&[]).is_empty());
-    }
-
     #[test]
     fn same_work_folds_into_one_card() {
         use super::{same_work, ticket_home, work_groups};

@@ -456,28 +456,6 @@ export interface CanvasCard {
   workHours: string | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
-  /** For an entry: its tickets box, each number once across `entry`, `work` and `folded`. */
-  tickets: WorkTicket[];
-}
-
-/** One ticket number in a work card's tickets box (round 14); the rule is in the app. */
-export interface WorkTicket {
-  number: string;
-  /** Done only when every place it appears is done. */
-  done: boolean;
-  /** The newest note written for it. */
-  note: string | null;
-  /** Where it appears, newest day first; a new note goes on the first. */
-  sources: TicketSource[];
-}
-
-/** One place a ticket number appears: an entry's ticket, or a tray ticket. */
-export interface TicketSource {
-  kind: 'entry' | 'tray';
-  id: string;
-  done: boolean;
-  note: string | null;
-  date: IsoDate;
 }
 
 /** A project's area on the Desk: cards dropped inside get its project. */
@@ -820,11 +798,6 @@ export interface DataApi {
   removeTicket(ticketId: string): Promise<Entry>;
   /** Tick an entry's ticket done, or mark it still open. Tauri: `ticket_set_done`. */
   ticketSetDone(id: string, done: boolean): Promise<Entry>;
-  /**
-   * Tick every copy of a ticket number on a piece of work done, or mark them all still open,
-   * in one go (all change or none do). Tauri: `ticket_copies_set_done`.
-   */
-  ticketCopiesSetDone(entryTickets: string[], trayTickets: string[], done: boolean): Promise<void>;
   /** Write an entry ticket's notepad (blank clears it). Tauri: `ticket_set_note`. */
   ticketSetNote(id: string, note: string): Promise<Entry>;
   /** Log work: tickets or words plus a time button, on `date`. */

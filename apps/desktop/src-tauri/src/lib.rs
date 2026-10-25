@@ -323,7 +323,6 @@ pub fn run() {
             api::add_entry_tickets,
             api::remove_ticket,
             api::ticket_set_done,
-            api::ticket_copies_set_done,
             api::ticket_set_note,
             api::quick_log,
             api::parse_capture_line,

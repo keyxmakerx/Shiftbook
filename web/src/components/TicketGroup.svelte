@@ -2,15 +2,16 @@
   // The tickets of a Desk card, opened from the strip on it (round 14): a box that floats
   // over the Desk with the work first (and its days, when the same work spans several), then
   // a card per ticket. A ticket number shows once even when it's on several days' entries or
-  // also in the Tickets tray (the app groups them: `card.tickets`); its round tick ticks it everywhere and its
+  // also in the Tickets tray (lib/workTickets.ts); its round tick ticks it everywhere and its
   // notepad is the newest one. Their time is the work's. More tickets can be attached at the
   // bottom. Esc or ✕ folds it away.
   import { api } from '../lib/api';
-  import type { CanvasCard, WorkTicket } from '../lib/api';
+  import type { CanvasCard } from '../lib/api';
   import { focusNow } from '../lib/focus';
   import { dayMonth, weekdayShort } from '../lib/format';
-  import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
+  import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
 
   let { card, onchanged, onclose }: { card: CanvasCard; onchanged: () => void; onclose: () => void } = $props();
@@ -22,19 +23,21 @@
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const entry = $derived(card.entry!);
-  const tickets = $derived(card.tickets);
+  const tickets = $derived(workTickets(card));
   const days = $derived([entry, ...card.work]);
   const stillOpen = $derived(tickets.filter((t) => !t.done).length);
 
   async function tick(w: WorkTicket) {
     const done = !w.done;
-    const change = w.sources.filter((s) => s.done !== done);
-    const ids = (kind: 'entry' | 'tray') => change.filter((s) => s.kind === kind).map((s) => s.id);
-    const ok = await attempt(() => api.ticketCopiesSetDone(ids('entry'), ids('tray'), done).then(() => true));
-    if (!ok) return;
-    // Day's tray and the ribbon show the same tickets.
-    await refresh();
-    onchanged();
+    const ok = await attempt(async () => {
+      for (const s of w.sources) {
+        if (s.done === done) continue;
+        if (s.kind === 'entry') await api.ticketSetDone(s.id, done);
+        else applyTray(await api.traySetDone(s.id, done));
+      }
+      return true;
+    });
+    if (ok) onchanged();
   }
 
   function openNote(w: WorkTicket) {

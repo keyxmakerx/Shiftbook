@@ -95,13 +95,13 @@ pub struct LinkView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TicketView {
-    pub(crate) id: String,
-    pub(crate) number: String,
+    id: String,
+    number: String,
     links: Vec<LinkView>,
     /// Ticked done; false while still open (round 14).
-    pub(crate) done: bool,
+    done: bool,
     /// Its notepad.
-    pub(crate) note: Option<String>,
+    note: Option<String>,
 }
 
 /// A time entry with its tickets.
@@ -109,7 +109,7 @@ pub struct TicketView {
 #[serde(rename_all = "camelCase")]
 pub struct EntryView {
     id: TimeEntryId,
-    pub(crate) date: String,
+    date: String,
     minutes: Minutes,
     hours: String,
     description: String,
@@ -117,7 +117,7 @@ pub struct EntryView {
     category: Option<String>,
     notes: Option<String>,
     timesheet_code_id: Option<TimesheetCodeId>,
-    pub(crate) tickets: Vec<TicketView>,
+    tickets: Vec<TicketView>,
     is_tray: bool,
 }
 
@@ -125,12 +125,12 @@ pub struct EntryView {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TrayItemView {
-    pub(crate) id: TrayItemId,
-    pub(crate) date: String,
-    pub(crate) ticket: String,
+    id: TrayItemId,
+    date: String,
+    ticket: String,
     minutes: Minutes,
-    pub(crate) note: Option<String>,
-    pub(crate) done: bool,
+    note: Option<String>,
+    done: bool,
     project_id: Option<ProjectId>,
     links: Vec<LinkView>,
 }
@@ -685,30 +685,6 @@ pub async fn ticket_set_done(s: State<'_, VaultSession>, id: String, done: bool)
         .set_ticket_done(owner, id_arg::<TicketId>(&id)?, done)
         .await?;
     one_entry(&store, owner, rec).await
-}
-
-/// Maps to `DataApi.ticketCopiesSetDone()`: tick every copy of a ticket number on a piece of
-/// work (entry tickets and tray tickets) done or still open, all in one go.
-#[tauri::command]
-pub async fn ticket_copies_set_done(
-    s: State<'_, VaultSession>,
-    entry_tickets: Vec<String>,
-    tray_tickets: Vec<String>,
-    done: bool,
-) -> Res<()> {
-    let (store, owner) = s.data().await?;
-    let entry_tickets = entry_tickets
-        .iter()
-        .map(|id| id_arg::<TicketId>(id))
-        .collect::<Res<Vec<_>>>()?;
-    let tray_tickets = tray_tickets
-        .iter()
-        .map(|id| id_arg::<TrayItemId>(id))
-        .collect::<Res<Vec<_>>>()?;
-    store
-        .set_ticket_copies_done(owner, &entry_tickets, &tray_tickets, done)
-        .await?;
-    Ok(())
 }
 
 /// Maps to `DataApi.ticketSetNote()`: write an entry ticket's notepad.
