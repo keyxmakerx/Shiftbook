@@ -1,6 +1,7 @@
 // The tickets of one Desk card for some work (round 14): the entry's own, those on the same
-// work's other days, and Tickets-tray tickets folded in. Each number shows once; it's done
-// only when every place it appears is done, and ticking it ticks them all.
+// work's other days, and Tickets-tray tickets folded in. Each number shows once. A number is
+// one item (round 15), so storage keeps every place it appears in step: its newest place
+// says whether it's done and holds its notepad.
 import type { CanvasCard, TrayItem } from './api';
 
 /** Where a ticket number appears: an entry's ticket row, or a tray ticket. */
@@ -11,7 +12,7 @@ export type TicketSource =
 export interface WorkTicket {
   number: string;
   done: boolean;
-  /** The newest note written for it. */
+  /** Its notepad. */
   note: string | null;
   /** Newest first; the first takes a new note. */
   sources: TicketSource[];
@@ -37,8 +38,8 @@ export function workTickets(card: Pick<CanvasCard, 'entry' | 'work' | 'folded'>)
   }
   for (const w of out) {
     w.sources.sort((a, b) => b.date.localeCompare(a.date));
-    w.done = w.sources.every((s) => s.done);
-    w.note = w.sources.find((s) => s.note)?.note ?? null;
+    w.done = w.sources[0]!.done;
+    w.note = w.sources[0]!.note;
   }
   return out;
 }

@@ -35,6 +35,9 @@ use time::{Date, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::error::StorageError;
+use crate::items::{
+    item_for_number, set_item_done, set_item_note, set_item_project, ticket_item, tray_row_item,
+};
 use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, u32_from, Result};
 use crate::SqliteStore;
 
@@ -97,11 +100,11 @@ pub struct TrayDay {
     pub minutes: Minutes,
 }
 
-fn corrupt_date(text: &str) -> Result<Date> {
+pub(crate) fn corrupt_date(text: &str) -> Result<Date> {
     parse_date(text).map_err(|_| StorageError::Corrupt("date"))
 }
 
-fn opt_uuid(text: Option<String>) -> Result<Option<Uuid>> {
+pub(crate) fn opt_uuid(text: Option<String>) -> Result<Option<Uuid>> {
     text.as_deref().map(parse_uuid).transpose()
 }
 
@@ -346,8 +349,10 @@ async fn entry_record(
     })
 }
 
-/// Add tickets to an entry. They start still open (`NEW_TICKET_DONE`), except on a tray
-/// roll-up, whose tickets only mirror the tray (their state lives there).
+/// Add tickets to an entry. Each joins its item (round 15): it starts still open
+/// (`NEW_TICKET_DONE`), which reopens the item from the entry's day, and shows the item's
+/// notepad. A tray roll-up's tickets only mirror the tray (their state lives there), so they
+/// have no item.
 async fn insert_tickets(
     conn: &mut SqliteConnection,
     owner: OwnerId,
@@ -355,27 +360,37 @@ async fn insert_tickets(
     tickets: &[String],
 ) -> Result<()> {
     let now = now_text();
-    let rollup: Option<String> =
-        sqlx::query_scalar("SELECT source FROM time_entries WHERE id = $1 AND owner_id = $2")
+    let (date, rollup): (String, Option<String>) =
+        sqlx::query_as("SELECT date, source FROM time_entries WHERE id = $1 AND owner_id = $2")
             .bind(entry.to_string())
             .bind(owner.to_string())
             .fetch_optional(&mut *conn)
             .await?
-            .flatten();
-    let done = rollup.is_some() || NEW_TICKET_DONE;
+            .ok_or(StorageError::NotFound)?;
+    let date = corrupt_date(&date)?;
     for t in tickets {
+        let item = match rollup {
+            Some(_) => None,
+            None => Some(item_for_number(conn, owner, t).await?),
+        };
         sqlx::query(
             "INSERT INTO tickets (id, owner_id, time_entry_id, ticket_number, note, done, \
-             created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, NULL, $5, $6, $6, NULL)",
+             item_id, created_at, updated_at, deleted_at) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, NULL)",
         )
         .bind(TicketId::new().to_string())
         .bind(owner.to_string())
         .bind(entry.to_string())
         .bind(t)
-        .bind(done)
+        .bind(item.as_ref().and_then(|i| i.note.clone()))
+        .bind(item.is_none() || NEW_TICKET_DONE)
+        .bind(item.as_ref().map(|i| i.id.to_string()))
         .bind(&now)
         .execute(&mut *conn)
         .await?;
+        if let Some(item) = item {
+            set_item_done(conn, owner, item.id, NEW_TICKET_DONE, date).await?;
+        }
     }
     Ok(())
 }
@@ -722,51 +737,9 @@ async fn tray_item_date(
     corrupt_date(&date.ok_or(StorageError::NotFound)?)
 }
 
-/// The latest tray row for `ticket` from before `date` (ignoring case), if any.
-async fn earlier_tray_row(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    ticket: &str,
-    date: Date,
-) -> Result<Option<TrayItem>> {
-    let row = sqlx::query(concat!(
-        "SELECT ",
-        tray_columns!(),
-        " FROM ticket_tray WHERE owner_id = $1 AND lower(ticket_number) = lower($2) \
-         AND date < $3 AND deleted_at IS NULL ORDER BY date DESC, id DESC LIMIT 1"
-    ))
-    .bind(owner.to_string())
-    .bind(ticket)
-    .bind(format_date(date))
-    .fetch_optional(&mut *conn)
-    .await?;
-    row.as_ref().map(tray_from_row).transpose()
-}
-
-/// Close every still-open row of `ticket` up to and including `date`: finishing a ticket
-/// finishes it on the earlier days it came back on too.
-async fn close_open_rows(
-    conn: &mut SqliteConnection,
-    owner: OwnerId,
-    ticket: &str,
-    date: Date,
-) -> Result<()> {
-    sqlx::query(
-        "UPDATE ticket_tray SET done = TRUE, updated_at = $1 WHERE owner_id = $2 \
-         AND lower(ticket_number) = lower($3) AND date <= $4 AND done = FALSE \
-         AND deleted_at IS NULL",
-    )
-    .bind(now_text())
-    .bind(owner.to_string())
-    .bind(ticket)
-    .bind(format_date(date))
-    .execute(&mut *conn)
-    .await?;
-    Ok(())
-}
-
-/// Add one ticket to a day's tray, carrying on from its latest earlier row: the notepad
-/// and project come along. `done` false keeps it open; true also closes the earlier rows.
+/// Add one ticket to a day's tray as part of its item (round 15): the item's notepad and
+/// project come along. `done` false keeps it open (reopening the item from `date`); true
+/// finishes the item everywhere.
 async fn insert_tray_row(
     conn: &mut SqliteConnection,
     owner: OwnerId,
@@ -774,28 +747,26 @@ async fn insert_tray_row(
     ticket: &str,
     done: bool,
 ) -> Result<()> {
-    let before = earlier_tray_row(conn, owner, ticket, date).await?;
+    let item = item_for_number(conn, owner, ticket).await?;
     let now = now_text();
     sqlx::query(concat!(
         "INSERT INTO ticket_tray (",
         tray_columns!(),
-        ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL)"
+        ", item_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL, $10)"
     ))
     .bind(TrayItemId::new().to_string())
     .bind(owner.to_string())
     .bind(format_date(date))
     .bind(ticket)
     .bind(i64::from(DEFAULT_TRAY_MINUTES))
-    .bind(before.as_ref().and_then(|b| b.note.clone()))
+    .bind(item.note)
     .bind(done)
-    .bind(before.and_then(|b| b.project_id).map(|p| p.to_string()))
+    .bind(item.project.map(|p| p.to_string()))
     .bind(&now)
+    .bind(item.id.to_string())
     .execute(&mut *conn)
     .await?;
-    if done {
-        close_open_rows(conn, owner, ticket, date).await?;
-    }
-    Ok(())
+    set_item_done(conn, owner, item.id, done, date).await
 }
 
 impl SqliteStore {
@@ -1305,9 +1276,21 @@ impl SqliteStore {
         .fetch_optional(&mut *tx)
         .await?;
         let entry = TimeEntryId::from_uuid(parse_uuid(&entry.ok_or(StorageError::NotFound)?)?);
-        let (_, is_tray) = fetch_entry(&mut tx, owner, entry).await?;
+        let (current, is_tray) = fetch_entry(&mut tx, owner, entry).await?;
         if is_tray {
             return Err(StorageError::TrayManaged);
+        }
+        // The ticket's item changes (round 15), so it changes everywhere the ticket appears.
+        if let Some(of) = ticket_item(&mut tx, owner, &ticket.to_string()).await? {
+            if let Some(done) = done {
+                set_item_done(&mut tx, owner, of, done, current.date).await?;
+            }
+            if let Some(note) = note {
+                set_item_note(&mut tx, owner, of, note.as_deref()).await?;
+            }
+            let rec = entry_record(&mut tx, owner, entry).await?;
+            tx.commit().await?;
+            return Ok(rec);
         }
         let now = now_text();
         if let Some(done) = done {
@@ -1573,7 +1556,7 @@ impl SqliteStore {
         Ok(day)
     }
 
-    /// Set or clear the few words noted on a tray ticket.
+    /// Set or clear a tray ticket's notepad (the same notepad on every day it's on).
     pub async fn tray_set_note(
         &self,
         owner: OwnerId,
@@ -1583,22 +1566,30 @@ impl SqliteStore {
         let note = clean_tray_note(note)?;
         let mut tx = self.pool.begin().await?;
         let date = tray_item_date(&mut tx, owner, id, true).await?;
-        sqlx::query(
-            "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
-        )
-        .bind(note)
-        .bind(now_text())
-        .bind(id.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *tx)
-        .await?;
+        match tray_row_item(&mut tx, owner, &id.to_string()).await? {
+            // One notepad per ticket (round 15): it shows wherever the ticket does.
+            Some(of) => set_item_note(&mut tx, owner, of, note.as_deref()).await?,
+            None => {
+                sqlx::query(
+                    "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE id = $3 \
+                     AND owner_id = $4",
+                )
+                .bind(note)
+                .bind(now_text())
+                .bind(id.to_string())
+                .bind(owner.to_string())
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
         let day = tray_day_in(&mut tx, owner, date).await?;
         tx.commit().await?;
         Ok(day)
     }
 
-    /// Tick a tray ticket done, or untick it to keep it open. Ticking also finishes the
-    /// ticket on the earlier days it came back on.
+    /// Tick a tray ticket done, or untick it to keep it open. It's its item that changes
+    /// (round 15): ticking finishes the ticket everywhere it appears, unticking reopens it
+    /// from this day on.
     pub async fn tray_set_done(
         &self,
         owner: OwnerId,
@@ -1607,8 +1598,22 @@ impl SqliteStore {
     ) -> Result<TrayDay> {
         let mut tx = self.pool.begin().await?;
         let item = live_tray_item(&mut tx, owner, id).await?;
+        match tray_row_item(&mut tx, owner, &id.to_string()).await? {
+            Some(of) => set_item_done(&mut tx, owner, of, done, item.date).await?,
+            None => {
+                sqlx::query(
+                    "UPDATE ticket_tray SET done = $1, updated_at = $2 WHERE id = $3 \
+                     AND owner_id = $4",
+                )
+                .bind(done)
+                .bind(now_text())
+                .bind(id.to_string())
+                .bind(owner.to_string())
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
         if done {
-            close_open_rows(&mut tx, owner, &item.ticket_number, item.date).await?;
             // A ticket ticked done joins the Desk's "Done today" pile, so it gives up the spot
             // it had (unless it's filed in a drawer).
             sqlx::query(
@@ -1619,15 +1624,6 @@ impl SqliteStore {
             .bind(now_text())
             .bind(owner.to_string())
             .bind(id.to_string())
-            .execute(&mut *tx)
-            .await?;
-        } else {
-            sqlx::query(
-                "UPDATE ticket_tray SET done = FALSE, updated_at = $1 WHERE id = $2 AND owner_id = $3",
-            )
-            .bind(now_text())
-            .bind(id.to_string())
-            .bind(owner.to_string())
             .execute(&mut *tx)
             .await?;
         }
@@ -1658,6 +1654,10 @@ impl SqliteStore {
         .bind(owner.to_string())
         .execute(&mut *tx)
         .await?;
+        // The ticket's next days start with this project; days already logged keep theirs.
+        if let Some(of) = tray_row_item(&mut tx, owner, &id.to_string()).await? {
+            set_item_project(&mut tx, owner, of, project).await?;
+        }
         sync_tray(&mut tx, owner, date).await?;
         let day = tray_day_in(&mut tx, owner, date).await?;
         tx.commit().await?;

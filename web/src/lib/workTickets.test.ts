@@ -5,10 +5,11 @@ const entry = (id: string, date: string, tickets: { id: string; number: string; 
   ({ id, date, tickets: tickets.map((t) => ({ ...t, links: [] })) }) as never;
 
 describe('workTickets', () => {
-  it('shows each number once, done only when done everywhere', () => {
+  it('shows each number once; its newest place says if it is done and holds its notepad', () => {
+    // Storage keeps every place a number appears in step (one item per ticket, round 15).
     const card = {
-      entry: entry('today', '2026-10-22', [{ id: 'a', number: 'CHG0146615', done: true, note: null }]),
-      work: [entry('old', '2026-10-20', [{ id: 'b', number: 'chg0146615', done: true, note: 'closet keys' }])],
+      entry: entry('today', '2026-10-22', [{ id: 'a', number: 'CHG0146615', done: false, note: 'waiting on vendor' }]),
+      work: [entry('old', '2026-10-20', [{ id: 'b', number: 'chg0146615', done: true, note: 'waiting on vendor' }])],
       folded: [
         { date: '2026-10-21', item: { id: 't', ticket: 'CHG0146615', done: false, note: 'waiting on vendor' } as never },
         { date: '2026-10-21', item: { id: 'u', ticket: 'INC1', done: true, note: null } as never },

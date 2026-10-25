@@ -25,6 +25,7 @@ pub mod error;
 pub mod extras;
 mod fsutil;
 pub mod hex;
+mod items;
 pub mod meetings;
 pub mod notes;
 pub mod piles;
