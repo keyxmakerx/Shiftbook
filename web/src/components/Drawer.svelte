@@ -1,9 +1,10 @@
 <script lang="ts">
   // The slide-out details drawer for one entry: title, hours stepper, project pills,
-  // category, tickets (multi-paste), notes and every custom field that applies to entries.
+  // category, timesheet code, tickets (multi-paste), notes and every custom field that
+  // applies to entries.
   // Changes save as you go. Click outside, Esc or Done closes it.
   import { api } from '../lib/api';
-  import type { CustomValue, Entry, EntryInput } from '../lib/api';
+  import type { CodeSource, CustomValue, Entry, EntryInput, ResolvedCode } from '../lib/api';
   import { longDay } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { countTo } from '../lib/motion';
@@ -13,6 +14,7 @@
   import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
   import TicketChip from './TicketChip.svelte';
+  import CodeSelect from './CodeSelect.svelte';
 
   const entry = $derived(app.entries.find((e) => e.id === app.drawer) ?? null);
   const open = $derived(entry !== null);
@@ -45,6 +47,38 @@
 
   $effect(() => {
     if (!open) loadedFor = '';
+  });
+
+  // The code the entry gets when none is chosen on it; follows the project and category.
+  let usual = $state<ResolvedCode | null>(null);
+  $effect(() => {
+    const e = entry;
+    void app.prefs?.ticketsCode;
+    if (!e || app.codes.length === 0) return;
+    const { id, projectId, category } = e;
+    void attempt(() => api.usualCode(id, projectId, category)).then((u) => {
+      if (u && app.drawer === id) usual = u;
+    });
+  });
+
+  const FROM: Record<CodeSource, string> = {
+    entry: 'chosen here',
+    target: 'from the project',
+    category: 'from the category',
+    tickets: 'from your Tickets code',
+    unassigned: 'none yet',
+  };
+
+  function codeName(id: string | null): string {
+    const c = app.codes.find((x) => x.id === id);
+    return c ? (c.area ? `${c.area} › ${c.code}` : c.code) : 'Unassigned';
+  }
+
+  const usualText = $derived.by(() => {
+    if (!usual) return 'Use the usual code';
+    if (!usual.code) return 'Use the usual code (none yet, so Unassigned)';
+    const from = usual.source === 'target' && !entry?.projectId ? 'from its repeating thing' : FROM[usual.source];
+    return `Use the usual code (${codeName(usual.code)}, ${from})`;
   });
 
   $effect(() => {
@@ -206,6 +240,18 @@
           {#each categories as c (c)}<option value={c}>{c}</option>{/each}
         </select>
       </div>
+
+      {#if app.codes.length > 0}
+        <div class="field rise" style:--i={4}>
+          <span class="lbl">Timesheet code · {entry.timesheetCodeId ? 'chosen for this entry' : usualText.includes('none yet') ? 'none yet' : 'the usual one'}</span>
+          <CodeSelect
+            value={entry.timesheetCodeId}
+            label="Timesheet code"
+            empty={usualText}
+            onchange={(id) => save({ timesheetCodeId: id })}
+          />
+        </div>
+      {/if}
 
       <div class="field rise" style:--i={5}>
         <span class="lbl">Tickets · paste several at once</span>

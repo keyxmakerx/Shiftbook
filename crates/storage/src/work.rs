@@ -1136,6 +1136,36 @@ impl SqliteStore {
         Ok(rec)
     }
 
+    /// Choose the timesheet code for several entries at once (`None` goes back to the usual
+    /// code). Works on tray roll-ups too. All or nothing.
+    pub async fn set_entry_codes(
+        &self,
+        owner: OwnerId,
+        ids: &[TimeEntryId],
+        code: Option<TimesheetCodeId>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        if let Some(c) = code {
+            code_exists(&mut tx, owner, c).await?;
+        }
+        let now = now_text();
+        for id in ids {
+            fetch_entry(&mut tx, owner, *id).await?;
+            sqlx::query(
+                "UPDATE time_entries SET timesheet_code_id = $1, updated_at = $2 \
+                 WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(code.map(|c| c.to_string()))
+            .bind(&now)
+            .bind(id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Soft-delete an entry. Deleting a tray roll-up also takes its tickets out of that
     /// day's tray: all of the plain entry's, or one project's (restoring brings both back).
     pub async fn delete_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<()> {

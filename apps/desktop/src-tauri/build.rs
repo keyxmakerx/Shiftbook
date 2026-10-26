@@ -29,6 +29,8 @@ fn main() {
             "create_entry",
             "update_entry",
             "set_entry_notes",
+            "set_entry_codes",
+            "usual_code",
             "get_entry",
             "tray_item",
             "meeting_series",

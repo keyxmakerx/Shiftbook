@@ -137,6 +137,8 @@ export interface Prefs {
   standupWords: [string, string];
   /** Your own time buttons (round 15), shortest first. */
   timeButtons: number[];
+  /** The timesheet code for each day's "Tickets" entry, or null (Customize → Timesheet). */
+  ticketsCode: string | null;
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
@@ -313,6 +315,7 @@ export type PrefKey =
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
+  | 'timesheet.tickets_code'
   | 'security.quick_unlock';
 
 export interface Project {
@@ -447,6 +450,20 @@ export interface SheetLine {
   items: SheetItem[];
   unassigned: boolean;
   projectId: string | null;
+  /** Its entries that are a day's "Tickets" entry (from the Tickets tray). */
+  rollupIds: string[];
+}
+
+/**
+ * Where an entry's timesheet code comes from: chosen on the entry, its project (or
+ * repeating thing), its category, the tickets code, or nowhere yet.
+ */
+export type CodeSource = 'entry' | 'target' | 'category' | 'tickets' | 'unassigned';
+
+/** An entry's code and where it came from. */
+export interface ResolvedCode {
+  code: string | null;
+  source: CodeSource;
 }
 
 export interface SheetDay {
@@ -951,6 +968,17 @@ export interface DataApi {
   logNote(id: string, date: IsoDate, minutes: number): Promise<Entry>;
   /** The entry's notepad, saved as you type (blank clears it). */
   setEntryNotes(id: string, notes: string): Promise<Entry>;
+  /**
+   * The code an entry gets when none is chosen on it ("Use the usual code"), for the project
+   * and category picked on the form. `id` is the entry being edited (null for a new one).
+   * Tauri: `usual_code`.
+   */
+  usualCode(id: string | null, projectId: string | null, category: string | null): Promise<ResolvedCode>;
+  /**
+   * Choose the timesheet code for several entries at once (the Timesheet's "Pick a code");
+   * null goes back to the usual code. Tauri: `set_entry_codes`.
+   */
+  setEntryCodes(ids: string[], codeId: string | null): Promise<void>;
   /** One entry (for a window showing its notepad). */
   getEntry(id: string): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;

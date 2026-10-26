@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-usual-code"
+description = "Enables the usual_code command without any pre-configured scope."
+commands.allow = ["usual_code"]
+
+[[permission]]
+identifier = "deny-usual-code"
+description = "Denies the usual_code command without any pre-configured scope."
+commands.deny = ["usual_code"]

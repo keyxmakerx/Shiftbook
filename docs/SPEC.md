@@ -79,7 +79,9 @@ or imports them. The first-run tour shows a generic example.
 1. Code chosen on the entry itself (override).
 2. Default code on its **project** or **recurring task**.
 3. Default code for its **category** (mapping in Settings).
-4. Otherwise **Unassigned** — highlighted in amber in the Time Log and listed at the top of the
+4. For a day's **Tickets** entry (rolled up from the Tickets tray): the **tickets code**
+   (Customize → Timesheet → Default codes).
+5. Otherwise **Unassigned** — highlighted in amber in the Time Log and listed at the top of the
    timesheet view so nothing is missed.
 
 **Category → code defaults:** none are shipped. The user maps categories to codes in Settings;
@@ -183,7 +185,7 @@ update existing rows in a transaction.
     `Renewed – update expiration date`; else `OK`.
 - **Tasks:** overdue = due_date < today and status ≠ Done.
 - **Timesheet code resolution:** entry override → project/recurring default → category default →
-  Unassigned (see §2.8). Timesheet totals = Σ minutes grouped by (resolved code, date).
+  tickets code (Tickets roll-up entries only) → Unassigned (see §2.8). Timesheet totals = Σ minutes grouped by (resolved code, date).
 - Port the Excel behaviour exactly where these rules came from; add tests for each state.
 
 ## 5. Non-functional

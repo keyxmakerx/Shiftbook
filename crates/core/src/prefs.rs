@@ -68,6 +68,9 @@ pub const MAX_STANDUP_WORD_CHARS: usize = 20;
 pub const KEY_QUICK_UNLOCK: &str = "security.quick_unlock";
 /// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
 pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
+/// The timesheet code for each day's "Tickets" roll-up entry (round 15): a code id, or
+/// blank for none.
+pub const KEY_TICKETS_CODE: &str = "timesheet.tickets_code";
 /// The time buttons everyone starts with.
 pub const DEFAULT_TIME_BUTTONS: [u32; 5] = [15, 30, 45, 60, 120];
 /// Most time buttons.
@@ -221,6 +224,8 @@ pub struct Prefs {
     pub standup_words: (String, String),
     /// The time buttons in Log work, jots and tickets, shortest first.
     pub time_buttons: Vec<u32>,
+    /// The timesheet code for each day's "Tickets" roll-up entry.
+    pub tickets_code: Option<crate::ids::TimesheetCodeId>,
 }
 
 impl Prefs {
@@ -258,6 +263,7 @@ impl Default for Prefs {
                 crate::standup::DEFAULT_WORDS.1.to_string(),
             ),
             time_buttons: DEFAULT_TIME_BUTTONS.to_vec(),
+            tickets_code: None,
         }
     }
 }
@@ -418,6 +424,11 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_TIME_BUTTONS => parse_time_buttons(v)
             .map(|l| l.iter().map(u32::to_string).collect::<Vec<_>>().join(","))
             .ok_or_else(|| invalid(value)),
+        KEY_TICKETS_CODE if v.is_empty() => Ok(String::new()),
+        KEY_TICKETS_CODE => v
+            .parse::<crate::ids::TimesheetCodeId>()
+            .map(|c| c.to_string())
+            .map_err(|_| invalid(value)),
         KEY_TIMER_PAUSED => {
             if v.is_empty() {
                 Ok(String::new())
@@ -499,6 +510,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
                     prefs.time_buttons = list;
                 }
             }
+            KEY_TICKETS_CODE => prefs.tickets_code = v.parse().ok(),
             _ => {}
         }
     }
@@ -508,6 +520,20 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tickets_code() {
+        let id = crate::ids::TimesheetCodeId::new();
+        let text = id.to_string();
+        assert_eq!(validate_pref(KEY_TICKETS_CODE, &text), Ok(text.clone()));
+        assert_eq!(validate_pref(KEY_TICKETS_CODE, " "), Ok(String::new()));
+        assert!(validate_pref(KEY_TICKETS_CODE, "Support").is_err());
+        assert_eq!(Prefs::default().tickets_code, None);
+        let p = prefs_from_settings(&[(KEY_TICKETS_CODE, text.as_str())]);
+        assert_eq!(p.tickets_code, Some(id));
+        let p = prefs_from_settings(&[(KEY_TICKETS_CODE, "")]);
+        assert_eq!(p.tickets_code, None);
+    }
 
     #[test]
     fn use_mode_and_last_open() {

@@ -52,6 +52,7 @@ import type {
   SearchResult,
   IsoDate,
   PrefKey,
+  ResolvedCode,
   Prefs,
   Project,
   ProjectInput,
@@ -173,6 +174,12 @@ export class TauriApi implements DataApi {
   }
   setEntryNotes(id: string, notes: string): Promise<Entry> {
     return call('set_entry_notes', { id, notes });
+  }
+  usualCode(id: string | null, projectId: string | null, category: string | null): Promise<ResolvedCode> {
+    return call('usual_code', { id, projectId, category });
+  }
+  setEntryCodes(ids: string[], codeId: string | null): Promise<void> {
+    return call('set_entry_codes', { ids, codeId });
   }
   getEntry(id: string): Promise<Entry> {
     return call('get_entry', { id });

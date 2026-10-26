@@ -615,6 +615,8 @@ pub fn run() {
             api::create_entry,
             api::update_entry,
             api::set_entry_notes,
+            api::set_entry_codes,
+            api::usual_code,
             api::get_entry,
             api::tray_item,
             meetings::meeting_series,

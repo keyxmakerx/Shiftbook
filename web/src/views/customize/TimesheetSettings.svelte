@@ -6,6 +6,7 @@
   import { app, attempt, refreshRibbon } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import Icon from '../../components/Icon.svelte';
+  import CodeSelect from '../../components/CodeSelect.svelte';
 
   let categories = $state<CategoryCode[]>([]);
   let draft = $state<CodeInput>({ area: '', phaseLabel: '', code: '', sortOrder: 0, hidden: false });
@@ -110,24 +111,26 @@
 </article>
 
 <article class="paper cz-card">
-  <h3>Categories → codes</h3>
-  <p class="sub">An entry without its own code, and whose project has none, gets its category's code.</p>
+  <h3>Default codes</h3>
+  <p class="sub">An entry without its own code, and whose project has none, gets one of these.</p>
+  {#if app.prefs}
+    <div class="cz-row">
+      <span class="cz-grow"><strong>Tickets</strong> <span class="from">from the Tickets tray</span></span>
+      <CodeSelect
+        value={app.prefs.ticketsCode}
+        label="Code for tickets"
+        empty="Unassigned"
+        onchange={(id) => pref('timesheet.tickets_code', id ?? '')}
+      />
+    </div>
+  {/if}
   {#each categories as cat (cat.category)}
     <div class="cz-row">
       <span class="cz-grow">{cat.category}</span>
-      <select
-        class="text-in"
-        value={cat.codeId ?? ''}
-        aria-label="Code for {cat.category}"
-        onchange={(e) => mapCategory(cat.category, (e.currentTarget as HTMLSelectElement).value || null)}
-      >
-        <option value="">Unassigned</option>
-        {#each app.codes.filter((c) => !c.hidden || c.id === cat.codeId) as c (c.id)}
-          <option value={c.id}>{c.area ? `${c.area} › ` : ''}{c.code}</option>
-        {/each}
-      </select>
+      <CodeSelect value={cat.codeId} label="Code for {cat.category}" empty="Unassigned" onchange={(id) => mapCategory(cat.category, id)} />
     </div>
   {/each}
+  <p class="sub">Tickets with a project use the project's code. A code chosen on an entry always wins.</p>
 </article>
 
 {#if app.prefs}
@@ -219,6 +222,11 @@
     height: 18px;
     justify-self: center;
     accent-color: var(--accent);
+  }
+
+  .from {
+    color: var(--mut);
+    font-size: 13px;
   }
 
   .sep-in {

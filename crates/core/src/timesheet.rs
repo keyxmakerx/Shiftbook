@@ -5,7 +5,9 @@
 //! 2. the default code of its project or recurring task
 //! 3. the default code of its category (category names match ignoring case
 //!    and surrounding spaces)
-//! 4. otherwise Unassigned
+//! 4. for a day's "Tickets" roll-up entry (made from the Tickets tray), the
+//!    tickets code from Customize → Timesheet
+//! 5. otherwise Unassigned
 //!
 //! Totals are minutes summed per (resolved code, date), live entries only.
 
@@ -29,6 +31,8 @@ pub enum CodeSource {
     Target,
     /// Default of its category.
     Category,
+    /// The tickets code (the day's "Tickets" roll-up entry only).
+    Tickets,
     /// No code found.
     Unassigned,
 }
@@ -42,19 +46,32 @@ pub struct ResolvedCode {
     pub source: CodeSource,
 }
 
-/// First match wins: entry override → target default → category default → Unassigned.
+/// First match wins: entry override → target default → category default → tickets code →
+/// Unassigned. `tickets_default` is only passed for a "Tickets" roll-up entry.
 pub fn resolve_code(
     entry_override: Option<TimesheetCodeId>,
     target_default: Option<TimesheetCodeId>,
     category_default: Option<TimesheetCodeId>,
+    tickets_default: Option<TimesheetCodeId>,
 ) -> ResolvedCode {
-    let (code, source) = match (entry_override, target_default, category_default) {
-        (Some(c), _, _) => (Some(c), CodeSource::Entry),
-        (None, Some(c), _) => (Some(c), CodeSource::Target),
-        (None, None, Some(c)) => (Some(c), CodeSource::Category),
-        (None, None, None) => (None, CodeSource::Unassigned),
-    };
-    ResolvedCode { code, source }
+    let found = [
+        (entry_override, CodeSource::Entry),
+        (target_default, CodeSource::Target),
+        (category_default, CodeSource::Category),
+        (tickets_default, CodeSource::Tickets),
+    ]
+    .into_iter()
+    .find_map(|(code, source)| code.map(|c| (c, source)));
+    match found {
+        Some((c, source)) => ResolvedCode {
+            code: Some(c),
+            source,
+        },
+        None => ResolvedCode {
+            code: None,
+            source: CodeSource::Unassigned,
+        },
+    }
 }
 
 fn category_key(category: &str) -> String {
@@ -67,6 +84,7 @@ pub struct CodeDefaults {
     projects: HashMap<ProjectId, TimesheetCodeId>,
     recurring: HashMap<RecurringTaskId, TimesheetCodeId>,
     categories: HashMap<String, TimesheetCodeId>,
+    tickets: Option<TimesheetCodeId>,
 }
 
 impl CodeDefaults {
@@ -93,7 +111,19 @@ impl CodeDefaults {
                 .filter(|c| c.deleted_at.is_none())
                 .map(|c| (category_key(&c.category), c.timesheet_code_id))
                 .collect(),
+            tickets: None,
         }
+    }
+
+    /// Add the tickets code, used by a day's "Tickets" roll-up entry.
+    pub fn with_tickets(mut self, tickets: Option<TimesheetCodeId>) -> Self {
+        self.tickets = tickets;
+        self
+    }
+
+    /// The tickets code, if one is set.
+    pub fn tickets_default(&self) -> Option<TimesheetCodeId> {
+        self.tickets
     }
 
     /// The default code of what the entry is logged against.
@@ -110,12 +140,29 @@ impl CodeDefaults {
         category.and_then(|c| self.categories.get(&category_key(c)).copied())
     }
 
-    /// Resolve one entry's code.
+    /// The code an entry gets when none is chosen on it: what "Use the usual code" means.
+    pub fn usual(&self, target: EntryTarget, category: Option<&str>, rollup: bool) -> ResolvedCode {
+        resolve_code(
+            None,
+            self.target_default(target),
+            self.category_default(category),
+            if rollup { self.tickets } else { None },
+        )
+    }
+
+    /// Resolve one ordinary entry's code.
     pub fn resolve(&self, entry: &TimeEntry) -> ResolvedCode {
+        self.resolve_for(entry, false)
+    }
+
+    /// Resolve one entry's code; `rollup` is true for a day's "Tickets" roll-up entry,
+    /// which falls back to the tickets code.
+    pub fn resolve_for(&self, entry: &TimeEntry, rollup: bool) -> ResolvedCode {
         resolve_code(
             entry.timesheet_code_id,
             self.target_default(entry.target),
             self.category_default(entry.category.as_deref()),
+            if rollup { self.tickets } else { None },
         )
     }
 }
@@ -240,18 +287,20 @@ mod tests {
         let a = Some(TimesheetCodeId::new());
         let b = Some(TimesheetCodeId::new());
         let c = Some(TimesheetCodeId::new());
+        let t = Some(TimesheetCodeId::new());
         use CodeSource::*;
         let cases = [
-            (a, b, c, a, Entry),
-            (a, None, None, a, Entry),
-            (None, b, c, b, Target),
-            (None, b, None, b, Target),
-            (None, None, c, c, Category),
-            (None, None, None, None, Unassigned),
+            (a, b, c, t, a, Entry),
+            (a, None, None, None, a, Entry),
+            (None, b, c, t, b, Target),
+            (None, b, None, None, b, Target),
+            (None, None, c, t, c, Category),
+            (None, None, None, t, t, Tickets),
+            (None, None, None, None, None, Unassigned),
         ];
-        for (entry_code, target, category, code, source) in cases {
+        for (entry_code, target, category, tickets, code, source) in cases {
             assert_eq!(
-                resolve_code(entry_code, target, category),
+                resolve_code(entry_code, target, category, tickets),
                 ResolvedCode { code, source }
             );
         }
@@ -344,6 +393,49 @@ mod tests {
                 "case {i}"
             );
         }
+    }
+
+    #[test]
+    fn tickets_code_applies_to_the_rollup_entry_only() {
+        let tickets = TimesheetCodeId::new();
+        let support = TimesheetCodeId::new();
+        let mine = TimesheetCodeId::new();
+        let none = CodeDefaults::new(&[], &[], &[mapping("Support", support)]);
+        let defaults = none.clone().with_tickets(Some(tickets));
+        assert_eq!(defaults.tickets_default(), Some(tickets));
+        let d = date!(2026 - 10 - 15);
+        let rollup = entry(d, 90, EntryTarget::None, None, None);
+        assert_eq!(
+            defaults.resolve_for(&rollup, true),
+            ResolvedCode {
+                code: Some(tickets),
+                source: CodeSource::Tickets
+            }
+        );
+        // An ordinary entry with nothing set stays Unassigned.
+        assert_eq!(defaults.resolve(&rollup).source, CodeSource::Unassigned);
+        // No tickets code set: the roll-up is Unassigned, as before.
+        assert_eq!(
+            none.resolve_for(&rollup, true).source,
+            CodeSource::Unassigned
+        );
+        // The usual code ignores what was chosen on the entry.
+        assert_eq!(
+            defaults.usual(EntryTarget::None, None, true).code,
+            Some(tickets)
+        );
+        assert_eq!(
+            defaults
+                .usual(EntryTarget::None, Some("support"), false)
+                .source,
+            CodeSource::Category
+        );
+        // A code chosen on the roll-up entry wins.
+        let picked = entry(d, 90, EntryTarget::None, None, Some(mine));
+        assert_eq!(defaults.resolve_for(&picked, true).code, Some(mine));
+        // So does a category, should the roll-up ever have one.
+        let filed = entry(d, 90, EntryTarget::None, Some("Support"), None);
+        assert_eq!(defaults.resolve_for(&filed, true).code, Some(support));
     }
 
     #[test]

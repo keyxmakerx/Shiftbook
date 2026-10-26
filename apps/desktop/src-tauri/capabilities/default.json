@@ -32,6 +32,8 @@
     "allow-create-entry",
     "allow-update-entry",
     "allow-set-entry-notes",
+    "allow-set-entry-codes",
+    "allow-usual-code",
     "allow-get-entry",
     "allow-tray-item",
     "allow-meeting-series",

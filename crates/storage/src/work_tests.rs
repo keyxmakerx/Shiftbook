@@ -4,10 +4,12 @@
 
 use shiftbook_core::capture::{parse_capture, CaptureProject};
 use shiftbook_core::fields::{AppliesTo, FieldKind};
-use shiftbook_core::ids::{OwnerId, ProjectId, TimeEntryId};
+use shiftbook_core::ids::{OwnerId, ProjectId, TimeEntryId, TimesheetCodeId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
-use shiftbook_core::prefs::{Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME};
+use shiftbook_core::prefs::{
+    Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME, KEY_TICKETS_CODE,
+};
 use shiftbook_core::responses::ResponseDraft;
 use shiftbook_core::week::WeekStart;
 use shiftbook_core::CoreError;
@@ -1234,5 +1236,75 @@ fn tickets_from_before_items_join_them_on_unlock() {
         // Running it again changes nothing.
         s.initialize_local_owner("Me").await.unwrap();
         assert_eq!(item_count(&s, me).await, 3);
+    });
+}
+
+#[test]
+fn tickets_code_and_entry_codes() {
+    let dir = TestDir::new("entrycodes");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let code = s
+            .add_timesheet_code(
+                me,
+                &CodeInput {
+                    area: "Operations".into(),
+                    phase_label: "Phase".into(),
+                    code: "1 - Support".into(),
+                    sort_order: 0,
+                    hidden: false,
+                },
+            )
+            .await
+            .unwrap();
+        // The tickets code must be one of yours.
+        s.set_pref(me, KEY_TICKETS_CODE, &code.id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(s.prefs(me).await.unwrap().tickets_code, Some(code.id));
+        assert!(matches!(
+            s.set_pref(other, KEY_TICKETS_CODE, &code.id.to_string())
+                .await,
+            Err(StorageError::NotFound)
+        ));
+        s.set_pref(me, KEY_TICKETS_CODE, "").await.unwrap();
+        assert_eq!(s.prefs(me).await.unwrap().tickets_code, None);
+
+        // Several entries at once, the tray roll-up included.
+        let day = s.tray_add(me, DAY, "INC0045601").await.unwrap();
+        let rollup = day.entry_id.unwrap();
+        let plain = s
+            .create_entry(me, &input(DAY, 30, "Misc"), "")
+            .await
+            .unwrap()
+            .entry
+            .id;
+        s.set_entry_codes(me, &[rollup, plain], Some(code.id))
+            .await
+            .unwrap();
+        for id in [rollup, plain] {
+            let rec = s.get_entry(me, id).await.unwrap();
+            assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        }
+        // The roll-up keeps its code when the tray changes.
+        s.tray_add(me, DAY, "INC0045602").await.unwrap();
+        let rec = s.get_entry(me, rollup).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        assert_eq!(numbers(&rec), ["INC0045601", "INC0045602"]);
+        // Someone else's entry, or a code that isn't there: nothing changes.
+        assert!(s.set_entry_codes(other, &[plain], None).await.is_err());
+        assert!(s
+            .set_entry_codes(me, &[plain], Some(TimesheetCodeId::new()))
+            .await
+            .is_err());
+        assert!(s
+            .set_entry_codes(me, &[plain, TimeEntryId::new()], None)
+            .await
+            .is_err());
+        let rec = s.get_entry(me, plain).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        s.set_entry_codes(me, &[plain], None).await.unwrap();
+        let rec = s.get_entry(me, plain).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, None);
     });
 }

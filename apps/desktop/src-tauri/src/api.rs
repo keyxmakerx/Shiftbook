@@ -23,7 +23,7 @@ use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, 
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
-use shiftbook_core::timesheet::CodeDefaults;
+use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
@@ -754,6 +754,64 @@ pub async fn week_sheet(
     week_sheet_for(&store, owner, date_arg(&date)?, date_arg(&today)?, group_by).await
 }
 
+/// Everything that gives an entry its code when none is chosen on it.
+async fn code_defaults(
+    store: &SqliteStore,
+    owner: OwnerId,
+    projects: &[Project],
+    prefs: &Prefs,
+) -> Res<CodeDefaults> {
+    let mappings = store.list_category_codes(owner).await?;
+    Ok(CodeDefaults::new(projects, &[], &mappings).with_tickets(prefs.tickets_code))
+}
+
+/// Maps to `DataApi.usualCode()`: the code an entry gets when none is chosen on it, for
+/// the project and category picked on the form (`id` is the entry being edited, if any).
+#[tauri::command]
+pub async fn usual_code(
+    s: State<'_, VaultSession>,
+    id: Option<String>,
+    project_id: Option<String>,
+    category: Option<String>,
+) -> Res<ResolvedCode> {
+    let (store, owner) = s.data().await?;
+    let (current, rollup) = match id {
+        Some(id) => {
+            let rec = store.get_entry(owner, id_arg(&id)?).await?;
+            (Some(rec.entry.target), rec.is_tray)
+        }
+        None => (None, false),
+    };
+    let target = match opt_id(&project_id)? {
+        Some(p) => EntryTarget::Project(p),
+        // A repeating thing's entry has no project to pick; it keeps what it belongs to.
+        None => current
+            .filter(|t| matches!(t, EntryTarget::Recurring(_)))
+            .unwrap_or(EntryTarget::None),
+    };
+    let prefs = store.prefs(owner).await?;
+    let projects = store.list_projects(owner).await?;
+    let defaults = code_defaults(&store, owner, &projects, &prefs).await?;
+    Ok(defaults.usual(target, category.as_deref(), rollup))
+}
+
+/// Maps to `DataApi.setEntryCodes()`: choose the code for several entries at once (from
+/// the Timesheet's "Pick a code"); no code goes back to the usual one.
+#[tauri::command]
+pub async fn set_entry_codes(
+    s: State<'_, VaultSession>,
+    ids: Vec<String>,
+    code_id: Option<String>,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let ids = ids
+        .iter()
+        .map(|i| id_arg(i))
+        .collect::<Res<Vec<TimeEntryId>>>()?;
+    let code = opt_id(&code_id)?;
+    Ok(store.set_entry_codes(owner, &ids, code).await?)
+}
+
 /// The crib sheet for the week holding `date` (also the timesheet reminder's).
 pub(crate) async fn week_sheet_for(
     store: &SqliteStore,
@@ -766,8 +824,7 @@ pub(crate) async fn week_sheet_for(
     let start = week_of(date, prefs.week_start);
     let projects = store.list_projects(owner).await?;
     let codes = store.list_timesheet_codes(owner).await?;
-    let mappings = store.list_category_codes(owner).await?;
-    let defaults = CodeDefaults::new(&projects, &[], &mappings);
+    let defaults = code_defaults(store, owner, &projects, &prefs).await?;
     let entries: Vec<EntryWithTickets> = store
         .list_entries(owner, start, shiftbook_core::dates::add_days(start, 6))
         .await?
@@ -775,6 +832,7 @@ pub(crate) async fn week_sheet_for(
         .map(|r| EntryWithTickets {
             tickets: r.tickets.into_iter().map(|t| t.ticket_number).collect(),
             entry: r.entry,
+            rollup: r.is_tray,
         })
         .collect();
     let ctx = SheetContext {

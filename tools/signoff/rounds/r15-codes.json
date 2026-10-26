@@ -1,0 +1,84 @@
+{
+ "cards": {
+  "r15-codes": {
+   "area": "Tickets, plans and projects",
+   "round": 15,
+   "order": 45,
+   "version": 1,
+   "title": "A timesheet code for tickets",
+   "body": [
+    "You asked why tickets have no default code. Codes come from three places today: a code on the **project** (Customize → Projects), a code per **category** (Customize → Timesheet), or a code on the entry itself, which the app stores but has nowhere to set. Tray tickets roll up into a \"Tickets\" entry with no project and no category, so none of those reach them and they always show as **Unassigned** on the Timesheet.",
+    "Three small fixes, shown below. They only change which code a line gets; your hours and entries stay as they are."
+   ],
+   "bullets": [
+    "**A code for tickets:** one new line at the top of Customize → Timesheet. Tickets with a project still use the project's code.",
+    "**A code on each entry:** its details show which code it gets and where from, and you can pick a different one for just that entry.",
+    "**Pick a code on the Timesheet:** an Unassigned line gets a button right where you notice it. On the Tickets line it can set the tickets code for good."
+   ],
+   "questions": [
+    {
+     "id": "tickets",
+     "legend": "A code for tickets",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "entry",
+     "legend": "A code on each entry",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "sheet",
+     "legend": "Pick a code on the Timesheet",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. tickets should follow the Support category instead"
+    }
+   ],
+   "figures": [
+    {
+     "caption": "Customize → Timesheet: a Tickets line above the categories.",
+     "html_file": "mocks/r16-codes.html",
+     "start": "settings"
+    },
+    {
+     "caption": "An entry's details: its code and where it comes from.",
+     "html_file": "mocks/r16-codes.html",
+     "start": "entry"
+    },
+    {
+     "caption": "The Timesheet: Pick a code on an Unassigned line.",
+     "html_file": "mocks/r16-codes.html",
+     "start": "sheet"
+    }
+   ]
+  }
+ }
+}

@@ -2,6 +2,23 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 26 Oct 2026 (a timesheet code for tickets)
+Card `r15-codes` (`tools/signoff/rounds/r15-codes.json`, mockups `mocks/r16-codes.html`); the
+owner asked "why can't I have a default code for tickets?" and ticked all three. They asked
+that long codes still fit.
+- **A code for tickets:** Customize → Timesheet's "Categories → codes" becomes **Default
+  codes**, with a **Tickets** line on top. A day's Tickets entry gets it when nothing else
+  gives it a code: entry → project → category → **tickets code** → Unassigned. Tickets with a
+  project keep the project's code. It applies to past weeks too.
+- **A code on each entry:** entry details show a **Timesheet code** picker. Its first choice
+  is "Use the usual code (… , from the project / category / your Tickets code)"; picking
+  another sets it for that entry only (the Tickets entry too).
+- **Pick a code on the Timesheet:** an Unassigned line has **Pick a code**. On a line with a
+  Tickets entry, "Use it for tickets from now on" (on by default) sets the tickets code;
+  otherwise, or unticked, it sets the code on that line's entries.
+- **Long codes:** pickers never grow past their box; a long chosen code is written out in full
+  under the picker, and Pick a code's choices wrap inside their buttons.
+
 ## Round 15 — 25 Oct 2026 (one item per ticket)
 - **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
   write-up "Tickets, plans and projects: one clearer model"): a new **item** record that

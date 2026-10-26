@@ -4,7 +4,7 @@
   // (crates/core/src/sheet.rs); this page shows it and remembers the tick-offs.
   import { api } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
-  import type { GroupBy, SheetDay, SheetWarning, Tick, WeekSheet } from '../lib/api';
+  import type { GroupBy, SheetDay, SheetLine, SheetWarning, Tick, TimesheetCode, WeekSheet } from '../lib/api';
   import { addDays, dayMonth, dayOfMonth, isWeekend, weekdayLong, weekdayShort } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { app, attempt, projectColor } from '../lib/store.svelte';
@@ -82,6 +82,42 @@
     void attempt(() => api.savePref('timesheet.group_by', g)).then((p) => {
       if (p) app.prefs = p;
     });
+  }
+
+  // "Pick a code" on an Unassigned line: which line is open, and whether the pick also
+  // becomes the code for tickets from now on (only offered when the line holds tickets).
+  let picking = $state<string | null>(null);
+  let forTickets = $state(true);
+
+  function codeName(c: TimesheetCode): string {
+    return c.area ? `${c.area} › ${c.code}` : c.code;
+  }
+
+  function openPick(day: string, line: SheetLine) {
+    const key = `${day}/${line.key}`;
+    picking = picking === key ? null : key;
+    forTickets = true;
+  }
+
+  async function pick(line: SheetLine, code: TimesheetCode) {
+    const all = line.items.flatMap((i) => i.entryIds);
+    const tickets = line.rollupIds.length > 0 && forTickets;
+    const own = tickets ? all.filter((id) => !line.rollupIds.includes(id)) : all;
+    if (tickets) {
+      const p = await attempt(() => api.savePref('timesheet.tickets_code', code.id));
+      if (!p) return;
+      app.prefs = p;
+    }
+    if (own.length > 0) {
+      const ok = await attempt(async () => {
+        await api.setEntryCodes(own, code.id);
+        return true;
+      });
+      if (!ok) return;
+    }
+    picking = null;
+    await load();
+    toast(tickets ? `Tickets will use ${codeName(code)} from now on.` : `Set ${codeName(code)} on ${own.length === 1 ? 'that entry' : `those ${own.length} entries`}.`);
   }
 
   const shownDays = $derived(
@@ -173,6 +209,16 @@
                   <span class="code">
                     <small>{line.area}</small>
                     <b class:warn-text={line.unassigned} style:color={current === 'project' ? projectColor(line.projectId) : null}>{line.label}</b>
+                    {#if line.unassigned && app.codes.some((c) => !c.hidden)}
+                      <button
+                        class="pick-btn"
+                        type="button"
+                        aria-expanded={picking === `${d.date}/${line.key}`}
+                        onclick={() => openPick(d.date, line)}
+                      >
+                        Pick a code <Icon name="down" size={12} />
+                      </button>
+                    {/if}
                   </span>
                   <span class="hrs mono">{line.hours}</span>
                   <span class="cm">
@@ -186,6 +232,31 @@
                     Copy comment
                   </button>
                 </div>
+                {#if picking === `${d.date}/${line.key}`}
+                  <div class="pick" role="group" aria-label="Pick a code for {weekdayLong(d.date)}">
+                    <div class="pick-list">
+                      {#each app.codes.filter((c) => !c.hidden) as c (c.id)}
+                        <button type="button" class="pick-code" onclick={() => pick(line, c)}>
+                          {#if c.area}<small>{c.area} ›</small>{/if}
+                          <span>{c.code}</span>
+                        </button>
+                      {/each}
+                    </div>
+                    {#if line.rollupIds.length > 0}
+                      <label class="check-row">
+                        <input type="checkbox" bind:checked={forTickets} />
+                        Use it for tickets from now on
+                      </label>
+                    {/if}
+                    <p class="pick-note">
+                      {#if line.rollupIds.length > 0 && forTickets}
+                        Every day's Tickets entry gets this code (past weeks too), unless it has its own.
+                      {:else}
+                        Sets the code on {line.items.flatMap((i) => i.entryIds).length === 1 ? 'this entry' : 'these entries'} only.
+                      {/if}
+                    </p>
+                  </div>
+                {/if}
               {/each}
             </div>
           </div>
@@ -384,6 +455,70 @@
 
   .lines > div {
     overflow: hidden;
+  }
+
+  .pick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 3px 9px;
+    border-radius: 99px;
+    border: 1px solid var(--warn);
+    background: var(--warn-wash);
+    color: var(--warn);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .pick {
+    padding: 10px 16px 12px 54px;
+    background: var(--paper-2);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pick-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Codes can be long: each choice wraps inside its own box instead of being cut off. */
+  .pick-code {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    max-width: 100%;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    color: inherit;
+    cursor: pointer;
+    font-size: 13px;
+  }
+
+  .pick-code:hover,
+  .pick-code:focus-visible {
+    border-color: var(--accent);
+  }
+
+  .pick-code small {
+    color: var(--mut);
+    font-size: 11px;
+  }
+
+  .pick-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--mut);
   }
 
   .line {

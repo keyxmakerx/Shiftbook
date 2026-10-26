@@ -17,7 +17,7 @@ use shiftbook_core::model::{
     TimesheetCode, TimesheetTick,
 };
 use shiftbook_core::nextup::{bring_up_text, clean_next_up};
-use shiftbook_core::prefs::{prefs_from_settings, validate_pref, Prefs};
+use shiftbook_core::prefs::{prefs_from_settings, validate_pref, Prefs, KEY_TICKETS_CODE};
 use shiftbook_core::responses::{clean_responses, ResponseDraft};
 use shiftbook_core::validate::{
     validate_list_value, validate_required, validate_timesheet_code, MAX_LINE_CHARS,
@@ -976,6 +976,11 @@ impl SqliteStore {
     /// Save one preference after checking it.
     pub async fn set_pref(&self, owner: OwnerId, key: &str, value: &str) -> Result<()> {
         let value = validate_pref(key, value)?;
+        if key == KEY_TICKETS_CODE && !value.is_empty() {
+            let code: TimesheetCodeId = value.parse()?;
+            let mut conn = self.pool.acquire().await?;
+            code_exists(&mut conn, owner, code).await?;
+        }
         self.set_setting(owner, key, &value).await
     }
 }
