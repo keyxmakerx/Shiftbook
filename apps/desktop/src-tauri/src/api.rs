@@ -814,32 +814,33 @@ async fn code_defaults(
     prefs: &Prefs,
 ) -> Res<CodeDefaults> {
     let mappings = store.list_category_codes(owner).await?;
-    Ok(CodeDefaults::new(projects, &[], &mappings).with_tickets(prefs.tickets_code))
+    let repeating = store.recurring_all(owner).await?;
+    let kinds = store.list_kind_codes(owner).await?;
+    Ok(CodeDefaults::new(projects, &repeating, &mappings)
+        .with_kinds(&kinds)
+        .with_tickets(prefs.tickets_code))
 }
 
 /// Maps to `DataApi.usualCode()`: the code an entry gets when none is chosen on it, for
-/// the project and category picked on the form (`id` is the entry being edited, if any).
+/// the project or repeating thing and category picked on the form (`id` is the entry being
+/// edited, if any).
 #[tauri::command]
 pub async fn usual_code(
     s: State<'_, VaultSession>,
     id: Option<String>,
     project_id: Option<String>,
+    recurring_id: Option<String>,
     category: Option<String>,
 ) -> Res<ResolvedCode> {
     let (store, owner) = s.data().await?;
-    let (current, rollup) = match id {
-        Some(id) => {
-            let rec = store.get_entry(owner, id_arg(&id)?).await?;
-            (Some(rec.entry.target), rec.is_tray)
-        }
-        None => (None, false),
+    let rollup = match id {
+        Some(id) => store.get_entry(owner, id_arg(&id)?).await?.is_tray,
+        None => false,
     };
-    let target = match opt_id(&project_id)? {
-        Some(p) => EntryTarget::Project(p),
-        // A repeating thing's entry has no project to pick; it keeps what it belongs to.
-        None => current
-            .filter(|t| matches!(t, EntryTarget::Recurring(_)))
-            .unwrap_or(EntryTarget::None),
+    let target = match (opt_id(&project_id)?, opt_id(&recurring_id)?) {
+        (Some(p), _) => EntryTarget::Project(p),
+        (None, Some(r)) => EntryTarget::Recurring(r),
+        (None, None) => EntryTarget::None,
     };
     let prefs = store.prefs(owner).await?;
     let projects = store.list_projects(owner).await?;
@@ -1013,6 +1014,56 @@ pub async fn set_category_code(
     Ok(store
         .set_category_code(owner, &category, opt_id(&code_id)?)
         .await?)
+}
+
+/// One kind of repeating thing and its code, for Customize → Timesheet.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KindCodeView {
+    kind: String,
+    code_id: Option<TimesheetCodeId>,
+}
+
+/// Maps to `DataApi.kindCodes()`: every kind of repeating thing with its code (if any).
+#[tauri::command]
+pub async fn kind_codes(s: State<'_, VaultSession>) -> Res<Vec<KindCodeView>> {
+    let (store, owner) = s.data().await?;
+    let kinds = store
+        .list_options(owner, ListName::RecurringType, false)
+        .await?;
+    let maps = store.list_kind_codes(owner).await?;
+    let find = |kind: &str| {
+        maps.iter()
+            .find(|(k, _)| k.trim().eq_ignore_ascii_case(kind.trim()))
+            .map(|(_, c)| *c)
+    };
+    let mut out: Vec<KindCodeView> = kinds
+        .into_iter()
+        .map(|k| KindCodeView {
+            code_id: find(&k.value),
+            kind: k.value,
+        })
+        .collect();
+    for (kind, code) in &maps {
+        if !out.iter().any(|o| o.kind.eq_ignore_ascii_case(kind)) {
+            out.push(KindCodeView {
+                kind: kind.clone(),
+                code_id: Some(*code),
+            });
+        }
+    }
+    Ok(out)
+}
+
+/// Maps to `DataApi.setKindCode()`; no `codeId` removes the mapping.
+#[tauri::command]
+pub async fn set_kind_code(
+    s: State<'_, VaultSession>,
+    kind: String,
+    code_id: Option<String>,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.set_kind_code(owner, &kind, opt_id(&code_id)?).await?)
 }
 
 // ---------- custom fields ----------

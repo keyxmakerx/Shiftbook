@@ -3,11 +3,13 @@
 //! An entry's code, first match wins:
 //! 1. the code chosen on the entry itself (override)
 //! 2. the default code of its project or recurring task
-//! 3. the default code of its category (category names match ignoring case
+//! 3. for a recurring task, the default code of its kind ("Certificates"); kind names
+//!    match ignoring case and surrounding spaces
+//! 4. the default code of its category (category names match ignoring case
 //!    and surrounding spaces)
-//! 4. for a day's "Tickets" roll-up entry (made from the Tickets tray), the
+//! 5. for a day's "Tickets" roll-up entry (made from the Tickets tray), the
 //!    tickets code from Customize → Timesheet
-//! 5. otherwise Unassigned
+//! 6. otherwise Unassigned
 //!
 //! Totals are minutes summed per (resolved code, date), live entries only.
 
@@ -29,6 +31,8 @@ pub enum CodeSource {
     Entry,
     /// Default of its project or recurring task.
     Target,
+    /// Default of its recurring task's kind.
+    Kind,
     /// Default of its category.
     Category,
     /// The tickets code (the day's "Tickets" roll-up entry only).
@@ -46,17 +50,19 @@ pub struct ResolvedCode {
     pub source: CodeSource,
 }
 
-/// First match wins: entry override → target default → category default → tickets code →
-/// Unassigned. `tickets_default` is only passed for a "Tickets" roll-up entry.
+/// First match wins: entry override → target default → kind default → category default →
+/// tickets code → Unassigned. `tickets_default` is only passed for a "Tickets" roll-up entry.
 pub fn resolve_code(
     entry_override: Option<TimesheetCodeId>,
     target_default: Option<TimesheetCodeId>,
+    kind_default: Option<TimesheetCodeId>,
     category_default: Option<TimesheetCodeId>,
     tickets_default: Option<TimesheetCodeId>,
 ) -> ResolvedCode {
     let found = [
         (entry_override, CodeSource::Entry),
         (target_default, CodeSource::Target),
+        (kind_default, CodeSource::Kind),
         (category_default, CodeSource::Category),
         (tickets_default, CodeSource::Tickets),
     ]
@@ -83,6 +89,9 @@ fn category_key(category: &str) -> String {
 pub struct CodeDefaults {
     projects: HashMap<ProjectId, TimesheetCodeId>,
     recurring: HashMap<RecurringTaskId, TimesheetCodeId>,
+    /// Each recurring task's kind, keyed like `kinds`.
+    recurring_kinds: HashMap<RecurringTaskId, String>,
+    kinds: HashMap<String, TimesheetCodeId>,
     categories: HashMap<String, TimesheetCodeId>,
     tickets: Option<TimesheetCodeId>,
 }
@@ -106,6 +115,13 @@ impl CodeDefaults {
                 .filter(|r| r.deleted_at.is_none())
                 .filter_map(|r| r.default_timesheet_code_id.map(|c| (r.id, c)))
                 .collect(),
+            recurring_kinds: recurring
+                .iter()
+                .filter(|r| r.deleted_at.is_none())
+                .filter_map(|r| r.recurring_type.as_deref().map(|k| (r.id, category_key(k))))
+                .filter(|(_, k)| !k.is_empty())
+                .collect(),
+            kinds: HashMap::new(),
             categories: categories
                 .iter()
                 .filter(|c| c.deleted_at.is_none())
@@ -118,6 +134,15 @@ impl CodeDefaults {
     /// Add the tickets code, used by a day's "Tickets" roll-up entry.
     pub fn with_tickets(mut self, tickets: Option<TimesheetCodeId>) -> Self {
         self.tickets = tickets;
+        self
+    }
+
+    /// Add the kind codes (kind name → code), used by recurring tasks of that kind.
+    pub fn with_kinds(mut self, kinds: &[(String, TimesheetCodeId)]) -> Self {
+        self.kinds = kinds
+            .iter()
+            .map(|(kind, code)| (category_key(kind), *code))
+            .collect();
         self
     }
 
@@ -135,6 +160,18 @@ impl CodeDefaults {
         }
     }
 
+    /// The default code of a recurring task's kind (`None` for anything else).
+    pub fn kind_default(&self, target: EntryTarget) -> Option<TimesheetCodeId> {
+        match target {
+            EntryTarget::Recurring(id) => self
+                .recurring_kinds
+                .get(&id)
+                .and_then(|k| self.kinds.get(k))
+                .copied(),
+            _ => None,
+        }
+    }
+
     /// The default code of a category.
     pub fn category_default(&self, category: Option<&str>) -> Option<TimesheetCodeId> {
         category.and_then(|c| self.categories.get(&category_key(c)).copied())
@@ -145,6 +182,7 @@ impl CodeDefaults {
         resolve_code(
             None,
             self.target_default(target),
+            self.kind_default(target),
             self.category_default(category),
             if rollup { self.tickets } else { None },
         )
@@ -161,6 +199,7 @@ impl CodeDefaults {
         resolve_code(
             entry.timesheet_code_id,
             self.target_default(entry.target),
+            self.kind_default(entry.target),
             self.category_default(entry.category.as_deref()),
             if rollup { self.tickets } else { None },
         )
@@ -287,20 +326,22 @@ mod tests {
         let a = Some(TimesheetCodeId::new());
         let b = Some(TimesheetCodeId::new());
         let c = Some(TimesheetCodeId::new());
+        let k = Some(TimesheetCodeId::new());
         let t = Some(TimesheetCodeId::new());
         use CodeSource::*;
         let cases = [
-            (a, b, c, t, a, Entry),
-            (a, None, None, None, a, Entry),
-            (None, b, c, t, b, Target),
-            (None, b, None, None, b, Target),
-            (None, None, c, t, c, Category),
-            (None, None, None, t, t, Tickets),
-            (None, None, None, None, None, Unassigned),
+            (a, b, k, c, t, a, Entry),
+            (a, None, None, None, None, a, Entry),
+            (None, b, k, c, t, b, Target),
+            (None, b, None, None, None, b, Target),
+            (None, None, k, c, t, k, Kind),
+            (None, None, None, c, t, c, Category),
+            (None, None, None, None, t, t, Tickets),
+            (None, None, None, None, None, None, Unassigned),
         ];
-        for (entry_code, target, category, tickets, code, source) in cases {
+        for (entry_code, target, kind, category, tickets, code, source) in cases {
             assert_eq!(
-                resolve_code(entry_code, target, category, tickets),
+                resolve_code(entry_code, target, kind, category, tickets),
                 ResolvedCode { code, source }
             );
         }
@@ -393,6 +434,50 @@ mod tests {
                 "case {i}"
             );
         }
+    }
+
+    #[test]
+    fn a_repeating_things_kind_has_a_code() {
+        let certs = TimesheetCodeId::new();
+        let own = TimesheetCodeId::new();
+        let support = TimesheetCodeId::new();
+        let mut plain = recurring(None);
+        plain.recurring_type = Some("Certificates".into());
+        let mut coded = recurring(Some(own));
+        coded.recurring_type = Some("certificates".into());
+        let mut other = recurring(None);
+        other.recurring_type = Some("Audits".into());
+        let defaults = CodeDefaults::new(
+            &[],
+            &[plain.clone(), coded.clone(), other.clone()],
+            &[mapping("Support", support)],
+        )
+        .with_kinds(&[(" CERTIFICATES ".into(), certs)]);
+        let d = date!(2026 - 10 - 15);
+        let on = |r: &RecurringTask, cat: Option<&str>| {
+            entry(d, 30, EntryTarget::Recurring(r.id), cat, None)
+        };
+        // The thing's own code wins, then its kind's, then the category's.
+        assert_eq!(defaults.resolve(&on(&coded, None)).code, Some(own));
+        assert_eq!(
+            defaults.resolve(&on(&plain, Some("Support"))),
+            ResolvedCode {
+                code: Some(certs),
+                source: CodeSource::Kind
+            }
+        );
+        assert_eq!(
+            defaults.resolve(&on(&other, Some("Support"))).source,
+            CodeSource::Category
+        );
+        // A project never takes a kind's code.
+        assert_eq!(defaults.kind_default(EntryTarget::None), None);
+        assert_eq!(
+            defaults
+                .usual(EntryTarget::Recurring(plain.id), None, false)
+                .source,
+            CodeSource::Kind
+        );
     }
 
     #[test]

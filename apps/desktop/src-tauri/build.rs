@@ -70,6 +70,8 @@ fn main() {
             "save_timesheet_code",
             "category_codes",
             "set_category_code",
+            "kind_codes",
+            "set_kind_code",
             "list_custom_fields",
             "save_custom_field",
             "delete_custom_field",

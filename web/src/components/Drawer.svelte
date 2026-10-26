@@ -61,8 +61,8 @@
     const e = entry;
     void app.prefs?.ticketsCode;
     if (!e || app.codes.length === 0) return;
-    const { id, projectId, category } = e;
-    void attempt(() => api.usualCode(id, projectId, category)).then((u) => {
+    const { id, projectId, recurringId, category } = e;
+    void attempt(() => api.usualCode(id, projectId, recurringId, category)).then((u) => {
       if (u && app.drawer === id) usual = u;
     });
   });
@@ -70,6 +70,7 @@
   const FROM: Record<CodeSource, string> = {
     entry: 'chosen here',
     target: 'from the project',
+    kind: "from its repeating thing's kind",
     category: 'from the category',
     tickets: 'from your Tickets code',
     unassigned: 'none yet',

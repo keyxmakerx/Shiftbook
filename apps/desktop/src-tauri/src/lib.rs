@@ -656,6 +656,8 @@ pub fn run() {
             api::save_timesheet_code,
             api::category_codes,
             api::set_category_code,
+            api::kind_codes,
+            api::set_kind_code,
             api::list_custom_fields,
             api::save_custom_field,
             api::delete_custom_field,

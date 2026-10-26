@@ -10,6 +10,7 @@ use time::macros::date;
 use time::Date;
 
 use crate::db::{database_path, open_encrypted, test_dek};
+use crate::extras::CodeInput;
 use crate::fsutil::test_dir::TestDir;
 use crate::recurring::RecurringInput;
 use crate::repo::{FrequencyRepository, ListOptionRepository};
@@ -107,6 +108,7 @@ fn bins(frequency: Option<shiftbook_core::ids::FrequencyId>) -> RecurringInput {
         warn_days_before: Some(1),
         alerts_enabled: true,
         notes: String::new(),
+        timesheet_code_id: None,
     }
 }
 
@@ -413,5 +415,63 @@ fn tray_tickets_count_under_a_repeating_thing() {
         assert!(entries
             .iter()
             .all(|e| e.entry.target != EntryTarget::Recurring(cert.id)));
+    });
+}
+
+#[test]
+fn repeating_things_and_kinds_keep_codes() {
+    let dir = TestDir::new("recurringcodes");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let code = |c: &str| CodeInput {
+            area: "Operations".into(),
+            phase_label: String::new(),
+            code: c.into(),
+            sort_order: 0,
+            hidden: false,
+        };
+        let certs = s
+            .add_timesheet_code(me, &code("Certificates"))
+            .await
+            .unwrap();
+        let own = s
+            .add_timesheet_code(me, &code("Web renewals"))
+            .await
+            .unwrap();
+
+        // A thing's own code is saved, changed and cleared.
+        let mut input = bins(None);
+        input.timesheet_code_id = Some(own.id);
+        let thing = s.create_recurring(me, &input).await.unwrap();
+        assert_eq!(thing.default_timesheet_code_id, Some(own.id));
+        input.timesheet_code_id = None;
+        let thing = s.update_recurring(me, thing.id, &input).await.unwrap();
+        assert_eq!(thing.default_timesheet_code_id, None);
+        // Someone else's code can't be used.
+        let mut theirs = bins(None);
+        theirs.timesheet_code_id = Some(own.id);
+        assert!(matches!(
+            s.create_recurring(other, &theirs).await,
+            Err(StorageError::NotFound)
+        ));
+
+        // A kind's code: one per kind, ignoring case.
+        s.set_kind_code(me, "Certificates", Some(own.id))
+            .await
+            .unwrap();
+        s.set_kind_code(me, " certificates ", Some(certs.id))
+            .await
+            .unwrap();
+        assert_eq!(
+            s.list_kind_codes(me).await.unwrap(),
+            vec![("Certificates".to_string(), certs.id)]
+        );
+        assert!(s.list_kind_codes(other).await.unwrap().is_empty());
+        assert!(matches!(
+            s.set_kind_code(other, "Certificates", Some(certs.id)).await,
+            Err(StorageError::NotFound)
+        ));
+        s.set_kind_code(me, "CERTIFICATES", None).await.unwrap();
+        assert!(s.list_kind_codes(me).await.unwrap().is_empty());
     });
 }

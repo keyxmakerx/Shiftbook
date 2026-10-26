@@ -5,7 +5,7 @@
 //! those entries. Owner-scoped, bound parameters only, soft-deleted.
 
 use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
-use shiftbook_core::ids::{FrequencyId, OwnerId, RecurringTaskId, TimeEntryId};
+use shiftbook_core::ids::{FrequencyId, OwnerId, RecurringTaskId, TimeEntryId, TimesheetCodeId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{EntryTarget, RecurringTask, TimeEntry, STATUS_DONE};
 use shiftbook_core::validate::validate_recurring_task;
@@ -16,7 +16,7 @@ use uuid::Uuid;
 
 use crate::error::StorageError;
 use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, u32_from, Result};
-use crate::work::{entry_from_row, insert_entry};
+use crate::work::{code_exists, entry_from_row, insert_entry};
 use crate::SqliteStore;
 
 /// The editable parts of a repeating thing.
@@ -39,6 +39,8 @@ pub struct RecurringInput {
     pub alerts_enabled: bool,
     /// Notes.
     pub notes: String,
+    /// The timesheet code its time gets (`None` = its kind's code, then the usual rules).
+    pub timesheet_code_id: Option<TimesheetCodeId>,
 }
 
 /// What Mark done did, so Undo can take it back.
@@ -156,7 +158,7 @@ fn checked(owner: OwnerId, id: RecurringTaskId, input: &RecurringInput) -> Resul
         alerts_enabled: input.alerts_enabled,
         active: true,
         notes: input.notes.trim_end().to_string(),
-        default_timesheet_code_id: None,
+        default_timesheet_code_id: input.timesheet_code_id,
         created_at: now,
         updated_at: now,
         deleted_at: None,
@@ -216,10 +218,13 @@ impl SqliteStore {
         if let Some(f) = task.frequency_id {
             frequency_exists(&mut tx, owner, f).await?;
         }
+        if let Some(c) = task.default_timesheet_code_id {
+            code_exists(&mut tx, owner, c).await?;
+        }
         sqlx::query(concat!(
             "INSERT INTO recurring_tasks (",
             recurring_columns!(),
-            ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, NULL, $11, $11, NULL)"
+            ") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, TRUE, $10, $12, $11, $11, NULL)"
         ))
         .bind(task.id.to_string())
         .bind(owner.to_string())
@@ -232,6 +237,7 @@ impl SqliteStore {
         .bind(task.alerts_enabled)
         .bind(&task.notes)
         .bind(format_timestamp(task.created_at))
+        .bind(task.default_timesheet_code_id.map(|c| c.to_string()))
         .execute(&mut *tx)
         .await?;
         let saved = fetch_recurring(&mut tx, owner, task.id).await?;
@@ -252,10 +258,14 @@ impl SqliteStore {
         if let Some(f) = task.frequency_id {
             frequency_exists(&mut tx, owner, f).await?;
         }
+        if let Some(c) = task.default_timesheet_code_id {
+            code_exists(&mut tx, owner, c).await?;
+        }
         sqlx::query(
             "UPDATE recurring_tasks SET name = $1, type = $2, frequency_id = $3, \
              expiration_date = $4, warn_days_before = $5, last_done_before_tracker = $6, \
-             alerts_enabled = $7, notes = $8, updated_at = $9 WHERE id = $10 AND owner_id = $11",
+             alerts_enabled = $7, notes = $8, updated_at = $9, default_timesheet_code_id = $12 \
+             WHERE id = $10 AND owner_id = $11",
         )
         .bind(&task.name)
         .bind(task.recurring_type.as_deref())
@@ -268,6 +278,7 @@ impl SqliteStore {
         .bind(now_text())
         .bind(id.to_string())
         .bind(owner.to_string())
+        .bind(task.default_timesheet_code_id.map(|c| c.to_string()))
         .execute(&mut *tx)
         .await?;
         let saved = fetch_recurring(&mut tx, owner, id).await?;

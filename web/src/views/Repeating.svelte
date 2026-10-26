@@ -5,9 +5,10 @@
   // "Renewed…" instead, which asks for the new expiry date. The form on the right adds one or
   // changes the one picked.
   import { onMount, untrack } from 'svelte';
+  import CodeSelect from '../components/CodeSelect.svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
-  import type { Frequency, Recurring, RecurringInput } from '../lib/api';
+  import type { Frequency, KindCode, Recurring, RecurringInput } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
   import { addDays, dayMonth, longDay } from '../lib/format';
   import { markDone, markRenewed, refreshRepeating, repeating } from '../lib/repeating.svelte';
@@ -34,6 +35,7 @@
 
   let frequencies = $state<Frequency[]>([]);
   let kinds = $state<string[]>([]);
+  let kindCodes = $state<KindCode[]>([]);
 
   type Form = {
     id: string | null;
@@ -45,6 +47,7 @@
     warnDays: number;
     alerts: boolean;
     notes: string;
+    codeId: string | null;
   };
 
   function blank(): Form {
@@ -59,10 +62,11 @@
       warnDays: 1,
       alerts: true,
       notes: '',
+      codeId: null,
     };
   }
 
-  let form = $state<Form>({ id: null, name: '', kind: '', expires: false, frequencyId: '', date: '', warnDays: 1, alerts: true, notes: '' });
+  let form = $state<Form>({ id: null, name: '', kind: '', expires: false, frequencyId: '', date: '', warnDays: 1, alerts: true, notes: '', codeId: null });
   let renewing = $state<{ id: string; name: string; date: string } | null>(null);
   let nameEl: HTMLInputElement | undefined = $state();
 
@@ -72,6 +76,7 @@
       frequencies = choices.frequencies;
       kinds = choices.kinds;
     }
+    if (app.codes.length > 0) kindCodes = (await attempt(() => api.kindCodes())) ?? [];
     form = blank();
     await refreshRepeating();
   });
@@ -97,6 +102,7 @@
       warnDays: r.warnDays,
       alerts: r.alerts,
       notes: r.notes,
+      codeId: r.codeId,
     };
     nameEl?.focus();
   }
@@ -117,6 +123,7 @@
       warnDays: form.warnDays,
       alerts: form.alerts,
       notes: form.notes,
+      codeId: form.codeId,
     };
     if (!form.name.trim()) {
       toast('Give it a name first.');
@@ -132,6 +139,15 @@
     form = blank();
     await Promise.all([refreshRepeating(), refreshBell()]);
   }
+
+  // "Use the Certificates code (…)" when its kind has one; otherwise the usual rules.
+  const kindEmpty = $derived.by(() => {
+    const kind = form.kind.trim().toLowerCase();
+    const k = kind ? kindCodes.find((x) => x.kind.trim().toLowerCase() === kind && x.codeId) : undefined;
+    const c = k ? app.codes.find((x) => x.id === k.codeId) : undefined;
+    if (!k || !c) return 'Use the usual code';
+    return `Use the ${k.kind} code (${c.area ? `${c.area} › ${c.code}` : c.code})`;
+  });
 
   async function renew() {
     if (!renewing) return;
@@ -268,6 +284,11 @@
         <label for="rep-kind">Kind</label>
         <input id="rep-kind" class="text-in" list="rep-kinds" bind:value={form.kind} placeholder="e.g. Bills" maxlength="60" />
         <datalist id="rep-kinds">{#each kinds as k (k)}<option value={k}></option>{/each}</datalist>
+
+        {#if app.codes.length > 0}
+          <span class="lab">Timesheet code</span>
+          <CodeSelect value={form.codeId} label="Timesheet code" empty={kindEmpty} onchange={(id) => (form.codeId = id)} />
+        {/if}
 
         <label for="rep-notes">Notes</label>
         <input id="rep-notes" class="text-in" bind:value={form.notes} placeholder="e.g. policy number, who to ring" />

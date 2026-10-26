@@ -73,6 +73,8 @@
     "allow-save-timesheet-code",
     "allow-category-codes",
     "allow-set-category-code",
+    "allow-kind-codes",
+    "allow-set-kind-code",
     "allow-list-custom-fields",
     "allow-save-custom-field",
     "allow-delete-custom-field",

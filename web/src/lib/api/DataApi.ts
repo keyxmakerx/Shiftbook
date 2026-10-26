@@ -173,6 +173,8 @@ export interface Recurring {
   alerts: boolean;
   notes: string;
   totalMinutes: number;
+  /** Its own timesheet code; null = its kind's code, then the usual rules. */
+  codeId: string | null;
 }
 
 /** What the Repeating view sends to save one. */
@@ -187,6 +189,8 @@ export interface RecurringInput {
   warnDays: number | null;
   alerts: boolean;
   notes: string;
+  /** Its own timesheet code; null = its kind's code, then the usual rules. */
+  codeId: string | null;
 }
 
 /** What Mark done did, for Undo. */
@@ -466,7 +470,7 @@ export interface SheetLine {
  * Where an entry's timesheet code comes from: chosen on the entry, its project (or
  * repeating thing), its category, the tickets code, or nowhere yet.
  */
-export type CodeSource = 'entry' | 'target' | 'category' | 'tickets' | 'unassigned';
+export type CodeSource = 'entry' | 'target' | 'kind' | 'category' | 'tickets' | 'unassigned';
 
 /** An entry's code and where it came from. */
 export interface ResolvedCode {
@@ -532,6 +536,12 @@ export interface CodeInput {
 
 export interface CategoryCode {
   category: string;
+  codeId: string | null;
+}
+
+/** A kind of repeating thing ("Certificates") and its timesheet code. */
+export interface KindCode {
+  kind: string;
   codeId: string | null;
 }
 
@@ -981,7 +991,12 @@ export interface DataApi {
    * and category picked on the form. `id` is the entry being edited (null for a new one).
    * Tauri: `usual_code`.
    */
-  usualCode(id: string | null, projectId: string | null, category: string | null): Promise<ResolvedCode>;
+  usualCode(
+    id: string | null,
+    projectId: string | null,
+    recurringId: string | null,
+    category: string | null,
+  ): Promise<ResolvedCode>;
   /**
    * Choose the timesheet code for several entries at once (the Timesheet's "Pick a code");
    * null goes back to the usual code. Tauri: `set_entry_codes`.
@@ -1060,6 +1075,10 @@ export interface DataApi {
   saveTimesheetCode(id: string | null, input: CodeInput): Promise<TimesheetCode>;
   categoryCodes(): Promise<CategoryCode[]>;
   setCategoryCode(category: string, codeId: string | null): Promise<void>;
+  /** Every kind of repeating thing with its code. Tauri: `kind_codes`. */
+  kindCodes(): Promise<KindCode[]>;
+  /** Tauri: `set_kind_code`; null removes it. */
+  setKindCode(kind: string, codeId: string | null): Promise<void>;
 
   // ----- custom fields -----
   listCustomFields(): Promise<CustomField[]>;

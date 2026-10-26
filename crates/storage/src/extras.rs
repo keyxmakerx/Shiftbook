@@ -303,6 +303,56 @@ fn not_found_if_zero(done: sqlx::sqlite::SqliteQueryResult) -> Result<()> {
     }
 }
 
+/// The two name → code tables: categories, and kinds of repeating thing.
+#[derive(Clone, Copy)]
+enum NamedCodes {
+    Category,
+    Kind,
+}
+
+impl NamedCodes {
+    /// Its queries: find by name, change the code, remove, add.
+    fn sql(self) -> [&'static str; 4] {
+        macro_rules! queries {
+            ($table:literal, $column:literal) => {
+                [
+                    concat!(
+                        "SELECT id FROM ",
+                        $table,
+                        " WHERE owner_id = $1 AND lower(",
+                        $column,
+                        ") = lower($2) AND deleted_at IS NULL"
+                    ),
+                    concat!(
+                        "UPDATE ",
+                        $table,
+                        " SET timesheet_code_id = $1, updated_at = $2 ",
+                        "WHERE id = $3 AND owner_id = $4"
+                    ),
+                    concat!(
+                        "UPDATE ",
+                        $table,
+                        " SET deleted_at = $1, updated_at = $1 ",
+                        "WHERE id = $2 AND owner_id = $3"
+                    ),
+                    concat!(
+                        "INSERT INTO ",
+                        $table,
+                        " (id, owner_id, ",
+                        $column,
+                        ", timesheet_code_id, ",
+                        "created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $5, NULL)"
+                    ),
+                ]
+            };
+        }
+        match self {
+            NamedCodes::Category => queries!("category_code_defaults", "category"),
+            NamedCodes::Kind => queries!("kind_code_defaults", "kind"),
+        }
+    }
+}
+
 impl SqliteStore {
     // ---------- timesheet codes ----------
 
@@ -406,55 +456,80 @@ impl SqliteStore {
         category: &str,
         code: Option<TimesheetCodeId>,
     ) -> Result<()> {
-        let category = validate_list_value(category)?;
-        let mut tx = self.pool.begin().await?;
-        let now = now_text();
-        let existing: Option<String> = sqlx::query_scalar(
-            "SELECT id FROM category_code_defaults WHERE owner_id = $1 \
-             AND lower(category) = lower($2) AND deleted_at IS NULL",
+        self.set_named_code(NamedCodes::Category, owner, category, code)
+            .await
+    }
+
+    /// Live kind → code mappings (a kind of repeating thing, e.g. "Certificates"), by kind.
+    pub async fn list_kind_codes(&self, owner: OwnerId) -> Result<Vec<(String, TimesheetCodeId)>> {
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT kind, timesheet_code_id FROM kind_code_defaults \
+             WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY lower(kind)",
         )
         .bind(owner.to_string())
-        .bind(&category)
-        .fetch_optional(&mut *tx)
+        .fetch_all(&self.pool)
         .await?;
+        rows.into_iter()
+            .map(|(kind, code)| Ok((kind, TimesheetCodeId::from_uuid(parse_uuid(&code)?))))
+            .collect()
+    }
+
+    /// Map a kind of repeating thing to a code, or with `None` remove its mapping.
+    pub async fn set_kind_code(
+        &self,
+        owner: OwnerId,
+        kind: &str,
+        code: Option<TimesheetCodeId>,
+    ) -> Result<()> {
+        self.set_named_code(NamedCodes::Kind, owner, kind, code)
+            .await
+    }
+
+    async fn set_named_code(
+        &self,
+        table: NamedCodes,
+        owner: OwnerId,
+        name: &str,
+        code: Option<TimesheetCodeId>,
+    ) -> Result<()> {
+        let [find, change, remove, add] = table.sql();
+        let name = validate_list_value(name)?;
+        let mut tx = self.pool.begin().await?;
+        let now = now_text();
+        let existing: Option<String> = sqlx::query_scalar(find)
+            .bind(owner.to_string())
+            .bind(&name)
+            .fetch_optional(&mut *tx)
+            .await?;
         match (existing, code) {
             (Some(id), Some(code)) => {
                 code_exists(&mut tx, owner, code).await?;
-                sqlx::query(
-                    "UPDATE category_code_defaults SET timesheet_code_id = $1, updated_at = $2 \
-                     WHERE id = $3 AND owner_id = $4",
-                )
-                .bind(code.to_string())
-                .bind(&now)
-                .bind(id)
-                .bind(owner.to_string())
-                .execute(&mut *tx)
-                .await?;
+                sqlx::query(change)
+                    .bind(code.to_string())
+                    .bind(&now)
+                    .bind(id)
+                    .bind(owner.to_string())
+                    .execute(&mut *tx)
+                    .await?;
             }
             (Some(id), None) => {
-                sqlx::query(
-                    "UPDATE category_code_defaults SET deleted_at = $1, updated_at = $1 \
-                     WHERE id = $2 AND owner_id = $3",
-                )
-                .bind(&now)
-                .bind(id)
-                .bind(owner.to_string())
-                .execute(&mut *tx)
-                .await?;
+                sqlx::query(remove)
+                    .bind(&now)
+                    .bind(id)
+                    .bind(owner.to_string())
+                    .execute(&mut *tx)
+                    .await?;
             }
             (None, Some(code)) => {
                 code_exists(&mut tx, owner, code).await?;
-                sqlx::query(
-                    "INSERT INTO category_code_defaults (id, owner_id, category, timesheet_code_id, \
-                     created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $5, NULL)",
-                )
-                .bind(CategoryCodeDefaultId::new().to_string())
-                .bind(owner.to_string())
-                .bind(&category)
-                .bind(code.to_string())
-                .bind(&now)
-                .execute(&mut *tx)
-                .await?;
+                sqlx::query(add)
+                    .bind(CategoryCodeDefaultId::new().to_string())
+                    .bind(owner.to_string())
+                    .bind(&name)
+                    .bind(code.to_string())
+                    .bind(&now)
+                    .execute(&mut *tx)
+                    .await?;
             }
             (None, None) => {}
         }

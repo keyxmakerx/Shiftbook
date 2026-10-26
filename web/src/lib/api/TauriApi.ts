@@ -19,6 +19,7 @@ import type {
   FingerprintStatus,
   SyncReport,
   CategoryCode,
+  KindCode,
   CodeInput,
   CustomField,
   CustomValue,
@@ -175,8 +176,13 @@ export class TauriApi implements DataApi {
   setEntryNotes(id: string, notes: string): Promise<Entry> {
     return call('set_entry_notes', { id, notes });
   }
-  usualCode(id: string | null, projectId: string | null, category: string | null): Promise<ResolvedCode> {
-    return call('usual_code', { id, projectId, category });
+  usualCode(
+    id: string | null,
+    projectId: string | null,
+    recurringId: string | null,
+    category: string | null,
+  ): Promise<ResolvedCode> {
+    return call('usual_code', { id, projectId, recurringId, category });
   }
   setEntryCodes(ids: string[], codeId: string | null): Promise<void> {
     return call('set_entry_codes', { ids, codeId });
@@ -311,6 +317,12 @@ export class TauriApi implements DataApi {
   }
   setCategoryCode(category: string, codeId: string | null): Promise<void> {
     return call('set_category_code', { category, codeId });
+  }
+  kindCodes(): Promise<KindCode[]> {
+    return call('kind_codes');
+  }
+  setKindCode(kind: string, codeId: string | null): Promise<void> {
+    return call('set_kind_code', { kind, codeId });
   }
 
   listCustomFields(): Promise<CustomField[]> {

@@ -8,7 +8,7 @@ use shiftbook_core::bell::{while_away as away_items, BellItem, DueThing};
 use shiftbook_core::dates::{format_date, parse_date};
 use shiftbook_core::home::UseMode;
 use shiftbook_core::ids::{
-    ChecklistItemId, FrequencyId, OwnerId, RecurringTaskId, TaskId, TimeEntryId,
+    ChecklistItemId, FrequencyId, OwnerId, RecurringTaskId, TaskId, TimeEntryId, TimesheetCodeId,
 };
 use shiftbook_core::model::{Frequency, ListName};
 use shiftbook_core::prefs::Prefs;
@@ -62,6 +62,8 @@ pub struct RecurringView {
     alerts: bool,
     notes: String,
     total_minutes: u32,
+    /// The timesheet code its time gets, when set on the thing itself.
+    code_id: Option<TimesheetCodeId>,
 }
 
 /// What the UI sends to save one.
@@ -77,6 +79,9 @@ pub struct RecurringArgs {
     warn_days: Option<u32>,
     alerts: bool,
     notes: String,
+    /// Its own timesheet code (`None` = its kind's code, then the usual rules).
+    #[serde(default)]
+    code_id: Option<String>,
 }
 
 /// Every repeating thing with its frequency, summary and the frequency list.
@@ -109,6 +114,7 @@ async fn summaries(store: &SqliteStore, owner: OwnerId, today: Date) -> Res<Vec<
                 alerts: t.alerts_enabled,
                 notes: t.notes,
                 total_minutes: sum.total_minutes.get(),
+                code_id: t.default_timesheet_code_id,
             }
         })
         .collect();
@@ -188,6 +194,12 @@ pub async fn recurring_save(
         warn_days_before: input.warn_days,
         alerts_enabled: input.alerts,
         notes: input.notes,
+        timesheet_code_id: input
+            .code_id
+            .as_deref()
+            .filter(|c| !c.is_empty())
+            .map(id_arg)
+            .transpose()?,
     };
     match id.as_deref() {
         Some(id) => {
