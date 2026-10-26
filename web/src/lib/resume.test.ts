@@ -10,6 +10,7 @@ function entry(description: string, tickets: string[], notes: string | null = nu
     hours: '1.5',
     description,
     projectId: null,
+    recurringId: null,
     category: null,
     notes,
     timesheetCodeId: null,

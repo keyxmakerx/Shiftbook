@@ -4,10 +4,12 @@
 
 use shiftbook_core::capture::{parse_capture, CaptureProject};
 use shiftbook_core::fields::{AppliesTo, FieldKind};
-use shiftbook_core::ids::{OwnerId, ProjectId, TimeEntryId};
+use shiftbook_core::ids::{OwnerId, ProjectId, TimeEntryId, TimesheetCodeId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
-use shiftbook_core::prefs::{Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME};
+use shiftbook_core::prefs::{
+    Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME, KEY_TICKETS_CODE,
+};
 use shiftbook_core::responses::ResponseDraft;
 use shiftbook_core::week::WeekStart;
 use shiftbook_core::CoreError;
@@ -48,6 +50,7 @@ fn input(date: Date, minutes: u32, description: &str) -> EntryInput {
         minutes: Minutes(minutes),
         description: description.into(),
         project: None,
+        recurring: None,
         category: None,
         next_step: None,
         timesheet_code_id: None,
@@ -489,7 +492,7 @@ fn log_work_reuses_or_creates() {
         let (s, me, _other) = setup(&dir).await;
         let p = s.create_project(me, "Network", None).await.unwrap();
         let list = [CaptureProject {
-            id: p.id,
+            id: EntryTarget::Project(p.id),
             name: "Network",
         }];
         let cap = |t: &str| parse_capture(t, DAY, WeekStart::default(), &list);
@@ -500,14 +503,14 @@ fn log_work_reuses_or_creates() {
         s.create_entry(me, &earlier, "CHG0012345").await.unwrap();
 
         let a = s
-            .quick_log(me, DAY, &cap("CHG0012345"), Minutes(30))
+            .quick_log(me, DAY, &cap("CHG0012345"), Minutes(30), None)
             .await
             .unwrap();
         assert_eq!(a.entry.description, "Switch upgrade");
         assert_eq!(a.entry.target, EntryTarget::Project(p.id));
         assert_eq!(a.entry.date, DAY);
         let b = s
-            .quick_log(me, DAY, &cap("chg0012345 INC0045678"), Minutes(15))
+            .quick_log(me, DAY, &cap("chg0012345 INC0045678"), Minutes(15), None)
             .await
             .unwrap();
         assert_eq!(b.entry.id, a.entry.id, "same ticket, same day");
@@ -515,16 +518,42 @@ fn log_work_reuses_or_creates() {
         assert_eq!(numbers(&b), ["CHG0012345", "INC0045678"]);
 
         let c = s
-            .quick_log(me, DAY, &cap("printer on 2nd floor"), Minutes(60))
+            .quick_log(me, DAY, &cap("printer on 2nd floor"), Minutes(60), None)
             .await
             .unwrap();
         assert_ne!(c.entry.id, a.entry.id);
         assert_eq!(c.entry.target, EntryTarget::None);
         assert!(matches!(
-            s.quick_log(me, DAY, &cap("  "), Minutes(15)).await,
+            s.quick_log(me, DAY, &cap("  "), Minutes(15), None).await,
             Err(StorageError::Invalid(CoreError::NothingToLog))
         ));
         assert_eq!(s.list_entries(me, DAY, DAY).await.unwrap().len(), 2);
+
+        // "Add to …?": the same title as earlier work goes where it went only when asked to.
+        let same = s
+            .same_work(me, DAY, " switch UPGRADE")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(same.target, EntryTarget::Project(p.id));
+        assert!(same.on_day, "logged today by CHG0012345 already");
+        let next = date!(2026 - 10 - 21);
+        let same = s
+            .same_work(me, next, "Switch upgrade")
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!same.on_day);
+        let new = s
+            .quick_log(me, next, &cap("Switch upgrade"), Minutes(15), Some(false))
+            .await
+            .unwrap();
+        assert_eq!(new.entry.target, EntryTarget::None);
+        let joined = s
+            .quick_log(me, next, &cap("Switch upgrade"), Minutes(15), Some(true))
+            .await
+            .unwrap();
+        assert_eq!(joined.entry.target, EntryTarget::Project(p.id));
     });
 }
 
@@ -1234,5 +1263,175 @@ fn tickets_from_before_items_join_them_on_unlock() {
         // Running it again changes nothing.
         s.initialize_local_owner("Me").await.unwrap();
         assert_eq!(item_count(&s, me).await, 3);
+    });
+}
+
+#[test]
+fn tickets_code_and_entry_codes() {
+    let dir = TestDir::new("entrycodes");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let code = s
+            .add_timesheet_code(
+                me,
+                &CodeInput {
+                    area: "Operations".into(),
+                    phase_label: "Phase".into(),
+                    code: "1 - Support".into(),
+                    sort_order: 0,
+                    hidden: false,
+                },
+            )
+            .await
+            .unwrap();
+        // The tickets code must be one of yours.
+        s.set_pref(me, KEY_TICKETS_CODE, &code.id.to_string())
+            .await
+            .unwrap();
+        assert_eq!(s.prefs(me).await.unwrap().tickets_code, Some(code.id));
+        assert!(matches!(
+            s.set_pref(other, KEY_TICKETS_CODE, &code.id.to_string())
+                .await,
+            Err(StorageError::NotFound)
+        ));
+        s.set_pref(me, KEY_TICKETS_CODE, "").await.unwrap();
+        assert_eq!(s.prefs(me).await.unwrap().tickets_code, None);
+
+        // Several entries at once, the tray roll-up included.
+        let day = s.tray_add(me, DAY, "INC0045601").await.unwrap();
+        let rollup = day.entry_id.unwrap();
+        let plain = s
+            .create_entry(me, &input(DAY, 30, "Misc"), "")
+            .await
+            .unwrap()
+            .entry
+            .id;
+        s.set_entry_codes(me, &[rollup, plain], Some(code.id))
+            .await
+            .unwrap();
+        for id in [rollup, plain] {
+            let rec = s.get_entry(me, id).await.unwrap();
+            assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        }
+        // The roll-up keeps its code when the tray changes.
+        s.tray_add(me, DAY, "INC0045602").await.unwrap();
+        let rec = s.get_entry(me, rollup).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        assert_eq!(numbers(&rec), ["INC0045601", "INC0045602"]);
+        // Someone else's entry, or a code that isn't there: nothing changes.
+        assert!(s.set_entry_codes(other, &[plain], None).await.is_err());
+        assert!(s
+            .set_entry_codes(me, &[plain], Some(TimesheetCodeId::new()))
+            .await
+            .is_err());
+        assert!(s
+            .set_entry_codes(me, &[plain, TimeEntryId::new()], None)
+            .await
+            .is_err());
+        let rec = s.get_entry(me, plain).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, Some(code.id));
+        s.set_entry_codes(me, &[plain], None).await.unwrap();
+        let rec = s.get_entry(me, plain).await.unwrap();
+        assert_eq!(rec.entry.timesheet_code_id, None);
+    });
+}
+
+#[test]
+fn one_follow_up_per_card() {
+    use shiftbook_core::canvas::CardKind;
+    let dir = TestDir::new("followup");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let rec = s
+            .create_entry(
+                me,
+                &EntryInput {
+                    date: DAY,
+                    minutes: Minutes(30),
+                    description: "Switch replacement".into(),
+                    project: None,
+                    recurring: None,
+                    category: None,
+                    next_step: None,
+                    timesheet_code_id: None,
+                },
+                "",
+            )
+            .await
+            .unwrap();
+        let card = *rec.entry.id.as_uuid();
+        s.pin(me, CardKind::Entry, card, Some(date!(2026 - 10 - 22)))
+            .await
+            .unwrap();
+        assert_eq!(
+            s.follow_ups(me).await.unwrap(),
+            vec![(CardKind::Entry, card, date!(2026 - 10 - 22))]
+        );
+        // Following it up on a day takes the place of the pin's chase day.
+        s.bring_up(
+            me,
+            "Switch replacement",
+            date!(2026 - 10 - 27),
+            Some((CardKind::Entry, card)),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            s.follow_ups(me).await.unwrap(),
+            vec![(CardKind::Entry, card, date!(2026 - 10 - 27))]
+        );
+        assert_eq!(s.pins(me).await.unwrap()[0].chase_on, None);
+        // No follow-up clears it, and the pin stays.
+        s.clear_follow_up(me, CardKind::Entry, card).await.unwrap();
+        assert!(s.follow_ups(me).await.unwrap().is_empty());
+        assert_eq!(s.pins(me).await.unwrap().len(), 1);
+    });
+}
+
+#[test]
+fn known_tickets_carry_their_time_so_far() {
+    let dir = TestDir::new("knowntickets");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        s.tray_add(me, date!(2026 - 10 - 19), "INC0045678")
+            .await
+            .unwrap();
+        s.create_entry(
+            me,
+            &EntryInput {
+                date: DAY,
+                minutes: Minutes(90),
+                description: "Switch replacement".into(),
+                project: None,
+                recurring: None,
+                category: None,
+                next_step: None,
+                timesheet_code_id: None,
+            },
+            "inc0045678",
+        )
+        .await
+        .unwrap();
+        let wanted = ["INC0045678".to_string(), "INC9999999".to_string()];
+        let found = s.item_summaries(me, Some(&wanted)).await.unwrap();
+        assert_eq!(found.len(), 1);
+        let item = &found[0];
+        assert_eq!(item.title, "Switch replacement");
+        let so_far = item.so_far.unwrap();
+        assert_eq!(so_far.first, DAY);
+        assert_eq!(so_far.last, date!(2026 - 10 - 19));
+        assert_eq!(so_far.minutes, Minutes(15 + 90));
+        assert_eq!(item.cards.len(), 2);
+        assert!(item.cards[0].starts_with("tray:"), "latest first");
+        assert!(s.item_summaries(other, None).await.unwrap().is_empty());
+        // Ticked done from the Items view: done everywhere.
+        assert!(matches!(
+            s.item_set_done(other, item.id, true, DAY).await,
+            Err(StorageError::NotFound)
+        ));
+        s.item_set_done(me, item.id, true, DAY).await.unwrap();
+        let tray = s.tray_day(me, date!(2026 - 10 - 19)).await.unwrap();
+        assert!(tray.items[0].done);
+        assert!(s.item_summaries(me, None).await.unwrap()[0].done);
     });
 }

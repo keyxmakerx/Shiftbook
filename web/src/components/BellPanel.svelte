@@ -1,8 +1,8 @@
 <script lang="ts">
   // The bell's panel (round 12): slides in from the right over the work area. Now first
   // (meetings about to start, and since round 15 one that just finished, offering to log its
-  // time), then Today (later meetings, things brought up for today, pins due to chase,
-  // repeating things that need doing, tickets still open). Each line has the button that does
+  // time), then Today (later meetings, things to follow up, each once with Open, Tomorrow and
+  // Done, repeating things that need doing, tickets still open). Each line has the button that does
   // the obvious thing. Click outside or press Esc to close it.
   // After a day or more away it opens by itself as "While you were away" (round 15), on just
   // what came due meanwhile; Got it shows the usual panel.
@@ -12,7 +12,7 @@
   import { bell, nowMinutes, refreshBell, snoozeHour, snoozeSheet } from '../lib/bell.svelte';
   import { addDays, fmtMinutes, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
-  import { chaseOn } from '../lib/pins.svelte';
+  import { bringUp } from '../lib/bringUp';
   import { markDone, openRepeating } from '../lib/repeating.svelte';
   import { app, attempt, flashEntry, projectName, refresh, selectDay, setView, timeButtons, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -83,9 +83,34 @@
     toast('Skipped. Nothing logged.', 'Undo', () => void attempt(() => api.skipMeeting(series, day, false)).then(refreshBell));
   }
 
-  async function done(id: string) {
-    if (await attempt(() => api.tickNextUp(id, true).then(() => true))) await refreshBell();
+  type Follow = { card: string | null; nextUp: string | null };
+
+  function cardOf(f: Follow): [CardKind, string] | null {
+    return f.card ? (f.card.split(':') as [CardKind, string]) : null;
   }
+
+  /** Done: it's followed up, so it leaves the bell (a pin stays on the bar). */
+  async function followDone(f: Follow) {
+    const card = cardOf(f);
+    const ok = await attempt(() =>
+      Promise.all([card ? api.clearFollowUp(card[0], card[1]) : null, f.nextUp ? api.tickNextUp(f.nextUp, true) : null]).then(() => true),
+    );
+    if (ok) await refreshBell();
+  }
+
+  function followOpen(f: Follow) {
+    const card = cardOf(f);
+    if (!card) return;
+    openWindow(card[0], card[1]);
+    close();
+  }
+
+  async function followTomorrow(f: Follow, title: string) {
+    const card = cardOf(f);
+    if (card) await bringUp(card[0], card[1], title, app.bringUpDays[0] ?? addDays(app.today, 1));
+  }
+
+  const KIND_WORD: Record<CardKind, string> = { entry: 'Work', tray: 'Ticket', note: 'Note', inbox: 'Jot' };
 
   async function openSheet() {
     await selectDay(app.today);
@@ -118,10 +143,11 @@
           : 'Just finished · logs your time, with the meeting note linked';
       case 'meeting':
         return i.about.state.state === 'later' ? 'Your meeting note opens from here' : 'Open your meeting note';
-      case 'brought_up':
-        return 'You brought this up for today';
-      case 'chase':
-        return i.about.on === app.today ? 'Pinned · chase it today' : `Pinned · to chase since ${relativeDay(i.about.on, app.today)}`;
+      case 'follow_up': {
+        const card = cardOf(i.about);
+        const what = card ? `${KIND_WORD[card[0]]} · ` : '';
+        return what + (i.about.on === app.today ? 'follow up today' : `follow up since ${relativeDay(i.about.on, app.today)}`);
+      }
       case 'due':
         return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${relativeDay(i.about.nextDue, app.today)}`;
       case 'still_open':
@@ -161,7 +187,7 @@
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} class:late={i.about.kind === 'due' && i.about.state === 'overdue'} style:--i={n}>
               <span class="ico" aria-hidden="true">
                 <Icon
-                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'brought_up' ? 'sun' : i.about.kind === 'chase' ? 'pin' : i.about.kind === 'due' ? 'repeat' : 'clock'}
+                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : 'clock'}
                   size={16}
                 />
               </span>
@@ -178,13 +204,14 @@
                 {:else if i.about.kind === 'meeting'}
                   {@const series = i.about.series}
                   <button type="button" class="btn primary" onclick={() => void openMeetingNote(series)}>Open note</button>
-                {:else if i.about.kind === 'brought_up'}
-                  {@const id = i.about.id}
-                  <button type="button" class="btn" onclick={() => void done(id)}>Done</button>
-                {:else if i.about.kind === 'chase'}
-                  {@const [kind, id] = i.about.card.split(':') as [CardKind, string]}
-                  <button type="button" class="btn primary" onclick={() => openWindow(kind, id)}>Open</button>
-                  <button type="button" class="btn" title="Chase it again tomorrow" onclick={() => void chaseOn(kind, id, addDays(app.today, 1))}>Tomorrow</button>
+                {:else if i.about.kind === 'follow_up'}
+                  {@const f = i.about}
+                  {@const title = i.title}
+                  {#if f.card}
+                    <button type="button" class="btn primary" onclick={() => followOpen(f)}>Open</button>
+                    <button type="button" class="btn" title="Follow it up tomorrow" onclick={() => void followTomorrow(f, title)}>Tomorrow</button>
+                  {/if}
+                  <button type="button" class="btn" onclick={() => void followDone(f)}><Icon name="check" size={13} /> Done</button>
                 {:else if i.about.kind === 'due'}
                   {@const id = i.about.id}
                   {@const title = i.title}
@@ -212,7 +239,7 @@
       {#if bell.items.length === 0}
         <p class="empty">
           Nothing coming up. {words().meetings} you add show here before they start, along with repeating things that are due,
-          things you brought up for today and {words().tickets.toLowerCase()} still open.
+          things to follow up today and {words().tickets.toLowerCase()} still open.
         </p>
       {/if}
       <button type="button" class="link" onclick={meetings}><Icon name="meeting" size={14} /> Your {words().meetings.toLowerCase()}</button>

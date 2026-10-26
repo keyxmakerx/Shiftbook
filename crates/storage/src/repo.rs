@@ -260,8 +260,12 @@ fn rename_statements(list: ListName) -> &'static [&'static str] {
             "UPDATE tasks SET priority = $1, updated_at = $2 \
              WHERE owner_id = $3 AND priority = $4",
         ],
-        ListName::RecurringType => &["UPDATE recurring_tasks SET type = $1, updated_at = $2 \
-             WHERE owner_id = $3 AND type = $4"],
+        ListName::RecurringType => &[
+            "UPDATE recurring_tasks SET type = $1, updated_at = $2 \
+             WHERE owner_id = $3 AND type = $4",
+            "UPDATE kind_code_defaults SET kind = $1, updated_at = $2 \
+             WHERE owner_id = $3 AND kind = $4",
+        ],
     }
 }
 

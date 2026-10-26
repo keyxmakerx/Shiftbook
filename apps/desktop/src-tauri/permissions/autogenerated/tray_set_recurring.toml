@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tray-set-recurring"
+description = "Enables the tray_set_recurring command without any pre-configured scope."
+commands.allow = ["tray_set_recurring"]
+
+[[permission]]
+identifier = "deny-tray-set-recurring"
+description = "Denies the tray_set_recurring command without any pre-configured scope."
+commands.deny = ["tray_set_recurring"]

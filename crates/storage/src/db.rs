@@ -94,6 +94,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "meeting length, project and logged day",
         include_str!("../migrations/0017_meeting_log.sql"),
     ),
+    (
+        18,
+        "repeating work",
+        include_str!("../migrations/0018_repeating_work.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -308,6 +313,7 @@ mod tests {
                     "frequencies",
                     "inbox_items",
                     "items",
+                    "kind_code_defaults",
                     "list_options",
                     "meeting_series",
                     "next_up_items",

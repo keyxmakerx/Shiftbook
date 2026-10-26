@@ -7,7 +7,8 @@ use shiftbook_core::dates::{format_date, format_timestamp};
 use shiftbook_core::fields::{build_link, ticket_matches_prefix};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TimesheetCodeId, TrayItemId,
+    InboxItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, TimeEntryId, TimesheetCodeId,
+    TrayItemId,
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, Note, TrayItem};
@@ -50,6 +51,8 @@ pub struct EntryView {
     pub hours: String,
     pub description: String,
     pub project_id: Option<ProjectId>,
+    /// The repeating thing it belongs to (round 15), when it has no project.
+    pub recurring_id: Option<RecurringTaskId>,
     pub category: Option<String>,
     pub notes: Option<String>,
     pub timesheet_code_id: Option<TimesheetCodeId>,
@@ -68,6 +71,7 @@ pub struct TrayItemView {
     pub note: Option<String>,
     pub done: bool,
     pub project_id: Option<ProjectId>,
+    pub recurring_id: Option<RecurringTaskId>,
     pub links: Vec<LinkView>,
 }
 
@@ -104,9 +108,10 @@ pub fn ticket_links(fields: &[CustomField], ticket: &str) -> Vec<LinkView> {
 }
 
 pub fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
-    let project_id = match rec.entry.target {
-        EntryTarget::Project(p) => Some(p),
-        _ => None,
+    let (project_id, recurring_id) = match rec.entry.target {
+        EntryTarget::Project(p) => (Some(p), None),
+        EntryTarget::Recurring(r) => (None, Some(r)),
+        EntryTarget::None => (None, None),
     };
     EntryView {
         id: rec.entry.id,
@@ -115,6 +120,7 @@ pub fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
         hours: format_hours(rec.entry.minutes),
         description: rec.entry.description,
         project_id,
+        recurring_id,
         category: rec.entry.category,
         notes: rec.entry.next_step,
         timesheet_code_id: rec.entry.timesheet_code_id,
@@ -143,6 +149,7 @@ pub fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
         note: item.note,
         done: item.done,
         project_id: item.project_id,
+        recurring_id: item.recurring_id,
     }
 }
 

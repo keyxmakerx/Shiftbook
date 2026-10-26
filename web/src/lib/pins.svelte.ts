@@ -1,10 +1,11 @@
 // Pins (round 14): entries, tickets and notes kept in view as chips on the bottom bar, each
-// with an optional day to chase it (rules in crates/core/src/pins.rs). Loaded after unlock,
+// with an optional day to follow it up (rules in crates/core/src/pins.rs; the day is the
+// card's one Follow up day since round 15, see bringUp.ts). Loaded after unlock,
 // each minute with the bell, and after every change.
 import { api } from './api';
 import type { CardKind, PinItem } from './api';
 import { refreshBell } from './bell.svelte';
-import { addDays } from './format';
+import { bringUpSection } from './bringUp';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { app, attempt } from './store.svelte';
 import { toast } from './toast.svelte';
@@ -32,7 +33,7 @@ async function changed() {
 export async function pin(kind: CardKind, id: string): Promise<void> {
   if (!(await attempt(() => api.pin(kind, id, null).then(() => true)))) return;
   await changed();
-  toast('Pinned to the bottom bar. Right-click its chip to set a day to chase it.', 'Undo', () => void unpin(kind, id, false));
+  toast('Pinned to the bottom bar. Right-click its chip to pick a day to follow it up.', 'Undo', () => void unpin(kind, id, false));
 }
 
 /** Take a chip off the bar, with Undo (which keeps its chase date). */
@@ -45,11 +46,6 @@ export async function unpin(kind: CardKind, id: string, undoable = true): Promis
   }
 }
 
-/** Set (or clear, with null) the day to chase a pinned thing. */
-export async function chaseOn(kind: CardKind, id: string, date: string | null): Promise<void> {
-  if (await attempt(() => api.pin(kind, id, date).then(() => true))) await changed();
-}
-
 /** "Pin to the bottom bar" or "Unpin", for a record's right-click menu. */
 export function pinMenuItem(kind: CardKind, id: string): MenuItem {
   return find(kind, id)
@@ -59,7 +55,6 @@ export function pinMenuItem(kind: CardKind, id: string): MenuItem {
 
 /** A chip's own menu. */
 export function chipMenu(p: PinItem): MenuSpec {
-  const day = (n: number) => addDays(app.today, n);
   return {
     sections: [
       {
@@ -69,16 +64,7 @@ export function chipMenu(p: PinItem): MenuSpec {
           { label: 'Unpin', icon: 'x', side: true, act: () => void unpin(p.kind, p.id) },
         ],
       },
-      {
-        head: 'Chase it',
-        choices: [
-          { label: 'Today', color: null, checked: p.chaseOn === app.today, act: () => void chaseOn(p.kind, p.id, app.today) },
-          { label: 'Tomorrow', color: null, checked: p.chaseOn === day(1), act: () => void chaseOn(p.kind, p.id, day(1)) },
-          { label: 'In 3 days', color: null, checked: p.chaseOn === day(3), act: () => void chaseOn(p.kind, p.id, day(3)) },
-          { label: 'Next week', color: null, checked: p.chaseOn === day(7), act: () => void chaseOn(p.kind, p.id, day(7)) },
-          { label: 'No chase date', color: null, checked: p.chaseOn === null, act: () => void chaseOn(p.kind, p.id, null) },
-        ],
-      },
+      bringUpSection(p.kind, p.id, p.title),
     ],
   };
 }

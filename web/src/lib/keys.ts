@@ -1,13 +1,13 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–7 switch views (1–6 at home,
+// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–8 switch views (1–7 at home,
 // where the Timesheet is hidden), Ctrl+L locks, Ctrl+Z undoes and Ctrl+Shift+Z redoes,
 // Ctrl +/−/0 change the text size, Esc closes the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
-export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'settings';
-export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'repeating', 'lists', 'settings'];
+export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'items' | 'settings';
+export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'repeating', 'lists', 'items', 'settings'];
 
 /** The views shown, in tab order: without the Timesheet at home (round 15). */
 export function viewsFor(work: boolean): readonly View[] {
@@ -22,6 +22,7 @@ export const VIEW_NAMES: Record<View, string> = {
   notes: 'Notes',
   repeating: 'Repeating',
   lists: 'Lists',
+  items: 'Items',
   settings: 'Settings',
 };
 export type SettingsSection =

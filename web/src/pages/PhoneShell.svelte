@@ -22,6 +22,7 @@
   import Day from '../views/Day.svelte';
   import Lists from '../views/Lists.svelte';
   import Notes from '../views/Notes.svelte';
+  import Items from '../views/Items.svelte';
   import Repeating from '../views/Repeating.svelte';
   import Settings from '../views/Settings.svelte';
   import Timesheet from '../views/Timesheet.svelte';
@@ -52,6 +53,7 @@
     timesheet: { label: 'Timesheet', icon: 'sheet' },
     repeating: { label: 'Repeating', icon: 'repeat' },
     lists: { label: 'Lists', icon: 'list' },
+    items: { label: 'Items', icon: 'ticket' },
     settings: { label: 'Settings', icon: 'sliders' },
   };
 
@@ -153,6 +155,8 @@
           <Notes />
         {:else if app.view === 'repeating'}
           <Repeating />
+        {:else if app.view === 'items'}
+          <Items />
         {:else if app.view === 'lists'}
           <Lists />
         {:else}

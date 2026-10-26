@@ -1,7 +1,7 @@
 <script lang="ts">
   // The bottom bar (round 12): thin and out of the way. Windows line up from the left like
   // the Windows taskbar (a line under each: accent when open, grey when minimised); pinned
-  // chips (round 14) come next, orange once their chase date comes; today's hours and the
+  // chips (round 14) come next, orange once their follow-up day comes; today's hours and the
   // bell sit on the right. The shortcut hint lives here too.
   import { bell } from '../lib/bell.svelte';
   import { fmtHours, relativeDay } from '../lib/format';
@@ -21,13 +21,13 @@
 
   function pinTip(p: PinItem): string {
     const when = !p.chaseOn
-      ? 'no chase date'
+      ? 'no follow-up day'
       : p.chaseOn === app.today
-        ? 'chase it today'
+        ? 'follow up today'
         : p.due
-          ? `to chase since ${relativeDay(p.chaseOn, app.today)}`
-          : `chase ${relativeDay(p.chaseOn, app.today)}`;
-    return `${p.title} · ${when} · click to open, right-click to chase or unpin`;
+          ? `follow up since ${relativeDay(p.chaseOn, app.today)}`
+          : `follow up ${relativeDay(p.chaseOn, app.today)}`;
+    return `${p.title} · ${when} · click to open, right-click to follow up or unpin`;
   }
 
   function menu(e: MouseEvent, w: WindowSpot) {

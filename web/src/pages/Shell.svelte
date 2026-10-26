@@ -28,6 +28,7 @@
   import Day from '../views/Day.svelte';
   import Timesheet from '../views/Timesheet.svelte';
   import Notes from '../views/Notes.svelte';
+  import Items from '../views/Items.svelte';
   import Repeating from '../views/Repeating.svelte';
   import Lists from '../views/Lists.svelte';
 
@@ -145,6 +146,8 @@
             <Notes />
           {:else if app.view === 'repeating'}
             <Repeating />
+          {:else if app.view === 'items'}
+            <Items />
           {:else if app.view === 'lists'}
             <Lists />
           {:else}

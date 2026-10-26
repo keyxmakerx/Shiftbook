@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-clear-follow-up"
+description = "Enables the clear_follow_up command without any pre-configured scope."
+commands.allow = ["clear_follow_up"]
+
+[[permission]]
+identifier = "deny-clear-follow-up"
+description = "Denies the clear_follow_up command without any pre-configured scope."
+commands.deny = ["clear_follow_up"]

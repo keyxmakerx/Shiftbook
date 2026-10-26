@@ -11,15 +11,21 @@
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
   import { copyText } from '../lib/protection.svelte';
   import { app, attempt, projectById, projectColor, setView, ticketTimes, words } from '../lib/store.svelte';
+  import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
   import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import KnownTickets from './KnownTickets.svelte';
   import TicketChip from './TicketChip.svelte';
 
   const STEP = 5;
   /** Choices in the "time on it so far?" box. */
   const SO_FAR = $derived(ticketTimes());
+  // Tickets counted under a repeating thing show its name, so the list must be loaded.
+  $effect(() => {
+    if (repeating.items.length === 0 && app.tray?.items.some((i) => i.recurringId)) void refreshRepeating();
+  });
   let text = $state('');
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);
@@ -156,12 +162,14 @@
           </span>
         </span>
       {/each}
+      <KnownTickets numbers={askingItems.map((i) => i.ticket)} before={app.selected} />
     </div>
   {/if}
   {#if app.tray && app.tray.items.length > 0}
     <ul class="items">
       {#each app.tray.items as item, i (item.id)}
         {@const project = projectById(item.projectId)}
+        {@const thing = item.recurringId ? repeating.items.find((r) => r.id === item.recurringId) : undefined}
         <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
         <li
           class="item rise"
@@ -221,10 +229,11 @@
           <button type="button" class="x" aria-label="Notepad and options for {item.ticket}" aria-expanded={isOpen(item)} onclick={() => toggle(item)}>
             <Icon name="more" size={14} />
           </button>
-          {#if !item.done || project}
+          {#if !item.done || project || thing}
             <span class="tags">
               {#if !item.done}<span class="tag open">Still open</span>{/if}
               {#if project}<span class="tag" style:--c={projectColor(item.projectId)}>{project.name}</span>{/if}
+              {#if thing}<span class="tag rep">⟳ {thing.name}</span>{/if}
             </span>
           {/if}
         </li>
@@ -470,6 +479,10 @@
     border-radius: 5px;
     color: var(--c, var(--ink-2));
     background: color-mix(in srgb, var(--c, var(--ink)) 10%, transparent);
+  }
+
+  .tag.rep {
+    --c: var(--rep);
   }
 
   .tag.open {

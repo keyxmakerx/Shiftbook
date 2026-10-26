@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-kind-codes"
+description = "Enables the kind_codes command without any pre-configured scope."
+commands.allow = ["kind_codes"]
+
+[[permission]]
+identifier = "deny-kind-codes"
+description = "Denies the kind_codes command without any pre-configured scope."
+commands.deny = ["kind_codes"]

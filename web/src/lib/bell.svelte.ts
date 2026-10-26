@@ -38,6 +38,7 @@ export async function refreshBell(): Promise<void> {
     const items = await api.bell(app.today, now);
     const snoozed = sheetSnooze?.day === app.today && now < sheetSnooze.until;
     bell.items = snoozed ? items.filter((i) => i.about.kind !== 'timesheet') : items;
+    app.followUps = Object.fromEntries((await api.followUps()).map((f) => [`${f.kind}:${f.id}`, f.on]));
   } catch {
     // The next tick tries again.
   }

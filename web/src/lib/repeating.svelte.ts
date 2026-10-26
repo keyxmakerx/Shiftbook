@@ -3,8 +3,10 @@
 // the latest list and the one action used from the Desk, the bell and the Repeating view.
 import { api } from './api';
 import type { Recurring } from './api';
+import type { MenuChoice } from './menu.svelte';
 import { refreshBell } from './bell.svelte';
-import { app, attempt, refresh, setView } from './store.svelte';
+import { app, attempt, focusLog, refresh, setView } from './store.svelte';
+import { startLine } from './renewal';
 import { toast } from './toast.svelte';
 
 export const repeating = $state({
@@ -12,6 +14,14 @@ export const repeating = $state({
   /** A thing for the Repeating view to open (from the bell or the Desk). */
   open: { id: null as string | null, renew: false, serial: 0 },
 });
+
+/** Menu choices for filing work under a repeating thing (round 15). */
+export function repeatingChoices(checked: string | null, act: (id: string) => void): MenuChoice[] {
+  if (repeating.items.length === 0) void refreshRepeating();
+  return repeating.items
+    .filter((r) => r.state !== 'inactive' || r.id === checked)
+    .map((r) => ({ label: `⟳ ${r.name}`, color: null, checked: r.id === checked, act: () => act(r.id) }));
+}
 
 export async function refreshRepeating(): Promise<void> {
   const items = await attempt(() => api.recurring(app.today));
@@ -48,6 +58,11 @@ export async function markRenewed(id: string, name: string, expires: string): Pr
   await afterChange();
   toast(`${name}: renewed.`);
   return true;
+}
+
+/** Start renewal: open Log work with a line already filed under the thing. */
+export function startWork(r: Recurring): void {
+  focusLog(startLine(r.name, r.expires));
 }
 
 /** Go to the Repeating view with one thing open (and its Renewed box, for things that expire). */

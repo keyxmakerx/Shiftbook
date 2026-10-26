@@ -6,7 +6,11 @@ import { toApiError } from './DataApi';
 import type {
   AwayList,
   Frequency,
+  FollowUp,
+  ItemSummary,
+  SameWork,
   MarkedDone,
+  PastTime,
   Recurring,
   RecurringInput,
   ShopList,
@@ -19,6 +23,7 @@ import type {
   FingerprintStatus,
   SyncReport,
   CategoryCode,
+  KindCode,
   CodeInput,
   CustomField,
   CustomValue,
@@ -52,6 +57,7 @@ import type {
   SearchResult,
   IsoDate,
   PrefKey,
+  ResolvedCode,
   Prefs,
   Project,
   ProjectInput,
@@ -174,6 +180,17 @@ export class TauriApi implements DataApi {
   setEntryNotes(id: string, notes: string): Promise<Entry> {
     return call('set_entry_notes', { id, notes });
   }
+  usualCode(
+    id: string | null,
+    projectId: string | null,
+    recurringId: string | null,
+    category: string | null,
+  ): Promise<ResolvedCode> {
+    return call('usual_code', { id, projectId, recurringId, category });
+  }
+  setEntryCodes(ids: string[], codeId: string | null): Promise<void> {
+    return call('set_entry_codes', { ids, codeId });
+  }
   getEntry(id: string): Promise<Entry> {
     return call('get_entry', { id });
   }
@@ -204,8 +221,17 @@ export class TauriApi implements DataApi {
     return call('ticket_set_note', { id, note });
   }
 
-  quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry> {
-    return call('quick_log', { date, text, minutes });
+  quickLog(date: IsoDate, text: string, minutes: number, addTo: boolean | null = null): Promise<Entry> {
+    return call('quick_log', { date, text, minutes, addTo });
+  }
+  sameWork(date: IsoDate, text: string): Promise<SameWork | null> {
+    return call('same_work', { date, text });
+  }
+  items(numbers?: string[]): Promise<ItemSummary[]> {
+    return call('items', { numbers: numbers ?? null });
+  }
+  itemSetDone(id: string, done: boolean, today: IsoDate): Promise<void> {
+    return call('item_set_done', { id, done, today });
   }
 
   parseCapture(text: string, today: IsoDate): Promise<Capture> {
@@ -232,6 +258,9 @@ export class TauriApi implements DataApi {
   }
   traySetProject(id: string, projectId: string | null): Promise<TrayDay> {
     return call('tray_set_project', { id, projectId });
+  }
+  traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay> {
+    return call('tray_set_recurring', { id, recurringId });
   }
   trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
     return call('tray_carry', { id, date });
@@ -301,6 +330,12 @@ export class TauriApi implements DataApi {
   }
   setCategoryCode(category: string, codeId: string | null): Promise<void> {
     return call('set_category_code', { category, codeId });
+  }
+  kindCodes(): Promise<KindCode[]> {
+    return call('kind_codes');
+  }
+  setKindCode(kind: string, codeId: string | null): Promise<void> {
+    return call('set_kind_code', { kind, codeId });
   }
 
   listCustomFields(): Promise<CustomField[]> {
@@ -427,6 +462,12 @@ export class TauriApi implements DataApi {
   bringUpDays(today: IsoDate): Promise<IsoDate[]> {
     return call('bring_up_days', { today });
   }
+  followUps(): Promise<FollowUp[]> {
+    return call('follow_ups');
+  }
+  clearFollowUp(kind: CardKind, id: string): Promise<void> {
+    return call('clear_follow_up', { kind, id });
+  }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });
   }
@@ -526,6 +567,9 @@ export class TauriApi implements DataApi {
   }
   recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone> {
     return call('recurring_renewed', { id, expires, date });
+  }
+  recurringHistory(id: string): Promise<PastTime[]> {
+    return call('recurring_history', { id });
   }
   recurringUndo(marked: MarkedDone): Promise<void> {
     return call('recurring_undo', { marked });

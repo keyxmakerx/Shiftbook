@@ -71,6 +71,7 @@
   import CanvasCard from '../components/CanvasCard.svelte';
   import DueSoonCard from '../components/DueSoonCard.svelte';
   import { hasHome } from '../lib/words';
+  import { dragButton, DRAG_SLOP_PX } from '../lib/rightDrag';
   import Icon from '../components/Icon.svelte';
   import LogWork from '../components/LogWork.svelte';
   import TrayCard from '../components/TrayCard.svelte';
@@ -686,8 +687,12 @@
   }
 
   function panStart(e: PointerEvent) {
-    if (e.button !== 0 || !board) return;
+    if (!dragButton(e) || !board) return;
     if ((e.target as HTMLElement).closest('.tools, .jot, .rail, .selbar, .drawer-at')) return;
+    if (e.button === 2) {
+      rightPan(e);
+      return;
+    }
     fanned = null;
     closePanel();
     if (mode === 'free' && (tool === 'box' || tool === 'select' || e.shiftKey)) {
@@ -717,6 +722,36 @@
     board.addEventListener('pointermove', moveFn);
     board.addEventListener('pointerup', up);
     board.addEventListener('pointercancel', up);
+  }
+
+  /**
+   * The right button slides the Desk too when that's on (Settings → Look). Nothing else happens
+   * until it moves, so a plain right-click still gets the paper's menu with the selection kept.
+   */
+  function rightPan(e: PointerEvent) {
+    e.preventDefault();
+    const startView = view;
+    const start = { x: e.clientX, y: e.clientY };
+    board!.setPointerCapture(e.pointerId);
+    const moveFn = (m: PointerEvent) => {
+      if (!panning) {
+        if (Math.hypot(m.clientX - start.x, m.clientY - start.y) < DRAG_SLOP_PX) return;
+        panning = true;
+        fanned = null;
+        closePanel();
+        window.getSelection()?.removeAllRanges();
+      }
+      view = { ...startView, x: startView.x + m.clientX - start.x, y: startView.y + m.clientY - start.y };
+    };
+    const up = () => {
+      panning = false;
+      board?.removeEventListener('pointermove', moveFn);
+      board?.removeEventListener('pointerup', up);
+      board?.removeEventListener('pointercancel', up);
+    };
+    board!.addEventListener('pointermove', moveFn);
+    board!.addEventListener('pointerup', up);
+    board!.addEventListener('pointercancel', up);
   }
 
   // ----- Select and Box: a rubber band on empty paper -----
@@ -835,7 +870,8 @@
   $effect(() => {
     if (!selected.size) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !drawn) {
+      // Esc in a box (renaming a card) belongs to the box.
+      if (e.key === 'Escape' && !drawn && !(e.target instanceof HTMLInputElement)) {
         e.stopPropagation();
         selected = new Set();
       }

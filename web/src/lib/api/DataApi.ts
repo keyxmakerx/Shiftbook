@@ -137,12 +137,16 @@ export interface Prefs {
   standupWords: [string, string];
   /** Your own time buttons (round 15), shortest first. */
   timeButtons: number[];
+  /** The timesheet code for each day's "Tickets" entry, or null (Customize → Timesheet). */
+  ticketsCode: string | null;
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
   /** Copying text out is blocked until allowed for 10 minutes (on by default). */
   blockCopy: boolean;
   /** The window is hidden from screenshots until allowed for 10 minutes (on by default). */
   hideScreenshots: boolean;
+  /** The right mouse button drags on the Desk too (off by default, round 15). */
+  rightDrag: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -175,6 +179,8 @@ export interface Recurring {
   alerts: boolean;
   notes: string;
   totalMinutes: number;
+  /** Its own timesheet code; null = its kind's code, then the usual rules. */
+  codeId: string | null;
 }
 
 /** What the Repeating view sends to save one. */
@@ -189,6 +195,20 @@ export interface RecurringInput {
   warnDays: number | null;
   alerts: boolean;
   notes: string;
+  /** Its own timesheet code; null = its kind's code, then the usual rules. */
+  codeId: string | null;
+}
+
+/** One past round of a repeating thing: a renewal, or the work in progress. */
+export interface PastTime {
+  /** When it was done, or for the round in progress, the last day worked on it. */
+  date: IsoDate;
+  /** False for the round still in progress. */
+  done: boolean;
+  minutes: number;
+  tickets: string[];
+  /** The new expiry date, when the round ended with Renewed…. */
+  renewedTo: IsoDate | null;
 }
 
 /** What Mark done did, for Undo. */
@@ -253,6 +273,41 @@ export type SeriesInput = Omit<MeetingSeries, 'id'>;
 /** Where today's meeting stands. Mirrors `shiftbook_core::meetings::MeetingToday`. */
 export type MeetingToday = { state: 'later' } | { state: 'soon'; minutes: number } | { state: 'started'; minutes: number };
 
+/** Earlier work with the same title, for Log work's "Add to …?". */
+export interface SameWork {
+  title: string;
+  projectId: string | null;
+  recurringId: string | null;
+  minutes: number;
+  days: number;
+  openTickets: string[];
+}
+
+/** A ticket item with its time so far (round 15). */
+export interface ItemSummary {
+  id: string;
+  number: string;
+  /** The latest title of work it was on ("" when only in the tray). */
+  title: string;
+  done: boolean;
+  note: string | null;
+  projectId: string | null;
+  recurringId: string | null;
+  /** The first and last days it was worked (null when on nothing). */
+  first: IsoDate | null;
+  last: IsoDate | null;
+  minutes: number;
+  /** The cards it's on, latest first: `tray:id` or `entry:id`. */
+  cards: string[];
+}
+
+/** A card's follow-up day: brought up for that day, or a pin's chase day. */
+export interface FollowUp {
+  kind: CardKind;
+  id: string;
+  on: IsoDate;
+}
+
 /** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
 export interface BellItem {
   when: 'now' | 'today';
@@ -261,8 +316,7 @@ export interface BellItem {
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
     | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
     | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
-    | { kind: 'brought_up'; id: string; from: IsoDate }
-    | { kind: 'chase'; card: string; on: IsoDate }
+    | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
     | { kind: 'still_open'; tickets: string[] };
 }
@@ -317,9 +371,11 @@ export type PrefKey =
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
+  | 'timesheet.tickets_code'
   | 'security.quick_unlock'
   | 'security.block_copy'
-  | 'security.hide_screenshots';
+  | 'security.hide_screenshots'
+  | 'ui.right_drag';
 
 export interface Project {
   id: string;
@@ -358,6 +414,8 @@ export interface Entry {
   hours: string;
   description: string;
   projectId: string | null;
+  /** The repeating thing it belongs to, when it has no project. */
+  recurringId: string | null;
   category: string | null;
   notes: string | null;
   timesheetCodeId: string | null;
@@ -371,6 +429,8 @@ export interface EntryInput {
   minutes: number;
   description: string;
   projectId: string | null;
+  /** The repeating thing it belongs to (used when there is no project). */
+  recurringId: string | null;
   category: string | null;
   notes: string | null;
   timesheetCodeId: string | null;
@@ -388,6 +448,8 @@ export interface TrayItem {
   done: boolean;
   /** The project its minutes count under; null = the day's "Tickets" entry. */
   projectId: string | null;
+  /** The repeating thing its minutes count under, when it has no project. */
+  recurringId: string | null;
   links: TicketLink[];
 }
 
@@ -408,6 +470,8 @@ export interface Capture {
   hoursText: string | null;
   tickets: string[];
   projectId: string | null;
+  /** The repeating thing a #name matched. */
+  recurringId: string | null;
   projectQuery: string | null;
   date: IsoDate;
   dayWord: string | null;
@@ -453,6 +517,20 @@ export interface SheetLine {
   items: SheetItem[];
   unassigned: boolean;
   projectId: string | null;
+  /** Its entries that are a day's "Tickets" entry (from the Tickets tray). */
+  rollupIds: string[];
+}
+
+/**
+ * Where an entry's timesheet code comes from: chosen on the entry, its project (or
+ * repeating thing), its category, the tickets code, or nowhere yet.
+ */
+export type CodeSource = 'entry' | 'target' | 'kind' | 'category' | 'tickets' | 'unassigned';
+
+/** An entry's code and where it came from. */
+export interface ResolvedCode {
+  code: string | null;
+  source: CodeSource;
 }
 
 export interface SheetDay {
@@ -513,6 +591,12 @@ export interface CodeInput {
 
 export interface CategoryCode {
   category: string;
+  codeId: string | null;
+}
+
+/** A kind of repeating thing ("Certificates") and its timesheet code. */
+export interface KindCode {
+  kind: string;
   codeId: string | null;
 }
 
@@ -957,6 +1041,22 @@ export interface DataApi {
   logNote(id: string, date: IsoDate, minutes: number): Promise<Entry>;
   /** The entry's notepad, saved as you type (blank clears it). */
   setEntryNotes(id: string, notes: string): Promise<Entry>;
+  /**
+   * The code an entry gets when none is chosen on it ("Use the usual code"), for the project
+   * and category picked on the form. `id` is the entry being edited (null for a new one).
+   * Tauri: `usual_code`.
+   */
+  usualCode(
+    id: string | null,
+    projectId: string | null,
+    recurringId: string | null,
+    category: string | null,
+  ): Promise<ResolvedCode>;
+  /**
+   * Choose the timesheet code for several entries at once (the Timesheet's "Pick a code");
+   * null goes back to the usual code. Tauri: `set_entry_codes`.
+   */
+  setEntryCodes(ids: string[], codeId: string | null): Promise<void>;
   /** One entry (for a window showing its notepad). */
   getEntry(id: string): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
@@ -968,7 +1068,16 @@ export interface DataApi {
   /** Write an entry ticket's notepad (blank clears it). Tauri: `ticket_set_note`. */
   ticketSetNote(id: string, note: string): Promise<Entry>;
   /** Log work: tickets or words plus a time button, on `date`. */
-  quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry>;
+  quickLog(date: IsoDate, text: string, minutes: number, addTo?: boolean | null): Promise<Entry>;
+  /**
+   * "Add to …?" (round 15): earlier work whose title the line's words are, when Log work
+   * should ask before logging; null otherwise. Tauri: `same_work`.
+   */
+  sameWork(date: IsoDate, text: string): Promise<SameWork | null>;
+  /** Ticket items with their time so far; with `numbers`, only those. Tauri: `items`. */
+  items(numbers?: string[]): Promise<ItemSummary[]>;
+  /** The Items view's tick: done everywhere, or reopened from `today`. Tauri: `item_set_done`. */
+  itemSetDone(id: string, done: boolean, today: IsoDate): Promise<void>;
 
   // ----- capture -----
   /** What a capture line means (for the live chips). */
@@ -986,6 +1095,8 @@ export interface DataApi {
   traySetDone(id: string, done: boolean): Promise<TrayDay>;
   /** The project a ticket's minutes count under (null = the day's "Tickets" entry). */
   traySetProject(id: string, projectId: string | null): Promise<TrayDay>;
+  /** Count a tray ticket's time under a repeating thing (null: back to Tickets). Tauri: `tray_set_recurring`. */
+  traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay>;
   /** Work on a still-open ticket again on `date`: it joins that day's tray. */
   trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
   /** One tray ticket, or null when it was taken out (for a window showing its notepad). */
@@ -1028,6 +1139,10 @@ export interface DataApi {
   saveTimesheetCode(id: string | null, input: CodeInput): Promise<TimesheetCode>;
   categoryCodes(): Promise<CategoryCode[]>;
   setCategoryCode(category: string, codeId: string | null): Promise<void>;
+  /** Every kind of repeating thing with its code. Tauri: `kind_codes`. */
+  kindCodes(): Promise<KindCode[]>;
+  /** Tauri: `set_kind_code`; null removes it. */
+  setKindCode(kind: string, codeId: string | null): Promise<void>;
 
   // ----- custom fields -----
   listCustomFields(): Promise<CustomField[]>;
@@ -1111,6 +1226,10 @@ export interface DataApi {
   standup(today: IsoDate): Promise<string>;
   /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
   bringUpDays(today: IsoDate): Promise<IsoDate[]>;
+  /** Every card with a follow-up day (round 15). Tauri: `follow_ups`. */
+  followUps(): Promise<FollowUp[]>;
+  /** "No follow-up" on a card. Tauri: `clear_follow_up`. */
+  clearFollowUp(kind: CardKind, id: string): Promise<void>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;
@@ -1200,6 +1319,8 @@ export interface DataApi {
   recurringDone(id: string, date: IsoDate): Promise<MarkedDone>;
   /** It was renewed on `date` and now runs to `expires`. Tauri: `recurring_renewed`. */
   recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone>;
+  /** Its past renewals (or past times), newest first. Tauri: `recurring_history`. */
+  recurringHistory(id: string): Promise<PastTime[]>;
   /** Take back a Mark done. Tauri: `recurring_undo`. */
   recurringUndo(marked: MarkedDone): Promise<void>;
   setRecurringDeleted(id: string, deleted: boolean): Promise<void>;

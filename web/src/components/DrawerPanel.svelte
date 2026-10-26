@@ -11,6 +11,7 @@
   import { openBoard } from '../lib/boards.svelte';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { openWindow } from '../lib/windows.svelte';
+  import { dragButton } from '../lib/rightDrag';
   import Icon from './Icon.svelte';
 
   let {
@@ -72,7 +73,7 @@
 
   /** Drag the title bar to move the panel (buttons and the rename box keep their clicks). */
   function moveStart(e: PointerEvent) {
-    if (e.button !== 0 || (e.target as HTMLElement).closest('button, input')) return;
+    if (!dragButton(e) || (e.target as HTMLElement).closest('button, input')) return;
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;
     const start = { x: e.clientX - shift.x, y: e.clientY - shift.y };

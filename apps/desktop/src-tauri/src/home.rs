@@ -8,12 +8,13 @@ use shiftbook_core::bell::{while_away as away_items, BellItem, DueThing};
 use shiftbook_core::dates::{format_date, parse_date};
 use shiftbook_core::home::UseMode;
 use shiftbook_core::ids::{
-    ChecklistItemId, FrequencyId, OwnerId, RecurringTaskId, TaskId, TimeEntryId,
+    ChecklistItemId, FrequencyId, OwnerId, RecurringTaskId, TaskId, TimeEntryId, TimesheetCodeId,
 };
 use shiftbook_core::model::{Frequency, ListName};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::recurring::{
-    attention_order, due_words, last_done_for_next, summarize_recurring, Interval, RecurringState,
+    attention_order, due_words, last_done_for_next, past_times, summarize_recurring, Interval,
+    RecurringState,
 };
 use shiftbook_core::task::list_progress;
 use shiftbook_storage::lists::ListRecord;
@@ -62,6 +63,8 @@ pub struct RecurringView {
     alerts: bool,
     notes: String,
     total_minutes: u32,
+    /// The timesheet code its time gets, when set on the thing itself.
+    code_id: Option<TimesheetCodeId>,
 }
 
 /// What the UI sends to save one.
@@ -77,6 +80,9 @@ pub struct RecurringArgs {
     warn_days: Option<u32>,
     alerts: bool,
     notes: String,
+    /// Its own timesheet code (`None` = its kind's code, then the usual rules).
+    #[serde(default)]
+    code_id: Option<String>,
 }
 
 /// Every repeating thing with its frequency, summary and the frequency list.
@@ -109,6 +115,7 @@ async fn summaries(store: &SqliteStore, owner: OwnerId, today: Date) -> Res<Vec<
                 alerts: t.alerts_enabled,
                 notes: t.notes,
                 total_minutes: sum.total_minutes.get(),
+                code_id: t.default_timesheet_code_id,
             }
         })
         .collect();
@@ -188,6 +195,12 @@ pub async fn recurring_save(
         warn_days_before: input.warn_days,
         alerts_enabled: input.alerts,
         notes: input.notes,
+        timesheet_code_id: input
+            .code_id
+            .as_deref()
+            .filter(|c| !c.is_empty())
+            .map(id_arg)
+            .transpose()?,
     };
     match id.as_deref() {
         Some(id) => {
@@ -247,8 +260,39 @@ pub async fn recurring_renewed(
     if expires <= date {
         return Err(CommandError::InvalidInput);
     }
-    store.set_recurring_expiry(owner, id, expires).await?;
-    Ok(store.mark_recurring_done(owner, id, date).await?.into())
+    Ok(store
+        .mark_recurring_renewed(owner, id, date, expires)
+        .await?
+        .into())
+}
+
+/// One past round of a repeating thing (see `shiftbook_core::recurring::past_times`).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PastTimeView {
+    date: String,
+    done: bool,
+    minutes: u32,
+    tickets: Vec<String>,
+    renewed_to: Option<String>,
+}
+
+/// Maps to `DataApi.recurringHistory()`: its past renewals (or past times), newest first.
+#[tauri::command]
+pub async fn recurring_history(s: State<'_, VaultSession>, id: String) -> Res<Vec<PastTimeView>> {
+    let (store, owner) = s.data().await?;
+    let id: RecurringTaskId = id_arg(&id)?;
+    let (entries, tickets) = store.recurring_history(owner, id).await?;
+    Ok(past_times(id, &entries, &tickets)
+        .into_iter()
+        .map(|p| PastTimeView {
+            date: format_date(p.date),
+            done: p.done,
+            minutes: p.minutes.get(),
+            tickets: p.tickets,
+            renewed_to: p.renewed_to.map(format_date),
+        })
+        .collect())
 }
 
 /// Maps to `DataApi.recurringUndo()`: take back a Mark done.

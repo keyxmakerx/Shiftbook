@@ -26,7 +26,8 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('4'))).toEqual({ kind: 'view', view: 'notes' });
     expect(shortcutFor(key('5'))).toEqual({ kind: 'view', view: 'repeating' });
     expect(shortcutFor(key('6'))).toEqual({ kind: 'view', view: 'lists' });
-    expect(shortcutFor(key('7'))).toEqual({ kind: 'view', view: 'settings' });
+    expect(shortcutFor(key('7'))).toEqual({ kind: 'view', view: 'items' });
+    expect(shortcutFor(key('8'))).toEqual({ kind: 'view', view: 'settings' });
     expect(shortcutFor(key('Escape', { typing: true }))).toEqual({ kind: 'escape' });
     expect(shortcutFor(key('F10', { shiftKey: true }))).toEqual({ kind: 'menu-key' });
     expect(shortcutFor(key('ContextMenu'))).toEqual({ kind: 'menu-key' });
@@ -35,7 +36,7 @@ describe('keyboard shortcuts', () => {
   it('leaves typing alone', () => {
     expect(shortcutFor(key('n', { typing: true }))).toBeNull();
     expect(shortcutFor(key('2', { typing: true }))).toBeNull();
-    expect(shortcutFor(key('8'))).toBeNull();
+    expect(shortcutFor(key('9'))).toBeNull();
     expect(shortcutFor(key('0'))).toBeNull();
     expect(shortcutFor(key('n', { ctrlKey: true }))).toBeNull();
     expect(shortcutFor(key('l', { ctrlKey: true, altKey: true }))).toBeNull();
@@ -48,10 +49,10 @@ describe('views by mode', () => {
     const home = viewsFor(false);
     expect(home).not.toContain('timesheet');
     expect(shortcutFor(key('3'), home)).toEqual({ kind: 'view', view: 'notes' });
-    expect(shortcutFor(key('6'), home)).toEqual({ kind: 'view', view: 'settings' });
-    expect(shortcutFor(key('7'), home)).toBeNull();
+    expect(shortcutFor(key('7'), home)).toEqual({ kind: 'view', view: 'settings' });
+    expect(shortcutFor(key('8'), home)).toBeNull();
     expect(viewsFor(true)).toContain('timesheet');
-    expect(shortcutList(home)[3]).toEqual({ keys: '1  2  3  4  5  6', what: 'Desk, Day, Notes, Repeating, Lists, Settings' });
+    expect(shortcutList(home)[3]).toEqual({ keys: '1  2  3  4  5  6  7', what: 'Desk, Day, Notes, Repeating, Lists, Items, Settings' });
   });
 });
 

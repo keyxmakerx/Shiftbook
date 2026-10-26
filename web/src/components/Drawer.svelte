@@ -1,9 +1,10 @@
 <script lang="ts">
   // The slide-out details drawer for one entry: title, hours stepper, project pills,
-  // category, tickets (multi-paste), notes and every custom field that applies to entries.
+  // category, timesheet code, tickets (multi-paste), notes and every custom field that
+  // applies to entries.
   // Changes save as you go. Click outside, Esc or Done closes it.
   import { api } from '../lib/api';
-  import type { CustomValue, Entry, EntryInput } from '../lib/api';
+  import type { CodeSource, CustomValue, Entry, EntryInput, ResolvedCode } from '../lib/api';
   import { longDay } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { countTo } from '../lib/motion';
@@ -13,10 +14,16 @@
   import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
   import TicketChip from './TicketChip.svelte';
+  import CodeSelect from './CodeSelect.svelte';
+  import { refreshRepeating, repeating } from '../lib/repeating.svelte';
 
   const entry = $derived(app.entries.find((e) => e.id === app.drawer) ?? null);
   const open = $derived(entry !== null);
   const fields = $derived(app.fields.filter((f) => f.appliesTo === 'entry' && !f.hidden));
+  // Repeating things hold work too (round 15); a tray roll-up belongs to a project or nothing.
+  const homes = $derived(
+    entry && !entry.isTray ? repeating.items.filter((r) => r.state !== 'inactive' || r.id === entry.recurringId) : [],
+  );
 
   let title = $state('');
   let notes = $state('');
@@ -28,6 +35,22 @@
   let shown = $state(0);
   let shownFrom = 0;
   let titleEl: HTMLInputElement | undefined = $state();
+  // "✓ Saved" shows for a moment after the name changes (round 15).
+  let nameSaved = $state(false);
+  let nameSavedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function saveName() {
+    const e = entry;
+    if (!e || title === e.description) return;
+    if (!title.trim()) {
+      title = e.description;
+      return;
+    }
+    if (!(await save({ description: title.trim() }))) return;
+    nameSaved = true;
+    clearTimeout(nameSavedTimer);
+    nameSavedTimer = setTimeout(() => (nameSaved = false), 2000);
+  }
 
   $effect(() => {
     const e = entry;
@@ -40,11 +63,45 @@
     links = {};
     void attempt(() => api.listCustomValues(e.id)).then((list) => setValues(list ?? []));
     void attempt(() => api.categoryCodes()).then((list) => (categories = (list ?? []).map((c) => c.category)));
+    if (repeating.items.length === 0) void refreshRepeating();
     queueMicrotask(() => titleEl?.focus());
   });
 
   $effect(() => {
     if (!open) loadedFor = '';
+  });
+
+  // The code the entry gets when none is chosen on it; follows the project and category.
+  let usual = $state<ResolvedCode | null>(null);
+  $effect(() => {
+    const e = entry;
+    void app.prefs?.ticketsCode;
+    if (!e || app.codes.length === 0) return;
+    const { id, projectId, recurringId, category } = e;
+    void attempt(() => api.usualCode(id, projectId, recurringId, category)).then((u) => {
+      if (u && app.drawer === id) usual = u;
+    });
+  });
+
+  const FROM: Record<CodeSource, string> = {
+    entry: 'chosen here',
+    target: 'from the project',
+    kind: "from its repeating thing's kind",
+    category: 'from the category',
+    tickets: 'from your Tickets code',
+    unassigned: 'none yet',
+  };
+
+  function codeName(id: string | null): string {
+    const c = app.codes.find((x) => x.id === id);
+    return c ? (c.area ? `${c.area} › ${c.code}` : c.code) : 'Unassigned';
+  }
+
+  const usualText = $derived.by(() => {
+    if (!usual) return 'Use the usual code';
+    if (!usual.code) return 'Use the usual code (none yet, so Unassigned)';
+    const from = usual.source === 'target' && !entry?.projectId ? 'from its repeating thing' : FROM[usual.source];
+    return `Use the usual code (${codeName(usual.code)}, ${from})`;
   });
 
   $effect(() => {
@@ -72,6 +129,7 @@
       minutes: e.minutes,
       description: e.description,
       projectId: e.projectId,
+      recurringId: e.recurringId,
       category: e.category,
       notes: e.notes,
       timesheetCodeId: e.timesheetCodeId,
@@ -79,13 +137,14 @@
     };
   }
 
-  async function save(change: Partial<EntryInput>) {
+  async function save(change: Partial<EntryInput>): Promise<boolean> {
     const e = entry;
-    if (!e) return;
+    if (!e) return false;
     const updated = await attempt(() => api.updateEntry(e.id, inputOf(e, change)));
-    if (!updated) return;
+    if (!updated) return false;
     putEntry(updated);
     void refresh();
+    return true;
   }
 
   async function step(delta: number) {
@@ -158,15 +217,19 @@
       <span class="lbl rise" style:--i={0}>{longDay(entry.date)}{entry.isTray ? ' · from the Tickets tray' : ''}</span>
 
       <div class="field rise" style:--i={1}>
-        <label class="lbl" for="dr-title">What</label>
-        <input
-          id="dr-title"
-          class="text-in"
-          bind:this={titleEl}
-          bind:value={title}
-          onblur={() => title !== entry.description && save({ description: title })}
-          onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
-        />
+        <label class="lbl" for="dr-title">Name</label>
+        <div class="namerow">
+          <input
+            id="dr-title"
+            class="text-in"
+            bind:this={titleEl}
+            bind:value={title}
+            onblur={() => void saveName()}
+            onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+          />
+          <button class="pen" type="button" aria-label="Rename" title="Rename" onclick={() => titleEl?.select()}>✎</button>
+        </div>
+        {#if nameSaved}<p class="saved" role="status">✓ Saved</p>{/if}
       </div>
 
       <div class="field rise" style:--i={2}>
@@ -181,17 +244,45 @@
       </div>
 
       <div class="field rise" style:--i={3}>
-        <span class="lbl">Project</span>
+        <span class="lbl">{homes.length ? 'Belongs to' : 'Project'}</span>
+        {#if homes.length}<span class="grp">Projects</span>{/if}
         <div class="pills">
           {#each app.projects.filter((p) => !p.archived || p.id === entry.projectId) as p (p.id)}
-            <button type="button" style:--c={p.color ?? 'var(--none)'} aria-pressed={p.id === entry.projectId} onclick={() => save({ projectId: p.id })}>
+            <button
+              type="button"
+              style:--c={p.color ?? 'var(--none)'}
+              aria-pressed={p.id === entry.projectId}
+              onclick={() => save({ projectId: p.id, recurringId: null })}
+            >
               {p.name}
             </button>
           {/each}
-          <button type="button" style:--c="var(--none)" aria-pressed={entry.projectId === null} onclick={() => save({ projectId: null })}>
+          <button
+            type="button"
+            style:--c="var(--none)"
+            aria-pressed={entry.projectId === null && entry.recurringId === null}
+            onclick={() => save({ projectId: null, recurringId: null })}
+          >
             No project
           </button>
         </div>
+        {#if homes.length}
+          <span class="grp rep-grp">Repeating</span>
+          <div class="pills">
+            {#each homes as r (r.id)}
+              <button
+                type="button"
+                class="rep"
+                style:--c="var(--rep)"
+                aria-pressed={r.id === entry.recurringId}
+                onclick={() => save({ projectId: null, recurringId: r.id })}
+              >
+                <Icon name="repeat" size={13} />
+                {r.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
 
       <div class="field rise" style:--i={4}>
@@ -206,6 +297,18 @@
           {#each categories as c (c)}<option value={c}>{c}</option>{/each}
         </select>
       </div>
+
+      {#if app.codes.length > 0}
+        <div class="field rise" style:--i={4}>
+          <span class="lbl">Timesheet code · {entry.timesheetCodeId ? 'chosen for this entry' : usualText.includes('none yet') ? 'none yet' : 'the usual one'}</span>
+          <CodeSelect
+            value={entry.timesheetCodeId}
+            label="Timesheet code"
+            empty={usualText}
+            onchange={(id) => save({ timesheetCodeId: id })}
+          />
+        </div>
+      {/if}
 
       <div class="field rise" style:--i={5}>
         <span class="lbl">Tickets · paste several at once</span>
@@ -302,6 +405,40 @@
 </aside>
 
 <style>
+  .namerow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .namerow input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pen {
+    flex: none;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 14px;
+    color: var(--mut);
+    cursor: pointer;
+  }
+
+  .pen:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .saved {
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ok);
+  }
+
   .dscrim {
     position: fixed;
     inset: 0;
@@ -409,6 +546,23 @@
     transition:
       background 0.25s,
       color 0.25s;
+  }
+
+  .pills button.rep {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .grp {
+    display: block;
+    margin: 6px 0 4px;
+    font-size: 11px;
+    color: var(--mut);
+  }
+
+  .rep-grp {
+    color: var(--rep);
   }
 
   .pills button[aria-pressed='true'] {
