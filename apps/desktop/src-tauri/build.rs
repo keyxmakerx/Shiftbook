@@ -58,6 +58,7 @@ fn main() {
             "tray_set_note",
             "tray_set_done",
             "tray_set_project",
+            "tray_set_recurring",
             "tray_carry",
             "tray_remove",
             "tray_restore",

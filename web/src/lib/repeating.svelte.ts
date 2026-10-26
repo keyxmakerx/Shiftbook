@@ -3,6 +3,7 @@
 // the latest list and the one action used from the Desk, the bell and the Repeating view.
 import { api } from './api';
 import type { Recurring } from './api';
+import type { MenuChoice } from './menu.svelte';
 import { refreshBell } from './bell.svelte';
 import { app, attempt, refresh, setView } from './store.svelte';
 import { toast } from './toast.svelte';
@@ -12,6 +13,14 @@ export const repeating = $state({
   /** A thing for the Repeating view to open (from the bell or the Desk). */
   open: { id: null as string | null, renew: false, serial: 0 },
 });
+
+/** Menu choices for filing work under a repeating thing (round 15). */
+export function repeatingChoices(checked: string | null, act: (id: string) => void): MenuChoice[] {
+  if (repeating.items.length === 0) void refreshRepeating();
+  return repeating.items
+    .filter((r) => r.state !== 'inactive' || r.id === checked)
+    .map((r) => ({ label: `⟳ ${r.name}`, color: null, checked: r.id === checked, act: () => act(r.id) }));
+}
 
 export async function refreshRepeating(): Promise<void> {
   const items = await attempt(() => api.recurring(app.today));

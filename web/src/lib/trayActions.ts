@@ -10,6 +10,7 @@ import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
 import { toast } from './toast.svelte';
+import { repeating, repeatingChoices } from './repeating.svelte';
 import { openWindow } from './windows.svelte';
 
 /** Show a changed tray: the open day's tray updates, everything else reloads. */
@@ -37,6 +38,20 @@ export async function setTrayProject(item: TrayItem, projectId: string | null): 
   const name = projectById(projectId)?.name;
   toast(name ? `${item.ticket}'s time now counts under ${name}` : `${item.ticket} is back in the day's Tickets entry`, 'Undo', () => {
     void attempt(() => api.traySetProject(item.id, before)).then(applyTray);
+  });
+}
+
+/** Count a tray ticket's time under a repeating thing (round 15), or back in Tickets. */
+export async function setTrayRepeating(item: TrayItem, recurringId: string | null): Promise<void> {
+  const before = { projectId: item.projectId, recurringId: item.recurringId };
+  if (before.recurringId === recurringId && before.projectId === null) return;
+  await applyTray(await attempt(() => api.traySetRecurring(item.id, recurringId)));
+  const name = repeating.items.find((r) => r.id === recurringId)?.name;
+  toast(name ? `${item.ticket}'s time now counts under ${name}` : `${item.ticket} is back in the day's Tickets entry`, 'Undo', () => {
+    const back = before.projectId
+      ? api.traySetProject(item.id, before.projectId)
+      : api.traySetRecurring(item.id, before.recurringId);
+    void attempt(() => back).then(applyTray);
   });
 }
 
@@ -87,7 +102,13 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     ...app.projects
       .filter((p) => !p.archived || p.id === item.projectId)
       .map((p) => ({ label: p.name, color: p.color, checked: p.id === item.projectId, act: () => void setTrayProject(item, p.id) })),
-    { label: 'No project', color: null, checked: item.projectId === null, act: () => void setTrayProject(item, null) },
+    {
+      label: 'No project',
+      color: null,
+      checked: item.projectId === null && item.recurringId === null,
+      act: () => void setTrayProject(item, null),
+    },
+    ...repeatingChoices(item.recurringId, (id) => void setTrayRepeating(item, id)),
   ];
   return {
     sections: [

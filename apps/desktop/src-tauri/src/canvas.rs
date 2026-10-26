@@ -434,6 +434,7 @@ mod tests {
                 minutes: Minutes(minutes),
                 description: "Network closet".into(),
                 project: Some(p.id),
+                recurring: None,
                 category: None,
                 next_step: None,
                 timesheet_code_id: None,

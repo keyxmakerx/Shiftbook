@@ -13,10 +13,10 @@
 //!    Lower-case letters count only with 4 or more digits (`inc0045678` yes,
 //!    `win10` no), so ordinary words are not mistaken for tickets. Tickets are
 //!    upper-cased.
-//! 3. **Project** — `#name`, matched against the given projects ignoring case:
-//!    whole name, then name starts with it, then name without spaces starts with
-//!    it, then any word of the name starts with it. An unknown `#name` is kept in
-//!    the description and reported in `project_query`.
+//! 3. **Project** — `#name`, matched against the given projects and repeating things
+//!    (projects listed first win) ignoring case: whole name, then name starts with it,
+//!    then name without spaces starts with it, then any word of the name starts with it.
+//!    An unknown `#name` is kept in the description and reported in `project_query`.
 //! 4. **Day** — `today`, `yesterday`, or a weekday (`mon`/`monday` ... `sun`)
 //!    meaning that day of the current week. The first day word wins.
 //! 5. Everything else, in order, is the **description**.
@@ -26,19 +26,20 @@ use time::{Date, Weekday};
 
 use crate::dates::{add_days, iso_date};
 use crate::hours::{parse_hours, BARE_NUMBER_HOURS_LIMIT};
-use crate::ids::ProjectId;
+use crate::ids::{ProjectId, RecurringTaskId};
 use crate::minutes::Minutes;
+use crate::model::EntryTarget;
 use crate::tickets::MAX_TICKET_CHARS;
 use crate::week::{week_of, WeekStart};
 
 /// Longest run of words tried as one time (`1 hour 30 minutes` is four).
 const MAX_HOURS_WORDS: usize = 4;
 
-/// A project the `#name` word can match.
+/// A project or repeating thing the `#name` word can match.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CaptureProject<'a> {
-    /// Its id.
-    pub id: ProjectId,
+    /// What it is: a project or a repeating thing.
+    pub id: EntryTarget,
     /// Its name as shown.
     pub name: &'a str,
 }
@@ -55,6 +56,8 @@ pub struct Capture {
     pub tickets: Vec<String>,
     /// The project a `#name` matched.
     pub project_id: Option<ProjectId>,
+    /// The repeating thing a `#name` matched (round 15: repeating things hold work too).
+    pub recurring_id: Option<RecurringTaskId>,
     /// The `#name` text (without `#`) when it matched no project.
     pub project_query: Option<String>,
     /// The day the work belongs to (today unless a day word was used).
@@ -81,6 +84,7 @@ pub fn parse_capture(
         hours_text: None,
         tickets: Vec::new(),
         project_id: None,
+        recurring_id: None,
         project_query: None,
         date: today,
         day_word: None,
@@ -112,13 +116,13 @@ pub fn parse_capture(
             }
             continue;
         }
-        if capture.project_id.is_none() && capture.project_query.is_none() {
+        if capture.target() == EntryTarget::None && capture.project_query.is_none() {
             if let Some(query) = word.strip_prefix('#') {
                 let query = trim_punctuation(query);
                 if !query.is_empty() {
                     match match_project(query, projects) {
-                        Some(id) => {
-                            capture.project_id = Some(id);
+                        Some(target) => {
+                            capture.set_target(target);
                             continue;
                         }
                         None => capture.project_query = Some(query.to_string()),
@@ -136,17 +140,38 @@ pub fn parse_capture(
         rest.push(*word);
     }
     capture.description = rest.join(" ");
-    if capture.project_id.is_none() && capture.project_query.is_none() {
-        capture.project_id = project_named_in(&capture.description, projects);
+    if capture.target() == EntryTarget::None && capture.project_query.is_none() {
+        if let Some(target) = project_named_in(&capture.description, projects) {
+            capture.set_target(target);
+        }
     }
     capture
+}
+
+impl Capture {
+    /// What the line is logged against: its project, its repeating thing, or neither.
+    pub fn target(&self) -> EntryTarget {
+        match (self.project_id, self.recurring_id) {
+            (Some(p), _) => EntryTarget::Project(p),
+            (None, Some(r)) => EntryTarget::Recurring(r),
+            (None, None) => EntryTarget::None,
+        }
+    }
+
+    fn set_target(&mut self, target: EntryTarget) {
+        match target {
+            EntryTarget::Project(p) => self.project_id = Some(p),
+            EntryTarget::Recurring(r) => self.recurring_id = Some(r),
+            EntryTarget::None => {}
+        }
+    }
 }
 
 /// The project whose name the words are, or start with (ignoring case, spaces and
 /// punctuation): "Huntsville closet" logs to the project "Huntsville Closet", and so does
 /// "Huntsville closet re-cabling". The longest matching name wins; names shorter than
 /// [`MIN_NAMED_PROJECT`] letters only match exactly.
-fn project_named_in(description: &str, projects: &[CaptureProject<'_>]) -> Option<ProjectId> {
+fn project_named_in(description: &str, projects: &[CaptureProject<'_>]) -> Option<EntryTarget> {
     let words = compact(description);
     if words.is_empty() {
         return None;
@@ -159,6 +184,8 @@ fn project_named_in(description: &str, projects: &[CaptureProject<'_>]) -> Optio
                 && (name == words
                     || (name.chars().count() >= MIN_NAMED_PROJECT && words.starts_with(&name)))
         })
+        // On a tie the first listed (a project before a repeating thing) wins.
+        .rev()
         .max_by_key(|p| compact(p.name).chars().count())
         .map(|p| p.id)
 }
@@ -274,8 +301,8 @@ fn compact(name: &str) -> String {
         .to_lowercase()
 }
 
-/// The project a `#name` query means, by the tiers in the module docs.
-pub fn match_project(query: &str, projects: &[CaptureProject<'_>]) -> Option<ProjectId> {
+/// The project or repeating thing a `#name` query means, by the tiers in the module docs.
+pub fn match_project(query: &str, projects: &[CaptureProject<'_>]) -> Option<EntryTarget> {
     let q = query.trim().to_lowercase();
     if q.is_empty() {
         return None;
@@ -343,7 +370,10 @@ mod tests {
     fn parse_with(text: &str, list: &[(ProjectId, &'static str)]) -> Capture {
         let refs: Vec<CaptureProject<'_>> = list
             .iter()
-            .map(|(id, name)| CaptureProject { id: *id, name })
+            .map(|(id, name)| CaptureProject {
+                id: EntryTarget::Project(*id),
+                name,
+            })
             .collect();
         parse_capture(text, TODAY, WeekStart::default(), &refs)
     }
@@ -488,6 +518,48 @@ mod tests {
         assert_eq!(ticket("proj-1234").as_deref(), Some("PROJ-1234"));
         let long = format!("AB{}", "1".repeat(70));
         assert_eq!(ticket(&long), None);
+    }
+
+    #[test]
+    fn repeating_things_match_after_projects() {
+        let net = ProjectId::new();
+        let cert = RecurringTaskId::new();
+        let same = RecurringTaskId::new();
+        let refs = [
+            CaptureProject {
+                id: EntryTarget::Project(net),
+                name: "Network refresh",
+            },
+            CaptureProject {
+                id: EntryTarget::Recurring(cert),
+                name: "www.example.com certificate",
+            },
+            CaptureProject {
+                id: EntryTarget::Recurring(same),
+                name: "Network refresh",
+            },
+        ];
+        let c = parse_capture("Renew RITM0034567 #www", TODAY, WeekStart::default(), &refs);
+        assert_eq!(c.recurring_id, Some(cert));
+        assert_eq!(c.project_id, None);
+        assert_eq!(c.target(), EntryTarget::Recurring(cert));
+        assert_eq!(c.description, "Renew");
+        // A project of the same name wins, by #name and by the words.
+        let c = parse_capture("#network", TODAY, WeekStart::default(), &refs);
+        assert_eq!(c.target(), EntryTarget::Project(net));
+        let c = parse_capture("Network refresh", TODAY, WeekStart::default(), &refs);
+        assert_eq!(c.target(), EntryTarget::Project(net));
+        let c = parse_capture(
+            "www.example.com certificate renewal",
+            TODAY,
+            WeekStart::default(),
+            &refs,
+        );
+        assert_eq!(c.target(), EntryTarget::Recurring(cert));
+        assert_eq!(
+            parse_capture("fix printer", TODAY, WeekStart::default(), &refs).target(),
+            EntryTarget::None
+        );
     }
 
     #[test]

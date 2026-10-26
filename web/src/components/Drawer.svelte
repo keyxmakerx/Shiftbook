@@ -15,10 +15,15 @@
   import Icon from './Icon.svelte';
   import TicketChip from './TicketChip.svelte';
   import CodeSelect from './CodeSelect.svelte';
+  import { refreshRepeating, repeating } from '../lib/repeating.svelte';
 
   const entry = $derived(app.entries.find((e) => e.id === app.drawer) ?? null);
   const open = $derived(entry !== null);
   const fields = $derived(app.fields.filter((f) => f.appliesTo === 'entry' && !f.hidden));
+  // Repeating things hold work too (round 15); a tray roll-up belongs to a project or nothing.
+  const homes = $derived(
+    entry && !entry.isTray ? repeating.items.filter((r) => r.state !== 'inactive' || r.id === entry.recurringId) : [],
+  );
 
   let title = $state('');
   let notes = $state('');
@@ -42,6 +47,7 @@
     links = {};
     void attempt(() => api.listCustomValues(e.id)).then((list) => setValues(list ?? []));
     void attempt(() => api.categoryCodes()).then((list) => (categories = (list ?? []).map((c) => c.category)));
+    if (repeating.items.length === 0) void refreshRepeating();
     queueMicrotask(() => titleEl?.focus());
   });
 
@@ -106,6 +112,7 @@
       minutes: e.minutes,
       description: e.description,
       projectId: e.projectId,
+      recurringId: e.recurringId,
       category: e.category,
       notes: e.notes,
       timesheetCodeId: e.timesheetCodeId,
@@ -215,17 +222,45 @@
       </div>
 
       <div class="field rise" style:--i={3}>
-        <span class="lbl">Project</span>
+        <span class="lbl">{homes.length ? 'Belongs to' : 'Project'}</span>
+        {#if homes.length}<span class="grp">Projects</span>{/if}
         <div class="pills">
           {#each app.projects.filter((p) => !p.archived || p.id === entry.projectId) as p (p.id)}
-            <button type="button" style:--c={p.color ?? 'var(--none)'} aria-pressed={p.id === entry.projectId} onclick={() => save({ projectId: p.id })}>
+            <button
+              type="button"
+              style:--c={p.color ?? 'var(--none)'}
+              aria-pressed={p.id === entry.projectId}
+              onclick={() => save({ projectId: p.id, recurringId: null })}
+            >
               {p.name}
             </button>
           {/each}
-          <button type="button" style:--c="var(--none)" aria-pressed={entry.projectId === null} onclick={() => save({ projectId: null })}>
+          <button
+            type="button"
+            style:--c="var(--none)"
+            aria-pressed={entry.projectId === null && entry.recurringId === null}
+            onclick={() => save({ projectId: null, recurringId: null })}
+          >
             No project
           </button>
         </div>
+        {#if homes.length}
+          <span class="grp rep-grp">Repeating</span>
+          <div class="pills">
+            {#each homes as r (r.id)}
+              <button
+                type="button"
+                class="rep"
+                style:--c="var(--rep)"
+                aria-pressed={r.id === entry.recurringId}
+                onclick={() => save({ projectId: null, recurringId: r.id })}
+              >
+                <Icon name="repeat" size={13} />
+                {r.name}
+              </button>
+            {/each}
+          </div>
+        {/if}
       </div>
 
       <div class="field rise" style:--i={4}>
@@ -455,6 +490,23 @@
     transition:
       background 0.25s,
       color 0.25s;
+  }
+
+  .pills button.rep {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .grp {
+    display: block;
+    margin: 6px 0 4px;
+    font-size: 11px;
+    color: var(--mut);
+  }
+
+  .rep-grp {
+    color: var(--rep);
   }
 
   .pills button[aria-pressed='true'] {

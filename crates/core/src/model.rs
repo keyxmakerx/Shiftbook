@@ -510,6 +510,8 @@ pub struct TrayItem {
     pub done: bool,
     /// The project its minutes count under; `None` puts them in the day's "Tickets" entry.
     pub project_id: Option<ProjectId>,
+    /// The repeating thing its minutes count under, when it has no project (round 15).
+    pub recurring_id: Option<RecurringTaskId>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

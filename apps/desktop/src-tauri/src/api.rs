@@ -13,7 +13,9 @@ use shiftbook_core::ids::{
     CustomFieldId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
 };
 use shiftbook_core::minutes::Minutes;
-use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
+use shiftbook_core::model::{
+    CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode, TrayItem,
+};
 use shiftbook_core::nextup::{bring_up_on, next_work_day};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
@@ -208,6 +210,9 @@ pub struct EntryArgs {
     minutes: u32,
     description: String,
     project_id: Option<String>,
+    /// The repeating thing it belongs to, when it has no project.
+    #[serde(default)]
+    recurring_id: Option<String>,
     category: Option<String>,
     notes: Option<String>,
     timesheet_code_id: Option<String>,
@@ -220,6 +225,7 @@ impl EntryArgs {
             minutes: Minutes(self.minutes),
             description: self.description,
             project: opt_id(&self.project_id)?,
+            recurring: opt_id(&self.recurring_id)?,
             category: self.category,
             next_step: self.notes,
             timesheet_code_id: opt_id(&self.timesheet_code_id)?,
@@ -289,14 +295,30 @@ pub(crate) async fn one_entry(
     Ok(entry_view(rec, &links_for(store, owner).await?))
 }
 
-fn capture_with(text: &str, today: Date, start: WeekStart, projects: &[Project]) -> Capture {
+/// Read a capture line against the live projects, then the repeating things.
+fn capture_with(
+    text: &str,
+    today: Date,
+    start: WeekStart,
+    projects: &[Project],
+    repeating: &[RecurringTask],
+) -> Capture {
     let live: Vec<CaptureProject<'_>> = projects
         .iter()
         .filter(|p| !p.archived)
         .map(|p| CaptureProject {
-            id: p.id,
+            id: EntryTarget::Project(p.id),
             name: &p.name,
         })
+        .chain(
+            repeating
+                .iter()
+                .filter(|r| r.active)
+                .map(|r| CaptureProject {
+                    id: EntryTarget::Recurring(r.id),
+                    name: &r.name,
+                }),
+        )
         .collect();
     parse_capture(text, today, start, &live)
 }
@@ -588,7 +610,14 @@ pub async fn quick_log(
     let (store, owner) = s.data().await?;
     let date = date_arg(&date)?;
     let projects = store.list_projects(owner).await?;
-    let capture = capture_with(&text, date, week_start(&store, owner).await?, &projects);
+    let repeating = store.recurring_all(owner).await?;
+    let capture = capture_with(
+        &text,
+        date,
+        week_start(&store, owner).await?,
+        &projects,
+        &repeating,
+    );
     let rec = store
         .quick_log(owner, date, &capture, Minutes(minutes))
         .await?;
@@ -604,8 +633,15 @@ pub async fn parse_capture_line(
 ) -> Res<Capture> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
     let start = week_start(&store, owner).await?;
-    Ok(capture_with(&text, date_arg(&today)?, start, &projects))
+    Ok(capture_with(
+        &text,
+        date_arg(&today)?,
+        start,
+        &projects,
+        &repeating,
+    ))
 }
 
 /// Maps to `DataApi.captureLog()`: log a capture line (it must have hours).
@@ -617,8 +653,9 @@ pub async fn capture_log(
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
     let start = week_start(&store, owner).await?;
-    let capture = capture_with(&text, date_arg(&today)?, start, &projects);
+    let capture = capture_with(&text, date_arg(&today)?, start, &projects, &repeating);
     let minutes = capture.minutes.ok_or(CommandError::InvalidInput)?;
     let rec = store
         .quick_log(owner, capture.date, &capture, minutes)
@@ -692,6 +729,21 @@ pub async fn tray_set_project(
     let (store, owner) = s.data().await?;
     let day = store
         .tray_set_project(owner, id_arg(&id)?, opt_id(&project_id)?)
+        .await?;
+    tray_result(&store, owner, day).await
+}
+
+/// Maps to `DataApi.traySetRecurring()`: the repeating thing a ticket's minutes count
+/// under (`None` = the day's "Tickets" entry).
+#[tauri::command]
+pub async fn tray_set_recurring(
+    s: State<'_, VaultSession>,
+    id: String,
+    recurring_id: Option<String>,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store
+        .tray_set_recurring(owner, id_arg(&id)?, opt_id(&recurring_id)?)
         .await?;
     tray_result(&store, owner, day).await
 }

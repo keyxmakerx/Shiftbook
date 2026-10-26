@@ -644,6 +644,7 @@ pub fn run() {
             api::tray_set_note,
             api::tray_set_done,
             api::tray_set_project,
+            api::tray_set_recurring,
             api::tray_carry,
             api::tray_remove,
             api::tray_restore,

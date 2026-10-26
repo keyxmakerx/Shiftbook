@@ -113,10 +113,9 @@ pub fn plan_quick_log(
     } else {
         DEFAULT_TICKET_TITLE.to_string()
     };
-    let target = match (capture.project_id, past) {
-        (Some(id), _) => EntryTarget::Project(id),
-        (None, Some(p)) => p.target,
-        (None, None) => EntryTarget::None,
+    let target = match (capture.target(), past) {
+        (EntryTarget::None, Some(p)) => p.target,
+        (named, _) => named,
     };
     Ok(QuickLogPlan::Create {
         description,
@@ -298,7 +297,7 @@ mod tests {
         // A #project typed wins over the earlier project.
         let other = ProjectId::new();
         let list = [CaptureProject {
-            id: other,
+            id: EntryTarget::Project(other),
             name: "Admin",
         }];
         let plan = plan_quick_log(

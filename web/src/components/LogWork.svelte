@@ -9,6 +9,8 @@
   import { app, attempt, flashEntry, projectById, projectColor, refresh, timeButtons, words } from '../lib/store.svelte';
   import { hasHome, hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
+  import { refreshRepeating, repeating } from '../lib/repeating.svelte';
+  import Icon from './Icon.svelte';
 
   const TIMES = $derived(timeButtons());
 
@@ -35,6 +37,11 @@
     return () => {
       live = false;
     };
+  });
+
+  // Lines filed under a repeating thing (#name) show its name.
+  $effect(() => {
+    if (seen?.recurringId && repeating.items.length === 0) void refreshRepeating();
   });
 
   // Home and Both (round 15): a Done button saves the line with no time; time stays optional.
@@ -102,6 +109,7 @@
           minutes: e.minutes,
           description: e.description,
           projectId: e.projectId,
+          recurringId: e.recurringId,
           category: e.category,
           notes: null,
           timesheetCodeId: e.timesheetCodeId,
@@ -197,8 +205,11 @@
       {/each}
       {#if seen.projectId}
         <span>goes to <b>{projectById(seen.projectId)?.name}</b></span>
+      {:else if seen.recurringId}
+        {@const id = seen.recurringId}
+        <span>goes to <b class="rep-name"><Icon name="repeat" size={12} /> {repeating.items.find((r) => r.id === id)?.name ?? 'a repeating thing'}</b></span>
       {:else if seen.projectQuery}
-        <span class="warn">no project called “{seen.projectQuery}”</span>
+        <span class="warn">nothing called “{seen.projectQuery}”</span>
       {/if}
       {#if seen.description}<span>as “{seen.description}”</span>{/if}
       {#if seen.minutes}
@@ -221,6 +232,13 @@
 </div>
 
 <style>
+  .rep-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    color: var(--rep);
+  }
+
   .quick {
     display: flex;
     flex-direction: column;

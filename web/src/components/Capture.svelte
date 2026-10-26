@@ -295,7 +295,7 @@
     const date = app.today;
     const entry = await attempt(() =>
       api.createEntry(
-        { date, minutes: 480, description: 'Holiday', projectId: null, category: null, notes: null, timesheetCodeId: null },
+        { date, minutes: 480, description: 'Holiday', projectId: null, recurringId: null, category: null, notes: null, timesheetCodeId: null },
         '',
       ),
     );

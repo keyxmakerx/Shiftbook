@@ -7,8 +7,9 @@
 
 use std::collections::HashMap;
 
-use shiftbook_core::ids::{ItemId, OwnerId, ProjectId};
+use shiftbook_core::ids::{ItemId, OwnerId, ProjectId, RecurringTaskId};
 use shiftbook_core::items::{reopens, seed_item, ItemKind, Occurrence};
+use shiftbook_core::model::EntryTarget;
 use sqlx::sqlite::SqliteConnection;
 use sqlx::Row;
 use time::Date;
@@ -25,6 +26,8 @@ pub(crate) struct ItemState {
     pub note: Option<String>,
     /// The project it was last given.
     pub project: Option<ProjectId>,
+    /// The repeating thing it was last filed under (round 15), when it has no project.
+    pub recurring: Option<RecurringTaskId>,
 }
 
 /// The item for a ticket number (ignoring case), made if there is none yet.
@@ -34,7 +37,7 @@ pub(crate) async fn item_for_number(
     number: &str,
 ) -> Result<ItemState> {
     let row = sqlx::query(
-        "SELECT id, note, project_id FROM items WHERE owner_id = $1 \
+        "SELECT id, note, project_id, recurring_id FROM items WHERE owner_id = $1 \
          AND lower(number) = lower($2) AND deleted_at IS NULL",
     )
     .bind(owner.to_string())
@@ -46,6 +49,7 @@ pub(crate) async fn item_for_number(
             id: ItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
             note: row.try_get("note")?,
             project: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
+            recurring: opt_uuid(row.try_get("recurring_id")?)?.map(RecurringTaskId::from_uuid),
         });
     }
     let id = ItemId::new();
@@ -54,6 +58,7 @@ pub(crate) async fn item_for_number(
         id,
         note: None,
         project: None,
+        recurring: None,
     })
 }
 
@@ -198,17 +203,25 @@ pub(crate) async fn set_item_note(
     Ok(())
 }
 
-/// Remember the project an item was last given: its next tray rows start with it.
-pub(crate) async fn set_item_project(
+/// Remember the project or repeating thing an item was last given: its next tray rows
+/// start with it.
+pub(crate) async fn set_item_home(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     item: ItemId,
-    project: Option<ProjectId>,
+    home: Option<EntryTarget>,
 ) -> Result<()> {
+    let (project, recurring) = match home {
+        Some(EntryTarget::Project(p)) => (Some(p.to_string()), None),
+        Some(EntryTarget::Recurring(r)) => (None, Some(r.to_string())),
+        _ => (None, None),
+    };
     sqlx::query(
-        "UPDATE items SET project_id = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        "UPDATE items SET project_id = $1, recurring_id = $2, updated_at = $3 \
+         WHERE id = $4 AND owner_id = $5",
     )
-    .bind(project.map(|p| p.to_string()))
+    .bind(project)
+    .bind(recurring)
     .bind(now_text())
     .bind(item.to_string())
     .bind(owner.to_string())

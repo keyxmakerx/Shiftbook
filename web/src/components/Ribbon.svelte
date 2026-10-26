@@ -95,6 +95,7 @@
           minutes: 480,
           description: 'Holiday',
           projectId: null,
+          recurringId: null,
           category: null,
           notes: null,
           timesheetCodeId: null,

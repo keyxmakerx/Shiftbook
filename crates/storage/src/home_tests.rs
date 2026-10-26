@@ -170,6 +170,7 @@ fn repeating_things_and_mark_done() {
                     minutes: Minutes(10),
                     description: "Bins and recycling out".into(),
                     project: None,
+                    recurring: Some(r.id),
                     category: None,
                     next_step: None,
                     timesheet_code_id: None,
@@ -220,6 +221,54 @@ fn repeating_things_and_mark_done() {
         let mut blank = bins(None);
         blank.name = "  ".into();
         assert!(s.create_recurring(me, &blank).await.is_err());
+    });
+}
+
+#[test]
+fn repeating_things_hold_work() {
+    let dir = TestDir::new("recurringwork");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mut cert = bins(None);
+        cert.name = "www.example.com certificate".into();
+        cert.expiration_date = Some(date!(2026 - 11 - 16));
+        let cert = s.create_recurring(me, &cert).await.unwrap();
+        let input = |recurring| EntryInput {
+            date: DAY,
+            minutes: Minutes(90),
+            description: "Renew it".into(),
+            project: None,
+            recurring,
+            category: None,
+            next_step: None,
+            timesheet_code_id: None,
+        };
+        let rec = s
+            .create_entry(me, &input(Some(cert.id)), "RITM0034567")
+            .await
+            .unwrap();
+        assert_eq!(rec.entry.target, EntryTarget::Recurring(cert.id));
+        // Work filed under it is not "done": the reminder still stands.
+        let entries = s.recurring_entries(me).await.unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].status, None);
+        // Moved off it, it belongs to nothing.
+        let moved = s
+            .update_entry(me, rec.entry.id, &input(None))
+            .await
+            .unwrap();
+        assert_eq!(moved.entry.target, EntryTarget::None);
+        // Someone else's, or a removed one, can't be used.
+        let theirs = s.create_recurring(other, &bins(None)).await.unwrap();
+        assert!(matches!(
+            s.create_entry(me, &input(Some(theirs.id)), "").await,
+            Err(StorageError::NotFound)
+        ));
+        s.set_recurring_deleted(me, cert.id, true).await.unwrap();
+        assert!(s
+            .update_entry(me, rec.entry.id, &input(Some(cert.id)))
+            .await
+            .is_err());
     });
 }
 
@@ -289,5 +338,80 @@ fn lists_tick_reset_and_stay_apart_from_tasks() {
         assert!(s.add_list_items(me, l.list.id, "x").await.is_err());
         s.set_list_deleted(me, l.list.id, false).await.unwrap();
         assert_eq!(s.lists(me).await.unwrap().len(), 1);
+    });
+}
+
+#[test]
+fn tray_tickets_count_under_a_repeating_thing() {
+    let dir = TestDir::new("recurringtray");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mut cert = bins(None);
+        cert.name = "www.example.com certificate".into();
+        let cert = s.create_recurring(me, &cert).await.unwrap();
+        let day = s.tray_add(me, DAY, "RITM0034567 INC0045678").await.unwrap();
+        let ritm = day.items[0].clone();
+        let day = s
+            .tray_set_recurring(me, ritm.id, Some(cert.id))
+            .await
+            .unwrap();
+        assert_eq!(day.items[0].recurring_id, Some(cert.id));
+        assert_eq!(day.items[0].project_id, None);
+        // Its minutes moved to a roll-up logged against the certificate.
+        let entries = s.list_entries(me, DAY, DAY).await.unwrap();
+        let rollup = entries
+            .iter()
+            .find(|e| e.entry.target == EntryTarget::Recurring(cert.id))
+            .unwrap();
+        assert!(rollup.is_tray);
+        assert_eq!(rollup.entry.minutes, Minutes(15));
+        let plain = entries
+            .iter()
+            .find(|e| e.is_tray && e.entry.target == EntryTarget::None)
+            .unwrap();
+        assert_eq!(plain.tickets.len(), 1);
+        // Editing the roll-up keeps it with the certificate.
+        let kept = s
+            .update_entry(
+                me,
+                rollup.entry.id,
+                &EntryInput {
+                    date: DAY,
+                    minutes: Minutes(5),
+                    description: "Renewal".into(),
+                    project: None,
+                    recurring: None,
+                    category: None,
+                    next_step: None,
+                    timesheet_code_id: None,
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(kept.entry.target, EntryTarget::Recurring(cert.id));
+        assert_eq!(kept.entry.minutes, Minutes(15));
+        // Carried to the next day, it stays with the certificate.
+        let next = date!(2026 - 10 - 23);
+        let carried = s.tray_carry(me, ritm.id, next).await.unwrap();
+        assert_eq!(carried.items[0].recurring_id, Some(cert.id));
+        // Deleting the roll-up takes only its own tickets out; Undo brings them back.
+        s.delete_entry(me, rollup.entry.id).await.unwrap();
+        let left = s.tray_day(me, DAY).await.unwrap();
+        assert_eq!(left.items.len(), 1);
+        assert_eq!(left.items[0].ticket_number, "INC0045678");
+        s.restore_entry(me, rollup.entry.id).await.unwrap();
+        assert_eq!(s.tray_day(me, DAY).await.unwrap().items.len(), 2);
+        // Back to the plain entry; someone else's repeating thing is refused.
+        let theirs = s.create_recurring(other, &bins(None)).await.unwrap();
+        assert!(s
+            .tray_set_recurring(me, ritm.id, Some(theirs.id))
+            .await
+            .is_err());
+        let day = s.tray_set_recurring(me, ritm.id, None).await.unwrap();
+        assert!(day.items.iter().all(|i| i.recurring_id.is_none()));
+        let entries = s.list_entries(me, DAY, DAY).await.unwrap();
+        assert!(entries
+            .iter()
+            .all(|e| e.entry.target != EntryTarget::Recurring(cert.id)));
     });
 }

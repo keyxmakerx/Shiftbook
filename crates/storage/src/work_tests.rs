@@ -50,6 +50,7 @@ fn input(date: Date, minutes: u32, description: &str) -> EntryInput {
         minutes: Minutes(minutes),
         description: description.into(),
         project: None,
+        recurring: None,
         category: None,
         next_step: None,
         timesheet_code_id: None,
@@ -491,7 +492,7 @@ fn log_work_reuses_or_creates() {
         let (s, me, _other) = setup(&dir).await;
         let p = s.create_project(me, "Network", None).await.unwrap();
         let list = [CaptureProject {
-            id: p.id,
+            id: EntryTarget::Project(p.id),
             name: "Network",
         }];
         let cap = |t: &str| parse_capture(t, DAY, WeekStart::default(), &list);

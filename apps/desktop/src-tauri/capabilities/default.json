@@ -61,6 +61,7 @@
     "allow-tray-set-note",
     "allow-tray-set-done",
     "allow-tray-set-project",
+    "allow-tray-set-recurring",
     "allow-tray-carry",
     "allow-tray-remove",
     "allow-tray-restore",

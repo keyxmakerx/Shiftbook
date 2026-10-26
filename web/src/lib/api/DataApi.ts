@@ -355,6 +355,8 @@ export interface Entry {
   hours: string;
   description: string;
   projectId: string | null;
+  /** The repeating thing it belongs to, when it has no project. */
+  recurringId: string | null;
   category: string | null;
   notes: string | null;
   timesheetCodeId: string | null;
@@ -368,6 +370,8 @@ export interface EntryInput {
   minutes: number;
   description: string;
   projectId: string | null;
+  /** The repeating thing it belongs to (used when there is no project). */
+  recurringId: string | null;
   category: string | null;
   notes: string | null;
   timesheetCodeId: string | null;
@@ -385,6 +389,8 @@ export interface TrayItem {
   done: boolean;
   /** The project its minutes count under; null = the day's "Tickets" entry. */
   projectId: string | null;
+  /** The repeating thing its minutes count under, when it has no project. */
+  recurringId: string | null;
   links: TicketLink[];
 }
 
@@ -405,6 +411,8 @@ export interface Capture {
   hoursText: string | null;
   tickets: string[];
   projectId: string | null;
+  /** The repeating thing a #name matched. */
+  recurringId: string | null;
   projectQuery: string | null;
   date: IsoDate;
   dayWord: string | null;
@@ -1008,6 +1016,8 @@ export interface DataApi {
   traySetDone(id: string, done: boolean): Promise<TrayDay>;
   /** The project a ticket's minutes count under (null = the day's "Tickets" entry). */
   traySetProject(id: string, projectId: string | null): Promise<TrayDay>;
+  /** Count a tray ticket's time under a repeating thing (null: back to Tickets). Tauri: `tray_set_recurring`. */
+  traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay>;
   /** Work on a still-open ticket again on `date`: it joins that day's tray. */
   trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
   /** One tray ticket, or null when it was taken out (for a window showing its notepad). */

@@ -240,6 +240,9 @@ export class TauriApi implements DataApi {
   traySetProject(id: string, projectId: string | null): Promise<TrayDay> {
     return call('tray_set_project', { id, projectId });
   }
+  traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay> {
+    return call('tray_set_recurring', { id, recurringId });
+  }
   trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
     return call('tray_carry', { id, date });
   }

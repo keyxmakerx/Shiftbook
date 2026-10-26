@@ -10,6 +10,7 @@ function entry(date: string, description: string, minutes: number, isTray = fals
     hours: String(minutes / 60),
     description,
     projectId: null,
+    recurringId: null,
     category: null,
     notes: null,
     timesheetCodeId: null,

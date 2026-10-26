@@ -464,6 +464,7 @@ mod tests {
             minutes: Minutes(30),
             description: description.into(),
             project: None,
+            recurring: None,
             category: None,
             next_step: None,
             timesheet_code_id: None,

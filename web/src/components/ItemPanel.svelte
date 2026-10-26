@@ -8,10 +8,11 @@
   import { api } from '../lib/api';
   import type { Entry, TrayItem } from '../lib/api';
   import { bringUp, bringUpSection } from '../lib/bringUp';
-  import { addEntryTime, canTime, moveEntryTo } from '../lib/entryActions';
+  import { addEntryTime, canTime, moveEntryTo, moveEntryToRepeating } from '../lib/entryActions';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
-  import { setTrayDone, setTrayProject } from '../lib/trayActions';
+  import { repeating, repeatingChoices } from '../lib/repeating.svelte';
+  import { setTrayDone, setTrayProject, setTrayRepeating } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -60,6 +61,8 @@
 
   const projectId = $derived(entry ? entry.projectId : (tray?.projectId ?? null));
   const project = $derived(projectById(projectId));
+  const recurringId = $derived(entry ? entry.recurringId : (tray?.recurringId ?? null));
+  const thing = $derived(recurringId ? (repeating.items.find((r) => r.id === recurringId) ?? null) : null);
   // A tray roll-up's project comes from its tickets, so it isn't picked here.
   const canPickProject = $derived(!entry?.isTray);
   const timing = $derived(!!entry && timer.running && timer.target?.entryId === entry.id);
@@ -94,6 +97,10 @@
       if (entry) void moveEntryTo(entry, id);
       else if (tray) void setTrayProject(tray, id);
     };
+    const pickRepeating = (id: string) => {
+      if (entry) void moveEntryToRepeating(entry, id);
+      else if (tray) void setTrayRepeating(tray, id);
+    };
     openMenu(anchor, {
       sections: [
         {
@@ -102,7 +109,13 @@
             ...app.projects
               .filter((p) => !p.archived || p.id === projectId)
               .map((p) => ({ label: p.name, color: p.color, checked: p.id === projectId, act: () => pick(p.id) })),
-            { label: 'No project', color: null, checked: projectId === null, act: () => pick(null) },
+            ...repeatingChoices(recurringId, pickRepeating),
+            {
+              label: 'No project',
+              color: null,
+              checked: projectId === null && recurringId === null,
+              act: () => pick(null),
+            },
           ],
         },
       ],
@@ -223,7 +236,12 @@
       <span class="lbl">{tray ? 'Time counts under' : 'Project'}</span>
       <button type="button" class="proj" onclick={(e) => pickProject(e.currentTarget as HTMLElement)}>
         <span class="sw" style:background={project ? projectColor(projectId) : 'transparent'}></span>
-        {project?.name ?? (tray ? "The day's Tickets entry" : 'No project')}
+        {#if thing && !project}
+          <Icon name="repeat" size={13} />
+          {thing.name}
+        {:else}
+          {project?.name ?? (tray ? "The day's Tickets entry" : 'No project')}
+        {/if}
         <Icon name="right" size={12} />
       </button>
     </div>
