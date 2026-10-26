@@ -213,7 +213,7 @@
             items: [
               { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
               { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
-              { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
+              { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
               pinMenuItem('note', note.id),
               {
                 label: 'Archive',

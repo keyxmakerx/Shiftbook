@@ -1309,3 +1309,55 @@ fn tickets_code_and_entry_codes() {
         assert_eq!(rec.entry.timesheet_code_id, None);
     });
 }
+
+#[test]
+fn one_follow_up_per_card() {
+    use shiftbook_core::canvas::CardKind;
+    let dir = TestDir::new("followup");
+    block_on(async {
+        let (s, me, _) = setup(&dir).await;
+        let rec = s
+            .create_entry(
+                me,
+                &EntryInput {
+                    date: DAY,
+                    minutes: Minutes(30),
+                    description: "Switch replacement".into(),
+                    project: None,
+                    recurring: None,
+                    category: None,
+                    next_step: None,
+                    timesheet_code_id: None,
+                },
+                "",
+            )
+            .await
+            .unwrap();
+        let card = *rec.entry.id.as_uuid();
+        s.pin(me, CardKind::Entry, card, Some(date!(2026 - 10 - 22)))
+            .await
+            .unwrap();
+        assert_eq!(
+            s.follow_ups(me).await.unwrap(),
+            vec![(CardKind::Entry, card, date!(2026 - 10 - 22))]
+        );
+        // Following it up on a day takes the place of the pin's chase day.
+        s.bring_up(
+            me,
+            "Switch replacement",
+            date!(2026 - 10 - 27),
+            Some((CardKind::Entry, card)),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            s.follow_ups(me).await.unwrap(),
+            vec![(CardKind::Entry, card, date!(2026 - 10 - 27))]
+        );
+        assert_eq!(s.pins(me).await.unwrap()[0].chase_on, None);
+        // No follow-up clears it, and the pin stays.
+        s.clear_follow_up(me, CardKind::Entry, card).await.unwrap();
+        assert!(s.follow_ups(me).await.unwrap().is_empty());
+        assert_eq!(s.pins(me).await.unwrap().len(), 1);
+    });
+}

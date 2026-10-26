@@ -106,6 +106,8 @@
     "allow-pins",
     "allow-pin",
     "allow-unpin",
+    "allow-follow-ups",
+    "allow-clear-follow-up",
     "allow-canvas-area",
     "allow-canvas-area-remove",
     "allow-canvas-area-collapse",

@@ -6,6 +6,7 @@ import { toApiError } from './DataApi';
 import type {
   AwayList,
   Frequency,
+  FollowUp,
   MarkedDone,
   PastTime,
   Recurring,
@@ -449,6 +450,12 @@ export class TauriApi implements DataApi {
   }
   bringUpDays(today: IsoDate): Promise<IsoDate[]> {
     return call('bring_up_days', { today });
+  }
+  followUps(): Promise<FollowUp[]> {
+    return call('follow_ups');
+  }
+  clearFollowUp(kind: CardKind, id: string): Promise<void> {
+    return call('clear_follow_up', { kind, id });
   }
   tickNextUp(id: string, done: boolean): Promise<void> {
     return call('tick_next_up', { id, done });

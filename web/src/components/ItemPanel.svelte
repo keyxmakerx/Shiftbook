@@ -1,13 +1,13 @@
 <script lang="ts">
   // The slide-out under an entry or a ticket (round 12): one click on a row on Day, a card on
   // the Desk or a ticket in the tray opens it right underneath. It holds the everyday things:
-  // the notepad (saved as you type), the entry's tickets, the project, Bring up tomorrow, done
+  // the notepad (saved as you type), the entry's tickets, the project, Follow up, done
   // or still open (tickets), more time and, only when the timer is turned on, Start. The full
   // menu stays on right-click and on "More". Esc folds it away.
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
   import type { Entry, TrayItem } from '../lib/api';
-  import { bringUp, bringUpSection } from '../lib/bringUp';
+  import { bringUpSection, followWords } from '../lib/bringUp';
   import { addEntryTime, canTime, moveEntryTo, moveEntryToRepeating } from '../lib/entryActions';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
@@ -61,6 +61,9 @@
 
   const projectId = $derived(entry ? entry.projectId : (tray?.projectId ?? null));
   const project = $derived(projectById(projectId));
+  const followDay = $derived(
+    entry ? (app.followUps[`entry:${entry.id}`] ?? null) : tray ? (app.followUps[`tray:${tray.id}`] ?? null) : null,
+  );
   const recurringId = $derived(entry ? entry.recurringId : (tray?.recurringId ?? null));
   const thing = $derived(recurringId ? (repeating.items.find((r) => r.id === recurringId) ?? null) : null);
   // A tray roll-up's project comes from its tickets, so it isn't picked here.
@@ -257,18 +260,8 @@
     <button
       type="button"
       class="act"
-      onclick={() => {
-        if (entry) void bringUp('entry', entry.id, entry.description);
-        else if (tray) void bringUp('tray', tray.id, tray.note ? `${tray.ticket}: ${tray.note}` : tray.ticket);
-      }}
-    >
-      <Icon name="sun" size={15} /> Bring up tomorrow
-    </button>
-    <button
-      type="button"
-      class="act more-days"
-      title="Bring it up on another day"
-      aria-label="Bring it up on another day"
+      class:open={!!followDay}
+      aria-haspopup="menu"
       onclick={(e) => {
         const section = entry
           ? bringUpSection('entry', entry.id, entry.description)
@@ -278,7 +271,8 @@
         if (section) openMenu(e.currentTarget as HTMLElement, { sections: [section] });
       }}
     >
-      Another day…
+      <Icon name="sun" size={15} />
+      {followDay ? `Follow up ${followWords(followDay, app.today)}` : 'Follow up…'}
     </button>
     {#if entry && !entry.isTray}
       <span class="time" role="group" aria-label="Add time">

@@ -267,6 +267,13 @@ export type SeriesInput = Omit<MeetingSeries, 'id'>;
 /** Where today's meeting stands. Mirrors `shiftbook_core::meetings::MeetingToday`. */
 export type MeetingToday = { state: 'later' } | { state: 'soon'; minutes: number } | { state: 'started'; minutes: number };
 
+/** A card's follow-up day: brought up for that day, or a pin's chase day. */
+export interface FollowUp {
+  kind: CardKind;
+  id: string;
+  on: IsoDate;
+}
+
 /** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
 export interface BellItem {
   when: 'now' | 'today';
@@ -275,8 +282,7 @@ export interface BellItem {
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
     | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
     | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
-    | { kind: 'brought_up'; id: string; from: IsoDate }
-    | { kind: 'chase'; card: string; on: IsoDate }
+    | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
     | { kind: 'still_open'; tickets: string[] };
 }
@@ -1174,6 +1180,10 @@ export interface DataApi {
   standup(today: IsoDate): Promise<string>;
   /** The days "Bring up…" offers from `today`: a few work days and next week's first. */
   bringUpDays(today: IsoDate): Promise<IsoDate[]>;
+  /** Every card with a follow-up day (round 15). Tauri: `follow_ups`. */
+  followUps(): Promise<FollowUp[]>;
+  /** "No follow-up" on a card. Tauri: `clear_follow_up`. */
+  clearFollowUp(kind: CardKind, id: string): Promise<void>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
   setNextUp(items: string[]): Promise<NextUpItem[]>;
   tickNextUp(id: string, done: boolean): Promise<void>;

@@ -919,6 +919,17 @@ impl SqliteStore {
             .bind(id.to_string())
             .execute(&mut *tx)
             .await?;
+            // One follow-up per card: a pin's chase day gives way to the new day.
+            sqlx::query(
+                "UPDATE pins SET chase_on = NULL, updated_at = $1 WHERE owner_id = $2 \
+                 AND record_kind = $3 AND record_id = $4 AND chase_on IS NOT NULL",
+            )
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(kind.as_str())
+            .bind(id.to_string())
+            .execute(&mut *tx)
+            .await?;
         }
         let id = NextUpItemId::new();
         sqlx::query(

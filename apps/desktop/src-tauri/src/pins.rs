@@ -62,7 +62,17 @@ pub(crate) async fn pinned(
     owner: OwnerId,
     today: time::Date,
 ) -> Res<Vec<(Pin, String)>> {
-    let pins = store.pins(owner).await?;
+    let mut pins = store.pins(owner).await?;
+    // A pinned card followed up on a day shows that day as its chase day (round 15).
+    let follow = store.follow_ups(owner).await?;
+    for pin in &mut pins {
+        if let Some((_, _, on)) = follow
+            .iter()
+            .find(|(k, id, _)| *k == pin.kind && *id == pin.record_id)
+        {
+            pin.chase_on = Some(*on);
+        }
+    }
     let mut out = Vec::new();
     for i in pin_order(&pins, today) {
         let pin = pins[i];
@@ -122,4 +132,37 @@ pub async fn unpin(s: State<'_, VaultSession>, kind: String, id: String) -> Res<
     let (store, owner) = s.data().await?;
     let (kind, id) = card_args(&kind, &id)?;
     Ok(store.unpin(owner, kind, id).await?)
+}
+
+/// One card's follow-up day.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FollowUpView {
+    kind: CardKind,
+    id: String,
+    on: String,
+}
+
+/// Maps to `DataApi.followUps()`: every card with a follow-up day (round 15).
+#[tauri::command]
+pub async fn follow_ups(s: State<'_, VaultSession>) -> Res<Vec<FollowUpView>> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .follow_ups(owner)
+        .await?
+        .into_iter()
+        .map(|(kind, id, on)| FollowUpView {
+            kind,
+            id: id.to_string(),
+            on: format_date(on),
+        })
+        .collect())
+}
+
+/// Maps to `DataApi.clearFollowUp()`: "No follow-up" on a card.
+#[tauri::command]
+pub async fn clear_follow_up(s: State<'_, VaultSession>, kind: String, id: String) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let (kind, id) = card_args(&kind, &id)?;
+    Ok(store.clear_follow_up(owner, kind, id).await?)
 }

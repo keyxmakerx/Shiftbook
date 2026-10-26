@@ -82,7 +82,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     item.done
       ? { label: 'Not done yet (keep it open)', icon: 'clock', side: true, act: () => void setTrayDone(item, false) }
       : { label: 'Done', icon: 'check', side: true, act: () => void setTrayDone(item, true) },
-    { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('tray', item.id, item.ticket) },
+    { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('tray', item.id, item.ticket) },
     pinMenuItem('tray', item.id),
   ];
   if (notepad) main.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: notepad });

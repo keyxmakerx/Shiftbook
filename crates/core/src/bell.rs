@@ -1,7 +1,9 @@
 //! The bell (round 12): what's coming up, in the panel that slides in from the right of the
 //! bottom bar. **Now** holds meetings about to start or just started; **Today** holds the
-//! rest of today's meetings, the things brought up for today, pins due to chase and the
-//! tickets still open.
+//! rest of today's meetings, the things to follow up and the tickets still open.
+//! **Follow up** (round 15, card r15-things): a thing brought up for a day and a pin's chase
+//! day are the same idea, so each card shows once, from the earlier of the two, and a ticket
+//! shown there is left out of "still open".
 //! The badge counts everything in the panel. Repeating things that are overdue, due soon or
 //! need their expiry date moved join them (round 15), and after a day or more away the
 //! things that came due meanwhile open the panel as "While you were away".
@@ -58,18 +60,15 @@ pub enum BellAbout {
         /// Entries with no timesheet code yet.
         uncoded: usize,
     },
-    /// A thing brought up for today ("Bring up tomorrow").
-    BroughtUp {
-        /// The list item.
-        id: String,
-        /// The day it was brought up for.
-        from: String,
-    },
-    /// A pin whose chase date has come (see `crate::pins`).
-    Chase {
-        /// The pinned record, `kind:id` like a Desk card's key.
-        card: String,
-        /// Its chase date.
+    /// A thing to follow up today or since an earlier day: brought up ("Follow up"), or a
+    /// pin whose chase day has come (see `crate::pins`), once per card.
+    #[serde(rename_all = "camelCase")]
+    FollowUp {
+        /// The card, `kind:id` like a Desk card's key, if it came from one.
+        card: Option<String>,
+        /// The brought-up list item, if there is one (Done ticks it off).
+        next_up: Option<String>,
+        /// The day it was due to be followed up.
         on: String,
     },
     /// A repeating thing that needs attention (round 15).
@@ -164,6 +163,8 @@ pub fn bell_items(
             },
         });
     }
+    // (on, title, card, next-up id), merged by card: the earlier day wins.
+    let mut follow: Vec<(Date, String, Option<String>, Option<String>)> = Vec::new();
     let mut brought: Vec<&NextUpItem> = next_up
         .iter()
         .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
@@ -171,30 +172,40 @@ pub fn bell_items(
         .collect();
     brought.sort_by_key(|i| (i.show_from, i.created_at));
     for i in brought {
-        items.push(BellItem {
-            when: BellWhen::Today,
-            title: i.text.clone(),
-            about: BellAbout::BroughtUp {
-                id: i.id.to_string(),
-                from: i
-                    .show_from
-                    .map(crate::dates::format_date)
-                    .unwrap_or_default(),
-            },
-        });
+        let card = i.about.map(|(k, id)| format!("{}:{id}", k.as_str()));
+        let on = i.show_from.unwrap_or(today);
+        match follow.iter_mut().find(|f| card.is_some() && f.2 == card) {
+            Some(f) => f.0 = f.0.min(on),
+            None => follow.push((on, i.text.clone(), card, Some(i.id.to_string()))),
+        }
     }
-    let mut chase: Vec<&ChasePin> = pins.iter().filter(|(_, _, on)| *on <= today).collect();
-    chase.sort_by_key(|(_, _, on)| *on);
-    for (title, card, on) in chase {
+    for (title, card, on) in pins.iter().filter(|(_, _, on)| *on <= today) {
+        match follow
+            .iter_mut()
+            .find(|f| f.2.as_deref() == Some(card.as_str()))
+        {
+            Some(f) => f.0 = f.0.min(*on),
+            None => follow.push((*on, title.clone(), Some(card.clone()), None)),
+        }
+    }
+    follow.sort_by_key(|f| f.0);
+    for (on, title, card, id) in &follow {
         items.push(BellItem {
             when: BellWhen::Today,
-            title: format!("Chase: {title}"),
-            about: BellAbout::Chase {
+            title: title.clone(),
+            about: BellAbout::FollowUp {
                 card: card.clone(),
+                next_up: id.clone(),
                 on: crate::dates::format_date(*on),
             },
         });
     }
+    // A ticket already shown to follow up isn't counted again as still open.
+    let open_tickets: Vec<String> = open_tickets
+        .iter()
+        .filter(|t| !follow.iter().any(|f| f.1.trim().eq_ignore_ascii_case(t)))
+        .cloned()
+        .collect();
     if !open_tickets.is_empty() {
         let n = open_tickets.len();
         items.push(BellItem {
@@ -272,8 +283,7 @@ pub fn while_away(items: &[BellItem], last_open: Option<Date>, today: Date) -> V
             BellAbout::Due { next_due, warn, .. } => {
                 parse_date(next_due).is_ok_and(|d| came_due_since(d, *warn, last, today))
             }
-            BellAbout::Chase { on, .. } => new_day(on),
-            BellAbout::BroughtUp { from, .. } => new_day(from),
+            BellAbout::FollowUp { on, .. } => new_day(on),
             BellAbout::Meeting { .. }
             | BellAbout::StillOpen { .. }
             | BellAbout::MeetingDone { .. }
@@ -304,8 +314,10 @@ pub fn clock(minutes: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::canvas::CardKind;
     use crate::ids::{MeetingSeriesId, NextUpItemId, OwnerId};
     use time::macros::{date, datetime};
+    use uuid::Uuid;
 
     const MON: Date = date!(2026 - 10 - 19);
 
@@ -493,11 +505,7 @@ mod tests {
         let titles: Vec<&str> = away.iter().map(|i| i.title.as_str()).collect();
         assert_eq!(
             titles,
-            [
-                "ring the garage",
-                "Chase: Claim 77812",
-                "Bins out: 2 days late"
-            ]
+            ["Claim 77812", "ring the garage", "Bins out: 2 days late"]
         );
         assert!(while_away(&items, Some(MON), MON).is_empty());
         assert!(while_away(&items, None, MON).is_empty());
@@ -520,15 +528,37 @@ mod tests {
         ];
         let items = bell_items(&[], &[], &pins, &[], MON, 600);
         let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
-        assert_eq!(
-            titles,
-            ["Chase: waiting longest", "Chase: PSUs for the switch"]
-        );
+        assert_eq!(titles, ["waiting longest", "PSUs for the switch"]);
         assert_eq!(
             items[1].about,
-            BellAbout::Chase {
-                card: "note:a".into(),
+            BellAbout::FollowUp {
+                card: Some("note:a".into()),
+                next_up: None,
                 on: "2026-10-19".into()
+            }
+        );
+    }
+
+    #[test]
+    fn each_thing_to_follow_up_shows_once() {
+        let card = Uuid::now_v7();
+        let mut up = brought("INC0045678", MON);
+        up.about = Some((CardKind::Tray, card));
+        let pins = [(
+            "INC0045678".to_string(),
+            format!("tray:{card}"),
+            date!(2026 - 10 - 15),
+        )];
+        let open = vec!["INC0045678".to_string(), "RITM0012345".to_string()];
+        let items = bell_items(&[], std::slice::from_ref(&up), &pins, &open, MON, 600);
+        let titles: Vec<&str> = items.iter().map(|i| i.title.as_str()).collect();
+        assert_eq!(titles, ["INC0045678", "1 ticket still open"]);
+        assert_eq!(
+            items[0].about,
+            BellAbout::FollowUp {
+                card: Some(format!("tray:{card}")),
+                next_up: Some(up.id.to_string()),
+                on: "2026-10-15".into()
             }
         );
     }

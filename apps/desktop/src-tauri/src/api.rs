@@ -1363,6 +1363,8 @@ pub async fn bring_up(
     let prefs = store.prefs(owner).await?;
     let is_work_day = |d: Date| prefs.day_target(d) > 0;
     let day = match on {
+        // "Later today" (Follow up, round 15) stays today.
+        Some(chosen) if chosen == today => today,
         Some(chosen) => {
             bring_up_on(today, chosen, is_work_day).ok_or(CommandError::InvalidInput)?
         }

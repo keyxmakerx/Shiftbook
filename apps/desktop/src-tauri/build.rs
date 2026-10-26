@@ -103,6 +103,8 @@ fn main() {
             "pins",
             "pin",
             "unpin",
+            "follow_ups",
+            "clear_follow_up",
             "canvas_area",
             "canvas_area_remove",
             "canvas_area_collapse",

@@ -721,6 +721,8 @@ pub fn run() {
             pins::pins,
             pins::pin,
             pins::unpin,
+            pins::follow_ups,
+            pins::clear_follow_up,
             canvas::canvas_link,
             canvas::canvas_link_reset,
             notes::daily_note,
