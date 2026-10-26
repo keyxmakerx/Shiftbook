@@ -455,7 +455,7 @@ impl crate::SqliteStore {
         for item in &mut items {
             if let Some((rows, title, cards)) = by_item.get_mut(&item.id.to_string()) {
                 item.so_far = ticket_so_far(rows);
-                cards.sort_by(|a, b| b.0.cmp(&a.0));
+                cards.sort_by_key(|c| std::cmp::Reverse(c.0));
                 item.cards = cards.iter().map(|(_, c)| c.clone()).collect();
                 item.title = title.as_ref().map(|(_, t)| t.clone()).unwrap_or_default();
             }
