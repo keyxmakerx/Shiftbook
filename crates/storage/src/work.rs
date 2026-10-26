@@ -9,7 +9,7 @@
 //! its title, project and notes stay editable.
 
 use shiftbook_core::capture::Capture;
-use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
+use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::error::CoreError;
 use shiftbook_core::ids::{
     NoteId, OwnerId, ProjectId, RecurringTaskId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId,
@@ -21,6 +21,7 @@ use shiftbook_core::prefs::next_project_color;
 use shiftbook_core::quicklog::{
     plan_add_time, plan_quick_log, AddTimePlan, DayEntry, PastUse, QuickLogPlan,
 };
+use shiftbook_core::samework::{same_work, same_work_target, SameWork, WorkLine, SAME_WORK_DAYS};
 use shiftbook_core::tickets::add_tickets;
 use shiftbook_core::tray::{
     carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
@@ -1578,6 +1579,41 @@ impl SqliteStore {
         Ok(best.map(|(_, _, p)| p))
     }
 
+    /// Earlier work (within [`SAME_WORK_DAYS`] up to `day`) whose title is `words`: what
+    /// Log work's "Add to …?" is about.
+    pub async fn same_work(
+        &self,
+        owner: OwnerId,
+        day: Date,
+        words: &str,
+    ) -> Result<Option<SameWork>> {
+        if words.trim().is_empty() {
+            return Ok(None);
+        }
+        let records = self
+            .list_entries(owner, add_days(day, -SAME_WORK_DAYS), day)
+            .await?;
+        let tickets: Vec<Vec<(String, bool)>> = records
+            .iter()
+            .map(|r| {
+                r.tickets
+                    .iter()
+                    .map(|t| (t.ticket_number.clone(), t.done))
+                    .collect()
+            })
+            .collect();
+        let lines: Vec<WorkLine<'_>> = records
+            .iter()
+            .zip(&tickets)
+            .map(|(r, t)| WorkLine {
+                entry: &r.entry,
+                tickets: t,
+                rollup: r.is_tray,
+            })
+            .collect();
+        Ok(same_work(words, day, &lines))
+    }
+
     /// Log work: add `minutes` on `date` following `shiftbook_core::quicklog`.
     /// The capture's own hours and day are ignored (the button and the selected
     /// day decide). Returns the entry that was created or added to.
@@ -1587,7 +1623,16 @@ impl SqliteStore {
         date: Date,
         capture: &Capture,
         minutes: Minutes,
+        add_to: Option<bool>,
     ) -> Result<EntryRecord> {
+        // "Add to …?" (round 15): a line naming nowhere follows the same work, when it was
+        // logged on the day or the answer was "Add to it".
+        let same_target = if capture.target() == EntryTarget::None {
+            let same = self.same_work(owner, date, &capture.description).await?;
+            same_work_target(same.as_ref(), add_to)
+        } else {
+            None
+        };
         let day: Vec<DayEntry> = self
             .list_entries(owner, date, date)
             .await?
@@ -1600,7 +1645,18 @@ impl SqliteStore {
             })
             .collect();
         let mut tx = self.pool.begin().await?;
-        let past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
+        let mut past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
+        if let Some(target) = same_target {
+            match past.as_mut() {
+                Some(p) => p.target = target,
+                None => {
+                    past = Some(PastUse {
+                        description: String::new(),
+                        target,
+                    })
+                }
+            }
+        }
         let id = match plan_quick_log(capture, minutes, &day, past.as_ref())? {
             QuickLogPlan::AddTo {
                 entry,

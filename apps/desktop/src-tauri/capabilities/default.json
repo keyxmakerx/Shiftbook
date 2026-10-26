@@ -53,6 +53,8 @@
     "allow-ticket-set-done",
     "allow-ticket-set-note",
     "allow-quick-log",
+    "allow-same-work",
+    "allow-items",
     "allow-parse-capture-line",
     "allow-capture-log",
     "allow-tray-day",

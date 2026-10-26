@@ -16,6 +16,7 @@
   import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import KnownTickets from './KnownTickets.svelte';
   import TicketChip from './TicketChip.svelte';
 
   const STEP = 5;
@@ -161,6 +162,7 @@
           </span>
         </span>
       {/each}
+      <KnownTickets numbers={askingItems.map((i) => i.ticket)} before={app.selected} />
     </div>
   {/if}
   {#if app.tray && app.tray.items.length > 0}

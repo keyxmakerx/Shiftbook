@@ -503,14 +503,14 @@ fn log_work_reuses_or_creates() {
         s.create_entry(me, &earlier, "CHG0012345").await.unwrap();
 
         let a = s
-            .quick_log(me, DAY, &cap("CHG0012345"), Minutes(30))
+            .quick_log(me, DAY, &cap("CHG0012345"), Minutes(30), None)
             .await
             .unwrap();
         assert_eq!(a.entry.description, "Switch upgrade");
         assert_eq!(a.entry.target, EntryTarget::Project(p.id));
         assert_eq!(a.entry.date, DAY);
         let b = s
-            .quick_log(me, DAY, &cap("chg0012345 INC0045678"), Minutes(15))
+            .quick_log(me, DAY, &cap("chg0012345 INC0045678"), Minutes(15), None)
             .await
             .unwrap();
         assert_eq!(b.entry.id, a.entry.id, "same ticket, same day");
@@ -518,16 +518,42 @@ fn log_work_reuses_or_creates() {
         assert_eq!(numbers(&b), ["CHG0012345", "INC0045678"]);
 
         let c = s
-            .quick_log(me, DAY, &cap("printer on 2nd floor"), Minutes(60))
+            .quick_log(me, DAY, &cap("printer on 2nd floor"), Minutes(60), None)
             .await
             .unwrap();
         assert_ne!(c.entry.id, a.entry.id);
         assert_eq!(c.entry.target, EntryTarget::None);
         assert!(matches!(
-            s.quick_log(me, DAY, &cap("  "), Minutes(15)).await,
+            s.quick_log(me, DAY, &cap("  "), Minutes(15), None).await,
             Err(StorageError::Invalid(CoreError::NothingToLog))
         ));
         assert_eq!(s.list_entries(me, DAY, DAY).await.unwrap().len(), 2);
+
+        // "Add to …?": the same title as earlier work goes where it went only when asked to.
+        let same = s
+            .same_work(me, DAY, " switch UPGRADE")
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(same.target, EntryTarget::Project(p.id));
+        assert!(same.on_day, "logged today by CHG0012345 already");
+        let next = date!(2026 - 10 - 21);
+        let same = s
+            .same_work(me, next, "Switch upgrade")
+            .await
+            .unwrap()
+            .unwrap();
+        assert!(!same.on_day);
+        let new = s
+            .quick_log(me, next, &cap("Switch upgrade"), Minutes(15), Some(false))
+            .await
+            .unwrap();
+        assert_eq!(new.entry.target, EntryTarget::None);
+        let joined = s
+            .quick_log(me, next, &cap("Switch upgrade"), Minutes(15), Some(true))
+            .await
+            .unwrap();
+        assert_eq!(joined.entry.target, EntryTarget::Project(p.id));
     });
 }
 
@@ -1359,5 +1385,42 @@ fn one_follow_up_per_card() {
         s.clear_follow_up(me, CardKind::Entry, card).await.unwrap();
         assert!(s.follow_ups(me).await.unwrap().is_empty());
         assert_eq!(s.pins(me).await.unwrap().len(), 1);
+    });
+}
+
+#[test]
+fn known_tickets_carry_their_time_so_far() {
+    let dir = TestDir::new("knowntickets");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        s.tray_add(me, date!(2026 - 10 - 19), "INC0045678")
+            .await
+            .unwrap();
+        s.create_entry(
+            me,
+            &EntryInput {
+                date: DAY,
+                minutes: Minutes(90),
+                description: "Switch replacement".into(),
+                project: None,
+                recurring: None,
+                category: None,
+                next_step: None,
+                timesheet_code_id: None,
+            },
+            "inc0045678",
+        )
+        .await
+        .unwrap();
+        let wanted = ["INC0045678".to_string(), "INC9999999".to_string()];
+        let found = s.item_summaries(me, Some(&wanted)).await.unwrap();
+        assert_eq!(found.len(), 1);
+        let item = &found[0];
+        assert_eq!(item.title, "Switch replacement");
+        let so_far = item.so_far.unwrap();
+        assert_eq!(so_far.first, DAY);
+        assert_eq!(so_far.last, date!(2026 - 10 - 19));
+        assert_eq!(so_far.minutes, Minutes(15 + 90));
+        assert!(s.item_summaries(other, None).await.unwrap().is_empty());
     });
 }

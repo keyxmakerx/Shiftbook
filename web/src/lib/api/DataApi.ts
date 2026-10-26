@@ -267,6 +267,32 @@ export type SeriesInput = Omit<MeetingSeries, 'id'>;
 /** Where today's meeting stands. Mirrors `shiftbook_core::meetings::MeetingToday`. */
 export type MeetingToday = { state: 'later' } | { state: 'soon'; minutes: number } | { state: 'started'; minutes: number };
 
+/** Earlier work with the same title, for Log work's "Add to …?". */
+export interface SameWork {
+  title: string;
+  projectId: string | null;
+  recurringId: string | null;
+  minutes: number;
+  days: number;
+  openTickets: string[];
+}
+
+/** A ticket item with its time so far (round 15). */
+export interface ItemSummary {
+  id: string;
+  number: string;
+  /** The latest title of work it was on ("" when only in the tray). */
+  title: string;
+  done: boolean;
+  note: string | null;
+  projectId: string | null;
+  recurringId: string | null;
+  /** The first and last days it was worked (null when on nothing). */
+  first: IsoDate | null;
+  last: IsoDate | null;
+  minutes: number;
+}
+
 /** A card's follow-up day: brought up for that day, or a pin's chase day. */
 export interface FollowUp {
   kind: CardKind;
@@ -1031,7 +1057,14 @@ export interface DataApi {
   /** Write an entry ticket's notepad (blank clears it). Tauri: `ticket_set_note`. */
   ticketSetNote(id: string, note: string): Promise<Entry>;
   /** Log work: tickets or words plus a time button, on `date`. */
-  quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry>;
+  quickLog(date: IsoDate, text: string, minutes: number, addTo?: boolean | null): Promise<Entry>;
+  /**
+   * "Add to …?" (round 15): earlier work whose title the line's words are, when Log work
+   * should ask before logging; null otherwise. Tauri: `same_work`.
+   */
+  sameWork(date: IsoDate, text: string): Promise<SameWork | null>;
+  /** Ticket items with their time so far; with `numbers`, only those. Tauri: `items`. */
+  items(numbers?: string[]): Promise<ItemSummary[]>;
 
   // ----- capture -----
   /** What a capture line means (for the live chips). */

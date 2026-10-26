@@ -7,6 +7,8 @@ import type {
   AwayList,
   Frequency,
   FollowUp,
+  ItemSummary,
+  SameWork,
   MarkedDone,
   PastTime,
   Recurring,
@@ -219,8 +221,14 @@ export class TauriApi implements DataApi {
     return call('ticket_set_note', { id, note });
   }
 
-  quickLog(date: IsoDate, text: string, minutes: number): Promise<Entry> {
-    return call('quick_log', { date, text, minutes });
+  quickLog(date: IsoDate, text: string, minutes: number, addTo: boolean | null = null): Promise<Entry> {
+    return call('quick_log', { date, text, minutes, addTo });
+  }
+  sameWork(date: IsoDate, text: string): Promise<SameWork | null> {
+    return call('same_work', { date, text });
+  }
+  items(numbers?: string[]): Promise<ItemSummary[]> {
+    return call('items', { numbers: numbers ?? null });
   }
 
   parseCapture(text: string, today: IsoDate): Promise<Capture> {

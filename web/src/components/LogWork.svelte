@@ -2,7 +2,7 @@
   // Log work: paste a ticket or say what you did, then press a time button. The app
   // reuses today's entry for a ticket it already has (see crates/core/src/quicklog.rs).
   import { api } from '../lib/api';
-  import type { Capture } from '../lib/api';
+  import type { Capture, SameWork } from '../lib/api';
   import type { Entry } from '../lib/api';
   import { addDays, fmtMinutes, weekdayLong } from '../lib/format';
   import { repeatCandidates } from '../lib/repeat';
@@ -11,6 +11,7 @@
   import { toast } from '../lib/toast.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import Icon from './Icon.svelte';
+  import KnownTickets from './KnownTickets.svelte';
 
   const TIMES = $derived(timeButtons());
 
@@ -21,6 +22,10 @@
   let timer: ReturnType<typeof setTimeout> | null = null;
   let timesEl: HTMLElement | undefined = $state();
   let earlier = $state<Entry[]>([]);
+  // "Add to …?" (round 15): the question waiting for an answer, and answers already given
+  // this session (by title), so it is asked once.
+  let ask = $state<{ minutes: number; line: string; same: SameWork } | null>(null);
+  const answered = new Map<string, boolean>();
 
   // The week before the selected day, for "Same as yesterday".
   $effect(() => {
@@ -63,6 +68,7 @@
   });
 
   function recognise() {
+    ask = null;
     if (timer !== null) clearTimeout(timer);
     const now = text;
     if (!now.trim()) {
@@ -126,15 +132,28 @@
     }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
   }
 
-  async function log(minutes: number, line = text) {
+  async function log(minutes: number, line = text, addTo?: boolean) {
     if (!line.trim()) {
       input?.focus();
       toast('Paste a ticket or type what you did first.');
       return;
     }
     working = true;
+    if (addTo === undefined) {
+      const same = await api.sameWork(app.selected, line).catch(() => null);
+      if (same) {
+        const before = answered.get(same.title.toLowerCase());
+        if (before === undefined) {
+          working = false;
+          ask = { minutes, line, same };
+          return;
+        }
+        addTo = before;
+      }
+    }
+    ask = null;
     const before = new Map(app.entries.map((e) => [e.id, e.minutes]));
-    const entry = await attempt(() => api.quickLog(app.selected, line, minutes));
+    const entry = await attempt(() => api.quickLog(app.selected, line, minutes, addTo ?? null));
     working = false;
     if (!entry) return;
     text = '';
@@ -219,6 +238,43 @@
       {/if}
     {/if}
   </div>
+  {#if seen && text.trim() && seen.tickets.length > 0}
+    <KnownTickets numbers={seen.tickets} />
+  {/if}
+  {#if ask}
+    {@const a = ask}
+    {@const home = projectById(a.same.projectId)?.name ?? repeating.items.find((r) => r.id === a.same.recurringId)?.name}
+    <div class="ask" role="group" aria-label="Add to earlier work?">
+      <span class="q">
+        <b>Add to “{a.same.title}”?</b>
+        <small>
+          {[
+            home,
+            `${fmtMinutes(a.same.minutes)} over ${a.same.days} ${a.same.days === 1 ? 'day' : 'days'}`,
+            a.same.openTickets.length ? `${a.same.openTickets.join(', ')} still open` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </small>
+      </span>
+      <button
+        type="button"
+        class="btn primary"
+        onclick={() => {
+          answered.set(a.same.title.toLowerCase(), true);
+          void log(a.minutes, a.line, true);
+        }}>Yes, add to it</button
+      >
+      <button
+        type="button"
+        class="btn"
+        onclick={() => {
+          answered.set(a.same.title.toLowerCase(), false);
+          void log(a.minutes, a.line, false);
+        }}>No, it's new</button
+      >
+    </div>
+  {/if}
   {#if repeats.length > 0}
     <div class="repeat">
       <span class="lbl">Same as {repeatDay}</span>
@@ -232,6 +288,29 @@
 </div>
 
 <style>
+  .ask {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--paper);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  .ask .q {
+    flex: 1 1 220px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .ask small {
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+
   .rep-name {
     display: inline-flex;
     align-items: center;

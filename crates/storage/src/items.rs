@@ -9,7 +9,9 @@ use std::collections::HashMap;
 
 use shiftbook_core::ids::{ItemId, OwnerId, ProjectId, RecurringTaskId};
 use shiftbook_core::items::{reopens, seed_item, ItemKind, Occurrence};
+use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
+use shiftbook_core::samework::{ticket_so_far, SoFar};
 use sqlx::sqlite::SqliteConnection;
 use sqlx::Row;
 use time::Date;
@@ -351,4 +353,103 @@ pub(crate) async fn link_items(conn: &mut SqliteConnection, owner: OwnerId) -> R
         }
     }
     Ok(())
+}
+
+/// A ticket's item with its time so far (round 15, card r15-things): for a known ticket in
+/// Log work and the tray, and for the Items view.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ItemSummary {
+    /// The item.
+    pub id: ItemId,
+    /// The ticket number as first written.
+    pub number: String,
+    /// The latest title of work it was on ("" when only in the tray).
+    pub title: String,
+    /// Ticked done.
+    pub done: bool,
+    /// Its notepad.
+    pub note: Option<String>,
+    /// The project it was last given.
+    pub project: Option<ProjectId>,
+    /// The repeating thing it was last filed under, when it has no project.
+    pub recurring: Option<RecurringTaskId>,
+    /// When it was worked and how long, if it's on anything.
+    pub so_far: Option<SoFar>,
+}
+
+impl crate::SqliteStore {
+    /// Every live ticket item with its time so far; with `numbers`, only those tickets
+    /// (ignoring case).
+    pub async fn item_summaries(
+        &self,
+        owner: OwnerId,
+        numbers: Option<&[String]>,
+    ) -> Result<Vec<ItemSummary>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows = sqlx::query(
+            "SELECT id, number, done, note, project_id, recurring_id FROM items \
+             WHERE owner_id = $1 AND kind = 'ticket' AND number IS NOT NULL \
+             AND deleted_at IS NULL ORDER BY created_at, id",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&mut *conn)
+        .await?;
+        let wanted = |n: &str| {
+            numbers.is_none_or(|list| list.iter().any(|w| w.trim().eq_ignore_ascii_case(n)))
+        };
+        let mut items: Vec<ItemSummary> = Vec::new();
+        for row in &rows {
+            let number: String = row.try_get("number")?;
+            if !wanted(&number) {
+                continue;
+            }
+            items.push(ItemSummary {
+                id: ItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
+                number,
+                title: String::new(),
+                done: row.try_get("done")?,
+                note: row.try_get("note")?,
+                project: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
+                recurring: opt_uuid(row.try_get("recurring_id")?)?.map(RecurringTaskId::from_uuid),
+                so_far: None,
+            });
+        }
+        if items.is_empty() {
+            return Ok(items);
+        }
+        // (item, date, minutes, title): tray rows, then entries (not the roll-ups, which
+        // only mirror the tray).
+        let worked: Vec<(String, String, i64, String)> = sqlx::query_as(
+            "SELECT item_id, date, minutes, '' FROM ticket_tray WHERE owner_id = $1 \
+             AND item_id IS NOT NULL AND deleted_at IS NULL \
+             UNION ALL \
+             SELECT t.item_id, e.date, e.minutes, e.description FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.item_id IS NOT NULL \
+             AND t.deleted_at IS NULL AND e.deleted_at IS NULL \
+             AND COALESCE(e.source, '') <> 'tray'",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&mut *conn)
+        .await?;
+        // Per item: (day, minutes) worked, and the latest (day, title).
+        type Worked = (Vec<(Date, Minutes)>, Option<(Date, String)>);
+        let mut by_item: HashMap<String, Worked> = HashMap::new();
+        for (item, date, minutes, title) in worked {
+            let date = corrupt_date(&date)?;
+            let slot = by_item.entry(item).or_default();
+            slot.0
+                .push((date, Minutes(u32::try_from(minutes).unwrap_or(0))));
+            if !title.trim().is_empty() && slot.1.as_ref().is_none_or(|(d, _)| date >= *d) {
+                slot.1 = Some((date, title));
+            }
+        }
+        for item in &mut items {
+            if let Some((rows, title)) = by_item.get(&item.id.to_string()) {
+                item.so_far = ticket_so_far(rows);
+                item.title = title.as_ref().map(|(_, t)| t.clone()).unwrap_or_default();
+            }
+        }
+        Ok(items)
+    }
 }

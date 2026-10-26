@@ -636,6 +636,8 @@ pub fn run() {
             api::ticket_set_done,
             api::ticket_set_note,
             api::quick_log,
+            api::same_work,
+            api::items,
             api::parse_capture_line,
             api::capture_log,
             api::tray_day,

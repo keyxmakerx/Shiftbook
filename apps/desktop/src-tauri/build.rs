@@ -50,6 +50,8 @@ fn main() {
             "ticket_set_done",
             "ticket_set_note",
             "quick_log",
+            "same_work",
+            "items",
             "parse_capture_line",
             "capture_log",
             "tray_day",

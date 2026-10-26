@@ -10,7 +10,8 @@ use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date}
 use shiftbook_core::fields::{build_link, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    CustomFieldId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
+    CustomFieldId, NextUpItemId, OwnerId, ProjectId, RecurringTaskId, TicketId, TimeEntryId,
+    TimesheetCodeId,
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{
@@ -22,6 +23,7 @@ use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
 };
 use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, RIBBON_WEEKS};
+use shiftbook_core::samework::should_ask;
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
@@ -606,6 +608,7 @@ pub async fn quick_log(
     date: String,
     text: String,
     minutes: u32,
+    add_to: Option<bool>,
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let date = date_arg(&date)?;
@@ -619,9 +622,102 @@ pub async fn quick_log(
         &repeating,
     );
     let rec = store
-        .quick_log(owner, date, &capture, Minutes(minutes))
+        .quick_log(owner, date, &capture, Minutes(minutes), add_to)
         .await?;
     one_entry(&store, owner, rec).await
+}
+
+/// Earlier work Log work asks about ("Add to …?", round 15).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SameWorkView {
+    title: String,
+    project_id: Option<ProjectId>,
+    recurring_id: Option<RecurringTaskId>,
+    minutes: u32,
+    days: u32,
+    open_tickets: Vec<String>,
+}
+
+/// Maps to `DataApi.sameWork()`: the earlier work a line's words are the title of, when Log
+/// work should ask whether to add to it (`None` otherwise).
+#[tauri::command]
+pub async fn same_work(
+    s: State<'_, VaultSession>,
+    date: String,
+    text: String,
+) -> Res<Option<SameWorkView>> {
+    let (store, owner) = s.data().await?;
+    let date = date_arg(&date)?;
+    let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
+    let capture = capture_with(
+        &text,
+        date,
+        week_start(&store, owner).await?,
+        &projects,
+        &repeating,
+    );
+    if capture.target() != EntryTarget::None {
+        return Ok(None);
+    }
+    let same = store.same_work(owner, date, &capture.description).await?;
+    if !should_ask(same.as_ref()) {
+        return Ok(None);
+    }
+    Ok(same.map(|w| SameWorkView {
+        title: w.title,
+        project_id: match w.target {
+            EntryTarget::Project(p) => Some(p),
+            _ => None,
+        },
+        recurring_id: match w.target {
+            EntryTarget::Recurring(r) => Some(r),
+            _ => None,
+        },
+        minutes: w.minutes.get(),
+        days: w.days,
+        open_tickets: w.open_tickets,
+    }))
+}
+
+/// A ticket item with its time so far (round 15): a known ticket, or a line of the Items view.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemView {
+    id: String,
+    number: String,
+    title: String,
+    done: bool,
+    note: Option<String>,
+    project_id: Option<ProjectId>,
+    recurring_id: Option<RecurringTaskId>,
+    first: Option<String>,
+    last: Option<String>,
+    minutes: u32,
+}
+
+/// Maps to `DataApi.items()`: every ticket item, or with `numbers` only those (known tickets).
+#[tauri::command]
+pub async fn items(s: State<'_, VaultSession>, numbers: Option<Vec<String>>) -> Res<Vec<ItemView>> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .item_summaries(owner, numbers.as_deref())
+        .await?
+        .into_iter()
+        .map(|i| ItemView {
+            id: i.id.to_string(),
+            number: i.number,
+            title: i.title,
+            done: i.done,
+            note: i.note,
+            project_id: i.project,
+            recurring_id: i.recurring,
+            first: i.so_far.map(|f| format_date(f.first)),
+            last: i.so_far.map(|f| format_date(f.last)),
+            minutes: i.so_far.map_or(0, |f| f.minutes.get()),
+        })
+        .collect())
 }
 
 /// Maps to `DataApi.parseCapture()`: what a capture line means, for the live chips.
@@ -658,7 +754,7 @@ pub async fn capture_log(
     let capture = capture_with(&text, date_arg(&today)?, start, &projects, &repeating);
     let minutes = capture.minutes.ok_or(CommandError::InvalidInput)?;
     let rec = store
-        .quick_log(owner, capture.date, &capture, minutes)
+        .quick_log(owner, capture.date, &capture, minutes, None)
         .await?;
     one_entry(&store, owner, rec).await
 }
