@@ -2,6 +2,37 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 26 Oct 2026 (work that keeps coming back)
+Card `r15-repeating` (`tools/signoff/rounds/r15-repeating.json`, mockups
+`mocks/r16-repeating.html`); the owner asked where certificate renewals belong ("would that be
+a project?") and approved all three, with the recommended picks.
+- **Repeating things hold work** ("Build it"): a repeating thing is a peer of projects. Entries,
+  Log work (`#name`), entry details, the Tickets tray and a ticket's item can count time under
+  it; tray tickets roll up per project or repeating thing. Logging work against it doesn't mark
+  it done.
+- **Codes** ("On the thing and its kind"): a repeating thing can have its own timesheet code,
+  and a kind of repeating thing gets a line under Customize → Timesheet → Default codes. Order:
+  entry → project or repeating thing → its kind → category → Tickets → Unassigned.
+- **Start renewal and past renewals** ("Build it"): Due soon has Start renewal (Log work opens
+  filed under the thing) and Renewed…; Renewed… keeps the new expiry date, and the Repeating view
+  lists past renewals with their tickets, time and renewed-to date.
+
+## Round 15 — 26 Oct 2026 (one record per ticket, task or chore: the mockups)
+Card `r15-things` (`tools/signoff/rounds/r15-items.json`, mockups `mocks/r15-items.html`),
+approved.
+- **Bell** ("Good"): each item once, with Open, Tomorrow and Done; a ticket shown to follow up
+  isn't counted again under still open.
+- **Menu** ("Good"): one **Follow up** on every menu, the item slide-out and a pin's chip
+  (Later today, next work day, In 3 days, Next week, Pick a day, No follow-up). A pin's chase day
+  and "Bring up tomorrow" are the same follow-up day now.
+- **Log work** ("Ask me, as shown"): typing the title of earlier work asks once "Add to …?";
+  work already logged that day joins without asking. A known ticket shows its time so far,
+  project and notepad, in Log work and the tray.
+- **Items view** ("Good, add it as a view"): Open / Follow up / Done, by project and kind, with
+  find; it takes over the Done tickets board.
+- **Desk cards for tasks and chores** ("Good"): needs Tasks (roadmap M4) first; asked in the
+  thread whether to build Tasks now or as its own step.
+
 ## Round 15 — 26 Oct 2026 (a timesheet code for tickets)
 Card `r15-codes` (`tools/signoff/rounds/r15-codes.json`, mockups `mocks/r16-codes.html`); the
 owner asked "why can't I have a default code for tickets?" and ticked all three. They asked

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeating work mockups</title>
+<!-- Mockups: repeating things hold work like projects do. States via window.SB_START or the
+     hash: #hold, #codes, #renew. Made for 1200 x 640. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --paper-2: #f6f3ec; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --warn: #9f5a06; --warn-wash: #fcf1df; --rep: #7a4fa8;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+    --mono: Consolas, 'DejaVu Sans Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); padding: 18px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px; }
+  .tag.new { color: var(--accent); }
+  .why { color: var(--mut); font-size: 12.5px; margin: 10px 2px 0; max-width: 540px; }
+  .paper { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; }
+  h3 { margin: 0 0 2px; font: 700 17px var(--display); }
+  .sub { color: var(--mut); font-size: 12.5px; margin: 0 0 10px; }
+  .lbl { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .field { margin-top: 12px; }
+  .field .v { margin-top: 5px; font-size: 14px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+  .pill { border: 1px solid var(--rule); border-radius: 99px; padding: 3px 11px; font-size: 13px; background: #fff; display: inline-flex; align-items: center; gap: 6px; }
+  .pill i { width: 9px; height: 9px; border-radius: 50%; background: var(--c, #9aa3ad); display: inline-block; }
+  .pill.on { border-color: var(--c, var(--accent)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--accent)) 30%, transparent); font-weight: 600; }
+  .pill.rep { --c: var(--rep); }
+  .pill.rep::before { content: '⟳'; color: var(--rep); font-weight: 700; }
+  .grp { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); margin: 8px 0 0; }
+  .grp.new { color: var(--rep); }
+  .chip { font: 600 11.5px var(--mono); background: #e4e9f6; color: #2c3f78; border-radius: 10px; padding: 1px 8px; }
+  .btn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.rep { background: var(--rep); border-color: var(--rep); color: #fff; }
+  .sel { display: flex; justify-content: space-between; gap: 10px; font: 13px var(--ui); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 9px; background: #fff; }
+  .sel.hi { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61, 91, 176, .15); }
+  .note { font-size: 12px; color: var(--mut); }
+  .row { display: grid; grid-template-columns: 170px 1fr; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); }
+  .row:first-of-type { border-top: 0; }
+  .newrow { background: #f4effa; border-radius: 8px; padding: 6px 8px; margin: 4px -8px 0; border-top: 0; }
+  .cap { background: var(--paper-2); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-top: 8px; }
+  .cap b.rep { color: var(--rep); }
+  .form { display: grid; grid-template-columns: 110px 1fr; gap: 9px 10px; align-items: center; margin-top: 10px; font-size: 13px; }
+  .form .in { border: 1px solid var(--rule); border-radius: 8px; padding: 6px 9px; background: #fff; }
+  .seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; font-size: 12.5px; }
+  .seg span { padding: 4px 9px; }
+  .seg span.on { background: var(--ink); color: #fff; }
+  .hl { background: #f4effa; border-radius: 8px; padding: 4px 6px; margin: -4px -6px; }
+  .due li { list-style: none; display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); }
+  .due ul { margin: 6px 0 0; padding: 0; }
+  .due li:first-child { border-top: 0; }
+  .due small { display: block; color: var(--warn); font-size: 12px; }
+  .acts { display: flex; gap: 6px; }
+  .hist { margin-top: 10px; font-size: 12.5px; }
+  .hist div { display: grid; grid-template-columns: 90px 1fr 50px; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rule); }
+  .hist .mono { font-family: var(--mono); }
+</style>
+</head>
+<body>
+
+<!-- 1. Repeating things hold work -->
+<section class="state" id="hold">
+  <div class="pair">
+    <div>
+      <p class="tag">Now</p>
+      <div class="paper">
+        <span class="lbl">Entry details · Monday 26 October</span>
+        <div class="field"><span class="lbl">What</span><div class="v">Renewed the www.example.com certificate</div></div>
+        <div class="field"><span class="lbl">Project</span>
+          <div class="pills">
+            <span class="pill" style="--c:#3d5bb0"><i></i>Network refresh</span>
+            <span class="pill" style="--c:#2e8a5a"><i></i>Admin</span>
+            <span class="pill on" style="--c:#c0731b"><i></i>Certificate renewals</span>
+            <span class="pill"><i></i>No project</span>
+          </div>
+        </div>
+        <div class="field"><span class="lbl">Tickets</span><div class="v"><span class="chip">RITM0034567</span></div></div>
+      </div>
+      <p class="why">Today a renewal can only go under a project. A project is meant to finish one day, and this work never does. The certificate's own reminder, over in Repeating, never finds out it was renewed or how long it took.</p>
+    </div>
+    <div>
+      <p class="tag new">Repeating things hold work too</p>
+      <div class="paper">
+        <span class="lbl">Entry details · Monday 26 October</span>
+        <div class="field"><span class="lbl">What</span><div class="v">Renewed the www.example.com certificate</div></div>
+        <div class="field"><span class="lbl">Belongs to</span>
+          <p class="grp">Projects</p>
+          <div class="pills">
+            <span class="pill" style="--c:#3d5bb0"><i></i>Network refresh</span>
+            <span class="pill" style="--c:#2e8a5a"><i></i>Admin</span>
+            <span class="pill"><i></i>No project</span>
+          </div>
+          <p class="grp new">Repeating</p>
+          <div class="pills">
+            <span class="pill rep on">www.example.com certificate</span>
+            <span class="pill rep">mail.example.com certificate</span>
+            <span class="pill rep">Monthly patching</span>
+          </div>
+        </div>
+        <div class="field"><span class="lbl">Tickets</span><div class="v"><span class="chip">RITM0034567</span></div></div>
+        <div class="cap">Log work and the Tickets tray offer the same: <span class="mono">Renew cert RITM0034567 #www</span> → goes to <b class="rep">⟳ www.example.com certificate</b></div>
+      </div>
+      <p class="why">Next to the projects, the same picker lists your repeating things. Time and tickets filed under one count toward it, the same way they would for a project. Projects are for work that finishes; repeating things are for work that keeps coming back.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Codes on repeating things -->
+<section class="state" id="codes">
+  <div class="pair">
+    <div>
+      <p class="tag new">A code on the kind, so new ones get it</p>
+      <div class="paper">
+        <h3>Default codes</h3>
+        <p class="sub">An entry without its own code, and whose project or repeating thing has none, gets one of these.</p>
+        <div class="row"><span><b>Tickets</b><br><span class="note">from the Tickets tray</span></span><span class="sel">Operations › 1 - Support <span>▾</span></span></div>
+        <p class="grp new" style="margin-top:10px">Kinds of repeating thing</p>
+        <div class="row newrow"><span>Certificates</span><span class="sel hi">Operations › 2 - Maintenance <span>▾</span></span></div>
+        <div class="row newrow"><span>Patching</span><span class="sel">Operations › 2 - Maintenance <span>▾</span></span></div>
+        <p class="grp" style="margin-top:10px">Categories</p>
+        <div class="row"><span>Support</span><span class="sel">Operations › 1 - Support <span>▾</span></span></div>
+        <div class="row"><span>Meetings</span><span class="sel">Operations › 3 - Meetings <span>▾</span></span></div>
+      </div>
+      <p class="why">Give the kind (Certificates) a code once, and every certificate you add later gets it. The order is: the entry's own code → its project or repeating thing → that thing's kind → its category → Tickets → Unassigned.</p>
+    </div>
+    <div>
+      <p class="tag new">Or a code on one thing</p>
+      <div class="paper">
+        <h3>Change it</h3>
+        <div class="form">
+          <span>What is it?</span><span class="in">www.example.com certificate</span>
+          <span>It…</span><span class="seg"><span>repeats</span><span class="on">expires on a date</span></span>
+          <span>Expires on</span><span class="in">16 November 2026</span>
+          <span>Warn me</span><span class="seg"><span>1 week</span><span class="on">1 month</span><span>3 months</span></span>
+          <span>Kind</span><span class="in">Certificates</span>
+          <span>Timesheet code</span>
+          <span class="hl"><span class="sel hi">Use the Certificates code (Operations › 2 - Maintenance) <span>▾</span></span></span>
+        </div>
+      </div>
+      <p class="why">Each repeating thing gets the same picker as an entry. Leave it on the kind's code, or pick a different one for just this thing.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Start the renewal from the reminder -->
+<section class="state" id="renew">
+  <div class="pair">
+    <div>
+      <p class="tag new">Due soon on the Desk</p>
+      <div class="paper due">
+        <h3>⟳ Due soon</h3>
+        <ul>
+          <li><span><b>www.example.com certificate</b><small>expires in 21 days</small></span>
+            <span class="acts"><span class="btn rep">Start renewal</span><span class="btn">Renewed…</span></span></li>
+          <li><span><b>Monthly patching</b><small>due Thursday</small></span>
+            <span class="acts"><span class="btn">✓ Done</span></span></li>
+        </ul>
+      </div>
+      <div class="paper" style="margin-top:14px">
+        <span class="lbl">Log work · opened by Start renewal</span>
+        <div class="cap" style="background:#fff;border:1px solid var(--accent)">Renew www.example.com certificate <span class="chip">RITM0034567</span> <span class="note">1h</span></div>
+        <div class="cap">goes to <b class="rep">⟳ www.example.com certificate</b> · code Operations › 2 - Maintenance</div>
+      </div>
+      <p class="why"><b>Start renewal</b> opens Log work already filed under the certificate. You paste the request number and add your time, like any other work.</p>
+    </div>
+    <div>
+      <p class="tag new">The repeating thing remembers each renewal</p>
+      <div class="paper">
+        <h3>www.example.com certificate</h3>
+        <p class="sub">Certificates · expires 16 Nov 2026 · warns 1 month ahead</p>
+        <span class="btn primary">Renewed… put in the new expiry date</span>
+        <div class="hist">
+          <span class="lbl">Past renewals</span>
+          <div><span>26 Oct 2026</span><span><span class="chip">RITM0034567</span> in progress</span><span class="mono">1.5 h</span></div>
+          <div><span>3 Nov 2025</span><span><span class="chip">RITM0021190</span> renewed to 16 Nov 2026</span><span class="mono">2 h</span></div>
+          <div><span>28 Oct 2024</span><span><span class="chip">RITM0009874</span> renewed to 18 Nov 2025</span><span class="mono">1 h</span></div>
+        </div>
+      </div>
+      <p class="why">When you say it's renewed, it asks for the new expiry date as it does now. The history then keeps each year's ticket and time, so next year you can see what you did last time.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'hold');
+  (document.getElementById(pick) || document.getElementById('hold')).classList.add('on');
+</script>
+</body>
+</html>
