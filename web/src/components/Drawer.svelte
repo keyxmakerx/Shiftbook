@@ -35,6 +35,22 @@
   let shown = $state(0);
   let shownFrom = 0;
   let titleEl: HTMLInputElement | undefined = $state();
+  // "✓ Saved" shows for a moment after the name changes (round 15).
+  let nameSaved = $state(false);
+  let nameSavedTimer: ReturnType<typeof setTimeout> | undefined;
+
+  async function saveName() {
+    const e = entry;
+    if (!e || title === e.description) return;
+    if (!title.trim()) {
+      title = e.description;
+      return;
+    }
+    if (!(await save({ description: title.trim() }))) return;
+    nameSaved = true;
+    clearTimeout(nameSavedTimer);
+    nameSavedTimer = setTimeout(() => (nameSaved = false), 2000);
+  }
 
   $effect(() => {
     const e = entry;
@@ -121,13 +137,14 @@
     };
   }
 
-  async function save(change: Partial<EntryInput>) {
+  async function save(change: Partial<EntryInput>): Promise<boolean> {
     const e = entry;
-    if (!e) return;
+    if (!e) return false;
     const updated = await attempt(() => api.updateEntry(e.id, inputOf(e, change)));
-    if (!updated) return;
+    if (!updated) return false;
     putEntry(updated);
     void refresh();
+    return true;
   }
 
   async function step(delta: number) {
@@ -200,15 +217,19 @@
       <span class="lbl rise" style:--i={0}>{longDay(entry.date)}{entry.isTray ? ' · from the Tickets tray' : ''}</span>
 
       <div class="field rise" style:--i={1}>
-        <label class="lbl" for="dr-title">What</label>
-        <input
-          id="dr-title"
-          class="text-in"
-          bind:this={titleEl}
-          bind:value={title}
-          onblur={() => title !== entry.description && save({ description: title })}
-          onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
-        />
+        <label class="lbl" for="dr-title">Name</label>
+        <div class="namerow">
+          <input
+            id="dr-title"
+            class="text-in"
+            bind:this={titleEl}
+            bind:value={title}
+            onblur={() => void saveName()}
+            onkeydown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+          />
+          <button class="pen" type="button" aria-label="Rename" title="Rename" onclick={() => titleEl?.select()}>✎</button>
+        </div>
+        {#if nameSaved}<p class="saved" role="status">✓ Saved</p>{/if}
       </div>
 
       <div class="field rise" style:--i={2}>
@@ -384,6 +405,40 @@
 </aside>
 
 <style>
+  .namerow {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .namerow input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .pen {
+    flex: none;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 14px;
+    color: var(--mut);
+    cursor: pointer;
+  }
+
+  .pen:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .saved {
+    margin: 4px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ok);
+  }
+
   .dscrim {
     position: fixed;
     inset: 0;

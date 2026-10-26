@@ -14,6 +14,7 @@ import { toast } from './toast.svelte';
 import { repeating } from './repeating.svelte';
 import { fmtMinutes } from './format';
 import { startTimer, stopTimer, timer } from './timer.svelte';
+import { startRename } from './rename.svelte';
 
 /** The entry as an update with these changes (the project, so far). */
 export function input(e: Entry, changes: Partial<{ projectId: string | null; recurringId: string | null }>) {
@@ -136,6 +137,7 @@ export function entryMenu(entry: Entry): MenuSpec {
   const project = projectById(entry.projectId);
   const timing = timer.running && timer.target?.entryId === entry.id;
   const main: MenuItem[] = [
+    { label: 'Rename', icon: 'edit', side: true, hint: 'F2', act: () => startRename(entry.id) },
     { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
     { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
     { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },

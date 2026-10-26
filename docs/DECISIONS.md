@@ -2,6 +2,16 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 26 Oct 2026 (changing an entry's name)
+Card `r15-rename` (`tools/signoff/rounds/r15-rename.json`, mockups `mocks/r16-rename.html`),
+both parts approved:
+- **Rename on the entry:** a ✎ appears when you point at an entry on Day or an entry card on the
+  Desk; F2 or **Rename** (first in its right-click menu) does the same. The name becomes a box:
+  Enter or clicking away saves, Esc cancels, and a note offers Undo. Where the entry isn't shown
+  as a row or card (in a pile), Rename opens its details instead.
+- **In the details:** the "What" box is now **Name**, with a ✎, and shows **✓ Saved** for a
+  moment after a change. A blank name puts the old one back.
+
 ## Round 15 — 26 Oct 2026 (work that keeps coming back)
 Card `r15-repeating` (`tools/signoff/rounds/r15-repeating.json`, mockups
 `mocks/r16-repeating.html`); the owner asked where certificate renewals belong ("would that be

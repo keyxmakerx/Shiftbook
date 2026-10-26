@@ -14,7 +14,9 @@
   import { hasWork } from '../lib/words';
   import { toast } from '../lib/toast.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
+  import { renaming, startRename } from '../lib/rename.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import RenameBox from './RenameBox.svelte';
   import TicketChip from './TicketChip.svelte';
 
   let { entry, index = 0 }: { entry: Entry; index?: number } = $props();
@@ -161,7 +163,10 @@
   onkeydown={(e) => {
     if (e.target !== row) return;
     if (e.key === 'Enter') app.drawer = entry.id;
-    else if (e.key === ' ') {
+    else if (e.key === 'F2') {
+      e.preventDefault();
+      startRename(entry.id);
+    } else if (e.key === ' ') {
       e.preventDefault();
       togglePanel(key);
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -180,7 +185,20 @@
     <span class="h">{entry.hours}</span>
   {/if}
   <span class="t">
-    <b>{entry.description || 'Untitled'}</b>
+    {#if renaming.id === entry.id}
+      <RenameBox {entry} />
+    {:else}
+      <span class="name">
+        <b>{entry.description || 'Untitled'}</b>
+        <button
+          type="button"
+          class="pen"
+          title="Rename (F2)"
+          aria-label="Rename"
+          onclick={(e) => { e.stopPropagation(); startRename(entry.id); }}
+        >✎</button>
+      </span>
+    {/if}
     <small>
       {project?.name ?? (hasWork(app.prefs?.useMode) ? 'No project' : 'Done')}{#if entry.isTray}{` · from the ${words().tickets} tray`}{/if}{#if entry.notes}{` · ✎ ${firstLine(entry.notes)}`}{/if}
     </small>
@@ -220,6 +238,47 @@
 {/if}
 
 <style>
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .name b {
+    min-width: 0;
+  }
+
+  .pen {
+    flex: none;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 0 6px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--mut);
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .row:hover .pen,
+  .row:focus-within .pen,
+  .pen:focus-visible {
+    opacity: 1;
+  }
+
+  .pen:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (hover: none) {
+    .pen {
+      display: none;
+    }
+  }
+
   .swipe {
     position: relative;
   }
