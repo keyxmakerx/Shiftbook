@@ -193,6 +193,18 @@ export interface RecurringInput {
   codeId: string | null;
 }
 
+/** One past round of a repeating thing: a renewal, or the work in progress. */
+export interface PastTime {
+  /** When it was done, or for the round in progress, the last day worked on it. */
+  date: IsoDate;
+  /** False for the round still in progress. */
+  done: boolean;
+  minutes: number;
+  tickets: string[];
+  /** The new expiry date, when the round ended with Renewed…. */
+  renewedTo: IsoDate | null;
+}
+
 /** What Mark done did, for Undo. */
 export interface MarkedDone {
   entryId: string;
@@ -1251,6 +1263,8 @@ export interface DataApi {
   recurringDone(id: string, date: IsoDate): Promise<MarkedDone>;
   /** It was renewed on `date` and now runs to `expires`. Tauri: `recurring_renewed`. */
   recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone>;
+  /** Its past renewals (or past times), newest first. Tauri: `recurring_history`. */
+  recurringHistory(id: string): Promise<PastTime[]>;
   /** Take back a Mark done. Tauri: `recurring_undo`. */
   recurringUndo(marked: MarkedDone): Promise<void>;
   setRecurringDeleted(id: string, deleted: boolean): Promise<void>;

@@ -6,6 +6,9 @@
 ALTER TABLE ticket_tray ADD COLUMN recurring_id TEXT REFERENCES recurring_tasks (id);
 ALTER TABLE items ADD COLUMN recurring_id TEXT REFERENCES recurring_tasks (id);
 
+-- The new expiry date a Done entry renewed a thing to (Renewed…), for its past renewals.
+ALTER TABLE time_entries ADD COLUMN renewed_to TEXT;
+
 CREATE TABLE kind_code_defaults (
     id                TEXT PRIMARY KEY NOT NULL,
     owner_id          TEXT NOT NULL REFERENCES users (id),

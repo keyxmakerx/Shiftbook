@@ -137,6 +137,7 @@ fn main() {
             "recurring_save",
             "recurring_done",
             "recurring_renewed",
+            "recurring_history",
             "recurring_undo",
             "recurring_set_deleted",
             "recurring_choices",

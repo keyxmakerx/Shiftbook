@@ -315,10 +315,106 @@ pub fn due_words(days_left: i64) -> String {
     }
 }
 
+/// One round of a repeating thing: the work up to and including a Done (a renewal, a
+/// service), or the work since the last Done that isn't finished yet.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PastTime {
+    /// When it was done, or for the round in progress, the last day worked on it.
+    #[serde(with = "crate::dates::iso_date")]
+    pub date: Date,
+    /// False for the round still in progress.
+    pub done: bool,
+    /// Minutes logged in the round.
+    pub minutes: Minutes,
+    /// Ticket numbers worked in the round, first seen first, each once.
+    pub tickets: Vec<String>,
+    /// The new expiry date, when the round ended with Renewed….
+    #[serde(with = "crate::dates::iso_date::option")]
+    pub renewed_to: Option<Date>,
+}
+
+/// Each round of `task`, newest first. `entries` pairs every entry with the expiry date it
+/// renewed to (if any); `tickets` are (date, ticket number) pairs worked on the thing. A
+/// round runs from the day after one Done up to and including the next; work after the
+/// last Done is the round in progress, shown only when there is some.
+pub fn past_times(
+    task: RecurringTaskId,
+    entries: &[(TimeEntry, Option<Date>)],
+    tickets: &[(Date, String)],
+) -> Vec<PastTime> {
+    let mine: Vec<&(TimeEntry, Option<Date>)> = entries
+        .iter()
+        .filter(|(e, _)| e.is_live() && e.target == EntryTarget::Recurring(task))
+        .collect();
+    let mut ends: Vec<(Date, Option<Date>)> = mine
+        .iter()
+        .filter(|(e, _)| is_done(e.status.as_deref()))
+        .map(|(e, to)| (e.date, *to))
+        .collect();
+    ends.sort();
+    // One round per Done day; a renewal on that day wins over a plain Done.
+    let mut rounds: Vec<PastTime> = Vec::new();
+    for (date, to) in ends {
+        match rounds.last_mut() {
+            Some(last) if last.date == date => last.renewed_to = last.renewed_to.or(to),
+            _ => rounds.push(PastTime {
+                date,
+                done: true,
+                minutes: Minutes(0),
+                tickets: Vec::new(),
+                renewed_to: to,
+            }),
+        }
+    }
+    let mut open = PastTime {
+        date: Date::MIN,
+        done: false,
+        minutes: Minutes(0),
+        tickets: Vec::new(),
+        renewed_to: None,
+    };
+    let mut open_used = false;
+    let done_days: Vec<Date> = rounds.iter().map(|r| r.date).collect();
+    let index = |d: Date| done_days.iter().position(|end| d <= *end);
+    let mut sorted_entries = mine.clone();
+    sorted_entries.sort_by_key(|(e, _)| e.date);
+    let mut sorted_tickets: Vec<&(Date, String)> = tickets.iter().collect();
+    sorted_tickets.sort_by_key(|(d, _)| *d);
+    for (e, _) in sorted_entries {
+        match index(e.date) {
+            Some(i) => rounds[i].minutes = rounds[i].minutes + e.minutes,
+            None => {
+                open.minutes = open.minutes + e.minutes;
+                open.date = open.date.max(e.date);
+                open_used = true;
+            }
+        }
+    }
+    for (d, number) in sorted_tickets {
+        let round = match index(*d) {
+            Some(i) => &mut rounds[i],
+            None => {
+                open.date = open.date.max(*d);
+                open_used = true;
+                &mut open
+            }
+        };
+        if !round.tickets.iter().any(|t| t.eq_ignore_ascii_case(number)) {
+            round.tickets.push(number.clone());
+        }
+    }
+    if open_used {
+        rounds.push(open);
+    }
+    rounds.reverse();
+    rounds
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::ids::{FrequencyId, OwnerId, ProjectId, TimeEntryId};
+    use crate::model::STATUS_DONE;
     use time::macros::{date, datetime};
     use RecurringState::*;
 
@@ -772,6 +868,82 @@ mod tests {
         assert_eq!(last_done(None, [d2, d1]), Some(d2));
         assert_eq!(last_done(Some(d2), [d1]), Some(d2));
         assert_eq!(last_done(Some(d1), [d2]), Some(d2));
+    }
+
+    #[test]
+    fn past_times_split_at_each_done() {
+        let t = task();
+        let other = task();
+        let on = |d: Date, m: u32, st: Option<&str>| entry(EntryTarget::Recurring(t.id), d, m, st);
+        let entries = vec![
+            (on(date!(2024 - 10 - 20), 30, None), None),
+            (
+                on(date!(2024 - 10 - 28), 30, Some(STATUS_DONE)),
+                Some(date!(2025 - 11 - 18)),
+            ),
+            (on(date!(2025 - 11 - 03), 120, None), None),
+            (
+                on(date!(2025 - 11 - 03), 0, Some(STATUS_DONE)),
+                Some(date!(2026 - 11 - 16)),
+            ),
+            // A plain Done the same day doesn't make a second round.
+            (on(date!(2025 - 11 - 03), 0, Some(STATUS_DONE)), None),
+            (on(date!(2026 - 10 - 26), 90, None), None),
+            (
+                entry(
+                    EntryTarget::Recurring(other.id),
+                    date!(2026 - 10 - 26),
+                    60,
+                    None,
+                ),
+                None,
+            ),
+        ];
+        let tickets = vec![
+            (date!(2024 - 10 - 20), "RITM0009874".to_string()),
+            (date!(2024 - 10 - 28), "ritm0009874".to_string()),
+            (date!(2025 - 11 - 01), "RITM0021190".to_string()),
+            (date!(2026 - 10 - 26), "RITM0034567".to_string()),
+        ];
+        let rounds = past_times(t.id, &entries, &tickets);
+        type Shape<'a> = (Date, bool, u32, Vec<&'a str>, Option<Date>);
+        let shape: Vec<Shape> = rounds
+            .iter()
+            .map(|r| {
+                (
+                    r.date,
+                    r.done,
+                    r.minutes.get(),
+                    r.tickets.iter().map(String::as_str).collect(),
+                    r.renewed_to,
+                )
+            })
+            .collect();
+        assert_eq!(
+            shape,
+            vec![
+                (date!(2026 - 10 - 26), false, 90, vec!["RITM0034567"], None),
+                (
+                    date!(2025 - 11 - 03),
+                    true,
+                    120,
+                    vec!["RITM0021190"],
+                    Some(date!(2026 - 11 - 16))
+                ),
+                (
+                    date!(2024 - 10 - 28),
+                    true,
+                    60,
+                    vec!["RITM0009874"],
+                    Some(date!(2025 - 11 - 18))
+                ),
+            ]
+        );
+        // Nothing logged: no rounds. Nothing since the last Done: no round in progress.
+        assert!(past_times(other.id, &[], &[]).is_empty());
+        assert!(past_times(t.id, &entries[..5], &tickets[..3])
+            .iter()
+            .all(|r| r.done));
     }
 
     // ---- From records ----

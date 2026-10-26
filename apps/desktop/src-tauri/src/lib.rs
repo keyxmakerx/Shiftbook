@@ -738,6 +738,7 @@ pub fn run() {
             home::recurring_save,
             home::recurring_done,
             home::recurring_renewed,
+            home::recurring_history,
             home::recurring_undo,
             home::recurring_set_deleted,
             home::recurring_choices,

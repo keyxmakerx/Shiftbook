@@ -475,3 +475,55 @@ fn repeating_things_and_kinds_keep_codes() {
         assert!(s.list_kind_codes(me).await.unwrap().is_empty());
     });
 }
+
+#[test]
+fn renewals_are_remembered() {
+    let dir = TestDir::new("renewals");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mut cert = bins(None);
+        cert.name = "www.example.com certificate".into();
+        cert.expiration_date = Some(date!(2026 - 11 - 16));
+        let cert = s.create_recurring(me, &cert).await.unwrap();
+        let work = EntryInput {
+            date: DAY,
+            minutes: Minutes(90),
+            description: "Renew it".into(),
+            project: None,
+            recurring: Some(cert.id),
+            category: None,
+            next_step: None,
+            timesheet_code_id: None,
+        };
+        s.create_entry(me, &work, "RITM0034567").await.unwrap();
+        s.tray_add(me, DAY, "CHG0012345").await.unwrap();
+        let tray = s.tray_day(me, DAY).await.unwrap();
+        s.tray_set_recurring(me, tray.items[0].id, Some(cert.id))
+            .await
+            .unwrap();
+
+        let marked = s
+            .mark_recurring_renewed(me, cert.id, DAY, date!(2027 - 11 - 16))
+            .await
+            .unwrap();
+        assert!(!marked.created, "the day's own entry is marked Done");
+        let renewed = s.recurring_one(me, cert.id).await.unwrap();
+        assert_eq!(renewed.expiration_date, Some(date!(2027 - 11 - 16)));
+
+        let (entries, tickets) = s.recurring_history(me, cert.id).await.unwrap();
+        let renewed_to: Vec<_> = entries.iter().filter_map(|(_, to)| *to).collect();
+        assert_eq!(renewed_to, vec![date!(2027 - 11 - 16)]);
+        let mut numbers: Vec<&str> = tickets.iter().map(|(_, n)| n.as_str()).collect();
+        numbers.sort();
+        assert_eq!(numbers, ["CHG0012345", "RITM0034567"]);
+
+        // Undo takes the renewal off the entry too.
+        s.undo_recurring_done(me, marked).await.unwrap();
+        let (entries, _) = s.recurring_history(me, cert.id).await.unwrap();
+        assert!(entries.iter().all(|(_, to)| to.is_none()));
+        assert!(matches!(
+            s.recurring_history(other, cert.id).await,
+            Err(StorageError::NotFound)
+        ));
+    });
+}

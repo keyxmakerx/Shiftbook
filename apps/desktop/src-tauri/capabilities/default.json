@@ -140,6 +140,7 @@
     "allow-recurring-save",
     "allow-recurring-done",
     "allow-recurring-renewed",
+    "allow-recurring-history",
     "allow-recurring-undo",
     "allow-recurring-set-deleted",
     "allow-recurring-choices",

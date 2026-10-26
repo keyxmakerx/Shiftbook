@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   dayMonth,
+  dayMonthYear,
   daysBetween,
   fmtHours,
   fmtMinutes,
@@ -14,6 +15,10 @@ import {
 import { easeOut, motionScale, tweenAt } from './motion';
 
 describe('display formatting', () => {
+  it('writes dates in another year in full', () => {
+    expect(dayMonthYear('2025-11-03')).toBe('3 November 2025');
+  });
+
   it('formats hours like the app does', () => {
     const cases: [number, string][] = [
       [0, '0'],

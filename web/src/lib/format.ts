@@ -70,6 +70,11 @@ export function dayMonth(iso: string): string {
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
 
+/** "3 November 2025", for dates that can be in another year. */
+export function dayMonthYear(iso: string): string {
+  return `${dayMonth(iso)} ${fromIso(iso).getFullYear()}`;
+}
+
 /** Day of the month as a number. */
 export function dayOfMonth(iso: string): number {
   return fromIso(iso).getDate();

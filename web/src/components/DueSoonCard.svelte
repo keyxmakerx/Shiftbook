@@ -1,7 +1,8 @@
 <script lang="ts">
   // Due soon on the Desk (round 15): repeating things that are overdue, due soon or need a new
-  // expiry date, each with Done (or New date…) and Open. Hidden when nothing needs doing.
-  import { markDone, needsAttention, openRepeating, refreshRepeating, repeating } from '../lib/repeating.svelte';
+  // expiry date, each with Done (or New date…) and Open. Things that expire get Start renewal,
+  // which opens Log work filed under the thing, and Renewed…. Hidden when nothing needs doing.
+  import { markDone, needsAttention, openRepeating, refreshRepeating, repeating, startWork } from '../lib/repeating.svelte';
   import { app, setView } from '../lib/store.svelte';
   import Icon from './Icon.svelte';
 
@@ -27,6 +28,12 @@
           </span>
           {#if r.state === 'renewed'}
             <button type="button" class="btn" onclick={() => openRepeating(r.id, true)}>New date…</button>
+          {:else if r.expires}
+            <button type="button" class="btn rep" onclick={() => startWork(r)}>Start renewal</button>
+            <button type="button" class="btn" onclick={() => openRepeating(r.id, true)}>Renewed…</button>
+            <button type="button" class="ib" aria-label="Open {r.name}" title="Open" onclick={() => openRepeating(r.id)}>
+              <Icon name="open" size={14} />
+            </button>
           {:else}
             <button type="button" class="btn primary" onclick={() => void markDone(r.id, r.name)}>✓ Done</button>
             <button type="button" class="ib" aria-label="Open {r.name}" title="Open" onclick={() => openRepeating(r.id)}>
@@ -43,6 +50,11 @@
 {/if}
 
 <style>
+  .btn.rep {
+    color: var(--rep);
+    border-color: color-mix(in srgb, var(--rep) 45%, transparent);
+  }
+
   .due {
     padding: 12px 14px;
   }
@@ -63,6 +75,7 @@
 
   li {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     padding: 6px 0;

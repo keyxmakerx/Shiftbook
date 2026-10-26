@@ -5,7 +5,8 @@ import { api } from './api';
 import type { Recurring } from './api';
 import type { MenuChoice } from './menu.svelte';
 import { refreshBell } from './bell.svelte';
-import { app, attempt, refresh, setView } from './store.svelte';
+import { app, attempt, focusLog, refresh, setView } from './store.svelte';
+import { startLine } from './renewal';
 import { toast } from './toast.svelte';
 
 export const repeating = $state({
@@ -57,6 +58,11 @@ export async function markRenewed(id: string, name: string, expires: string): Pr
   await afterChange();
   toast(`${name}: renewed.`);
   return true;
+}
+
+/** Start renewal: open Log work with a line already filed under the thing. */
+export function startWork(r: Recurring): void {
+  focusLog(startLine(r.name, r.expires));
 }
 
 /** Go to the Repeating view with one thing open (and its Renewed box, for things that expire). */

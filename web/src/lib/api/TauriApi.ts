@@ -7,6 +7,7 @@ import type {
   AwayList,
   Frequency,
   MarkedDone,
+  PastTime,
   Recurring,
   RecurringInput,
   ShopList,
@@ -548,6 +549,9 @@ export class TauriApi implements DataApi {
   }
   recurringRenewed(id: string, expires: IsoDate, date: IsoDate): Promise<MarkedDone> {
     return call('recurring_renewed', { id, expires, date });
+  }
+  recurringHistory(id: string): Promise<PastTime[]> {
+    return call('recurring_history', { id });
   }
   recurringUndo(marked: MarkedDone): Promise<void> {
     return call('recurring_undo', { marked });

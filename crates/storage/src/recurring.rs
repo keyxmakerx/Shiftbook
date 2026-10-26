@@ -167,6 +167,82 @@ fn checked(owner: OwnerId, id: RecurringTaskId, input: &RecurringInput) -> Resul
     Ok(task)
 }
 
+/// Mark `task` done on `date` (see [`SqliteStore::mark_recurring_done`]), noting the expiry
+/// date it was renewed to, if any.
+async fn mark_done_in(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    task: &RecurringTask,
+    date: Date,
+    renewed_to: Option<Date>,
+) -> Result<MarkedDone> {
+    let id = task.id;
+    let existing: Option<String> = sqlx::query_scalar(
+        "SELECT id FROM time_entries WHERE owner_id = $1 AND target_type = 'recurring' \
+         AND target_id = $2 AND date = $3 AND deleted_at IS NULL ORDER BY id LIMIT 1",
+    )
+    .bind(owner.to_string())
+    .bind(id.to_string())
+    .bind(format_date(date))
+    .fetch_optional(&mut *conn)
+    .await?;
+    let marked = match existing {
+        Some(entry) => {
+            sqlx::query(
+                "UPDATE time_entries SET status = $1, updated_at = $2, \
+                 renewed_to = COALESCE($5, renewed_to) WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(STATUS_DONE)
+            .bind(now_text())
+            .bind(&entry)
+            .bind(owner.to_string())
+            .bind(renewed_to.map(format_date))
+            .execute(&mut *conn)
+            .await?;
+            MarkedDone {
+                entry_id: TimeEntryId::from_uuid(parse_uuid(&entry)?),
+                created: false,
+            }
+        }
+        None => {
+            let now = OffsetDateTime::now_utc();
+            let entry = TimeEntry {
+                id: TimeEntryId::new(),
+                owner_id: owner,
+                date,
+                minutes: Minutes(0),
+                target: EntryTarget::Recurring(id),
+                category: None,
+                description: task.name.clone(),
+                status: None,
+                priority: None,
+                next_step: None,
+                timesheet_code_id: None,
+                legacy_ticket_text: None,
+                created_at: now,
+                updated_at: now,
+                deleted_at: None,
+            };
+            insert_entry(&mut *conn, &entry, None, None).await?;
+            sqlx::query(
+                "UPDATE time_entries SET status = $1, renewed_to = $4 \
+                 WHERE id = $2 AND owner_id = $3",
+            )
+            .bind(STATUS_DONE)
+            .bind(entry.id.to_string())
+            .bind(owner.to_string())
+            .bind(renewed_to.map(format_date))
+            .execute(&mut *conn)
+            .await?;
+            MarkedDone {
+                entry_id: entry.id,
+                created: true,
+            }
+        }
+    };
+    Ok(marked)
+}
+
 impl SqliteStore {
     /// Every live repeating thing, by name.
     pub async fn recurring_all(&self, owner: OwnerId) -> Result<Vec<RecurringTask>> {
@@ -346,66 +422,81 @@ impl SqliteStore {
     ) -> Result<MarkedDone> {
         let mut tx = self.pool.begin().await?;
         let task = fetch_recurring(&mut tx, owner, id).await?;
-        let existing: Option<String> = sqlx::query_scalar(
-            "SELECT id FROM time_entries WHERE owner_id = $1 AND target_type = 'recurring' \
-             AND target_id = $2 AND date = $3 AND deleted_at IS NULL ORDER BY id LIMIT 1",
+        let marked = mark_done_in(&mut tx, owner, &task, date, None).await?;
+        tx.commit().await?;
+        Ok(marked)
+    }
+
+    /// Renewed…: move a thing that expires to its new expiry date and mark it done on
+    /// `date`, remembering the new date for its past renewals.
+    pub async fn mark_recurring_renewed(
+        &self,
+        owner: OwnerId,
+        id: RecurringTaskId,
+        date: Date,
+        expires: Date,
+    ) -> Result<MarkedDone> {
+        let mut tx = self.pool.begin().await?;
+        let task = fetch_recurring(&mut tx, owner, id).await?;
+        sqlx::query(
+            "UPDATE recurring_tasks SET expiration_date = $1, updated_at = $2 \
+             WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(format_date(expires))
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let marked = mark_done_in(&mut tx, owner, &task, date, Some(expires)).await?;
+        tx.commit().await?;
+        Ok(marked)
+    }
+
+    /// Everything its past rounds are made from (see
+    /// `shiftbook_core::recurring::past_times`): its live entries, each with the expiry
+    /// date it renewed to, and the (date, ticket number) of tickets on those entries (the
+    /// Tickets tray's roll-up entries carry their tickets too).
+    pub async fn recurring_history(
+        &self,
+        owner: OwnerId,
+        id: RecurringTaskId,
+    ) -> Result<(Vec<(TimeEntry, Option<Date>)>, Vec<(Date, String)>)> {
+        let mut conn = self.pool.acquire().await?;
+        fetch_recurring(&mut conn, owner, id).await?;
+        let rows = sqlx::query(concat!(
+            "SELECT ",
+            entry_columns!(),
+            ", renewed_to FROM time_entries WHERE owner_id = $1 AND target_type = 'recurring' \
+             AND target_id = $2 AND deleted_at IS NULL ORDER BY date, id"
+        ))
+        .bind(owner.to_string())
+        .bind(id.to_string())
+        .fetch_all(&mut *conn)
+        .await?;
+        let entries = rows
+            .iter()
+            .map(|r| {
+                let (entry, _) = entry_from_row(r)?;
+                let to: Option<String> = r.try_get("renewed_to")?;
+                Ok((entry, to.as_deref().map(parse_date).transpose()?))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        let numbers: Vec<(String, String)> = sqlx::query_as(
+            "SELECT e.date, t.ticket_number FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND e.target_type = 'recurring' \
+             AND e.target_id = $2 AND e.deleted_at IS NULL AND t.deleted_at IS NULL",
         )
         .bind(owner.to_string())
         .bind(id.to_string())
-        .bind(format_date(date))
-        .fetch_optional(&mut *tx)
+        .fetch_all(&mut *conn)
         .await?;
-        let marked = match existing {
-            Some(entry) => {
-                sqlx::query(
-                    "UPDATE time_entries SET status = $1, updated_at = $2 \
-                     WHERE id = $3 AND owner_id = $4",
-                )
-                .bind(STATUS_DONE)
-                .bind(now_text())
-                .bind(&entry)
-                .bind(owner.to_string())
-                .execute(&mut *tx)
-                .await?;
-                MarkedDone {
-                    entry_id: TimeEntryId::from_uuid(parse_uuid(&entry)?),
-                    created: false,
-                }
-            }
-            None => {
-                let now = OffsetDateTime::now_utc();
-                let entry = TimeEntry {
-                    id: TimeEntryId::new(),
-                    owner_id: owner,
-                    date,
-                    minutes: Minutes(0),
-                    target: EntryTarget::Recurring(id),
-                    category: None,
-                    description: task.name.clone(),
-                    status: None,
-                    priority: None,
-                    next_step: None,
-                    timesheet_code_id: None,
-                    legacy_ticket_text: None,
-                    created_at: now,
-                    updated_at: now,
-                    deleted_at: None,
-                };
-                insert_entry(&mut tx, &entry, None, None).await?;
-                sqlx::query("UPDATE time_entries SET status = $1 WHERE id = $2 AND owner_id = $3")
-                    .bind(STATUS_DONE)
-                    .bind(entry.id.to_string())
-                    .bind(owner.to_string())
-                    .execute(&mut *tx)
-                    .await?;
-                MarkedDone {
-                    entry_id: entry.id,
-                    created: true,
-                }
-            }
-        };
-        tx.commit().await?;
-        Ok(marked)
+        let tickets = numbers
+            .into_iter()
+            .map(|(d, n)| Ok((parse_date(&d)?, n)))
+            .collect::<Result<Vec<_>>>()?;
+        Ok((entries, tickets))
     }
 
     /// Undo [`Self::mark_recurring_done`].
@@ -415,7 +506,7 @@ impl SqliteStore {
             "UPDATE time_entries SET deleted_at = $1, updated_at = $1 \
              WHERE id = $2 AND owner_id = $3 AND target_type = 'recurring'"
         } else {
-            "UPDATE time_entries SET status = NULL, updated_at = $1 \
+            "UPDATE time_entries SET status = NULL, renewed_to = NULL, updated_at = $1 \
              WHERE id = $2 AND owner_id = $3 AND target_type = 'recurring'"
         };
         let done = sqlx::query(sql)

@@ -13,7 +13,8 @@ use shiftbook_core::ids::{
 use shiftbook_core::model::{Frequency, ListName};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::recurring::{
-    attention_order, due_words, last_done_for_next, summarize_recurring, Interval, RecurringState,
+    attention_order, due_words, last_done_for_next, past_times, summarize_recurring, Interval,
+    RecurringState,
 };
 use shiftbook_core::task::list_progress;
 use shiftbook_storage::lists::ListRecord;
@@ -259,8 +260,39 @@ pub async fn recurring_renewed(
     if expires <= date {
         return Err(CommandError::InvalidInput);
     }
-    store.set_recurring_expiry(owner, id, expires).await?;
-    Ok(store.mark_recurring_done(owner, id, date).await?.into())
+    Ok(store
+        .mark_recurring_renewed(owner, id, date, expires)
+        .await?
+        .into())
+}
+
+/// One past round of a repeating thing (see `shiftbook_core::recurring::past_times`).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PastTimeView {
+    date: String,
+    done: bool,
+    minutes: u32,
+    tickets: Vec<String>,
+    renewed_to: Option<String>,
+}
+
+/// Maps to `DataApi.recurringHistory()`: its past renewals (or past times), newest first.
+#[tauri::command]
+pub async fn recurring_history(s: State<'_, VaultSession>, id: String) -> Res<Vec<PastTimeView>> {
+    let (store, owner) = s.data().await?;
+    let id: RecurringTaskId = id_arg(&id)?;
+    let (entries, tickets) = store.recurring_history(owner, id).await?;
+    Ok(past_times(id, &entries, &tickets)
+        .into_iter()
+        .map(|p| PastTimeView {
+            date: format_date(p.date),
+            done: p.done,
+            minutes: p.minutes.get(),
+            tickets: p.tickets,
+            renewed_to: p.renewed_to.map(format_date),
+        })
+        .collect())
 }
 
 /// Maps to `DataApi.recurringUndo()`: take back a Mark done.
