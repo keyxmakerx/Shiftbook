@@ -1,18 +1,21 @@
 <script lang="ts">
   // Settings → Timesheet: your timesheet codes (area, phase, code, order, hide), which
-  // code each category gets, the comment format, the default grouping and the week start day.
+  // code each kind of repeating thing and each category gets, the comment format, the default grouping and the week start day.
   import { api } from '../../lib/api';
-  import type { CategoryCode, CodeInput, PrefKey, TimesheetCode, WeekStartDay } from '../../lib/api';
+  import type { CategoryCode, CodeInput, KindCode, PrefKey, TimesheetCode, WeekStartDay } from '../../lib/api';
   import { app, attempt, refreshRibbon } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
   import Icon from '../../components/Icon.svelte';
+  import CodeSelect from '../../components/CodeSelect.svelte';
 
   let categories = $state<CategoryCode[]>([]);
+  let kinds = $state<KindCode[]>([]);
   let draft = $state<CodeInput>({ area: '', phaseLabel: '', code: '', sortOrder: 0, hidden: false });
   let separator = $state(app.prefs?.comment.separator ?? '; ');
 
   $effect(() => {
     void attempt(() => api.categoryCodes()).then((c) => (categories = c ?? []));
+    void attempt(() => api.kindCodes()).then((k) => (kinds = k ?? []));
   });
 
   async function reloadCodes() {
@@ -41,6 +44,11 @@
   async function mapCategory(category: string, codeId: string | null) {
     await attempt(() => api.setCategoryCode(category, codeId));
     categories = (await attempt(() => api.categoryCodes())) ?? categories;
+  }
+
+  async function mapKind(kind: string, codeId: string | null) {
+    await attempt(() => api.setKindCode(kind, codeId));
+    kinds = (await attempt(() => api.kindCodes())) ?? kinds;
   }
 
   async function pref(key: PrefKey, value: string) {
@@ -110,24 +118,39 @@
 </article>
 
 <article class="paper cz-card">
-  <h3>Categories → codes</h3>
-  <p class="sub">An entry without its own code, and whose project has none, gets its category's code.</p>
+  <h3>Default codes</h3>
+  <p class="sub">An entry without its own code, and whose project or repeating thing has none, gets one of these.</p>
+  {#if app.prefs}
+    <div class="cz-row">
+      <span class="cz-grow"><strong>Tickets</strong> <span class="from">from the Tickets tray</span></span>
+      <CodeSelect
+        value={app.prefs.ticketsCode}
+        label="Code for tickets"
+        empty="Unassigned"
+        onchange={(id) => pref('timesheet.tickets_code', id ?? '')}
+      />
+    </div>
+  {/if}
+  {#if kinds.length > 0}
+    <p class="grp">Kinds of repeating thing</p>
+    {#each kinds as k (k.kind)}
+      <div class="cz-row">
+        <span class="cz-grow">{k.kind}</span>
+        <CodeSelect value={k.codeId} label="Code for {k.kind}" empty="Unassigned" onchange={(id) => mapKind(k.kind, id)} />
+      </div>
+    {/each}
+    <p class="grp">Categories</p>
+  {/if}
   {#each categories as cat (cat.category)}
     <div class="cz-row">
       <span class="cz-grow">{cat.category}</span>
-      <select
-        class="text-in"
-        value={cat.codeId ?? ''}
-        aria-label="Code for {cat.category}"
-        onchange={(e) => mapCategory(cat.category, (e.currentTarget as HTMLSelectElement).value || null)}
-      >
-        <option value="">Unassigned</option>
-        {#each app.codes.filter((c) => !c.hidden || c.id === cat.codeId) as c (c.id)}
-          <option value={c.id}>{c.area ? `${c.area} › ` : ''}{c.code}</option>
-        {/each}
-      </select>
+      <CodeSelect value={cat.codeId} label="Code for {cat.category}" empty="Unassigned" onchange={(id) => mapCategory(cat.category, id)} />
     </div>
   {/each}
+  <p class="sub">
+    The order is: the entry's own code, then its project or repeating thing, then that thing's kind, then its category,
+    then Tickets. Tickets with a project use the project's code.
+  </p>
 </article>
 
 {#if app.prefs}
@@ -189,6 +212,14 @@
 {/if}
 
 <style>
+  .grp {
+    margin: 12px 0 2px;
+    font: 700 10.5px var(--ui);
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
   .grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr) 70px 40px;
@@ -219,6 +250,11 @@
     height: 18px;
     justify-self: center;
     accent-color: var(--accent);
+  }
+
+  .from {
+    color: var(--mut);
+    font-size: 13px;
   }
 
   .sep-in {

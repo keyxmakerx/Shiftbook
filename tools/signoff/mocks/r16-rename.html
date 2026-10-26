@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 16 rename mockups</title>
+<!-- Round 16 mockups: changing an entry's name. Pick a state with window.SB_START or the hash:
+     #now, #inline, #details. Made for 1200 x 640. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --proj: #b0603d;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); padding: 18px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px; }
+  .tag.new { color: var(--accent); }
+  .why { color: var(--mut); font-size: 12.5px; margin: 10px 2px 0; max-width: 560px; }
+  .paper { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; }
+  .lbl { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .in { display: block; width: 100%; font: 15px var(--ui); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 10px; background: #fff; margin-top: 4px; }
+  .in.hi { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61, 91, 176, .15); }
+  .btn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .ring { outline: 3px dashed #c0392b; outline-offset: 3px; border-radius: 8px; }
+  .x { color: #c0392b; font-size: 12px; font-weight: 600; }
+
+  .drawer { width: 420px; }
+  .field { margin-top: 12px; }
+  .day { color: var(--mut); font-size: 12px; }
+  .big { font: 700 20px var(--display); }
+  .saved { color: var(--ok); font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .namerow { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .namerow .in { margin: 0; }
+
+  .rowx { display: grid; grid-template-columns: 6px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 10px; border-top: 1px solid var(--rule); }
+  .rowx:first-child { border-top: 0; }
+  .rowx .bar { width: 6px; height: 26px; border-radius: 3px; background: var(--proj); }
+  .rowx .hrs { font-weight: 700; }
+  .rowx.hover { background: #f4f1ea; border-radius: 8px; }
+  .pencil { border: 1px solid var(--rule); background: #fff; border-radius: 6px; padding: 1px 7px; font-size: 13px; }
+  .pencil.hi { border-color: var(--accent); color: var(--accent); }
+  .hint { font-size: 11.5px; color: var(--mut); margin-top: 3px; }
+  .menu { width: 260px; background: var(--paper); border-radius: 10px; box-shadow: var(--lift); padding: 5px; font-size: 13px; }
+  .menu div { padding: 6px 10px; border-radius: 6px; }
+  .menu div.hi { background: #e9edf7; font-weight: 600; }
+  .menu .head { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .menu .k { float: right; color: var(--mut); font-size: 12px; font-weight: 400; }
+</style>
+</head>
+<body>
+
+<!-- 1. Where it is today -->
+<section class="state" id="now">
+  <div class="pair">
+    <div>
+      <p class="tag">Today: open the details, then the "What" box</p>
+      <div class="paper drawer">
+        <div class="day">Monday 26 October</div>
+        <div class="field ring">
+          <span class="lbl">What</span>
+          <input class="in" value="Printer queue">
+        </div>
+        <div class="field"><span class="lbl">Hours</span><div class="big">1.5 h</div></div>
+        <div class="field"><span class="lbl">Project</span><div>Operations</div></div>
+      </div>
+    </div>
+    <div>
+      <p class="tag">Why it's easy to miss</p>
+      <div class="paper">
+        <p class="x">✕ Nothing on the entry itself says you can rename it.</p>
+        <p class="x">✕ The box is called "What", not "Name".</p>
+        <p class="x">✕ The right-click menu has no Rename.</p>
+        <p class="x">✕ It saves when you click away, and nothing says it saved.</p>
+      </div>
+    </div>
+  </div>
+  <p class="why">Today you double-click an entry (or right-click → Open details), then type in the <b>What</b> box at the top. It saves when you press Enter or click somewhere else.</p>
+</section>
+
+<!-- 2. Rename right on the entry -->
+<section class="state" id="inline">
+  <div class="pair">
+    <div>
+      <p class="tag new">Proposed: a pencil on the entry, and Rename in its menu</p>
+      <div class="paper">
+        <div class="rowx"><span class="bar"></span><span>Laptop imaging</span><span class="hrs">2 h</span><span></span></div>
+        <div class="rowx hover"><span class="bar"></span><span>Printer queue</span><span class="hrs">1.5 h</span><span class="pencil hi" title="Rename">✎</span></div>
+        <div class="rowx"><span class="bar"></span><span>Switch replacement</span><span class="hrs">3 h</span><span></span></div>
+      </div>
+      <p class="tag new" style="margin-top:16px">After clicking ✎ (or pressing F2)</p>
+      <div class="paper">
+        <div class="rowx"><span class="bar"></span>
+          <span><input class="in hi" value="Printer queue on floor 2" style="margin:0"><div class="hint">Enter to save · Esc to cancel</div></span>
+          <span class="hrs">1.5 h</span><span class="btn primary">Save</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="tag new">Right-click menu</p>
+      <div class="menu">
+        <div class="head">Printer queue</div>
+        <div class="hi">✎ Rename<span class="k">F2</span></div>
+        <div>Open details<span class="k">Enter</span></div>
+        <div>Write in the notepad</div>
+        <div>Follow up tomorrow</div>
+        <div>Add 15 minutes</div>
+      </div>
+      <p class="why">The same works on Day and on Desk cards. Afterwards a note says "Renamed to …" with <b>Undo</b>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Clearer in the details -->
+<section class="state" id="details">
+  <div class="pair">
+    <div>
+      <p class="tag">Today</p>
+      <div class="paper drawer">
+        <div class="day">Monday 26 October</div>
+        <div class="field"><span class="lbl">What</span><input class="in" value="Printer queue"></div>
+      </div>
+    </div>
+    <div>
+      <p class="tag new">Proposed</p>
+      <div class="paper drawer">
+        <div class="day">Monday 26 October</div>
+        <div class="field">
+          <span class="lbl">Name</span>
+          <div class="namerow"><input class="in hi" value="Printer queue on floor 2"><span class="pencil">✎</span></div>
+          <div class="saved">✓ Saved</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="why">The box is called <b>Name</b>, has a pencil so it looks editable, and shows <b>✓ Saved</b> for a moment after a change.</p>
+</section>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'now');
+  (document.getElementById(pick) || document.getElementById('now')).classList.add('on');
+</script>
+</body>
+</html>

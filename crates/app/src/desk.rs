@@ -856,6 +856,7 @@ mod tests {
                 note: None,
                 done: false,
                 project_id: None,
+                recurring_id: None,
                 created_at: datetime!(2026-10-22 09:00 UTC),
                 updated_at: datetime!(2026-10-22 09:00 UTC),
                 deleted_at: None,

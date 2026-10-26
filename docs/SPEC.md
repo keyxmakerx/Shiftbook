@@ -36,7 +36,16 @@ data: codes, categories and lists are the user's own.
 - On any entry, click **+ Ticket** → an input appears; paste and press Enter → becomes a chip.
 - Pasting multiple lines or comma-separated values creates multiple chips at once.
 - Chips are removable (×) and clickable to copy. Optional per-ticket note.
-- A Tickets page lists all tickets with date, project/task, entry and hours (searchable).
+- The **Items** view (round 15) lists every ticket once, however many days and entries it's on,
+  with its time so far, last day worked, project and follow-up day, plus the repeating chores:
+  Open / Follow up / Done, filtered by project and kind, with a find box. Ticking a ticket there
+  finishes it everywhere. It replaces the Done tickets board.
+- A pasted ticket Shiftbook has seen (Log work or the Tickets tray) shows since when it's been
+  worked, the time so far, its project and the first line of its notepad.
+- **Follow up** (round 15): any entry, ticket or note can be given one follow-up day (Later
+  today, the next work day, in 3 days, next week, or a picked day; No follow-up clears it). A
+  pin's chase day is the same day. The bell lists each thing to follow up once, with Open,
+  Tomorrow and Done, and a ticket shown there is not counted again as still open.
 
 ### 2.4 Tasks (task manager)
 - Fields: title, notes, project or recurring task (optional link), status, priority, due date,
@@ -59,6 +68,13 @@ data: codes, categories and lists are the user's own.
 - Items like "General - Tickets" or "Daily meeting" are **routine**: alerts disabled, they only
   collect hours (state = Ongoing). Spreadsheet trackers often show these as OVERDUE — import them with
   `alerts_enabled = false`.
+- **Repeating things hold work** (round 15): an entry, a Log work line (`#name`), a tray ticket
+  and a ticket's item can belong to a repeating thing instead of a project. Work logged against
+  it does not mark it done; Mark done / Renewed… still do. A repeating thing can have its own
+  timesheet code, and a **kind** (its type) can have one in Customize → Timesheet → Default codes.
+- Things that expire get **Start renewal** on the Desk's Due soon card: Log work opens with a line
+  already filed under the thing. **Renewed…** remembers the new expiry date, and the thing lists
+  its **past renewals** (each round's date, tickets, time and what it was renewed to).
 
 ### 2.7 Dashboard
 - Week selector (defaults to current week).
@@ -78,8 +94,11 @@ or imports them. The first-run tour shows a generic example.
 **How an entry gets its code** (first match wins; shown on the entry and changeable there):
 1. Code chosen on the entry itself (override).
 2. Default code on its **project** or **recurring task**.
-3. Default code for its **category** (mapping in Settings).
-4. Otherwise **Unassigned** — highlighted in amber in the Time Log and listed at the top of the
+3. For a recurring task, the default code of its **kind** (Customize → Timesheet → Default codes).
+4. Default code for its **category** (mapping in Settings).
+5. For a day's **Tickets** entry (rolled up from the Tickets tray): the **tickets code**
+   (Customize → Timesheet → Default codes).
+6. Otherwise **Unassigned** — highlighted in amber in the Time Log and listed at the top of the
    timesheet view so nothing is missed.
 
 **Category → code defaults:** none are shipped. The user maps categories to codes in Settings;
@@ -182,8 +201,13 @@ update existing rows in a transaction.
     days_left ≤ warn → `Due soon`; expiration set and last_done ≥ expiration − warn →
     `Renewed – update expiration date`; else `OK`.
 - **Tasks:** overdue = due_date < today and status ≠ Done.
-- **Timesheet code resolution:** entry override → project/recurring default → category default →
-  Unassigned (see §2.8). Timesheet totals = Σ minutes grouped by (resolved code, date).
+- **Same work** (Log work's "Add to …?"): words equal (ignoring case and spaces) to the title of
+  work in the last 60 days are that work; logged on the day already → the time follows it without
+  asking; only on earlier days → ask once, and "Add to it" files the time where it went.
+- **Past renewals:** a repeating thing's entries split into rounds, each ending at a Done day
+  (inclusive); work after the last Done is the round in progress.
+- **Timesheet code resolution:** entry override → project/recurring default → recurring kind
+  default → category default → tickets code (Tickets roll-up entries only) → Unassigned (see §2.8). Timesheet totals = Σ minutes grouped by (resolved code, date).
 - Port the Excel behaviour exactly where these rules came from; add tests for each state.
 
 ## 5. Non-functional

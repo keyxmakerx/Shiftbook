@@ -29,6 +29,8 @@ export const app = $state({
   today: toIso(new Date()),
   selected: toIso(new Date()),
   view: 'desk' as View,
+  /** Which part of the Items view shows (round 15). */
+  itemsTab: 'open' as 'open' | 'follow' | 'done',
   /** The view we came from, for the direction of the slide. */
   previousView: 'desk' as View,
   prefs: null as Prefs | null,
@@ -64,6 +66,8 @@ export const app = $state({
   settingsSection: 'look' as SettingsSection,
   /** The days "Bring up…" offers from today, the next work day first. */
   bringUpDays: [] as string[],
+  /** Each card's follow-up day, keyed `kind:id` (round 15). */
+  followUps: {} as Record<string, string>,
 });
 
 /** The time buttons everyone starts with (`shiftbook_core::prefs::DEFAULT_TIME_BUTTONS`). */

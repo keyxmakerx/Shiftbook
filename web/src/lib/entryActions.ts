@@ -11,16 +11,19 @@ import { openWindow } from './windows.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, putEntry, refresh, refreshProjects } from './store.svelte';
 import { toast } from './toast.svelte';
+import { repeating } from './repeating.svelte';
 import { fmtMinutes } from './format';
 import { startTimer, stopTimer, timer } from './timer.svelte';
+import { startRename } from './rename.svelte';
 
 /** The entry as an update with these changes (the project, so far). */
-export function input(e: Entry, changes: Partial<{ projectId: string | null }>) {
+export function input(e: Entry, changes: Partial<{ projectId: string | null; recurringId: string | null }>) {
   return {
     date: e.date,
     minutes: e.minutes,
     description: e.description,
     projectId: changes.projectId !== undefined ? changes.projectId : e.projectId,
+    recurringId: changes.recurringId !== undefined ? changes.recurringId : e.recurringId,
     category: e.category,
     notes: e.notes,
     timesheetCodeId: e.timesheetCodeId,
@@ -55,13 +58,26 @@ export async function addEntryTime(entry: Entry, minutes: number): Promise<void>
 
 /** Give the entry a project (null for none), with Undo. */
 export async function moveEntryTo(entry: Entry, projectId: string | null): Promise<void> {
-  const before = entry.projectId;
-  const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId })));
+  const before = { projectId: entry.projectId, recurringId: entry.recurringId };
+  const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId, recurringId: null })));
   if (!updated) return;
   putEntry(updated);
   void refresh();
   toast(`Moved to ${projectById(projectId)?.name ?? 'No project'}`, 'Undo', () => {
-    void attempt(() => api.updateEntry(updated.id, input(updated, { projectId: before }))).then(refresh);
+    void attempt(() => api.updateEntry(updated.id, input(updated, before))).then(refresh);
+  });
+}
+
+/** File an entry under a repeating thing (round 15): it leaves its project. */
+export async function moveEntryToRepeating(entry: Entry, recurringId: string): Promise<void> {
+  const before = { projectId: entry.projectId, recurringId: entry.recurringId };
+  const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId: null, recurringId })));
+  if (!updated) return;
+  putEntry(updated);
+  void refresh();
+  const name = repeating.items.find((r) => r.id === recurringId)?.name ?? 'the repeating thing';
+  toast(`Moved to ${name}`, 'Undo', () => {
+    void attempt(() => api.updateEntry(updated.id, input(updated, before))).then(refresh);
   });
 }
 
@@ -121,10 +137,11 @@ export function entryMenu(entry: Entry): MenuSpec {
   const project = projectById(entry.projectId);
   const timing = timer.running && timer.target?.entryId === entry.id;
   const main: MenuItem[] = [
+    { label: 'Rename', icon: 'edit', side: true, hint: 'F2', act: () => startRename(entry.id) },
     { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
     { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
     { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },
-    { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('entry', entry.id, entry.description) },
+    { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('entry', entry.id, entry.description) },
     pinMenuItem('entry', entry.id),
   ];
   if (!entry.isTray) {

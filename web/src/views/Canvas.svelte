@@ -870,7 +870,8 @@
   $effect(() => {
     if (!selected.size) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !drawn) {
+      // Esc in a box (renaming a card) belongs to the box.
+      if (e.key === 'Escape' && !drawn && !(e.target instanceof HTMLInputElement)) {
         e.stopPropagation();
         selected = new Set();
       }

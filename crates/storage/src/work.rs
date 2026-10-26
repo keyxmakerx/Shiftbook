@@ -9,10 +9,10 @@
 //! its title, project and notes stay editable.
 
 use shiftbook_core::capture::Capture;
-use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
+use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::error::CoreError;
 use shiftbook_core::ids::{
-    NoteId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId,
+    NoteId, OwnerId, ProjectId, RecurringTaskId, TicketId, TimeEntryId, TimesheetCodeId, TrayItemId,
 };
 use shiftbook_core::minutes::{Minutes, MAX_ENTRY_MINUTES};
 use shiftbook_core::model::{EntryTarget, Project, TargetType, Ticket, TimeEntry, TrayItem};
@@ -21,6 +21,7 @@ use shiftbook_core::prefs::next_project_color;
 use shiftbook_core::quicklog::{
     plan_add_time, plan_quick_log, AddTimePlan, DayEntry, PastUse, QuickLogPlan,
 };
+use shiftbook_core::samework::{same_work, same_work_target, SameWork, WorkLine, SAME_WORK_DAYS};
 use shiftbook_core::tickets::add_tickets;
 use shiftbook_core::tray::{
     carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
@@ -36,7 +37,7 @@ use uuid::Uuid;
 
 use crate::error::StorageError;
 use crate::items::{
-    item_for_number, set_item_done, set_item_note, set_item_project, ticket_item, tray_row_item,
+    item_for_number, set_item_done, set_item_home, set_item_note, ticket_item, tray_row_item,
 };
 use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, u32_from, Result};
 use crate::SqliteStore;
@@ -66,12 +67,25 @@ pub struct EntryInput {
     pub description: String,
     /// Project, or none.
     pub project: Option<ProjectId>,
+    /// The repeating thing it belongs to, when it has no project (round 15).
+    pub recurring: Option<RecurringTaskId>,
     /// Category list value.
     pub category: Option<String>,
     /// Notes / next step.
     pub next_step: Option<String>,
     /// Timesheet code override.
     pub timesheet_code_id: Option<TimesheetCodeId>,
+}
+
+impl EntryInput {
+    /// What the entry is logged against: its project, else its repeating thing.
+    pub fn target(&self) -> EntryTarget {
+        match (self.project, self.recurring) {
+            (Some(p), _) => EntryTarget::Project(p),
+            (None, Some(r)) => EntryTarget::Recurring(r),
+            (None, None) => EntryTarget::None,
+        }
+    }
 }
 
 /// The editable parts of a project.
@@ -201,7 +215,7 @@ fn ticket_from_row(row: &SqliteRow) -> Result<Ticket> {
 macro_rules! tray_columns {
     () => {
         "id, owner_id, date, ticket_number, minutes, note, done, project_id, created_at, \
-         updated_at, deleted_at"
+         updated_at, deleted_at, recurring_id"
     };
 }
 
@@ -215,6 +229,7 @@ fn tray_from_row(row: &SqliteRow) -> Result<TrayItem> {
         note: row.try_get("note")?,
         done: row.try_get("done")?,
         project_id: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
+        recurring_id: opt_uuid(row.try_get("recurring_id")?)?.map(RecurringTaskId::from_uuid),
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
         deleted_at: parse_opt_ts(row.try_get("deleted_at")?)?,
@@ -228,6 +243,26 @@ pub(crate) async fn project_exists(
 ) -> Result<()> {
     let n: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM projects WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+    )
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .fetch_one(&mut *conn)
+    .await?;
+    if n == 0 {
+        Err(StorageError::NotFound)
+    } else {
+        Ok(())
+    }
+}
+
+async fn recurring_exists(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: RecurringTaskId,
+) -> Result<()> {
+    let n: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM recurring_tasks WHERE id = $1 AND owner_id = $2 \
+         AND deleted_at IS NULL",
     )
     .bind(id.to_string())
     .bind(owner.to_string())
@@ -410,9 +445,7 @@ fn checked_entry(owner: OwnerId, input: &EntryInput) -> Result<TimeEntry> {
         owner_id: owner,
         date: input.date,
         minutes: input.minutes,
-        target: input
-            .project
-            .map_or(EntryTarget::None, EntryTarget::Project),
+        target: input.target(),
         category: clean_opt(&input.category),
         description: input.description.trim().to_string(),
         status: None,
@@ -438,8 +471,10 @@ async fn check_links(
     owner: OwnerId,
     input: &EntryInput,
 ) -> Result<()> {
-    if let Some(p) = input.project {
-        project_exists(conn, owner, p).await?;
+    match input.target() {
+        EntryTarget::Project(p) => project_exists(conn, owner, p).await?,
+        EntryTarget::Recurring(r) => recurring_exists(conn, owner, r).await?,
+        EntryTarget::None => {}
     }
     if let Some(c) = input.timesheet_code_id {
         code_exists(conn, owner, c).await?;
@@ -531,15 +566,45 @@ async fn tray_items(
     rows.iter().map(tray_from_row).collect()
 }
 
-/// The day's live roll-up entries, by the project they roll up (`None` = plain "Tickets").
+/// Where a tray ticket's minutes go: a project's or a repeating thing's roll-up, or the
+/// day's plain "Tickets" entry (`None`).
+pub(crate) type TrayHome = Option<EntryTarget>;
+
+fn tray_home(project: Option<ProjectId>, recurring: Option<RecurringTaskId>) -> TrayHome {
+    match (project, recurring) {
+        (Some(p), _) => Some(EntryTarget::Project(p)),
+        (None, Some(r)) => Some(EntryTarget::Recurring(r)),
+        (None, None) => None,
+    }
+}
+
+/// The home a roll-up entry holds tickets for: its `tray_project_id`, else the repeating
+/// thing it is logged against.
+fn rollup_home(
+    project: Option<String>,
+    target_type: &str,
+    target_id: Option<String>,
+) -> Result<TrayHome> {
+    let recurring = if target_type == "recurring" {
+        opt_uuid(target_id)?.map(RecurringTaskId::from_uuid)
+    } else {
+        None
+    };
+    Ok(tray_home(
+        opt_uuid(project)?.map(ProjectId::from_uuid),
+        recurring,
+    ))
+}
+
+/// The day's live roll-up entries, by the home they roll up (`None` = plain "Tickets").
 async fn tray_entries(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     date: Date,
-) -> Result<Vec<(Option<ProjectId>, TimeEntryId)>> {
-    let rows: Vec<(String, Option<String>)> = sqlx::query_as(
-        "SELECT id, tray_project_id FROM time_entries WHERE owner_id = $1 AND date = $2 \
-         AND source = $3 AND deleted_at IS NULL ORDER BY id",
+) -> Result<Vec<(TrayHome, TimeEntryId)>> {
+    let rows: Vec<(String, Option<String>, String, Option<String>)> = sqlx::query_as(
+        "SELECT id, tray_project_id, target_type, target_id FROM time_entries \
+         WHERE owner_id = $1 AND date = $2 AND source = $3 AND deleted_at IS NULL ORDER BY id",
     )
     .bind(owner.to_string())
     .bind(format_date(date))
@@ -547,9 +612,9 @@ async fn tray_entries(
     .fetch_all(&mut *conn)
     .await?;
     rows.into_iter()
-        .map(|(id, project)| {
+        .map(|(id, project, kind, target)| {
             Ok((
-                opt_uuid(project)?.map(ProjectId::from_uuid),
+                rollup_home(project, &kind, target)?,
                 TimeEntryId::from_uuid(parse_uuid(&id)?),
             ))
         })
@@ -569,20 +634,39 @@ async fn tray_entry_id(
         .map(|(_, id)| id))
 }
 
-/// The project a roll-up entry rolls up, if it is a project's roll-up.
+/// The home a roll-up entry rolls up: a project's, a repeating thing's, or `None` for the
+/// plain one (and for an entry that isn't a roll-up).
 async fn tray_group(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     id: TimeEntryId,
-) -> Result<Option<ProjectId>> {
-    let project: Option<Option<String>> = sqlx::query_scalar(
-        "SELECT tray_project_id FROM time_entries WHERE id = $1 AND owner_id = $2",
+) -> Result<TrayHome> {
+    // tray_project_id, source, target_type, target_id
+    type Row = (Option<String>, Option<String>, String, Option<String>);
+    let row: Option<Row> = sqlx::query_as(
+        "SELECT tray_project_id, source, target_type, target_id FROM time_entries \
+         WHERE id = $1 AND owner_id = $2",
     )
     .bind(id.to_string())
     .bind(owner.to_string())
     .fetch_optional(&mut *conn)
     .await?;
-    Ok(opt_uuid(project.flatten())?.map(ProjectId::from_uuid))
+    match row {
+        Some((project, source, kind, target)) if source.as_deref() == Some(SOURCE_TRAY) => {
+            rollup_home(project, &kind, target)
+        }
+        _ => Ok(None),
+    }
+}
+
+/// The `COALESCE(project_id, '')` and `COALESCE(recurring_id, '')` values that pick a
+/// home's tray rows.
+fn home_keys(home: TrayHome) -> (String, String) {
+    match home {
+        Some(EntryTarget::Project(p)) => (p.to_string(), String::new()),
+        Some(EntryTarget::Recurring(r)) => (String::new(), r.to_string()),
+        _ => (String::new(), String::new()),
+    }
 }
 
 /// Make the tickets on `entry` exactly `wanted` (ignoring case), keeping the
@@ -626,9 +710,15 @@ async fn replace_tickets(
 /// its tray.
 async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<()> {
     let items = tray_items(conn, owner, date).await?;
-    let triples: Vec<(String, Minutes, Option<ProjectId>)> = items
+    let triples: Vec<(String, Minutes, TrayHome)> = items
         .iter()
-        .map(|i| (i.ticket_number.clone(), i.minutes, i.project_id))
+        .map(|i| {
+            (
+                i.ticket_number.clone(),
+                i.minutes,
+                tray_home(i.project_id, i.recurring_id),
+            )
+        })
         .collect();
     let existing = tray_entries(conn, owner, date).await?;
     for (group, action) in plan_rollups(&triples, &existing) {
@@ -641,7 +731,7 @@ async fn apply_rollup(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     date: Date,
-    group: Option<ProjectId>,
+    group: TrayHome,
     action: RollupAction,
 ) -> Result<()> {
     match action {
@@ -652,7 +742,7 @@ async fn apply_rollup(
                 owner_id: owner,
                 date,
                 minutes: rollup.minutes,
-                target: group.map_or(EntryTarget::None, EntryTarget::Project),
+                target: group.unwrap_or(EntryTarget::None),
                 category: None,
                 description: TRAY_ENTRY_TITLE.to_string(),
                 status: None,
@@ -664,7 +754,11 @@ async fn apply_rollup(
                 updated_at: now,
                 deleted_at: None,
             };
-            insert_entry(conn, &entry, Some(SOURCE_TRAY), group).await?;
+            let tray_project = match group {
+                Some(EntryTarget::Project(p)) => Some(p),
+                _ => None,
+            };
+            insert_entry(conn, &entry, Some(SOURCE_TRAY), tray_project).await?;
             insert_tickets(conn, owner, entry.id, &rollup.tickets).await
         }
         RollupAction::Update { entry, rollup } => {
@@ -752,7 +846,7 @@ async fn insert_tray_row(
     sqlx::query(concat!(
         "INSERT INTO ticket_tray (",
         tray_columns!(),
-        ", item_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL, $10)"
+        ", item_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9, NULL, $10, $11)"
     ))
     .bind(TrayItemId::new().to_string())
     .bind(owner.to_string())
@@ -763,10 +857,47 @@ async fn insert_tray_row(
     .bind(done)
     .bind(item.project.map(|p| p.to_string()))
     .bind(&now)
+    .bind(
+        item.recurring
+            .filter(|_| item.project.is_none())
+            .map(|r| r.to_string()),
+    )
     .bind(item.id.to_string())
     .execute(&mut *conn)
     .await?;
     set_item_done(conn, owner, item.id, done, date).await
+}
+
+/// Move a tray ticket to a home; its item remembers it for the ticket's next days (days
+/// already logged keep theirs).
+async fn tray_set_home(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TrayItemId,
+    home: TrayHome,
+) -> Result<TrayDay> {
+    let date = tray_item_date(conn, owner, id, true).await?;
+    let (project, recurring) = match home {
+        Some(EntryTarget::Project(p)) => (Some(p.to_string()), None),
+        Some(EntryTarget::Recurring(r)) => (None, Some(r.to_string())),
+        _ => (None, None),
+    };
+    sqlx::query(
+        "UPDATE ticket_tray SET project_id = $1, recurring_id = $2, updated_at = $3 \
+         WHERE id = $4 AND owner_id = $5",
+    )
+    .bind(project)
+    .bind(recurring)
+    .bind(now_text())
+    .bind(id.to_string())
+    .bind(owner.to_string())
+    .execute(&mut *conn)
+    .await?;
+    if let Some(of) = tray_row_item(conn, owner, &id.to_string()).await? {
+        set_item_home(conn, owner, of, home).await?;
+    }
+    sync_tray(conn, owner, date).await?;
+    tray_day_in(conn, owner, date).await
 }
 
 impl SqliteStore {
@@ -960,15 +1091,21 @@ impl SqliteStore {
         if is_tray {
             input.minutes = current.minutes;
             input.date = current.date;
-            if let Some(project) = tray_group(&mut tx, owner, id).await? {
-                input.project = Some(project);
+            // A roll-up keeps the home it rolls up; the plain one can't go under a
+            // repeating thing (its tickets would sit in the wrong place).
+            match tray_group(&mut tx, owner, id).await? {
+                Some(EntryTarget::Project(p)) => {
+                    input.project = Some(p);
+                    input.recurring = None;
+                }
+                Some(EntryTarget::Recurring(r)) => {
+                    input.project = None;
+                    input.recurring = Some(r);
+                }
+                _ => input.recurring = None,
             }
         }
-        let mut checked = checked_entry(owner, &input)?;
-        if input.project.is_none() && matches!(current.target, EntryTarget::Recurring(_)) {
-            // A repeating thing's entry has no project to pick; keep what it belongs to.
-            checked.target = current.target;
-        }
+        let checked = checked_entry(owner, &input)?;
         check_links(&mut tx, owner, &input).await?;
         sqlx::query(
             "UPDATE time_entries SET date = $1, minutes = $2, target_type = $3, target_id = $4, \
@@ -1011,6 +1148,7 @@ impl SqliteStore {
             minutes: Minutes(minutes),
             description: made.description,
             project: note.project_id,
+            recurring: None,
             category: None,
             next_step: made.notes,
             timesheet_code_id: None,
@@ -1071,6 +1209,10 @@ impl SqliteStore {
                     description: e.description.clone(),
                     project: match e.target {
                         EntryTarget::Project(p) => Some(p),
+                        _ => None,
+                    },
+                    recurring: match e.target {
+                        EntryTarget::Recurring(r) => Some(r),
                         _ => None,
                     },
                     category: e.category.clone(),
@@ -1136,6 +1278,36 @@ impl SqliteStore {
         Ok(rec)
     }
 
+    /// Choose the timesheet code for several entries at once (`None` goes back to the usual
+    /// code). Works on tray roll-ups too. All or nothing.
+    pub async fn set_entry_codes(
+        &self,
+        owner: OwnerId,
+        ids: &[TimeEntryId],
+        code: Option<TimesheetCodeId>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        if let Some(c) = code {
+            code_exists(&mut tx, owner, c).await?;
+        }
+        let now = now_text();
+        for id in ids {
+            fetch_entry(&mut tx, owner, *id).await?;
+            sqlx::query(
+                "UPDATE time_entries SET timesheet_code_id = $1, updated_at = $2 \
+                 WHERE id = $3 AND owner_id = $4",
+            )
+            .bind(code.map(|c| c.to_string()))
+            .bind(&now)
+            .bind(id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Soft-delete an entry. Deleting a tray roll-up also takes its tickets out of that
     /// day's tray: all of the plain entry's, or one project's (restoring brings both back).
     pub async fn delete_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<()> {
@@ -1155,12 +1327,13 @@ impl SqliteStore {
             sqlx::query(
                 "UPDATE ticket_tray SET deleted_at = $1, updated_at = $1 \
                  WHERE owner_id = $2 AND date = $3 AND deleted_at IS NULL \
-                 AND COALESCE(project_id, '') = $4",
+                 AND COALESCE(project_id, '') = $4 AND COALESCE(recurring_id, '') = $5",
             )
             .bind(&now)
             .bind(owner.to_string())
             .bind(format_date(entry.date))
-            .bind(group.map(|p| p.to_string()).unwrap_or_default())
+            .bind(home_keys(group).0)
+            .bind(home_keys(group).1)
             .execute(&mut *tx)
             .await?;
         }
@@ -1203,13 +1376,14 @@ impl SqliteStore {
             sqlx::query(
                 "UPDATE ticket_tray SET deleted_at = NULL, updated_at = $1 \
                  WHERE owner_id = $2 AND date = $3 AND deleted_at = $4 \
-                 AND COALESCE(project_id, '') = $5",
+                 AND COALESCE(project_id, '') = $5 AND COALESCE(recurring_id, '') = $6",
             )
             .bind(&now)
             .bind(owner.to_string())
             .bind(&date)
             .bind(&deleted_at)
-            .bind(group.map(|p| p.to_string()).unwrap_or_default())
+            .bind(home_keys(group).0)
+            .bind(home_keys(group).1)
             .execute(&mut *tx)
             .await?;
             sync_tray(&mut tx, owner, corrupt_date(&date)?).await?;
@@ -1405,6 +1579,41 @@ impl SqliteStore {
         Ok(best.map(|(_, _, p)| p))
     }
 
+    /// Earlier work (within [`SAME_WORK_DAYS`] up to `day`) whose title is `words`: what
+    /// Log work's "Add to …?" is about.
+    pub async fn same_work(
+        &self,
+        owner: OwnerId,
+        day: Date,
+        words: &str,
+    ) -> Result<Option<SameWork>> {
+        if words.trim().is_empty() {
+            return Ok(None);
+        }
+        let records = self
+            .list_entries(owner, add_days(day, -SAME_WORK_DAYS), day)
+            .await?;
+        let tickets: Vec<Vec<(String, bool)>> = records
+            .iter()
+            .map(|r| {
+                r.tickets
+                    .iter()
+                    .map(|t| (t.ticket_number.clone(), t.done))
+                    .collect()
+            })
+            .collect();
+        let lines: Vec<WorkLine<'_>> = records
+            .iter()
+            .zip(&tickets)
+            .map(|(r, t)| WorkLine {
+                entry: &r.entry,
+                tickets: t,
+                rollup: r.is_tray,
+            })
+            .collect();
+        Ok(same_work(words, day, &lines))
+    }
+
     /// Log work: add `minutes` on `date` following `shiftbook_core::quicklog`.
     /// The capture's own hours and day are ignored (the button and the selected
     /// day decide). Returns the entry that was created or added to.
@@ -1414,7 +1623,16 @@ impl SqliteStore {
         date: Date,
         capture: &Capture,
         minutes: Minutes,
+        add_to: Option<bool>,
     ) -> Result<EntryRecord> {
+        // "Add to …?" (round 15): a line naming nowhere follows the same work, when it was
+        // logged on the day or the answer was "Add to it".
+        let same_target = if capture.target() == EntryTarget::None {
+            let same = self.same_work(owner, date, &capture.description).await?;
+            same_work_target(same.as_ref(), add_to)
+        } else {
+            None
+        };
         let day: Vec<DayEntry> = self
             .list_entries(owner, date, date)
             .await?
@@ -1427,7 +1645,18 @@ impl SqliteStore {
             })
             .collect();
         let mut tx = self.pool.begin().await?;
-        let past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
+        let mut past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
+        if let Some(target) = same_target {
+            match past.as_mut() {
+                Some(p) => p.target = target,
+                None => {
+                    past = Some(PastUse {
+                        description: String::new(),
+                        target,
+                    })
+                }
+            }
+        }
         let id = match plan_quick_log(capture, minutes, &day, past.as_ref())? {
             QuickLogPlan::AddTo {
                 entry,
@@ -1451,15 +1680,18 @@ impl SqliteStore {
                 minutes,
                 tickets,
             } => {
-                let project = match target {
-                    EntryTarget::Project(p) => Some(p),
-                    _ => None,
-                };
                 let input = EntryInput {
                     date,
                     minutes,
                     description,
-                    project,
+                    project: match target {
+                        EntryTarget::Project(p) => Some(p),
+                        _ => None,
+                    },
+                    recurring: match target {
+                        EntryTarget::Recurring(r) => Some(r),
+                        _ => None,
+                    },
                     category: None,
                     next_step: None,
                     timesheet_code_id: None,
@@ -1648,22 +1880,24 @@ impl SqliteStore {
         if let Some(p) = project {
             project_exists(&mut tx, owner, p).await?;
         }
-        let date = tray_item_date(&mut tx, owner, id, true).await?;
-        sqlx::query(
-            "UPDATE ticket_tray SET project_id = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
-        )
-        .bind(project.map(|p| p.to_string()))
-        .bind(now_text())
-        .bind(id.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *tx)
-        .await?;
-        // The ticket's next days start with this project; days already logged keep theirs.
-        if let Some(of) = tray_row_item(&mut tx, owner, &id.to_string()).await? {
-            set_item_project(&mut tx, owner, of, project).await?;
+        let day = tray_set_home(&mut tx, owner, id, tray_home(project, None)).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Let a tray ticket's minutes count under a repeating thing (round 15), or `None` to put
+    /// it back in the day's plain "Tickets" entry. It leaves any project.
+    pub async fn tray_set_recurring(
+        &self,
+        owner: OwnerId,
+        id: TrayItemId,
+        recurring: Option<RecurringTaskId>,
+    ) -> Result<TrayDay> {
+        let mut tx = self.pool.begin().await?;
+        if let Some(r) = recurring {
+            recurring_exists(&mut tx, owner, r).await?;
         }
-        sync_tray(&mut tx, owner, date).await?;
-        let day = tray_day_in(&mut tx, owner, date).await?;
+        let day = tray_set_home(&mut tx, owner, id, tray_home(None, recurring)).await?;
         tx.commit().await?;
         Ok(day)
     }

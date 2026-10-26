@@ -10,20 +10,24 @@ use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date}
 use shiftbook_core::fields::{build_link, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
-    CustomFieldId, NextUpItemId, OwnerId, ProjectId, TicketId, TimeEntryId, TimesheetCodeId,
+    CustomFieldId, NextUpItemId, OwnerId, ProjectId, RecurringTaskId, TicketId, TimeEntryId,
+    TimesheetCodeId,
 };
 use shiftbook_core::minutes::Minutes;
-use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
+use shiftbook_core::model::{
+    CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode, TrayItem,
+};
 use shiftbook_core::nextup::{bring_up_on, next_work_day};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
 };
 use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, RIBBON_WEEKS};
+use shiftbook_core::samework::should_ask;
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
-use shiftbook_core::timesheet::CodeDefaults;
+use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
@@ -208,6 +212,9 @@ pub struct EntryArgs {
     minutes: u32,
     description: String,
     project_id: Option<String>,
+    /// The repeating thing it belongs to, when it has no project.
+    #[serde(default)]
+    recurring_id: Option<String>,
     category: Option<String>,
     notes: Option<String>,
     timesheet_code_id: Option<String>,
@@ -220,6 +227,7 @@ impl EntryArgs {
             minutes: Minutes(self.minutes),
             description: self.description,
             project: opt_id(&self.project_id)?,
+            recurring: opt_id(&self.recurring_id)?,
             category: self.category,
             next_step: self.notes,
             timesheet_code_id: opt_id(&self.timesheet_code_id)?,
@@ -289,14 +297,30 @@ pub(crate) async fn one_entry(
     Ok(entry_view(rec, &links_for(store, owner).await?))
 }
 
-fn capture_with(text: &str, today: Date, start: WeekStart, projects: &[Project]) -> Capture {
+/// Read a capture line against the live projects, then the repeating things.
+fn capture_with(
+    text: &str,
+    today: Date,
+    start: WeekStart,
+    projects: &[Project],
+    repeating: &[RecurringTask],
+) -> Capture {
     let live: Vec<CaptureProject<'_>> = projects
         .iter()
         .filter(|p| !p.archived)
         .map(|p| CaptureProject {
-            id: p.id,
+            id: EntryTarget::Project(p.id),
             name: &p.name,
         })
+        .chain(
+            repeating
+                .iter()
+                .filter(|r| r.active)
+                .map(|r| CaptureProject {
+                    id: EntryTarget::Recurring(r.id),
+                    name: &r.name,
+                }),
+        )
         .collect();
     parse_capture(text, today, start, &live)
 }
@@ -593,15 +617,133 @@ pub async fn quick_log(
     date: String,
     text: String,
     minutes: u32,
+    add_to: Option<bool>,
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let date = date_arg(&date)?;
     let projects = store.list_projects(owner).await?;
-    let capture = capture_with(&text, date, week_start(&store, owner).await?, &projects);
+    let repeating = store.recurring_all(owner).await?;
+    let capture = capture_with(
+        &text,
+        date,
+        week_start(&store, owner).await?,
+        &projects,
+        &repeating,
+    );
     let rec = store
-        .quick_log(owner, date, &capture, Minutes(minutes))
+        .quick_log(owner, date, &capture, Minutes(minutes), add_to)
         .await?;
     one_entry(&store, owner, rec).await
+}
+
+/// Earlier work Log work asks about ("Add to …?", round 15).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SameWorkView {
+    title: String,
+    project_id: Option<ProjectId>,
+    recurring_id: Option<RecurringTaskId>,
+    minutes: u32,
+    days: u32,
+    open_tickets: Vec<String>,
+}
+
+/// Maps to `DataApi.sameWork()`: the earlier work a line's words are the title of, when Log
+/// work should ask whether to add to it (`None` otherwise).
+#[tauri::command]
+pub async fn same_work(
+    s: State<'_, VaultSession>,
+    date: String,
+    text: String,
+) -> Res<Option<SameWorkView>> {
+    let (store, owner) = s.data().await?;
+    let date = date_arg(&date)?;
+    let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
+    let capture = capture_with(
+        &text,
+        date,
+        week_start(&store, owner).await?,
+        &projects,
+        &repeating,
+    );
+    if capture.target() != EntryTarget::None {
+        return Ok(None);
+    }
+    let same = store.same_work(owner, date, &capture.description).await?;
+    if !should_ask(same.as_ref()) {
+        return Ok(None);
+    }
+    Ok(same.map(|w| SameWorkView {
+        title: w.title,
+        project_id: match w.target {
+            EntryTarget::Project(p) => Some(p),
+            _ => None,
+        },
+        recurring_id: match w.target {
+            EntryTarget::Recurring(r) => Some(r),
+            _ => None,
+        },
+        minutes: w.minutes.get(),
+        days: w.days,
+        open_tickets: w.open_tickets,
+    }))
+}
+
+/// A ticket item with its time so far (round 15): a known ticket, or a line of the Items view.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ItemView {
+    id: String,
+    number: String,
+    title: String,
+    done: bool,
+    note: Option<String>,
+    project_id: Option<ProjectId>,
+    recurring_id: Option<RecurringTaskId>,
+    first: Option<String>,
+    last: Option<String>,
+    minutes: u32,
+    /// The cards it's on, latest first (`tray:id`, `entry:id`).
+    cards: Vec<String>,
+}
+
+/// Maps to `DataApi.items()`: every ticket item, or with `numbers` only those (known tickets).
+#[tauri::command]
+pub async fn items(s: State<'_, VaultSession>, numbers: Option<Vec<String>>) -> Res<Vec<ItemView>> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .item_summaries(owner, numbers.as_deref())
+        .await?
+        .into_iter()
+        .map(|i| ItemView {
+            id: i.id.to_string(),
+            number: i.number,
+            title: i.title,
+            done: i.done,
+            note: i.note,
+            project_id: i.project,
+            recurring_id: i.recurring,
+            first: i.so_far.map(|f| format_date(f.first)),
+            last: i.so_far.map(|f| format_date(f.last)),
+            minutes: i.so_far.map_or(0, |f| f.minutes.get()),
+            cards: i.cards,
+        })
+        .collect())
+}
+
+/// Maps to `DataApi.itemSetDone()`: the Items view's tick (reopening counts from `today`).
+#[tauri::command]
+pub async fn item_set_done(
+    s: State<'_, VaultSession>,
+    id: String,
+    done: bool,
+    today: String,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .item_set_done(owner, id_arg(&id)?, done, date_arg(&today)?)
+        .await?)
 }
 
 /// Maps to `DataApi.parseCapture()`: what a capture line means, for the live chips.
@@ -613,8 +755,15 @@ pub async fn parse_capture_line(
 ) -> Res<Capture> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
     let start = week_start(&store, owner).await?;
-    Ok(capture_with(&text, date_arg(&today)?, start, &projects))
+    Ok(capture_with(
+        &text,
+        date_arg(&today)?,
+        start,
+        &projects,
+        &repeating,
+    ))
 }
 
 /// Maps to `DataApi.captureLog()`: log a capture line (it must have hours).
@@ -626,11 +775,12 @@ pub async fn capture_log(
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
     let start = week_start(&store, owner).await?;
-    let capture = capture_with(&text, date_arg(&today)?, start, &projects);
+    let capture = capture_with(&text, date_arg(&today)?, start, &projects, &repeating);
     let minutes = capture.minutes.ok_or(CommandError::InvalidInput)?;
     let rec = store
-        .quick_log(owner, capture.date, &capture, minutes)
+        .quick_log(owner, capture.date, &capture, minutes, None)
         .await?;
     one_entry(&store, owner, rec).await
 }
@@ -705,6 +855,21 @@ pub async fn tray_set_project(
     tray_result(&store, owner, day).await
 }
 
+/// Maps to `DataApi.traySetRecurring()`: the repeating thing a ticket's minutes count
+/// under (`None` = the day's "Tickets" entry).
+#[tauri::command]
+pub async fn tray_set_recurring(
+    s: State<'_, VaultSession>,
+    id: String,
+    recurring_id: Option<String>,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let day = store
+        .tray_set_recurring(owner, id_arg(&id)?, opt_id(&recurring_id)?)
+        .await?;
+    tray_result(&store, owner, day).await
+}
+
 /// Maps to `DataApi.trayCarry()`: work on a still-open ticket again on `date`.
 #[tauri::command]
 pub async fn tray_carry(s: State<'_, VaultSession>, id: String, date: String) -> Res<TrayDayView> {
@@ -763,6 +928,65 @@ pub async fn week_sheet(
     week_sheet_for(&store, owner, date_arg(&date)?, date_arg(&today)?, group_by).await
 }
 
+/// Everything that gives an entry its code when none is chosen on it.
+async fn code_defaults(
+    store: &SqliteStore,
+    owner: OwnerId,
+    projects: &[Project],
+    prefs: &Prefs,
+) -> Res<CodeDefaults> {
+    let mappings = store.list_category_codes(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
+    let kinds = store.list_kind_codes(owner).await?;
+    Ok(CodeDefaults::new(projects, &repeating, &mappings)
+        .with_kinds(&kinds)
+        .with_tickets(prefs.tickets_code))
+}
+
+/// Maps to `DataApi.usualCode()`: the code an entry gets when none is chosen on it, for
+/// the project or repeating thing and category picked on the form (`id` is the entry being
+/// edited, if any).
+#[tauri::command]
+pub async fn usual_code(
+    s: State<'_, VaultSession>,
+    id: Option<String>,
+    project_id: Option<String>,
+    recurring_id: Option<String>,
+    category: Option<String>,
+) -> Res<ResolvedCode> {
+    let (store, owner) = s.data().await?;
+    let rollup = match id {
+        Some(id) => store.get_entry(owner, id_arg(&id)?).await?.is_tray,
+        None => false,
+    };
+    let target = match (opt_id(&project_id)?, opt_id(&recurring_id)?) {
+        (Some(p), _) => EntryTarget::Project(p),
+        (None, Some(r)) => EntryTarget::Recurring(r),
+        (None, None) => EntryTarget::None,
+    };
+    let prefs = store.prefs(owner).await?;
+    let projects = store.list_projects(owner).await?;
+    let defaults = code_defaults(&store, owner, &projects, &prefs).await?;
+    Ok(defaults.usual(target, category.as_deref(), rollup))
+}
+
+/// Maps to `DataApi.setEntryCodes()`: choose the code for several entries at once (from
+/// the Timesheet's "Pick a code"); no code goes back to the usual one.
+#[tauri::command]
+pub async fn set_entry_codes(
+    s: State<'_, VaultSession>,
+    ids: Vec<String>,
+    code_id: Option<String>,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let ids = ids
+        .iter()
+        .map(|i| id_arg(i))
+        .collect::<Res<Vec<TimeEntryId>>>()?;
+    let code = opt_id(&code_id)?;
+    Ok(store.set_entry_codes(owner, &ids, code).await?)
+}
+
 /// The crib sheet for the week holding `date` (also the timesheet reminder's).
 pub(crate) async fn week_sheet_for(
     store: &SqliteStore,
@@ -775,8 +999,7 @@ pub(crate) async fn week_sheet_for(
     let start = week_of(date, prefs.week_start);
     let projects = store.list_projects(owner).await?;
     let codes = store.list_timesheet_codes(owner).await?;
-    let mappings = store.list_category_codes(owner).await?;
-    let defaults = CodeDefaults::new(&projects, &[], &mappings);
+    let defaults = code_defaults(store, owner, &projects, &prefs).await?;
     let entries: Vec<EntryWithTickets> = store
         .list_entries(owner, start, shiftbook_core::dates::add_days(start, 6))
         .await?
@@ -784,6 +1007,7 @@ pub(crate) async fn week_sheet_for(
         .map(|r| EntryWithTickets {
             tickets: r.tickets.into_iter().map(|t| t.ticket_number).collect(),
             entry: r.entry,
+            rollup: r.is_tray,
         })
         .collect();
     let ctx = SheetContext {
@@ -912,6 +1136,56 @@ pub async fn set_category_code(
     Ok(store
         .set_category_code(owner, &category, opt_id(&code_id)?)
         .await?)
+}
+
+/// One kind of repeating thing and its code, for Customize → Timesheet.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KindCodeView {
+    kind: String,
+    code_id: Option<TimesheetCodeId>,
+}
+
+/// Maps to `DataApi.kindCodes()`: every kind of repeating thing with its code (if any).
+#[tauri::command]
+pub async fn kind_codes(s: State<'_, VaultSession>) -> Res<Vec<KindCodeView>> {
+    let (store, owner) = s.data().await?;
+    let kinds = store
+        .list_options(owner, ListName::RecurringType, false)
+        .await?;
+    let maps = store.list_kind_codes(owner).await?;
+    let find = |kind: &str| {
+        maps.iter()
+            .find(|(k, _)| k.trim().eq_ignore_ascii_case(kind.trim()))
+            .map(|(_, c)| *c)
+    };
+    let mut out: Vec<KindCodeView> = kinds
+        .into_iter()
+        .map(|k| KindCodeView {
+            code_id: find(&k.value),
+            kind: k.value,
+        })
+        .collect();
+    for (kind, code) in &maps {
+        if !out.iter().any(|o| o.kind.eq_ignore_ascii_case(kind)) {
+            out.push(KindCodeView {
+                kind: kind.clone(),
+                code_id: Some(*code),
+            });
+        }
+    }
+    Ok(out)
+}
+
+/// Maps to `DataApi.setKindCode()`; no `codeId` removes the mapping.
+#[tauri::command]
+pub async fn set_kind_code(
+    s: State<'_, VaultSession>,
+    kind: String,
+    code_id: Option<String>,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.set_kind_code(owner, &kind, opt_id(&code_id)?).await?)
 }
 
 // ---------- custom fields ----------
@@ -1211,6 +1485,8 @@ pub async fn bring_up(
     let prefs = store.prefs(owner).await?;
     let is_work_day = |d: Date| prefs.day_target(d) > 0;
     let day = match on {
+        // "Later today" (Follow up, round 15) stays today.
+        Some(chosen) if chosen == today => today,
         Some(chosen) => {
             bring_up_on(today, chosen, is_work_day).ok_or(CommandError::InvalidInput)?
         }

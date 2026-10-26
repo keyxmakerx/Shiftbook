@@ -27,7 +27,7 @@ pub mod extras;
 mod fsutil;
 pub mod hex;
 pub mod home;
-mod items;
+pub mod items;
 pub mod lists;
 pub mod meetings;
 pub mod notes;

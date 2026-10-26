@@ -20,6 +20,7 @@
   --warn-wash: #fcf1df;
   --bad: #c2412d;
   --ok: #2e8a5a;
+  --rep: #7a4fa8;
   --none: #8a919a;
   --display: 'Fraunces', Georgia, 'Times New Roman', serif;
   --ui: 'Instrument Sans', 'Segoe UI', system-ui, -apple-system, Ubuntu, Cantarell, sans-serif;
@@ -59,6 +60,7 @@
     --warn-wash: #3a2c14;
     --bad: #f08a78;
     --ok: #6ccb95;
+    --rep: #b993e0;
     --accent-fg: #14171b;
   }
 }
@@ -81,6 +83,7 @@
   --warn-wash: #3a2c14;
   --bad: #f08a78;
   --ok: #6ccb95;
+  --rep: #b993e0;
   --accent-fg: #14171b;
 }
 
@@ -266,7 +269,8 @@ button {
   color: var(--ink-2);
 }
 
-.seg button[aria-pressed='true'] {
+.seg button[aria-pressed='true'],
+.seg button[aria-selected='true'] {
   background: var(--paper);
   color: var(--ink);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);

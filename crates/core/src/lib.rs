@@ -34,6 +34,7 @@ pub mod reminder;
 pub mod responses;
 pub mod resume;
 pub mod ribbon;
+pub mod samework;
 pub mod search;
 pub mod seed;
 pub mod sheet;

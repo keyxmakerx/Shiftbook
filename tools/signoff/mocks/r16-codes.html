@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 16 timesheet codes mockups</title>
+<!-- Round 16 mockups: a default code for tickets, a code on each entry, and picking a code
+     from the Timesheet. Pick a state with window.SB_START or the hash: #settings, #entry,
+     #sheet. Made for 1200 x 640. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --paper-2: #f6f3ec; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --warn: #9f5a06; --warn-wash: #fcf1df; --net: #3d5bb0;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+    --mono: Consolas, 'DejaVu Sans Mono', monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); padding: 18px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px; }
+  .tag.new { color: var(--accent); }
+  .why { color: var(--mut); font-size: 12.5px; margin: 10px 2px 0; max-width: 540px; }
+  .paper { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; }
+  h3 { margin: 0 0 2px; font: 700 17px var(--display); }
+  .sub { color: var(--mut); font-size: 12.5px; margin: 0 0 10px; }
+  .lbl { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .row { display: grid; grid-template-columns: 180px 1fr; gap: 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); }
+  .row:first-of-type { border-top: 0; }
+  select, .sel { font: 13px var(--ui); border: 1px solid var(--rule); border-radius: 8px; padding: 6px 9px; background: #fff; color: var(--ink); }
+  .sel { display: inline-flex; justify-content: space-between; gap: 10px; min-width: 240px; }
+  .sel.hi { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61, 91, 176, .15); }
+  .newrow { background: #f1f4fb; border-radius: 8px; padding: 6px 8px; margin: 4px -8px 0; border-top: 0; }
+  .note { font-size: 12px; color: var(--mut); }
+  .chip { font: 600 11.5px var(--mono); background: #e4e9f6; color: #2c3f78; border-radius: 10px; padding: 1px 8px; }
+  .btn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  /* drawer */
+  .drawer { width: 420px; }
+  .field { margin-top: 12px; }
+  .field .v { margin-top: 4px; font-size: 14px; }
+  .from { font-size: 12px; color: var(--mut); margin-left: 6px; }
+  .menu { margin-top: 6px; width: 300px; background: var(--paper); border-radius: 10px; box-shadow: var(--lift); padding: 5px; font-size: 13px; }
+  .menu div { padding: 6px 10px; border-radius: 6px; }
+  .menu div.hi { background: #e9edf7; }
+  .menu hr { border: 0; border-top: 1px solid var(--rule); margin: 4px 6px; }
+  .menu .k { color: var(--mut); font-size: 12px; }
+
+  /* sheet */
+  .tday header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; }
+  .tday header b { font: 700 16px var(--display); }
+  .line { display: grid; grid-template-columns: 22px 210px 50px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); font-size: 13px; }
+  .line .code small { display: block; color: var(--mut); font-size: 11px; }
+  .line .code b { font-weight: 600; }
+  .line.unas .code b { color: var(--warn); }
+  .line.unas { background: var(--warn-wash); margin: 0 -10px; padding: 8px 10px; border-radius: 8px; border-top: 0; }
+  .hrs { font: 600 13px var(--mono); }
+  .pick { position: relative; }
+  .pick .menu { position: absolute; right: 0; top: 30px; z-index: 2; width: 290px; }
+  .ck { display: flex; gap: 7px; align-items: center; padding: 8px 10px 4px; font-size: 12.5px; }
+  .ck span { width: 14px; height: 14px; border-radius: 3px; background: var(--ok); display: inline-block; }
+</style>
+</head>
+<body>
+
+<!-- 1. Customize → Timesheet -->
+<section class="state" id="settings">
+  <div class="pair">
+    <div>
+      <p class="tag">Now</p>
+      <div class="paper">
+        <h3>Categories → codes</h3>
+        <p class="sub">An entry without its own code, and whose project has none, gets its category's code.</p>
+        <div class="row"><span>Support</span><span class="sel">Operations › 1 - Support <span>▾</span></span></div>
+        <div class="row"><span>Meetings</span><span class="sel">Operations › 3 - Meetings <span>▾</span></span></div>
+        <div class="row"><span>Admin</span><span class="sel">No code <span>▾</span></span></div>
+      </div>
+      <p class="why">Tickets in the Tickets tray roll up into a "Tickets" entry with no project and no category, so nothing here reaches them and they always land as Unassigned.</p>
+    </div>
+    <div>
+      <p class="tag new">With a code for tickets</p>
+      <div class="paper">
+        <h3>Default codes</h3>
+        <p class="sub">An entry without its own code, and whose project has none, gets one of these.</p>
+        <div class="row newrow"><span><b>Tickets</b><br><span class="note">from the Tickets tray</span></span><span class="sel hi">Operations › 1 - Support <span>▾</span></span></div>
+        <div class="row"><span>Support</span><span class="sel">Operations › 1 - Support <span>▾</span></span></div>
+        <div class="row"><span>Meetings</span><span class="sel">Operations › 3 - Meetings <span>▾</span></span></div>
+        <div class="row"><span>Admin</span><span class="sel">No code <span>▾</span></span></div>
+      </div>
+      <p class="why">One new line at the top. Tickets with a project still use the project's code; the rest use this one. It applies to past weeks too, unless an entry has its own code.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 2. The entry's details -->
+<section class="state" id="entry">
+  <div class="pair">
+    <div>
+      <p class="tag">Now</p>
+      <div class="paper drawer">
+        <span class="lbl">Monday 26 October</span>
+        <div class="field"><span class="lbl">What</span><div class="v">Switch replacement, floor 2</div></div>
+        <div class="field"><span class="lbl">Project</span><div class="v">Network refresh</div></div>
+        <div class="field"><span class="lbl">Category</span><div class="v">Support</div></div>
+        <div class="field"><span class="lbl">Tickets</span><div class="v"><span class="chip">INC0045678</span></div></div>
+      </div>
+      <p class="why">No code anywhere on the entry. You can't see which code it will get, or change it for just this one.</p>
+    </div>
+    <div>
+      <p class="tag new">With its code shown and changeable</p>
+      <div class="paper drawer">
+        <span class="lbl">Monday 26 October</span>
+        <div class="field"><span class="lbl">What</span><div class="v">Switch replacement, floor 2</div></div>
+        <div class="field"><span class="lbl">Project</span><div class="v">Network refresh</div></div>
+        <div class="field"><span class="lbl">Category</span><div class="v">Support</div></div>
+        <div class="field"><span class="lbl">Timesheet code</span>
+          <div class="v"><span class="sel hi">Projects › 4 - Network refresh <span>▾</span></span><span class="from">from the project</span></div>
+          <div class="menu">
+            <div class="hi">Use the usual code <span class="k">(Projects › 4 - Network refresh, from the project)</span></div>
+            <hr>
+            <div>Operations › 1 - Support</div>
+            <div>Operations › 3 - Meetings</div>
+            <div>Projects › 4 - Network refresh</div>
+          </div>
+        </div>
+      </div>
+      <p class="why">The entry says which code it gets and where from (its project, its category, Tickets, or chosen here). Picking one sets it for this entry only.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Fix it from the Timesheet -->
+<section class="state" id="sheet">
+  <div class="paper tday" style="max-width: 1060px">
+    <header><b>Monday 26</b><span class="hrs">7.5 h</span></header>
+    <div class="line"><input type="checkbox"><span class="code"><small>Operations</small><b>1 - Support</b></span><span class="hrs">3</span><span>Printer queue · Laptop imaging</span><span class="btn">Copy comment</span></div>
+    <div class="line unas"><input type="checkbox"><span class="code"><small>No code yet</small><b>Tickets</b></span><span class="hrs">1.5</span><span><span class="chip">INC0045690</span> <span class="chip">RITM0012345</span></span>
+      <span class="pick"><span class="btn primary">Pick a code ▾</span>
+        <div class="menu">
+          <div class="hi">Operations › 1 - Support</div>
+          <div>Operations › 3 - Meetings</div>
+          <div>Projects › 4 - Network refresh</div>
+          <hr>
+          <div class="ck"><span></span>Use it for tickets from now on</div>
+        </div>
+      </span>
+    </div>
+    <div class="line"><input type="checkbox"><span class="code"><small>Projects</small><b>4 - Network refresh</b></span><span class="hrs">3</span><span>Switch replacement, floor 2 <span class="chip">INC0045678</span></span><span class="btn">Copy comment</span></div>
+  </div>
+  <p class="why">An Unassigned line gets <b>Pick a code</b> right where you notice it. On the Tickets line, "Use it for tickets from now on" (on by default) sets the tickets code from the first picture; unticked, it's just this day. On any other line it sets that entry's own code.</p>
+</section>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'settings');
+  (document.getElementById(pick) || document.getElementById('settings')).classList.add('on');
+</script>
+</body>
+</html>

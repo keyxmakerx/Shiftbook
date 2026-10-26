@@ -74,6 +74,7 @@ mod tests {
             }],
             unassigned,
             project_id: None,
+            rollup_ids: Vec::new(),
         }
     }
 

@@ -145,6 +145,7 @@ pub async fn log_meeting(
         minutes: Minutes(minutes),
         description: series.name.clone(),
         project: series.project_id,
+        recurring: None,
         category: None,
         next_step: None,
         timesheet_code_id: None,

@@ -111,6 +111,64 @@ impl SqliteStore {
         .await?;
         Ok(())
     }
+
+    /// Follow up (round 15, card r15-things): the day each card is to be followed up, from
+    /// a thing brought up for a day or a pin's chase day, the earlier when it has both.
+    pub async fn follow_ups(&self, owner: OwnerId) -> Result<Vec<(CardKind, Uuid, Date)>> {
+        let rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT about_kind, about_id, show_from FROM next_up_items WHERE owner_id = $1 \
+             AND show_from IS NOT NULL AND about_kind IS NOT NULL AND about_id IS NOT NULL \
+             AND done_at IS NULL AND deleted_at IS NULL \
+             UNION ALL \
+             SELECT record_kind, record_id, chase_on FROM pins WHERE owner_id = $1 \
+             AND chase_on IS NOT NULL AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .fetch_all(&self.pool)
+        .await?;
+        let mut out: Vec<(CardKind, Uuid, Date)> = Vec::new();
+        for (kind, id, on) in rows {
+            let kind: CardKind = kind
+                .parse()
+                .map_err(|_| StorageError::Corrupt("follow-up"))?;
+            let id = parse_uuid(&id)?;
+            let on = parse_date(&on).map_err(|_| StorageError::Corrupt("date"))?;
+            match out.iter_mut().find(|(k, i, _)| *k == kind && *i == id) {
+                Some(f) => f.2 = f.2.min(on),
+                None => out.push((kind, id, on)),
+            }
+        }
+        Ok(out)
+    }
+
+    /// "No follow-up": take a card's follow-up day away, whether brought up or a chase day.
+    pub async fn clear_follow_up(&self, owner: OwnerId, kind: CardKind, id: Uuid) -> Result<()> {
+        let now = now_text();
+        let mut tx = self.pool.begin().await?;
+        sqlx::query(
+            "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
+             AND about_kind = $3 AND about_id = $4 AND show_from IS NOT NULL \
+             AND done_at IS NULL AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .bind(kind.as_str())
+        .bind(id.to_string())
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            "UPDATE pins SET chase_on = NULL, updated_at = $1 WHERE owner_id = $2 \
+             AND record_kind = $3 AND record_id = $4 AND chase_on IS NOT NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .bind(kind.as_str())
+        .bind(id.to_string())
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]

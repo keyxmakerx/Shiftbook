@@ -29,7 +29,7 @@ use crate::hours::format_hours;
 use crate::ids::{ProjectId, TimeEntryId, TimesheetCodeId};
 use crate::minutes::Minutes;
 use crate::model::{EntryTarget, Project, TimeEntry, TimesheetCode};
-use crate::timesheet::CodeDefaults;
+use crate::timesheet::{CodeDefaults, ResolvedCode};
 use crate::week::week_days;
 
 /// A day with more than this many minutes gets a warning.
@@ -78,6 +78,16 @@ pub struct EntryWithTickets {
     pub entry: TimeEntry,
     /// Its tickets, in order.
     pub tickets: Vec<String>,
+    /// True for a day's "Tickets" roll-up entry (made from the Tickets tray), which takes
+    /// the tickets code when nothing else gives it one.
+    pub rollup: bool,
+}
+
+impl EntryWithTickets {
+    /// The entry's code.
+    pub fn resolve(&self, defaults: &CodeDefaults) -> ResolvedCode {
+        defaults.resolve_for(&self.entry, self.rollup)
+    }
 }
 
 /// Everything besides the entries that the sheet needs.
@@ -135,6 +145,8 @@ pub struct SheetLine {
     pub unassigned: bool,
     /// The project, when grouping by project.
     pub project_id: Option<ProjectId>,
+    /// Its entries that are a day's "Tickets" roll-up entry (from the Tickets tray).
+    pub rollup_ids: Vec<TimeEntryId>,
 }
 
 /// One day of the week.
@@ -376,7 +388,7 @@ fn day_lines(ctx: &SheetContext<'_>, entries: &[&EntryWithTickets]) -> Vec<Sheet
     for e in entries {
         let (key, area, label, order, unassigned, project_id) = match ctx.group_by {
             GroupBy::Code => {
-                let (k, a, l, o, u) = line_for_code(ctx, ctx.defaults.resolve(&e.entry).code);
+                let (k, a, l, o, u) = line_for_code(ctx, e.resolve(ctx.defaults).code);
                 (k, a, l, o, u, None)
             }
             GroupBy::Project => {
@@ -414,6 +426,12 @@ fn day_lines(ctx: &SheetContext<'_>, entries: &[&EntryWithTickets]) -> Vec<Sheet
                 items,
                 unassigned: g.unassigned,
                 project_id: g.project_id,
+                rollup_ids: g
+                    .entries
+                    .iter()
+                    .filter(|e| e.rollup)
+                    .map(|e| e.entry.id)
+                    .collect(),
             }
         })
         .collect()
@@ -501,7 +519,7 @@ pub fn build_week_sheet(ctx: &SheetContext<'_>, entries: &[EntryWithTickets]) ->
 
     let unassigned: Minutes = live
         .iter()
-        .filter(|e| ctx.defaults.resolve(&e.entry).code.is_none())
+        .filter(|e| e.resolve(ctx.defaults).code.is_none())
         .map(|e| e.entry.minutes)
         .sum();
     if !unassigned.is_zero() {
@@ -633,6 +651,7 @@ mod tests {
                 deleted_at: None,
             },
             tickets: tickets.iter().map(|t| t.to_string()).collect(),
+            rollup: false,
         }
     }
 
@@ -886,6 +905,34 @@ mod tests {
             .warnings
             .iter()
             .all(|w| !matches!(w, SheetWarning::Unassigned { .. })));
+    }
+
+    #[test]
+    fn tickets_rollup_takes_the_tickets_code() {
+        let mut f = fixture();
+        let format = CommentFormat::default();
+        let mut rollup = entry(THU, 90, "Tickets", None, &["INC1", "INC2"]);
+        rollup.rollup = true;
+        let rollup_id = rollup.entry.id;
+        let other = entry(THU, 30, "Misc", None, &[]);
+        let entries = vec![rollup, other];
+        // No tickets code yet: both are Unassigned, and the line says it holds tickets.
+        let sheet = build_week_sheet(&ctx(&f, GroupBy::Code, &format), &entries);
+        let line = &sheet.days[3].lines[0];
+        assert!(line.unassigned);
+        assert_eq!(line.rollup_ids, [rollup_id]);
+        assert_eq!(line.minutes, Minutes(120));
+        // With one, the roll-up moves to it and only "Misc" is left Unassigned.
+        f.defaults = f.defaults.clone().with_tickets(Some(f.support.id));
+        let sheet = build_week_sheet(&ctx(&f, GroupBy::Code, &format), &entries);
+        let lines = &sheet.days[3].lines;
+        // Unassigned sorts first.
+        assert!(lines[0].unassigned && lines[0].rollup_ids.is_empty());
+        assert_eq!(lines[1].label, "1 - Support");
+        assert_eq!(lines[1].rollup_ids, [rollup_id]);
+        assert!(sheet.warnings.iter().any(
+            |w| matches!(w, SheetWarning::Unassigned { minutes, .. } if *minutes == Minutes(30))
+        ));
     }
 
     #[test]

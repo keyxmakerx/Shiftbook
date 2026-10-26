@@ -1,0 +1,92 @@
+{
+ "cards": {
+  "r15-repeating": {
+   "archived": false,
+   "area": "Tickets, plans and projects",
+   "round": 15,
+   "order": 46,
+   "version": 1,
+   "created_at": "2026-10-26T15:45:00+00:00",
+   "title": "Work that keeps coming back (like certificate renewals)",
+   "body": [
+    "You asked for the proper way to handle a steady kind of ticket like certificate renewals. My answer: it belongs in a **repeating thing**, not a project. A project is work that finishes; renewals never do. The app was planned this way from the start (entries can belong to a repeating thing), but the screens only ever let you pick projects.",
+    "So today you have to choose: a project for the time and code, or a repeating thing for the expiry warning, and the two never meet. These three changes make the repeating thing do both. Only the first one is needed to make it work; the other two make it nicer."
+   ],
+   "bullets": [
+    "**Repeating things hold work:** pick one wherever you pick a project (entry details, Log work, the Tickets tray). Its time and tickets count toward it.",
+    "**Codes:** a repeating thing can have a timesheet code, or take one from its kind (\"Certificates\"), so new certificates get it without setting it each time.",
+    "**Start renewal:** a due-soon certificate gets a button that opens Log work already filed under it, and the certificate keeps a list of past renewals with their tickets and time."
+   ],
+   "figures": [
+    {
+     "caption": "Entry details: repeating things sit next to projects.",
+     "html_file": "mocks/r16-repeating.html",
+     "start": "hold"
+    },
+    {
+     "caption": "Codes: on the kind (left) or on one thing (right).",
+     "html_file": "mocks/r16-repeating.html",
+     "start": "codes"
+    },
+    {
+     "caption": "Start renewal from Due soon, and the history it keeps.",
+     "html_file": "mocks/r16-repeating.html",
+     "start": "renew"
+    }
+   ],
+   "questions": [
+    {
+     "id": "hold",
+     "legend": "Repeating things hold work",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "codes",
+     "legend": "Codes on repeating things",
+     "options": [
+      {
+       "value": "On the thing and its kind",
+       "rec": true
+      },
+      {
+       "value": "Only on each thing"
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "renew",
+     "legend": "Start renewal and past renewals",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Later"
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. one renewals item for all certificates is enough"
+    }
+   ]
+  }
+ }
+}

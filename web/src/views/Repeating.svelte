@@ -5,12 +5,13 @@
   // "Renewed…" instead, which asks for the new expiry date. The form on the right adds one or
   // changes the one picked.
   import { onMount, untrack } from 'svelte';
+  import CodeSelect from '../components/CodeSelect.svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
-  import type { Frequency, Recurring, RecurringInput } from '../lib/api';
+  import type { Frequency, KindCode, PastTime, Recurring, RecurringInput } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
-  import { addDays, dayMonth, longDay } from '../lib/format';
-  import { markDone, markRenewed, refreshRepeating, repeating } from '../lib/repeating.svelte';
+  import { addDays, dayMonth, dayMonthYear, fmtHours, longDay } from '../lib/format';
+  import { markDone, markRenewed, refreshRepeating, repeating, startWork } from '../lib/repeating.svelte';
   import { app, attempt, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
 
@@ -34,6 +35,7 @@
 
   let frequencies = $state<Frequency[]>([]);
   let kinds = $state<string[]>([]);
+  let kindCodes = $state<KindCode[]>([]);
 
   type Form = {
     id: string | null;
@@ -45,6 +47,7 @@
     warnDays: number;
     alerts: boolean;
     notes: string;
+    codeId: string | null;
   };
 
   function blank(): Form {
@@ -59,10 +62,11 @@
       warnDays: 1,
       alerts: true,
       notes: '',
+      codeId: null,
     };
   }
 
-  let form = $state<Form>({ id: null, name: '', kind: '', expires: false, frequencyId: '', date: '', warnDays: 1, alerts: true, notes: '' });
+  let form = $state<Form>({ id: null, name: '', kind: '', expires: false, frequencyId: '', date: '', warnDays: 1, alerts: true, notes: '', codeId: null });
   let renewing = $state<{ id: string; name: string; date: string } | null>(null);
   let nameEl: HTMLInputElement | undefined = $state();
 
@@ -72,6 +76,7 @@
       frequencies = choices.frequencies;
       kinds = choices.kinds;
     }
+    if (app.codes.length > 0) kindCodes = (await attempt(() => api.kindCodes())) ?? [];
     form = blank();
     await refreshRepeating();
   });
@@ -97,6 +102,7 @@
       warnDays: r.warnDays,
       alerts: r.alerts,
       notes: r.notes,
+      codeId: r.codeId,
     };
     nameEl?.focus();
   }
@@ -117,6 +123,7 @@
       warnDays: form.warnDays,
       alerts: form.alerts,
       notes: form.notes,
+      codeId: form.codeId,
     };
     if (!form.name.trim()) {
       toast('Give it a name first.');
@@ -131,6 +138,39 @@
     toast(form.id ? `Saved “${form.name.trim()}”.` : `Added “${form.name.trim()}”.`);
     form = blank();
     await Promise.all([refreshRepeating(), refreshBell()]);
+  }
+
+  // "Use the Certificates code (…)" when its kind has one; otherwise the usual rules.
+  const kindEmpty = $derived.by(() => {
+    const kind = form.kind.trim().toLowerCase();
+    const k = kind ? kindCodes.find((x) => x.kind.trim().toLowerCase() === kind && x.codeId) : undefined;
+    const c = k ? app.codes.find((x) => x.id === k.codeId) : undefined;
+    if (!k || !c) return 'Use the usual code';
+    return `Use the ${k.kind} code (${c.area ? `${c.area} › ${c.code}` : c.code})`;
+  });
+
+  // The picked thing's past renewals (or past times), reloaded when the list changes.
+  let past = $state<PastTime[]>([]);
+  $effect(() => {
+    const id = form.id;
+    void repeating.items;
+    if (!id) {
+      past = [];
+      return;
+    }
+    let live = true;
+    void attempt(() => api.recurringHistory(id)).then((list) => {
+      if (live) past = list ?? [];
+    });
+    return () => {
+      live = false;
+    };
+  });
+  const picked = $derived(repeating.items.find((r) => r.id === form.id) ?? null);
+
+  function pastWords(p: PastTime): string {
+    if (!p.done) return 'in progress';
+    return p.renewedTo ? `renewed to ${dayMonthYear(p.renewedTo)}` : 'done';
   }
 
   async function renew() {
@@ -269,6 +309,11 @@
         <input id="rep-kind" class="text-in" list="rep-kinds" bind:value={form.kind} placeholder="e.g. Bills" maxlength="60" />
         <datalist id="rep-kinds">{#each kinds as k (k)}<option value={k}></option>{/each}</datalist>
 
+        {#if app.codes.length > 0}
+          <span class="lab">Timesheet code</span>
+          <CodeSelect value={form.codeId} label="Timesheet code" empty={kindEmpty} onchange={(id) => (form.codeId = id)} />
+        {/if}
+
         <label for="rep-notes">Notes</label>
         <input id="rep-notes" class="text-in" bind:value={form.notes} placeholder="e.g. policy number, who to ring" />
       </div>
@@ -286,10 +331,88 @@
           : 'Press Done when you’ve done it; the next time is worked out from that day.'}
       </p>
     </section>
+
+    {#if picked}
+      <section class="paper card hist" aria-label={picked.expires ? 'Past renewals' : 'Past times'}>
+        <header class="hist-head">
+          <span class="lbl">{picked.expires ? 'Past renewals' : 'Past times'}</span>
+          <span class="grow"></span>
+          <button type="button" class="btn rep-btn" onclick={() => startWork(picked)}>
+            {picked.expires ? 'Start renewal' : 'Log work on it'}
+          </button>
+        </header>
+        {#each past as p (p.date + p.done)}
+          <div class="past" class:open={!p.done}>
+            <span class="pd">{dayMonthYear(p.date)}</span>
+            <span class="pt">
+              {#each p.tickets as t (t)}<span class="chip">{t}</span>{/each}
+              {pastWords(p)}
+            </span>
+            <span class="pm">{p.minutes ? `${fmtHours(p.minutes)} h` : ''}</span>
+          </div>
+        {:else}
+          <p class="note">
+            Nothing yet. Work you log under it shows here, with its tickets and time.
+          </p>
+        {/each}
+      </section>
+    {/if}
   </div>
 </div>
 
 <style>
+  .hist {
+    margin-top: 14px;
+  }
+
+  .hist-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .rep-btn {
+    color: var(--rep);
+    border-color: color-mix(in srgb, var(--rep) 45%, transparent);
+  }
+
+  .past {
+    display: grid;
+    grid-template-columns: 9.5em minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: baseline;
+    padding: 6px 0;
+    border-top: 1px solid var(--rule);
+    font-size: 13px;
+  }
+
+  .past.open .pt {
+    color: var(--warn);
+  }
+
+  .pt {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: baseline;
+    color: var(--ink-2);
+  }
+
+  .pm {
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .chip {
+    font: 600 11.5px var(--mono);
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    border-radius: 10px;
+    padding: 1px 8px;
+    overflow-wrap: anywhere;
+  }
+
   .rep {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(300px, 1fr);

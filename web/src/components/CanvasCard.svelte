@@ -20,6 +20,8 @@
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
+  import RenameBox from './RenameBox.svelte';
+  import { renaming, startRename } from '../lib/rename.svelte';
   import { workTickets } from '../lib/workTickets';
   import { dragButton } from '../lib/rightDrag';
 
@@ -217,7 +219,7 @@
             items: [
               { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
               { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
-              { label: 'Bring up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
+              { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
               pinMenuItem('note', note.id),
               {
                 label: 'Archive',
@@ -301,7 +303,10 @@
   onkeydown={(e) => {
     if (e.target !== el) return;
     if (e.key === 'Enter') openCard();
-    else if (e.key === ' ' && hasPanel) {
+    else if (e.key === 'F2' && card.entry) {
+      e.preventDefault();
+      startRename(card.entry.id);
+    } else if (e.key === ' ' && hasPanel) {
       e.preventDefault();
       clicked();
     }
@@ -316,7 +321,22 @@
         Entry · {card.workHours} h · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
       {:else}Entry · {e.hours} h{dayWord(e.date)}{/if}
     </span>
-    <span class="title">{e.description || 'Untitled'}</span>
+    {#if renaming.id === e.id}
+      <RenameBox entry={e} />
+    {:else}
+      <span class="named">
+        <span class="title">{e.description || 'Untitled'}</span>
+        {#if !locked}
+          <button
+            type="button"
+            class="pen"
+            title="Rename (F2)"
+            aria-label="Rename"
+            onclick={(ev) => { ev.stopPropagation(); startRename(e.id); }}
+          >✎</button>
+        {/if}
+      </span>
+    {/if}
     <span class="sub">{projectById(e.projectId)?.name ?? 'No project'}</span>
     {@const all = workTickets(card)}
     {#if all.length}
@@ -442,6 +462,43 @@
     text-transform: uppercase;
     font-weight: 700;
     color: var(--mut);
+  }
+
+  .named {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .pen {
+    flex: none;
+    margin-left: auto;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    border-radius: 6px;
+    padding: 0 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--mut);
+    cursor: pointer;
+    opacity: 0;
+  }
+
+  .card:hover .pen,
+  .card:focus-visible .pen,
+  .pen:focus-visible {
+    opacity: 1;
+  }
+
+  .pen:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  @media (hover: none) {
+    .pen {
+      display: none;
+    }
   }
 
   .title {
