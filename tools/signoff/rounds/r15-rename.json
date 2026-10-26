@@ -1,0 +1,29 @@
+{
+ "cards": {
+  "r15-rename": {
+   "area": "Day and the Desk",
+   "round": 15,
+   "order": 48,
+   "version": 1,
+   "title": "Changing an entry's name",
+   "body": [
+    "You said it's confusing to change an entry's name. Today you double-click the entry (or right-click → **Open details**) and type in the **What** box at the top; it saves when you press Enter or click away. Nothing on the entry hints at that, and nothing tells you it saved.",
+    "Two small fixes, shown below. Pick either, both or neither."
+   ],
+   "bullets": [
+    "**Rename right on the entry:** a ✎ pencil appears when you point at an entry on Day or a card on the Desk, and **Rename** (F2) is first in the right-click menu. The name turns into a box; Enter saves, Esc cancels, and Undo is offered.",
+    "**Clearer in the details:** the \"What\" box becomes **Name**, with a pencil, and shows **✓ Saved** after a change."
+   ],
+   "questions": [
+    {"id": "inline", "legend": "Rename right on the entry", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
+    {"id": "details", "legend": "Clearer in the details", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
+    {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. double-click the name to rename instead of opening details"}
+   ],
+   "figures": [
+    {"caption": "Where it is today, and why it's easy to miss.", "html_file": "mocks/r16-rename.html", "start": "now"},
+    {"caption": "Rename right on the entry: a pencil, and Rename in the menu.", "html_file": "mocks/r16-rename.html", "start": "inline"},
+    {"caption": "The details: a Name box that says when it saved.", "html_file": "mocks/r16-rename.html", "start": "details"}
+   ]
+  }
+ }
+}
