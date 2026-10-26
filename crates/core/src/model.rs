@@ -784,6 +784,13 @@ pub struct MeetingSeries {
     pub at: u32,
     /// Minutes ahead the bell starts reminding.
     pub remind_minutes: u32,
+    /// How long it usually lasts, in minutes (round 15).
+    pub length_minutes: u32,
+    /// The project its time is logged to, if any.
+    pub project_id: Option<ProjectId>,
+    /// The last day its "Just finished" item was logged or skipped.
+    #[serde(with = "iso_date::option")]
+    pub handled_on: Option<Date>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
     pub created_at: OffsetDateTime,

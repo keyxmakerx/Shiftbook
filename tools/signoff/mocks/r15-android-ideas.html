@@ -1,0 +1,180 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#5f6872;--rule:rgba(29,33,38,.12);
+--accent:#3d5bb0;--aw:#e6ebf8;--warn:#9f5a06;--ww:#fcf1df;--ok:#2e8a5a;--okw:#e3f2ea;--bad:#c2412d;--phone:#1b1e22;--on:#fff;
+--display:Fraunces,Georgia,'Times New Roman',serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace}
+@media (prefers-color-scheme:dark){:root{--desk:#14171b;--paper:#23272d;--paper2:#2a2f36;--ink:#e7eaee;--ink2:#b9c0c8;--mut:#949da7;--rule:rgba(255,255,255,.1);--accent:#8ea6ee;--aw:#2a3350;--warn:#f0b45a;--ww:#3a2c14;--ok:#6ccb95;--okw:#1d3328;--bad:#f08a78;--phone:#050607;--on:#14171b}}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:14px}
+.grid{display:flex;flex-wrap:wrap;gap:22px 18px;justify-content:center}
+.shot{width:244px;display:flex;flex-direction:column;gap:8px;margin:0}
+.shot figcaption{font-size:12.5px;color:var(--ink2)}
+.shot figcaption b{color:var(--ink)}
+.tag{font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.phone{width:244px;height:500px;border-radius:30px;background:var(--phone);padding:9px}
+.screen{width:100%;height:100%;border-radius:22px;background:var(--desk);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:11.5px;line-height:1.35}
+.status{display:flex;justify-content:space-between;padding:7px 14px 3px;font:10px var(--mono);color:var(--mut)}
+.top{padding:3px 12px 9px;display:flex;flex-direction:column;gap:1px}
+.day{font:600 17px var(--display)}
+.sum{color:var(--mut)} .sum b{color:var(--ink)}
+.body{flex:1;overflow:hidden;padding:0 9px;display:flex;flex-direction:column;gap:7px}
+.timer{background:var(--accent);color:var(--on);border-radius:9px;padding:7px 9px;display:flex;justify-content:space-between;align-items:center}
+.timer .t{font:13px var(--mono)} .timer .x{border:1px solid currentColor;border-radius:6px;padding:1px 7px;font-weight:600}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 9px;display:flex;flex-direction:column;gap:4px;position:relative}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.h{font-family:var(--mono);color:var(--ink2);white-space:nowrap}
+.title{font-weight:600}
+.proj{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-size:10.5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}.dot.g{background:var(--ok)}.dot.o{background:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:10px var(--mono);background:var(--paper2);border:1px solid var(--rule);border-radius:5px;padding:1px 6px}.chip.ok{background:var(--okw)}
+.due{background:var(--ww);color:var(--warn);border-radius:9px;padding:7px 9px;display:flex;justify-content:space-between;font-weight:600}
+.fab{position:absolute;right:12px;bottom:60px;width:48px;height:48px;border-radius:15px;background:var(--accent);color:var(--on);display:grid;place-items:center;font-size:26px;box-shadow:0 8px 18px -8px rgba(0,0,0,.5)}
+.nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--paper);border-top:1px solid var(--rule);padding:6px 3px 11px;text-align:center;font-size:9.5px;color:var(--mut)}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav i{width:17px;height:17px;border-radius:5px;border:1.6px solid currentColor;display:block}
+.nav .on{color:var(--accent);font-weight:600}.nav .on i{background:var(--aw)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:16px 16px 0 0;padding:9px 12px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -10px 30px -12px rgba(0,0,0,.4)}
+.grab{width:34px;height:4px;border-radius:2px;background:var(--rule);align-self:center}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+.box{border:2px solid var(--accent);border-radius:9px;padding:8px 9px;font:11.5px var(--mono)}
+.cur{display:inline-block;width:1.5px;height:12px;background:var(--accent);vertical-align:-2px}
+.parsed{display:flex;flex-wrap:wrap;gap:5px}
+.pt{font-size:10.5px;border-radius:999px;padding:2px 8px;background:var(--aw)}
+.btns{display:flex;gap:7px}
+.btn{flex:1;text-align:center;border-radius:9px;padding:8px;border:1px solid var(--rule);font-weight:600;background:var(--paper)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.keys{background:var(--paper2);margin:0 -12px -12px;padding:7px 5px 12px;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.keys span{height:24px;border-radius:5px;background:var(--paper);border:1px solid var(--rule)}
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 20px;text-align:center}
+.mark{width:52px;height:52px;border-radius:15px;background:var(--paper);border:1px solid var(--rule);display:grid;place-items:center;font:600 24px var(--display);color:var(--accent)}
+.field{align-self:stretch;border:1px solid var(--rule);background:var(--paper);border-radius:9px;padding:9px;text-align:left;color:var(--mut)}
+.finger{width:50px;height:50px;border-radius:50%;border:2px solid var(--accent);display:grid;place-items:center}
+.finger svg{width:26px;height:26px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round}
+.small{font-size:10.5px;color:var(--mut)}
+h3{margin:0;font:600 14px var(--ui)}
+h4{margin:0;font:600 16px var(--display)}
+.wall{background:linear-gradient(160deg,#2c3a5c,#1a2236 60%,#121726);color:#e7eaee}
+.clock{font:400 50px var(--display);text-align:center;margin-top:40px}
+.date{text-align:center;opacity:.8}
+.notif{margin:22px 10px 0;background:rgba(255,255,255,.14);border-radius:13px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;color:#e7eaee}
+.notif .app{font-size:9.5px;opacity:.75;display:flex;gap:6px;align-items:center}
+.notif .app i{width:11px;height:11px;border-radius:3px;background:#8ea6ee;display:block}
+.notif b{font-size:12.5px}
+.notif .acts{display:flex;gap:14px;margin-top:4px;font-weight:600;color:#b9c8f5;font-size:11px}
+.list{background:var(--paper);border:1px solid var(--rule);border-radius:9px;display:flex;flex-direction:column}
+.li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--rule)}
+.li:last-child{border-bottom:0}
+.li small{display:block;color:var(--mut);font-size:10px}
+.sw{width:30px;height:17px;border-radius:9px;background:var(--rule);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--paper)}
+.sw.on{background:var(--accent)}.sw.on::after{left:15px}
+.lbl{font:600 9.5px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:0 3px}
+.ok{color:var(--ok);font-weight:600}
+.callout{font-size:10.5px;background:var(--ww);color:var(--warn);border-radius:8px;padding:7px 9px}
+</style></head><body><div class="grid">
+<figure class="shot"><span class="tag">A · Swipe an entry</span><div class="phone"><div class="screen">
+ <div class="status"><span>11:20</span><span>80%</span></div>
+ <div class="top"><span class="day">Tuesday 27 Oct</span><span class="sum">Today <b>3 h 30</b></span></div>
+ <div class="body">
+  <div style="position:relative;border-radius:9px;overflow:hidden;background:var(--ok)">
+   <div style="position:absolute;inset:0;display:flex;align-items:center;padding-left:12px;color:#fff;font-weight:700">+15 min</div>
+   <div class="card" style="transform:translateX(74px);border-radius:9px"><div class="row"><span class="title">Fixed VPN drop-outs</span><span class="h">1 h 45</span></div><span class="proj"><i class="dot"></i>Network refresh</span></div>
+  </div>
+  <div style="position:relative;border-radius:9px;overflow:hidden;background:var(--paper2)">
+   <div style="position:absolute;inset:0;display:flex;justify-content:flex-end;align-items:stretch">
+    <span style="display:grid;place-items:center;width:60px;background:var(--accent);color:var(--on);font-weight:600">Timer</span>
+    <span style="display:grid;place-items:center;width:60px;background:var(--bad);color:#fff;font-weight:600">Delete</span></div>
+   <div class="card" style="transform:translateX(-120px);border-radius:9px"><div class="row"><span class="title">Weekly ops meeting</span><span class="h">1 h</span></div><span class="proj"><i class="dot g"></i>Meetings</span></div>
+  </div>
+  <div class="card"><div class="row"><span class="title">Done tickets tray</span><span class="h">45 m</span></div></div>
+ </div>
+ <div style="position:absolute;left:10px;right:10px;bottom:62px;background:var(--ink);color:var(--paper);border-radius:9px;padding:8px 10px;display:flex;justify-content:space-between"><span>Added 15 min</span><b>Undo</b></div>
+ <div class="nav"><span class="on"><i></i>Desk</span><span><i></i>Day</span><span><i></i>Notes</span><span><i></i>Timesheet</span><span><i></i>More</span></div>
+</div></div><figcaption><b>Swipe right for +15 min</b>, a full swipe again for another 15. <b>Swipe left</b> to start the timer on it or delete it. Every swipe has Undo.</figcaption></figure>
+
+<figure class="shot"><span class="tag">B · Hour buttons</span><div class="phone"><div class="screen">
+ <div class="status"><span>11:25</span><span>80%</span></div>
+ <div class="top"><span class="day">Tuesday 27 Oct</span></div>
+ <div class="body"></div>
+ <div class="dim"></div>
+ <div class="sheet"><span class="grab"></span><h3>Log or jot</h3>
+  <div class="box">printer queue<span class="cur"></span></div>
+  <span class="lbl">How long</span>
+  <div class="parsed"><span class="pt">15m</span><span class="pt">30m</span><span class="pt" style="background:var(--accent);color:var(--on)"><b>45m</b></span><span class="pt">1h</span><span class="pt">2h</span><span class="pt">Half day</span></div>
+  <span class="lbl">Recent</span>
+  <div class="parsed"><span class="pt"><i class="dot"></i> Network refresh</span><span class="pt"><i class="dot g"></i> Meetings</span><span class="pt"><i class="dot o"></i> Laptop rollout</span></div>
+  <div class="btns"><span class="btn">Scrap</span><span class="btn p">Log 45 min</span></div>
+ </div>
+</div></div><figcaption><b>Tap instead of type.</b> Hour buttons and your recent projects under the capture box, so logging on a bus takes three taps. Typing "45m #net" still works.</figcaption></figure>
+
+<figure class="shot"><span class="tag">C · Share into Shiftbook</span><div class="phone"><div class="screen">
+ <div class="status"><span>13:02</span><span>77%</span></div>
+ <div class="top"><span class="day" style="font:600 14px var(--ui)">Mail</span><span class="sum">RE: INC0045720 and INC0045722 closed</span></div>
+ <div class="body"><div class="card"><span class="small">Hi, both tickets are resolved now, thanks for the quick fix on the printer queue…</span></div></div>
+ <div class="dim"></div>
+ <div class="sheet"><span class="grab"></span><h3>Add to Shiftbook</h3>
+  <span class="small">Found 2 tickets in what you shared:</span>
+  <div class="chips"><span class="chip">INC0045720</span><span class="chip">INC0045722</span></div>
+  <div class="list">
+   <div class="li"><span>Put in today's Done tickets tray<small>15 min each, change it later</small></span><span class="ok">●</span></div>
+   <div class="li"><span>Log as one entry</span><span class="small">○</span></div>
+   <div class="li"><span>Save the text as a scrap</span><span class="small">○</span></div>
+  </div>
+  <span class="btn p" style="flex:none">Add after unlocking</span>
+ </div>
+</div></div><figcaption><b>Share → Shiftbook</b> from mail or a ticket app. It pulls out the ticket numbers, and you pick where they go. Unlocks first, as always.</figcaption></figure>
+
+<figure class="shot"><span class="tag">D · Long-press the icon</span><div class="phone"><div class="screen wall">
+ <div class="status" style="color:#c9d0da"><span>08:55</span><span>90%</span></div>
+ <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px 0;padding:30px 12px 0;justify-items:center">
+  <span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span><span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span><span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span><span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span>
+  <span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span><span style="width:40px;height:40px;border-radius:12px;background:#fffdf8;display:grid;place-items:center;font:600 20px var(--display);color:#3d5bb0;box-shadow:0 0 0 3px rgba(142,166,238,.6)">S</span><span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span><span style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.18)"></span>
+ </div>
+ <div style="margin:10px 34px 0 60px;background:#fffdf8;color:#1d2126;border-radius:14px;padding:4px 0;font-size:12px;box-shadow:0 12px 26px -10px rgba(0,0,0,.6)">
+  <div style="padding:9px 12px;border-bottom:1px solid rgba(29,33,38,.1)">＋ Log work</div>
+  <div style="padding:9px 12px;border-bottom:1px solid rgba(29,33,38,.1)">▶ Start the timer</div>
+  <div style="padding:9px 12px">✎ Jot a note</div>
+ </div>
+</div></div><figcaption><b>Long-press the app icon</b> for Log work, Start the timer or Jot a note. This stands in for the computer's capture-from-anywhere shortcut.</figcaption></figure>
+
+<figure class="shot"><span class="tag">E · Timer, back from your pocket</span><div class="phone"><div class="screen">
+ <div class="status"><span>14:31</span><span>70%</span></div>
+ <div class="top"><span class="day">Tuesday 27 Oct</span></div>
+ <div class="body"><div class="timer"><span>Laptop rollout</span><span class="t">1:05</span><span class="x">Stop</span></div></div>
+ <div class="dim"></div>
+ <div class="sheet"><span class="grab"></span><h3>You were away for 25 minutes</h3>
+  <span class="small">The timer for Laptop rollout kept going while Shiftbook was in the background. Were you still working on it?</span>
+  <div class="btns"><span class="btn">Leave it out</span><span class="btn p">Count it</span></div>
+  <span class="small">Leave it out takes 25 min off: the timer shows 0:40.</span>
+ </div>
+</div></div><figcaption><b>The timer asks, it doesn't guess.</b> On the computer a long gap means it slept. On a phone you might have been working with it in your pocket.</figcaption></figure>
+
+<figure class="shot"><span class="tag">F · Timer in the pull-down</span><div class="phone"><div class="screen wall">
+ <div class="status" style="color:#c9d0da"><span>14:40</span><span>69%</span></div>
+ <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 10px 0">
+  <span style="background:rgba(255,255,255,.14);border-radius:14px;padding:10px">Wi-Fi<br><small style="opacity:.7">Home</small></span>
+  <span style="background:rgba(255,255,255,.14);border-radius:14px;padding:10px">Bluetooth<br><small style="opacity:.7">On</small></span>
+  <span style="background:#8ea6ee;color:#14171b;border-radius:14px;padding:10px;font-weight:600">Shiftbook timer<br><small>Running · 0:52</small></span>
+  <span style="background:rgba(255,255,255,.14);border-radius:14px;padding:10px">Torch<br><small style="opacity:.7">Off</small></span>
+ </div>
+ <div class="notif" style="margin-top:16px"><span class="app"><i></i>Shiftbook</span><b>Timer running · 0:52</b><span>Open Shiftbook to stop it.</span></div>
+</div></div><figcaption><b>A timer tile and a quiet notification.</b> Shows that a timer runs and for how long, never the project. Tap to open, unlock and stop.</figcaption></figure>
+
+<figure class="shot"><span class="tag">G · Wrap-up nudge</span><div class="phone"><div class="screen wall">
+ <div class="status" style="color:#c9d0da"><span></span><span>55%</span></div>
+ <div class="clock">16:45</div><div class="date">Tuesday 27 October</div>
+ <div class="notif"><span class="app"><i></i>Shiftbook · now</span><b>Time to wrap up the day?</b><span>Takes a minute: check today's hours and tickets.</span><div class="acts"><span>Wrap up</span><span>Tomorrow</span></div></div>
+</div></div><figcaption><b>An end-of-day nudge</b> at a time you pick, opening the wrap-up. Off by default; no hours or titles on the lock screen.</figcaption></figure>
+
+<figure class="shot"><span class="tag">H · Pick up where you left off</span><div class="phone"><div class="screen">
+ <div class="status"><span>09:12</span><span>88%</span></div>
+ <div class="top"><span class="day">Wednesday 28 Oct</span><span class="sum">Today <b>0 h</b></span></div>
+ <div class="body">
+  <div class="card" style="border:2px solid var(--accent)"><h3>Yesterday you ended on</h3><div class="row"><span class="title">Laptop rollout</span><span class="h">2 h 10</span></div><span class="small">Your note: "3 left, waiting on stock"</span><div class="btns"><span class="btn">Not now</span><span class="btn p">Carry on</span></div></div>
+  <div class="due"><span>2 due today</span><span>›</span></div>
+ </div>
+ <div class="fab">+</div>
+ <div class="nav"><span class="on"><i></i>Desk</span><span><i></i>Day</span><span><i></i>Notes</span><span><i></i>Timesheet</span><span><i></i>More</span></div>
+</div></div><figcaption><b>Where was I, on the phone.</b> The first unlock of the day shows what you ended on and your last note. Carry on starts the timer on it.</figcaption></figure>
+</div>
+<script>;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()</script></body></html>

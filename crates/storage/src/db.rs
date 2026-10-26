@@ -88,6 +88,12 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         include_str!("../migrations/0014_ticket_done.sql"),
     ),
     (15, "items", include_str!("../migrations/0015_items.sql")),
+    (16, "lists", include_str!("../migrations/0016_lists.sql")),
+    (
+        17,
+        "meeting length, project and logged day",
+        include_str!("../migrations/0017_meeting_log.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -150,6 +156,8 @@ pub async fn open_encrypted(path: &Path, dek: &Dek) -> Result<SqlitePool, Storag
     }
     fsutil::make_file_private(path).map_err(StorageError::Io)?;
     migrator().run(&pool).await?;
+    #[cfg(test)]
+    crate::test_rt::track(&pool);
     Ok(pool)
 }
 

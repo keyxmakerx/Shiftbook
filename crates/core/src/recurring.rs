@@ -254,6 +254,67 @@ pub fn summarize_recurring(
     }
 }
 
+/// The "last done" date that makes a repeating thing next come round on `next` (round 15:
+/// the user says when it's next due, not when it was last done). Months are clamped to the
+/// month end, so some dates can't be reached exactly (monthly onto 30 March: no day in
+/// February plus a month gives it); then the result is the latest day that comes round
+/// before `next`, so a reminder is early rather than late.
+pub fn last_done_for_next(next: Date, interval: Interval) -> Date {
+    let span = i64::from(interval.months) * 31 + i64::from(interval.days) + 2;
+    let mut day = add_days(next, -span);
+    let mut best = day;
+    while day < next {
+        if interval.add_to(day) <= next {
+            best = day;
+        } else {
+            break;
+        }
+        day = add_days(day, 1);
+    }
+    best
+}
+
+/// The day a thing starts to need attention: its warning window opens `warn` days before
+/// it is due.
+pub fn alert_from(next_due: Date, warn: u32) -> Date {
+    add_days(next_due, -i64::from(warn))
+}
+
+/// True when a thing due on `next_due` started needing attention, or went overdue, after
+/// `last_open` and by `today` ("While you were away", round 15).
+pub fn came_due_since(next_due: Date, warn: u32, last_open: Date, today: Date) -> bool {
+    let new = |d: Date| d > last_open && d <= today;
+    new(alert_from(next_due, warn)) || new(add_days(next_due, 1))
+}
+
+/// Sort position for the Repeating view and the bell: overdue first, then things whose
+/// expiry date needs moving, due soon, needing a date, fine, routine and retired last.
+pub const fn attention_order(state: RecurringState) -> u8 {
+    match state {
+        RecurringState::Overdue => 0,
+        RecurringState::Renewed => 1,
+        RecurringState::DueSoon => 2,
+        RecurringState::NeedsDate => 3,
+        RecurringState::Ok => 4,
+        RecurringState::Ongoing => 5,
+        RecurringState::Inactive => 6,
+    }
+}
+
+/// When it's due, in plain words: "today", "tomorrow", "in 9 days", "in 4 months",
+/// "yesterday", "3 days late".
+pub fn due_words(days_left: i64) -> String {
+    match days_left {
+        0 => "today".into(),
+        1 => "tomorrow".into(),
+        -1 => "yesterday".into(),
+        d if d < 0 => format!("{} days late", -d),
+        d if d < 60 => format!("in {d} days"),
+        d if d < 730 => format!("in {} months", d / 30),
+        d => format!("in {} years", d / 365),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -327,6 +388,90 @@ mod tests {
             }),
             Ongoing
         );
+    }
+
+    #[test]
+    fn last_done_for_next_comes_round_on_next() {
+        let weekly = Interval::new(0, 7).unwrap();
+        let next = date!(2026 - 10 - 29);
+        let last = last_done_for_next(next, weekly);
+        assert_eq!(last, date!(2026 - 10 - 22));
+        assert_eq!(weekly.add_to(last), next);
+        let yearly = YEARLY.unwrap();
+        let birthday = date!(2027 - 11 - 17);
+        assert_eq!(
+            yearly.add_to(last_done_for_next(birthday, yearly)),
+            birthday
+        );
+        let monthly = MONTHLY.unwrap();
+        for d in [
+            date!(2026 - 03 - 31),
+            date!(2026 - 02 - 28),
+            date!(2026 - 12 - 01),
+        ] {
+            let back = monthly.add_to(last_done_for_next(d, monthly));
+            assert!(
+                back <= d && days_between(back, d) <= 3,
+                "{d} came back as {back}"
+            );
+        }
+        // Monthly onto 31 March can only reach 28 March: early, never late.
+        assert_eq!(
+            monthly.add_to(last_done_for_next(date!(2026 - 03 - 31), monthly)),
+            date!(2026 - 03 - 28)
+        );
+        let both = Interval::new(1, 3).unwrap();
+        let n = date!(2026 - 07 - 15);
+        assert_eq!(both.add_to(last_done_for_next(n, both)), n);
+    }
+
+    #[test]
+    fn what_came_due_while_away() {
+        let away = date!(2026 - 10 - 20);
+        // Due 25 Oct, warn 3: the window opened on the 22nd, while away.
+        assert!(came_due_since(
+            date!(2026 - 10 - 25),
+            3,
+            away,
+            date!(2026 - 10 - 25)
+        ));
+        // Window opened before the last open and not overdue yet: already seen.
+        assert!(!came_due_since(
+            date!(2026 - 10 - 22),
+            5,
+            away,
+            date!(2026 - 10 - 22)
+        ));
+        // ...but went overdue while away: new again.
+        assert!(came_due_since(
+            date!(2026 - 10 - 22),
+            5,
+            away,
+            date!(2026 - 10 - 24)
+        ));
+        // Nothing new when opened the same day.
+        assert!(!came_due_since(date!(2026 - 10 - 20), 0, away, away));
+        // Not yet in its window.
+        assert!(!came_due_since(
+            date!(2026 - 12 - 01),
+            7,
+            away,
+            date!(2026 - 10 - 24)
+        ));
+    }
+
+    #[test]
+    fn plain_due_words_and_order() {
+        assert_eq!(due_words(0), "today");
+        assert_eq!(due_words(1), "tomorrow");
+        assert_eq!(due_words(-1), "yesterday");
+        assert_eq!(due_words(-3), "3 days late");
+        assert_eq!(due_words(9), "in 9 days");
+        assert_eq!(due_words(125), "in 4 months");
+        assert_eq!(due_words(1000), "in 2 years");
+        assert!(attention_order(Overdue) < attention_order(DueSoon));
+        assert!(attention_order(DueSoon) < attention_order(Ok));
+        assert!(attention_order(Ok) < attention_order(Inactive));
     }
 
     #[test]

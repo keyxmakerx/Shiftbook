@@ -1,0 +1,324 @@
+{
+ "meta": {
+  "round": 15
+ },
+ "cards": {
+  "r15-qol-five": {
+   "round": 15,
+   "order": 21,
+   "area": "Quality of life",
+   "version": 1,
+   "title": "Mockups for the five you picked",
+   "body": [
+    "You picked these five on the card above. Here is how each would look before I build it, drawn in Shiftbook's look with made-up tickets.",
+    "All five go in one pull request. If any picture looks wrong, pick **Change something** and say which."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-qol-paste.html",
+     "caption": "**Paste anywhere on the Desk.** Ctrl+V on empty paper: ticket numbers go to the Tickets tray and ask the time so far; plain text becomes a jot where the pointer is."
+    },
+    {
+     "html_file": "mocks/r15-qol-find.html",
+     "caption": "**Find does everything.** Press / or Ctrl+Space and type: days, actions and Settings pages all show, grouped."
+    },
+    {
+     "html_file": "mocks/r15-qol-bringup.html",
+     "caption": "**Bring up…** gets a short list of days, the same one pins use for their chase day."
+    },
+    {
+     "html_file": "mocks/r15-qol-standup.html",
+     "caption": "**Copy for stand-up** on Where was I? (and in Find). This is what lands on the clipboard."
+    },
+    {
+     "html_file": "mocks/r15-qol-undo.html",
+     "caption": "**Ctrl+Z** undoes the last change and keeps going back. Typing \"undo\" in Find lists recent changes."
+    }
+   ],
+   "questions": [
+    {
+     "id": "ok",
+     "legend": "Build them like this?",
+     "options": [
+      {
+       "value": "Yes, build them as pictured",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. stand-up should say Done / Next instead"
+    }
+   ],
+   "pick": "As pictured, in one pull request."
+  },
+  "r15-qol-rest": {
+   "round": 15,
+   "order": 22,
+   "area": "Quality of life",
+   "version": 1,
+   "title": "The other nine from the first list, now with mockups",
+   "body": [
+    "These were on the first card but not ticked. Each now has a picture. Tick any you want built after the first five. The ticked ones are my picks: small, and they help every day or every week."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-qol-times.html",
+     "caption": "**Your own time buttons** in Settings → Your day."
+    },
+    {
+     "html_file": "mocks/r15-qol-meetlog.html",
+     "caption": "**Log a meeting from the bell** when it ends."
+    },
+    {
+     "html_file": "mocks/r15-qol-title.html",
+     "caption": "**Today's hours in the window title**, with a switch to turn it off."
+    },
+    {
+     "html_file": "mocks/r15-qol-nudge.html",
+     "caption": "**Anything to log?** after 90 minutes with nothing logged."
+    },
+    {
+     "html_file": "mocks/r15-qol-today.html",
+     "caption": "**Just today** fades everything that isn't today, open, brought up or pinned."
+    },
+    {
+     "html_file": "mocks/r15-qol-friday.html",
+     "caption": "**Timesheet reminder** in the bell on your last work day."
+    },
+    {
+     "html_file": "mocks/r15-qol-recap.html",
+     "caption": "**Week recap** in Friday's wrap-up."
+    },
+    {
+     "html_file": "mocks/r15-qol-switches.html",
+     "caption": "**On my Desk** switches in Settings → Look."
+    },
+    {
+     "html_file": "mocks/r15-qol-deskkeys.html",
+     "caption": "**Desk keys**, shown while you hold Ctrl."
+    }
+   ],
+   "questions": [
+    {
+     "id": "build",
+     "type": "many",
+     "legend": "Build these next",
+     "options": [
+      {
+       "value": "Your own time buttons",
+       "on": true
+      },
+      {
+       "value": "Log a meeting from the bell in one click",
+       "on": true
+      },
+      {
+       "value": "Today's hours in the window title",
+       "on": false
+      },
+      {
+       "value": "A quiet \"Anything to log?\" after 90 minutes (off by default)",
+       "on": false
+      },
+      {
+       "value": "\"Just today\" switch that fades older cards on the Desk",
+       "on": true
+      },
+      {
+       "value": "Timesheet reminder on your last work day",
+       "on": true
+      },
+      {
+       "value": "A short week recap in the wrap-up",
+       "on": false
+      },
+      {
+       "value": "Switches to turn off Desk tools you don't use",
+       "on": false
+      },
+      {
+       "value": "Use the Desk from the keyboard (arrows, D, B, P)",
+       "on": false
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. the timesheet reminder should come on Thursday"
+    }
+   ],
+   "pick": "Time buttons, meetings from the bell, the Friday reminder and Just today."
+  },
+  "r15-qol-new": {
+   "round": 15,
+   "order": 23,
+   "area": "Quality of life",
+   "version": 1,
+   "title": "Eleven more ideas, each with a mockup",
+   "body": [
+    "You asked for more. These are a little bigger than the first list. Each still saves time every day or week, works offline and keeps to minutes only.",
+    "The full write-up of each (what bugs you today, what changes, why it helps) is on [Shiftbook Smaller Steps](https://claude.ai/artifact/6nnqjjm7UQVBYSBRVD75Uk). The ticked ones are my picks."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-qol-todos.html",
+     "caption": "**To-dos in notepads.** [] at the start of a line makes a tick box; open ones count on the card and in the bell."
+    },
+    {
+     "html_file": "mocks/r15-qol-age.html",
+     "caption": "**Ticket age** on still-open tickets; the oldest go to the top."
+    },
+    {
+     "html_file": "mocks/r15-qol-snooze.html",
+     "caption": "**Snooze** a waiting ticket out of the tray until a day."
+    },
+    {
+     "html_file": "mocks/r15-qol-fill.html",
+     "caption": "**Fill the rest of the day** at wrap-up time."
+    },
+    {
+     "html_file": "mocks/r15-qol-split.html",
+     "caption": "**Split** an entry (Merge works the other way)."
+    },
+    {
+     "html_file": "mocks/r15-qol-multiline.html",
+     "caption": "**Several lines into Log work**, one entry each."
+    },
+    {
+     "html_file": "mocks/r15-qol-blanks.html",
+     "caption": "**Responses with blanks** that fill themselves in."
+    },
+    {
+     "html_file": "mocks/r15-qol-daily.html",
+     "caption": "**Today's note** starts with your day in it."
+    },
+    {
+     "html_file": "mocks/r15-qol-timeoff.html",
+     "caption": "**Book time off** for a range of days."
+    },
+    {
+     "html_file": "mocks/r15-qol-recent.html",
+     "caption": "**Ctrl+Tab** for what you had open recently."
+    },
+    {
+     "html_file": "mocks/r15-qol-lockwrap.html",
+     "caption": "**Wrap up before you go?** when you lock or close after your wrap-up time."
+    }
+   ],
+   "questions": [
+    {
+     "id": "build",
+     "type": "many",
+     "legend": "Build these",
+     "options": [
+      {
+       "value": "To-dos inside notepads: [] makes a tick box",
+       "on": true
+      },
+      {
+       "value": "How long a ticket has been open (amber after 3 days)",
+       "on": true
+      },
+      {
+       "value": "Snooze a still-open ticket until a day",
+       "on": false
+      },
+      {
+       "value": "Fill the rest of the day up to your target",
+       "on": false
+      },
+      {
+       "value": "Split one entry in two, or merge two",
+       "on": false
+      },
+      {
+       "value": "Log several lines at once in Log work",
+       "on": true
+      },
+      {
+       "value": "Saved responses that fill in {ticket}, {date}, {name}",
+       "on": false
+      },
+      {
+       "value": "Today's note starts with today's meetings and brought-up items",
+       "on": false
+      },
+      {
+       "value": "Book time off for several days at once",
+       "on": true
+      },
+      {
+       "value": "Ctrl+Tab to jump back to what you just had open",
+       "on": false
+      },
+      {
+       "value": "Offer the wrap-up when you lock or close late in the day",
+       "on": true
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. ticket age should turn amber after a week"
+    }
+   ],
+   "pick": "To-dos in notepads, ticket age, several lines into Log work, time off, and the wrap-up when you leave."
+  },
+  "r15-unlock-plan": {
+   "round": 15,
+   "order": 26,
+   "area": "Quality of life · security",
+   "version": 1,
+   "title": "Quick unlock: the security write-up",
+   "body": [
+    "You asked for the security side first. It's written in SECURITY.md (section \"Quick unlock with a PIN\"). In plain words:",
+    "**When the PIN works.** Only after you've unlocked with your password that day. It stops working at midnight, 10 hours after that unlock, when Shiftbook closes, when the computer sleeps, or after 3 wrong PINs. Then it's the password again.",
+    "**What stays the same.** The data file on disk is exactly as safe as now. The PIN is never saved anywhere, and it can't open a copy of the file or a backup.",
+    "**The honest limit.** While locked with a PIN, Shiftbook keeps a PIN-locked copy of the key in memory. Malware already running on your computer could try every PIN against it, which takes days of computer time. The same malware could read the key directly while Shiftbook is unlocked today, so this adds little, but it is why the PIN stops at sleep and after 10 hours.",
+    "**Not chosen:** leaving the database open behind a lock screen (weaker), saving a PIN-locked key on disk so it survives a restart (much weaker), and Windows Hello or the keychain (new plugins; the Android card's fingerprint option can come back to it)."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r15-qol-unlock.html",
+     "caption": "The unlock screen inside the PIN window. Outside it, the usual password screen."
+    }
+   ],
+   "questions": [
+    {
+     "id": "ok",
+     "legend": "Quick unlock",
+     "options": [
+      {
+       "value": "Approved: build it as written",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      },
+      {
+       "value": "Not now"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. stop at 8 hours, or 4 digits"
+    }
+   ],
+   "pick": "Approve as written; it's off until you set a PIN."
+  }
+ }
+}

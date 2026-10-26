@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">"Shiftbook"</string>
+    <string name="main_activity_title">"Shiftbook"</string>
+    <string name="shortcut_log">Log work</string>
+    <string name="shortcut_timer">Start the timer</string>
+    <string name="shortcut_jot">Jot a note</string>
+    <string name="share_label">Add to Shiftbook</string>
+    <string name="tile_label">Shiftbook timer</string>
+</resources>

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-fingerprint-on"
+description = "Enables the fingerprint_on command without any pre-configured scope."
+commands.allow = ["fingerprint_on"]
+
+[[permission]]
+identifier = "deny-fingerprint-on"
+description = "Denies the fingerprint_on command without any pre-configured scope."
+commands.deny = ["fingerprint_on"]

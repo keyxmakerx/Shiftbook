@@ -19,7 +19,7 @@
     }
     toast('Removed from the Inbox', 'Undo', () => {
       void attempt(() => api.setInboxDeleted(item.id, false)).then(() => attempt(refreshInbox));
-    });
+    }, () => void attempt(() => api.setInboxDeleted(item.id, true)).then(() => attempt(refreshInbox)));
   }
 </script>
 

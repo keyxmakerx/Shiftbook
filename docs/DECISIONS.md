@@ -2,7 +2,7 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
-## Round 15 — 25 Oct 2026
+## Round 15 — 25 Oct 2026 (one item per ticket)
 - **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
   write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
   tray tickets, entry tickets and later tasks and chores point at, with one done tick, one
@@ -16,6 +16,100 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   unlock: the newest row decides done and project, and different notepads are merged under
   "Earlier note" lines so none is lost. A ticket number that comes back later is the same
   ticket, reopened, with its old notes (recommended pick on the card).
+## Round 15 — 25 Oct 2026 (home use and repeating things)
+- **What's Shiftbook for?** (r15-home): a real goal, not a side mode. First run asks **Work,
+  Home or Both** after the recovery key; Settings → Look can change it any time. Home turns the
+  hours targets off (0 every day), locks after 60 minutes instead of 15, hides the Timesheet
+  (keys become 1 to 6) and the week-pack day options, shows home starter categories (Home,
+  Money, Health, Family, Car, Admin, Errands) and repeating kinds (Bills, Home upkeep, Car,
+  Health, Documents, Birthdays), and swaps words (Tickets → References, Meetings → Regular
+  events, MOP → Step-by-step guide, Log work → "Done something?"). Values the user added are
+  never touched. Both keeps the work words and adds the home pieces. Rules: `core::home`.
+- **Done without time** (r15-home): in Home and Both, Log work has a **✓ Done** button that saves
+  the line with no minutes; such entries show a tick instead of 0h. With no hours target the
+  Desk and Day count "things done" instead of the hours ring.
+- **Lists** (r15-home, built with Tasks/M4): reusable checklists (shopping, packing, before we go
+  away) on their own screen (key 6, or 5 at home). Paste several lines to add them all; **Reset
+  for next time** unticks everything and keeps the items. Stored as tasks with `is_list` and their
+  checklist items (migration 0016).
+- **Repeating things** (r15-recurring): the M3 recurring screen is built now (key 5, or 4 at
+  home): things that repeat (pick how often and when it's next due) or expire on a date (with how
+  often they renew). **Mark done** adds a no-time Done entry on the day, with Undo; things that
+  expire ask for the new expiry date. Overdue and due-soon things show on the Desk (**Due soon**)
+  and in the bell with Done. **Yearly** (already a starter frequency) covers birthdays and renewals.
+- **While you were away** (r15-recurring): on unlock (and when the day changes) the bell opens on
+  what came due, or what you said to chase, since Shiftbook was last open. No new plugin and no
+  system notifications. Last-open day is kept in prefs (`app.last_open`).
+- **Keys:** 1 Desk, 2 Day, 3 Timesheet, 4 Notes, 5 Repeating, 6 Lists, 7 Settings (at home the
+  Timesheet is hidden and the rest move up one).
+
+## Round 15 — Android — 25 Oct 2026
+Proposal: [Shiftbook in your pocket](https://claude.ai/artifact/CufAB8vtd1KpGsRzwTH967);
+cards `r15-android` and `r15-android-ideas` (`tools/signoff/rounds/r15-android.json`). The
+owner approved every recommendation in chat and asked for mockups before any UI is built, so
+the screens are on the card and still need sign-off.
+- **Scope:** the phone starts as a companion (log work, capture, today, the bell, reading
+  notes), not the full Desk canvas. Same Tauri 2 app, core and storage; no separate codebase.
+- **Phone and computer data:** an encrypted sync file each side makes and merges, moved by the
+  user any way they like. Shiftbook still never goes online. Merges by id and `updated_at`,
+  newer edit wins, safety backup first.
+- **Fingerprint unlock:** offered, off by default. Built on Android's own BiometricPrompt
+  (Android 11 or newer) rather than `tauri-plugin-biometric`, so no new package; see SECURITY.md.
+- **Due reminders:** local notifications that count what is due and never show titles. Built
+  with a little Kotlin of our own rather than `tauri-plugin-notification`.
+- **Install:** a signed APK from GitHub releases; no Play Store or F-Droid for now.
+- **First step:** a test build that sets up, locks and unlocks on an Android emulator, to prove
+  SQLCipher builds for Android. If it can't, stop and ask (SECURITY.md).
+- **Ideas A–H all approved** (sign-off, 25 Oct): "do all these and push it, I'll test it". As
+  built: swipe right on an entry for +15 min, left for Timer and Delete (Undo on each);
+  hour and recent-project buttons in capture; Share → Shiftbook with a choice of the tray, one
+  entry or a scrap; long-press icon shortcuts (Log work, Start the timer, Jot a note); the timer
+  asks about time in the background from 5 minutes on (`core::timer::away_question`); a timer
+  tile and a quiet "Timer running" notification while Shiftbook is in the background; a
+  wrap-up nudge; "Where was I" as on the computer.
+- **Phone security defaults:** lock after leaving the app, default 1 minute (straight away, 1,
+  5 or 15); screenshots blocked (`FLAG_SECURE`) with the same Protected pill as the computer;
+  Android cloud backup and device transfer off; no INTERNET permission in release builds.
+  Password hashing on a phone stops at 256 MiB of memory and adds passes instead.
+- **Nudges** (due reminder, wrap-up): off by default, work days only, counts and times never
+  titles (`core::nudge`). The app plans the next one each time it's opened; Android shows it
+  then. Turning one on is when Android asks for permission to notify.
+- **Sync file** (Settings → Phone and computer, on both): "Make a sync file" saves a
+  `.shiftsync` (the backup format and encryption, everything in it); "Open a sync file" shows
+  what it would bring in, then merges after a safety backup. Rows match by id, the newer edit
+  wins, deletes travel (and can be brought back), settings stay on each device. Edits made on
+  both since the last swap are listed by name. Only copies that started from the same data can
+  swap: set the phone up by restoring a computer backup. A file from another key asks for that
+  device's password or recovery key, as a backup does. Something that clashes with a different
+  record here on a "one per day" rule (both used the same day's Tickets tray) is left out and
+  counted.
+- **No new packages for the phone so far:** notifications, the tile, shortcuts, sharing and the
+  file picker are a little Kotlin of our own (`gen/android/.../PhonePlugin.kt` and friends)
+  instead of the notification plugin.
+
+## Round 15, quality of life — 25 Oct 2026
+Built as pictured on the `r15-qol-*` mockups; the owner will try them and say which help most.
+- **Paste on the Desk:** text that is only ticket numbers goes to the Tickets tray and asks
+  "Time on them so far?" where the pointer is; anything else becomes a jot there (Undo).
+- **Find does everything; `/` opens it:** commands grouped Go to / Do / Settings (boards by name,
+  wrap up the day, back up now, copy for stand-up, fit, tidy, timeline, timer, each Settings
+  page), days like "fri", "last friday" or "12 oct", and "help" lists everything.
+- **Bring up…** offers a few work days, next week and Pick a day…, not only tomorrow.
+- **Copy for stand-up:** your last day with work and what you start with today, as plain lines;
+  the two headings are yours to name (Settings → Your day).
+- **Ctrl+Z undo with a history:** the last 20 changes with an Undo button; typing "undo" in Find
+  lists them, and undoing an older one undoes the ones after it. Redo where the change knows how.
+- **Your own time buttons:** up to five, used in Log work, on jots and for tickets.
+- **Log a meeting from the bell:** a series says how long it usually lasts and its project; when it
+  finishes the bell offers Log / Other time… / Skip, linking the entry to the meeting note.
+- **Just today** (bottom bar, key T) fades cards that aren't from today, still open, brought up
+  for today or pinned.
+- **Timesheet reminder:** from midday on your last work day the bell says the week isn't entered
+  yet, until every day is ticked off; "Remind me at…" hides it for two hours.
+- **Quick unlock with a PIN:** as written in SECURITY.md. Because the PIN is never stored, after
+  the day's first password unlock a small box asks for today's PIN (Skip is fine). The owner was
+  asked on a card whether to keep that box or set it only from Settings.
+- **The 11 newer ideas** (`r15-qol-new`) wait until the owner has tried these.
 
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a

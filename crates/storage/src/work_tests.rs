@@ -4,7 +4,7 @@
 
 use shiftbook_core::capture::{parse_capture, CaptureProject};
 use shiftbook_core::fields::{AppliesTo, FieldKind};
-use shiftbook_core::ids::{OwnerId, TimeEntryId};
+use shiftbook_core::ids::{OwnerId, ProjectId, TimeEntryId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
 use shiftbook_core::prefs::{Motion, Theme, KEY_COMMENT_SEPARATOR, KEY_MOTION, KEY_THEME};
@@ -855,6 +855,26 @@ fn open_tickets_come_back_until_ticked() {
         assert!(s.tray_carried(me, mon).await.unwrap().is_empty());
         s.tray_set_done(me, again.id, true).await.unwrap();
         assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+
+        // Ticking it on an older day (Friday's tray) also finishes the copy already
+        // carried into Monday, so it doesn't keep coming back.
+        let day = s.tray_add(me, fri, "INC0045800").await.unwrap();
+        let older = day
+            .items
+            .iter()
+            .find(|i| i.ticket_number == "INC0045800")
+            .unwrap()
+            .id;
+        s.tray_carry(me, older, mon).await.unwrap();
+        s.tray_set_done(me, older, true).await.unwrap();
+        assert!(s.tray_carried(me, tue).await.unwrap().is_empty());
+        assert!(s
+            .tray_day(me, mon)
+            .await
+            .unwrap()
+            .items
+            .iter()
+            .all(|i| i.done));
     });
 }
 
@@ -1001,8 +1021,12 @@ fn meeting_series_are_kept_and_checked() {
             days: mon_thu,
             at: 600,
             remind_minutes: 15,
+            length_minutes: 30,
+            project_id: None,
         };
         let ops = s.create_meeting_series(me, &input).await.unwrap();
+        assert_eq!(ops.length_minutes, 30);
+        assert_eq!(ops.handled_on, None);
         assert_eq!(ops.name, "Weekly ops");
         assert_eq!(ops.days, mon_thu);
         let early = crate::meetings::SeriesInput {
@@ -1041,6 +1065,25 @@ fn meeting_series_are_kept_and_checked() {
             ..input.clone()
         };
         assert!(s.create_meeting_series(me, &no_days).await.is_err());
+        let too_short = crate::meetings::SeriesInput {
+            length_minutes: 2,
+            ..input.clone()
+        };
+        assert!(s.create_meeting_series(me, &too_short).await.is_err());
+        let not_mine = crate::meetings::SeriesInput {
+            project_id: Some(ProjectId::new()),
+            ..input.clone()
+        };
+        assert!(s.create_meeting_series(me, &not_mine).await.is_err());
+
+        let day = date!(2026 - 10 - 19);
+        s.set_meeting_handled(me, ops.id, Some(day)).await.unwrap();
+        let handled = s.meeting_series(me).await.unwrap();
+        assert_eq!(
+            handled.iter().find(|m| m.id == ops.id).unwrap().handled_on,
+            Some(day)
+        );
+        assert!(s.set_meeting_handled(other, ops.id, None).await.is_err());
 
         s.set_meeting_series_deleted(me, ops.id, true)
             .await

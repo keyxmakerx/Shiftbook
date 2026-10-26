@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-recurring-set-deleted"
+description = "Enables the recurring_set_deleted command without any pre-configured scope."
+commands.allow = ["recurring_set_deleted"]
+
+[[permission]]
+identifier = "deny-recurring-set-deleted"
+description = "Denies the recurring_set_deleted command without any pre-configured scope."
+commands.deny = ["recurring_set_deleted"]

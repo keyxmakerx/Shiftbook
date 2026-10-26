@@ -1,9 +1,9 @@
 <script module lang="ts">
-  import { HOME, type CanvasView } from '../lib/canvasView';
+  import { START, type CanvasView } from '../lib/canvasView';
 
   // Where you left the view, the panel, the links switch and the toolbox, kept while the app
   // is open.
-  let lastView: CanvasView = HOME;
+  let lastView: CanvasView = START;
   let panelOpen = true;
   let linksShown = true;
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
@@ -33,6 +33,7 @@
     CanvasStack,
     CardKind,
     CardRef,
+    TrayItem,
   } from '../lib/api';
   import {
     areaAt,
@@ -54,18 +55,22 @@
     type Rect,
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
-  import { dayMonth, fmtHours, weekdayShort } from '../lib/format';
-  import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
+  import { menuOpen, openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import BoxPrompt from '../components/BoxPrompt.svelte';
+  import PastePrompt from '../components/PastePrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
   import CanvasPile from '../components/CanvasPile.svelte';
   import DrawerPanel from '../components/DrawerPanel.svelte';
   import CanvasAreaBox from '../components/CanvasArea.svelte';
   import CanvasCard from '../components/CanvasCard.svelte';
+  import DueSoonCard from '../components/DueSoonCard.svelte';
+  import { hasHome } from '../lib/words';
   import Icon from '../components/Icon.svelte';
   import LogWork from '../components/LogWork.svelte';
   import TrayCard from '../components/TrayCard.svelte';
@@ -115,6 +120,13 @@
   let anchorAt = $state({ x: 0, y: 0 });
   let jot = $state<{ x: number; y: number; text: string } | null>(null);
   let panning = $state(false);
+  /** The pointer's last spot over the Desk, in board pixels, for pasting there. */
+  let pointer = { sx: 0, sy: 0, over: false };
+  /** Tickets just pasted on the Desk, asking "Time on them so far?". */
+  let pasted = $state<{ sx: number; sy: number; ids: string[] } | null>(null);
+  const pastedItems = $derived(
+    pasted ? pasted.ids.map((id) => app.tray?.items.find((i) => i.id === id)).filter((i): i is TrayItem => !!i) : [],
+  );
 
   $effect(() => {
     lastView = view;
@@ -138,6 +150,9 @@
 
   const today = $derived(ribbonDay(app.today));
   const week = $derived(ribbonWeekOf(app.today));
+  // Home with no hours to aim for (round 15): count what got done today instead.
+  const countDone = $derived(hasHome(app.prefs?.useMode) && !app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7]);
+  const doneToday = $derived(app.entries.filter((e) => !e.isTray).length);
 
   async function load() {
     const desk = await attempt(() => api.canvas(app.today));
@@ -862,6 +877,14 @@
     view = fitAll(spots, board.clientWidth, board.clientHeight);
   }
 
+  // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.
+  $effect(() => {
+    const ask = app.deskAsk;
+    if (!ask || !loaded) return;
+    app.deskAsk = null;
+    void tick().then(() => (ask === 'fit' ? fit() : ask === 'tidy' ? tidy() : toggleTimeline()));
+  });
+
   // ----- jots on empty paper -----
   function startJot(sx: number, sy: number) {
     const at = toCanvas(view, sx, sy);
@@ -877,6 +900,48 @@
     await attempt(() => api.canvasMove('note' as CardKind, note.id, draft.x, draft.y));
     await load();
     toast('Jotted down. It’s in Notes too.');
+  }
+
+  // ----- paste anywhere on the Desk (round 15) -----
+  // Ctrl+V while nothing is being typed in: only tickets → the Tickets tray, asking the time
+  // so far; anything else → a jot where the pointer is. Which is which: crates/core.
+  async function pasteOnDesk(e: ClipboardEvent) {
+    if (!board || app.captureOpen || menuOpen() || jot || drawn) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, textarea, select, [contenteditable="true"], [role="dialog"]')) return;
+    const text = e.clipboardData?.getData('text/plain') ?? '';
+    if (!text.trim()) return;
+    e.preventDefault();
+    const spot = pointer.over ? pointer : { sx: board.clientWidth / 2, sy: board.clientHeight / 3 };
+    const tickets = await attempt(() => api.pastedTickets(text));
+    if (tickets === undefined) return;
+    if (tickets) {
+      const before = new Set(app.tray?.date === app.today ? app.tray.items.map((i) => i.id) : []);
+      const day = await attempt(() => api.trayAdd(app.today, tickets.join('\n')));
+      if (!day) return;
+      const added = day.items.filter((i) => !before.has(i.id) && tickets.includes(i.ticket)).map((i) => i.id);
+      await applyTray(day);
+      await load();
+      if (added.length) pasted = { sx: Math.min(spot.sx, board.clientWidth - 320), sy: Math.min(spot.sy, board.clientHeight - 150), ids: added };
+      else toast(tickets.length === 1 ? `${tickets[0]} is already in the tray.` : 'Those tickets are already in the tray.');
+      return;
+    }
+    const at = toCanvas(view, spot.sx, spot.sy);
+    const note = await attempt(() => api.createNote({ kind: 'jot', title: '', body: text.trim(), projectId: null, tags: '' }));
+    if (!note) return;
+    await attempt(() => api.canvasMove('note' as CardKind, note.id, Math.round(at.x), Math.round(at.y)));
+    await load();
+    toast('Pasted as a jot. It’s in Notes too.', 'Undo', () => {
+      void attempt(() => api.setNoteDeleted(note.id, true)).then(load);
+    }, () => void attempt(() => api.setNoteDeleted(note.id, false)).then(load));
+  }
+
+  async function pastedTime(minutes: number) {
+    const items = pastedItems;
+    pasted = null;
+    for (const item of items) {
+      if (item.minutes !== minutes) await applyTray(await attempt(() => api.traySetMinutes(item.id, minutes)));
+    }
   }
 
   async function emptyMenu(e: MouseEvent) {
@@ -911,6 +976,8 @@
   }
 </script>
 
+<svelte:window onpaste={(e) => void pasteOnDesk(e)} />
+
 <div class="desk" class:closed={!panel} class:dragging>
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -919,6 +986,11 @@
     class:drawing={mode === 'free' && tool !== 'hand'}
     bind:this={board}
     onpointerdown={panStart}
+    onpointermove={(e) => {
+      const p = boardPoint(e);
+      pointer = { ...p, over: true };
+    }}
+    onpointerleave={() => (pointer.over = false)}
     ondragstart={(e) => e.preventDefault()}
     ondblclick={(e) => {
       if ((e.target as HTMLElement).closest('.tools')) return;
@@ -996,6 +1068,7 @@
           locked={mode === 'timeline'}
           linking={!!linkFrom}
           selected={selected.has(keyOf(card))}
+          faded={app.justToday && !card.justToday}
           dropping={hoverCard === keyOf(card)}
           extra={cardExtra(card)}
           ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}
@@ -1035,6 +1108,9 @@
     {#if band}
       {@const r = rectFrom({ x: band.x0, y: band.y0 }, { x: band.x1, y: band.y1 })}
       <span class="band" class:drawing={band.drawing} style:left="{r.x}px" style:top="{r.y}px" style:width="{r.w}px" style:height="{r.h}px"></span>
+    {/if}
+    {#if pasted && pastedItems.length}
+      <PastePrompt x={pasted.sx} y={pasted.sy} items={pastedItems} onpick={(m) => void pastedTime(m)} onclose={() => (pasted = null)} />
     {/if}
     {#if drawn}
       {@const r = drawn.rect}
@@ -1146,9 +1222,14 @@
     {#if panel}
       <div class="stack">
         <div class="paper hours">
-          <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
-          <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+          {#if countDone}
+            <div><span class="big mono">{doneToday}</span><span class="lbl">{doneToday === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : weekdayShort(app.selected)}</span></div>
+          {:else}
+            <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
+            <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+          {/if}
         </div>
+        <DueSoonCard />
         <WhereWasI />
         <LogWork />
         <TrayCard />
@@ -1180,6 +1261,7 @@
   .board {
     position: relative;
     overflow: hidden;
+    container-type: inline-size;
     border-radius: 10px;
     background-color: var(--desk);
     background-image:
@@ -1490,6 +1572,13 @@
 
   .tools .wide {
     padding: 0 10px;
+  }
+
+  /* The hint shares the bottom edge with the toolbar; it steps aside when there's no room. */
+  @container (max-width: 1180px) {
+    .hint {
+      display: none;
+    }
   }
 
   .hint {

@@ -1,0 +1,164 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}
+:root{--desk:#e9ecef;--paper:#fffdf8;--paper2:#f6f3ec;--ink:#1d2126;--ink2:#4a525b;--mut:#5f6872;--rule:rgba(29,33,38,.12);
+--accent:#3d5bb0;--aw:#e6ebf8;--warn:#9f5a06;--ww:#fcf1df;--ok:#2e8a5a;--okw:#e3f2ea;--bad:#c2412d;--phone:#1b1e22;--on:#fff;
+--display:Fraunces,Georgia,'Times New Roman',serif;--ui:'Instrument Sans','Segoe UI',system-ui,sans-serif;--mono:'JetBrains Mono',Consolas,'DejaVu Sans Mono',monospace}
+@media (prefers-color-scheme:dark){:root{--desk:#14171b;--paper:#23272d;--paper2:#2a2f36;--ink:#e7eaee;--ink2:#b9c0c8;--mut:#949da7;--rule:rgba(255,255,255,.1);--accent:#8ea6ee;--aw:#2a3350;--warn:#f0b45a;--ww:#3a2c14;--ok:#6ccb95;--okw:#1d3328;--bad:#f08a78;--phone:#050607;--on:#14171b}}
+html,body{margin:0}
+body{background:var(--desk);color:var(--ink);font:14px/1.45 var(--ui);padding:14px}
+.grid{display:flex;flex-wrap:wrap;gap:22px 18px;justify-content:center}
+.shot{width:244px;display:flex;flex-direction:column;gap:8px;margin:0}
+.shot figcaption{font-size:12.5px;color:var(--ink2)}
+.shot figcaption b{color:var(--ink)}
+.tag{font:700 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mut)}
+.phone{width:244px;height:500px;border-radius:30px;background:var(--phone);padding:9px}
+.screen{width:100%;height:100%;border-radius:22px;background:var(--desk);overflow:hidden;position:relative;display:flex;flex-direction:column;font-size:11.5px;line-height:1.35}
+.status{display:flex;justify-content:space-between;padding:7px 14px 3px;font:10px var(--mono);color:var(--mut)}
+.top{padding:3px 12px 9px;display:flex;flex-direction:column;gap:1px}
+.day{font:600 17px var(--display)}
+.sum{color:var(--mut)} .sum b{color:var(--ink)}
+.body{flex:1;overflow:hidden;padding:0 9px;display:flex;flex-direction:column;gap:7px}
+.timer{background:var(--accent);color:var(--on);border-radius:9px;padding:7px 9px;display:flex;justify-content:space-between;align-items:center}
+.timer .t{font:13px var(--mono)} .timer .x{border:1px solid currentColor;border-radius:6px;padding:1px 7px;font-weight:600}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:9px;padding:8px 9px;display:flex;flex-direction:column;gap:4px;position:relative}
+.row{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.h{font-family:var(--mono);color:var(--ink2);white-space:nowrap}
+.title{font-weight:600}
+.proj{display:inline-flex;align-items:center;gap:5px;color:var(--mut);font-size:10.5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}.dot.g{background:var(--ok)}.dot.o{background:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font:10px var(--mono);background:var(--paper2);border:1px solid var(--rule);border-radius:5px;padding:1px 6px}.chip.ok{background:var(--okw)}
+.due{background:var(--ww);color:var(--warn);border-radius:9px;padding:7px 9px;display:flex;justify-content:space-between;font-weight:600}
+.fab{position:absolute;right:12px;bottom:60px;width:48px;height:48px;border-radius:15px;background:var(--accent);color:var(--on);display:grid;place-items:center;font-size:26px;box-shadow:0 8px 18px -8px rgba(0,0,0,.5)}
+.nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--paper);border-top:1px solid var(--rule);padding:6px 3px 11px;text-align:center;font-size:9.5px;color:var(--mut)}
+.nav span{display:flex;flex-direction:column;align-items:center;gap:3px}
+.nav i{width:17px;height:17px;border-radius:5px;border:1.6px solid currentColor;display:block}
+.nav .on{color:var(--accent);font-weight:600}.nav .on i{background:var(--aw)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--paper);border-radius:16px 16px 0 0;padding:9px 12px 12px;display:flex;flex-direction:column;gap:8px;box-shadow:0 -10px 30px -12px rgba(0,0,0,.4)}
+.grab{width:34px;height:4px;border-radius:2px;background:var(--rule);align-self:center}
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.3)}
+.box{border:2px solid var(--accent);border-radius:9px;padding:8px 9px;font:11.5px var(--mono)}
+.cur{display:inline-block;width:1.5px;height:12px;background:var(--accent);vertical-align:-2px}
+.parsed{display:flex;flex-wrap:wrap;gap:5px}
+.pt{font-size:10.5px;border-radius:999px;padding:2px 8px;background:var(--aw)}
+.btns{display:flex;gap:7px}
+.btn{flex:1;text-align:center;border-radius:9px;padding:8px;border:1px solid var(--rule);font-weight:600;background:var(--paper)}
+.btn.p{background:var(--accent);border-color:var(--accent);color:var(--on)}
+.keys{background:var(--paper2);margin:0 -12px -12px;padding:7px 5px 12px;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.keys span{height:24px;border-radius:5px;background:var(--paper);border:1px solid var(--rule)}
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:0 20px;text-align:center}
+.mark{width:52px;height:52px;border-radius:15px;background:var(--paper);border:1px solid var(--rule);display:grid;place-items:center;font:600 24px var(--display);color:var(--accent)}
+.field{align-self:stretch;border:1px solid var(--rule);background:var(--paper);border-radius:9px;padding:9px;text-align:left;color:var(--mut)}
+.finger{width:50px;height:50px;border-radius:50%;border:2px solid var(--accent);display:grid;place-items:center}
+.finger svg{width:26px;height:26px;stroke:var(--accent);fill:none;stroke-width:1.6;stroke-linecap:round}
+.small{font-size:10.5px;color:var(--mut)}
+h3{margin:0;font:600 14px var(--ui)}
+h4{margin:0;font:600 16px var(--display)}
+.wall{background:linear-gradient(160deg,#2c3a5c,#1a2236 60%,#121726);color:#e7eaee}
+.clock{font:400 50px var(--display);text-align:center;margin-top:40px}
+.date{text-align:center;opacity:.8}
+.notif{margin:22px 10px 0;background:rgba(255,255,255,.14);border-radius:13px;padding:9px 11px;display:flex;flex-direction:column;gap:3px;color:#e7eaee}
+.notif .app{font-size:9.5px;opacity:.75;display:flex;gap:6px;align-items:center}
+.notif .app i{width:11px;height:11px;border-radius:3px;background:#8ea6ee;display:block}
+.notif b{font-size:12.5px}
+.notif .acts{display:flex;gap:14px;margin-top:4px;font-weight:600;color:#b9c8f5;font-size:11px}
+.list{background:var(--paper);border:1px solid var(--rule);border-radius:9px;display:flex;flex-direction:column}
+.li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--rule)}
+.li:last-child{border-bottom:0}
+.li small{display:block;color:var(--mut);font-size:10px}
+.sw{width:30px;height:17px;border-radius:9px;background:var(--rule);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--paper)}
+.sw.on{background:var(--accent)}.sw.on::after{left:15px}
+.lbl{font:600 9.5px var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);padding:0 3px}
+.ok{color:var(--ok);font-weight:600}
+.callout{font-size:10.5px;background:var(--ww);color:var(--warn);border-radius:8px;padding:7px 9px}
+</style></head><body><div class="grid">
+<figure class="shot"><span class="tag">1 · Desk</span><div class="phone"><div class="screen">
+ <div class="status"><span>09:41</span><span>82%</span></div>
+ <div class="top"><span class="day">Tuesday 27 Oct</span><span class="sum">Today <b>3 h 15</b> · Week <b>11 h 30</b></span></div>
+ <div class="body">
+  <div class="timer"><span>Network refresh</span><span class="t">0:42</span><span class="x">Stop</span></div>
+  <div class="due"><span>2 due soon</span><span>›</span></div>
+  <div class="card"><div class="row"><span class="title">Fixed VPN drop-outs</span><span class="h">1 h 30</span></div><span class="proj"><i class="dot"></i>Network refresh</span><div class="chips"><span class="chip ok">INC0045678 ✓</span><span class="chip">INC0045690</span></div></div>
+  <div class="card"><div class="row"><span class="title">Weekly ops meeting</span><span class="h">1 h</span></div><span class="proj"><i class="dot g"></i>Meetings</span></div>
+  <div class="card"><div class="row"><span class="title">Done tickets tray</span><span class="h">45 m</span></div><div class="chips"><span class="chip">REQ2210</span><span class="chip">REQ2214</span><span class="chip">INC0045702</span></div></div>
+ </div>
+ <div class="fab">+</div>
+ <div class="nav"><span class="on"><i></i>Desk</span><span><i></i>Day</span><span><i></i>Notes</span><span><i></i>Timesheet</span><span><i></i>More</span></div>
+</div></div><figcaption><b>The Desk as a list.</b> Timer, due soon and today's work on top; one card per piece of work. The five views sit on a bottom bar; Settings moves under More.</figcaption></figure>
+
+<figure class="shot"><span class="tag">2 · Capture</span><div class="phone"><div class="screen">
+ <div class="status"><span>09:43</span><span>82%</span></div>
+ <div class="top"><span class="day">Tuesday 27 Oct</span></div>
+ <div class="body"><div class="card"><div class="row"><span class="title">Fixed VPN drop-outs</span><span class="h">1 h 30</span></div></div></div>
+ <div class="dim"></div>
+ <div class="sheet"><span class="grab"></span><h3>Log or jot</h3>
+  <div class="box">45m INC0045711 #net printer queue<span class="cur"></span></div>
+  <div class="parsed"><span class="pt"><b>45 min</b></span><span class="pt">INC0045711</span><span class="pt">Network refresh</span><span class="pt">today</span></div>
+  <div class="btns"><span class="btn">Save as scrap</span><span class="btn p">Log it</span></div>
+  <div class="keys"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+ </div>
+</div></div><figcaption><b>The + button opens capture</b> as a sheet over the screen. Same one-line box and the same reading of hours, tickets and #project as on the computer.</figcaption></figure>
+
+<figure class="shot"><span class="tag">3 · Unlock</span><div class="phone"><div class="screen">
+ <div class="status"><span>09:40</span><span>82%</span></div>
+ <div class="mid"><div class="mark">S</div><h3>Shiftbook is locked</h3><div class="field">Password</div><span class="btn p" style="align-self:stretch;flex:none">Unlock</span>
+ <div class="finger"><svg viewBox="0 0 24 24"><path d="M12 4a7 7 0 0 0-7 7v2"/><path d="M19 13v-2a7 7 0 0 0-3.5-6"/><path d="M8.5 20c.8-1.8 1.5-4 1.5-7a2 2 0 0 1 4 0c0 2.5-.3 4.7-1 6.6"/><path d="M15.8 19.5c.5-1.8.7-4 .7-6.5a4.5 4.5 0 0 0-9 0c0 1.7-.3 3.2-.9 4.5"/></svg></div>
+ <span class="small">Touch to unlock with your fingerprint</span>
+ <span class="small">Forgot your password? Use the recovery key</span></div>
+</div></div><figcaption><b>Unlock.</b> The fingerprint button only shows once you've turned it on. After a restart of the phone it asks for the password once, the way banking apps do.</figcaption></figure>
+
+<figure class="shot"><span class="tag">4 · More › Security</span><div class="phone"><div class="screen">
+ <div class="status"><span>09:50</span><span>82%</span></div>
+ <div class="top"><span class="day">Security</span></div>
+ <div class="body">
+  <span class="lbl">Unlocking</span>
+  <div class="list">
+   <div class="li"><span>Unlock with fingerprint<small>Off until you turn it on. Needs your password once.</small></span><i class="sw"></i></div>
+   <div class="li"><span>Lock after leaving the app<small>1 minute</small></span><span>›</span></div>
+  </div>
+  <span class="lbl">On this phone</span>
+  <div class="list">
+   <div class="li"><span>Block screenshots<small>Also hides Shiftbook in recent apps</small></span><i class="sw on"></i></div>
+   <div class="li"><span>Due reminders<small>8:00 on work days · no titles shown</small></span><i class="sw on"></i></div>
+  </div>
+  <span class="lbl">Password</span>
+  <div class="list"><div class="li"><span>Change password</span><span>›</span></div><div class="li"><span>New recovery key</span><span>›</span></div></div>
+ </div>
+ <div class="nav"><span><i></i>Desk</span><span><i></i>Day</span><span><i></i>Notes</span><span><i></i>Timesheet</span><span class="on"><i></i>More</span></div>
+</div></div><figcaption><b>Phone security settings.</b> Fingerprint off by default, a short lock time, screenshots blocked, and the reminder time.</figcaption></figure>
+
+<figure class="shot"><span class="tag">5 · Reminder</span><div class="phone"><div class="screen wall">
+ <div class="status" style="color:#c9d0da"><span></span><span>80%</span></div>
+ <div class="clock">8:00</div><div class="date">Wednesday 28 October</div>
+ <div class="notif"><span class="app"><i></i>Shiftbook · now</span><b>2 things are due today</b><span>Open Shiftbook to see them.</span></div>
+</div></div><figcaption><b>Due reminder on the lock screen.</b> It counts what's due and never says what. Tapping it opens the unlock screen, then the bell.</figcaption></figure>
+
+<figure class="shot"><span class="tag">6 · More › Phone and computer</span><div class="phone"><div class="screen">
+ <div class="status"><span>17:05</span><span>74%</span></div>
+ <div class="top"><span class="day">Phone and computer</span><span class="sum">Last swapped <b>yesterday 17:10</b></span></div>
+ <div class="body">
+  <div class="card"><h3>Send my changes</h3><span class="small">Makes one locked file with what changed on this phone since the last swap: 3 entries, 1 note, 2 scraps.</span><span class="btn p" style="flex:none">Make a sync file</span></div>
+  <div class="card"><h3>Bring in changes</h3><span class="small">Pick a sync file made by your computer. You'll see what it holds before anything changes.</span><span class="btn" style="flex:none">Open a sync file</span></div>
+  <div class="callout">Move the file any way you like: a USB cable, a folder you already sync, or email it to yourself. It's locked with your Shiftbook key, and Shiftbook itself never goes online.</div>
+ </div>
+ <div class="nav"><span><i></i>Desk</span><span><i></i>Day</span><span><i></i>Notes</span><span><i></i>Timesheet</span><span class="on"><i></i>More</span></div>
+</div></div><figcaption><b>Swapping changes.</b> Two buttons. The computer gets the same two in Settings, next to Backups.</figcaption></figure>
+
+<figure class="shot"><span class="tag">7 · Before merging</span><div class="phone"><div class="screen">
+ <div class="status"><span>17:06</span><span>74%</span></div>
+ <div class="top"><span class="day">Bring in changes?</span><span class="sum">From <b>your computer</b> · made today 17:02</span></div>
+ <div class="body">
+  <div class="list">
+   <div class="li"><span>New entries</span><b>12</b></div>
+   <div class="li"><span>Changed entries</span><b>3</b></div>
+   <div class="li"><span>Notes</span><b>1 new · 2 changed</b></div>
+   <div class="li"><span>Projects</span><b>1 new</b></div>
+   <div class="li"><span>Deleted (can be brought back)</span><b>1</b></div>
+  </div>
+  <div class="callout"><b>Changed on both:</b> "Weekly ops meeting" was edited here and on the computer. The newer edit wins (the computer's, 16:40). The older edit stays in the safety backup.</div>
+  <span class="small">A safety backup is made first, as with Restore.</span>
+  <div class="btns"><span class="btn">Cancel</span><span class="btn p">Bring them in</span></div>
+ </div>
+</div></div><figcaption><b>A check before anything changes.</b> Counts, any clash and how it's settled, then one button. Nothing is lost: deletes can be brought back.</figcaption></figure>
+</div>
+<script>;(function(){function t(){parent.postMessage({sbMockHeight:document.documentElement.scrollHeight},"*")}addEventListener("load",t);addEventListener("resize",t);new ResizeObserver(t).observe(document.body)})()</script></body></html>

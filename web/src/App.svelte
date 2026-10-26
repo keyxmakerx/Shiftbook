@@ -8,15 +8,23 @@
   import RecoveryKey from './pages/RecoveryKey.svelte';
   import Unlock from './pages/Unlock.svelte';
   import NewPassword from './pages/NewPassword.svelte';
+  import Purpose from './pages/Purpose.svelte';
   import Shell from './pages/Shell.svelte';
+  import PhoneShell from './pages/PhoneShell.svelte';
+  import { phone } from './lib/phone.svelte';
+  import { timerBack, timerHidden } from './lib/timer.svelte';
+  import { planNudges } from './lib/launch.svelte';
+  import TodayPin from './components/TodayPin.svelte';
 
-  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'unlock' | 'new-password' | 'app';
+  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
 
   let screen = $state<Screen>('loading');
   let problem = $state('');
   // Held only between setup and "Continue" on the recovery key page.
   let recoveryKey = $state<string | null>(null);
   let locking = $state(false);
+  // Just unlocked with the password: offer to set today's PIN when Quick unlock is on.
+  let askPin = $state(false);
 
   $effect(() => {
     api
@@ -30,12 +38,14 @@
       });
   });
 
-  const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'new-password');
+  const unlocked = $derived(screen === 'app' || screen === 'recovery' || screen === 'purpose' || screen === 'new-password');
 
-  async function lockNow() {
+  async function lockNow(slept = false) {
     if (locking) return;
     locking = true;
     recoveryKey = null;
+    // A sleep ends Quick unlock's window: the next unlock needs the password.
+    if (slept) await api.endQuickUnlock().catch(() => undefined);
     await lockAndReload();
   }
 
@@ -53,12 +63,37 @@
     const timer = setInterval(() => {
       const result = checkIdle(idle, Date.now(), idleMs);
       idle = result.state;
-      if (result.lock) void lockNow();
+      if (result.lock) void lockNow(result.lock === 'asleep');
     }, TICK_MS);
     return () => {
       clearInterval(timer);
       for (const name of events) window.removeEventListener(name, onActivity);
     };
+  });
+
+  // Phone: lock after being away from the app (another app, the home screen or the screen off)
+  // for the chosen time; 0 locks as soon as Shiftbook is left.
+  $effect(() => {
+    if (!unlocked || !phone.on) return;
+    const awayMs = (app.prefs?.leaveLockMinutes ?? 1) * 60 * 1000;
+    let leftAt: number | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        leftAt = Date.now();
+        // The timer goes into the notification first, so locking keeps it as away.
+        timerHidden();
+        if (screen === 'app') void planNudges();
+        if (awayMs === 0) void lockNow();
+      } else if (leftAt !== null && Date.now() - leftAt >= awayMs) {
+        // After unlock the timer picks up and asks about the time away.
+        void lockNow();
+      } else {
+        leftAt = null;
+        void timerBack();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
   });
 
   function onKeydown(event: KeyboardEvent) {
@@ -92,13 +127,27 @@
     {recoveryKey}
     onDone={() => {
       recoveryKey = null;
-      screen = 'app';
+      screen = 'purpose';
     }}
   />
+{:else if screen === 'purpose'}
+  <Purpose onDone={() => (screen = 'app')} />
 {:else if screen === 'unlock'}
-  <Unlock onUnlocked={(mustSetPassword) => (screen = mustSetPassword ? 'new-password' : 'app')} />
+  <Unlock
+    onUnlocked={(mustSetPassword, withPin) => {
+      askPin = !withPin && !mustSetPassword;
+      screen = mustSetPassword ? 'new-password' : 'app';
+    }}
+  />
 {:else if screen === 'new-password'}
   <NewPassword onDone={() => (screen = 'app')} />
 {:else if screen === 'app'}
-  <Shell onLock={lockNow} />
+  {#if phone.on}
+    <PhoneShell onLock={() => void lockNow()} />
+  {:else}
+    <Shell onLock={() => void lockNow()} />
+  {/if}
+  {#if askPin && app.prefs?.quickUnlock}
+    <TodayPin onDone={() => (askPin = false)} />
+  {/if}
 {/if}

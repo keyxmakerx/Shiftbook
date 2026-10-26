@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-lists"
+description = "Enables the lists command without any pre-configured scope."
+commands.allow = ["lists"]
+
+[[permission]]
+identifier = "deny-lists"
+description = "Denies the lists command without any pre-configured scope."
+commands.deny = ["lists"]

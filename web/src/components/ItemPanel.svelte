@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
   import type { Entry, TrayItem } from '../lib/api';
-  import { bringUp } from '../lib/bringUp';
+  import { bringUp, bringUpSection } from '../lib/bringUp';
   import { addEntryTime, canTime, moveEntryTo } from '../lib/entryActions';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
@@ -245,6 +245,22 @@
       }}
     >
       <Icon name="sun" size={15} /> Bring up tomorrow
+    </button>
+    <button
+      type="button"
+      class="act more-days"
+      title="Bring it up on another day"
+      aria-label="Bring it up on another day"
+      onclick={(e) => {
+        const section = entry
+          ? bringUpSection('entry', entry.id, entry.description)
+          : tray
+            ? bringUpSection('tray', tray.id, tray.note ? `${tray.ticket}: ${tray.note}` : tray.ticket)
+            : null;
+        if (section) openMenu(e.currentTarget as HTMLElement, { sections: [section] });
+      }}
+    >
+      Another day…
     </button>
     {#if entry && !entry.isTray}
       <span class="time" role="group" aria-label="Add time">

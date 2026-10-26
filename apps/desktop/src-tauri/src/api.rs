@@ -14,7 +14,7 @@ use shiftbook_core::ids::{
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, ListName, Project, TimesheetCode, TrayItem};
-use shiftbook_core::nextup::next_work_day;
+use shiftbook_core::nextup::{bring_up_on, next_work_day};
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
@@ -281,7 +281,11 @@ fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> Tr
     }
 }
 
-async fn one_entry(store: &SqliteStore, owner: OwnerId, rec: EntryRecord) -> Res<EntryView> {
+pub(crate) async fn one_entry(
+    store: &SqliteStore,
+    owner: OwnerId,
+    rec: EntryRecord,
+) -> Res<EntryView> {
     Ok(entry_view(rec, &links_for(store, owner).await?))
 }
 
@@ -747,9 +751,19 @@ pub async fn week_sheet(
     group_by: Option<GroupBy>,
 ) -> Res<WeekSheet> {
     let (store, owner) = s.data().await?;
+    week_sheet_for(&store, owner, date_arg(&date)?, date_arg(&today)?, group_by).await
+}
+
+/// The crib sheet for the week holding `date` (also the timesheet reminder's).
+pub(crate) async fn week_sheet_for(
+    store: &SqliteStore,
+    owner: OwnerId,
+    date: Date,
+    today: Date,
+    group_by: Option<GroupBy>,
+) -> Res<WeekSheet> {
     let prefs = store.prefs(owner).await?;
-    let start = week_of(date_arg(&date)?, prefs.week_start);
-    let today = date_arg(&today)?;
+    let start = week_of(date, prefs.week_start);
     let projects = store.list_projects(owner).await?;
     let codes = store.list_timesheet_codes(owner).await?;
     let mappings = store.list_category_codes(owner).await?;
@@ -1152,8 +1166,23 @@ pub async fn set_next_up(s: State<'_, VaultSession>, items: Vec<String>) -> Res<
     Ok(next_up_views(store.set_next_up(owner, &items).await?))
 }
 
-/// Maps to `DataApi.bringUp()`: "Bring up tomorrow" on a card. It comes up on the next
-/// work day after `today` (a day with a target), titled `title`.
+/// Maps to `DataApi.bringUpDays()`: the days "Bring up…" offers from `today`.
+#[tauri::command]
+pub async fn bring_up_days(s: State<'_, VaultSession>, today: String) -> Res<Vec<String>> {
+    let today = date_arg(&today)?;
+    let (store, owner) = s.data().await?;
+    let prefs = store.prefs(owner).await?;
+    Ok(
+        shiftbook_core::nextup::bring_up_days(today, prefs.week_start, |d| prefs.day_target(d) > 0)
+            .into_iter()
+            .map(format_date)
+            .collect(),
+    )
+}
+
+/// Maps to `DataApi.bringUp()`: "Bring up…" on a card, titled `title`. It comes up on
+/// `on` (moved to the next work day if that isn't one), or without `on` on the next work
+/// day after `today` (a day with a target).
 #[tauri::command]
 pub async fn bring_up(
     s: State<'_, VaultSession>,
@@ -1161,17 +1190,93 @@ pub async fn bring_up(
     kind: String,
     id: String,
     title: String,
+    on: Option<String>,
 ) -> Res<NextUpView> {
     let today = date_arg(&today)?;
+    let on = on.as_deref().map(date_arg).transpose()?;
     let about = (
         kind.parse().map_err(|_| CommandError::InvalidInput)?,
         uuid::Uuid::parse_str(&id).map_err(|_| CommandError::InvalidInput)?,
     );
     let (store, owner) = s.data().await?;
     let prefs = store.prefs(owner).await?;
-    let day = next_work_day(today, |d| prefs.day_target(d) > 0);
+    let is_work_day = |d: Date| prefs.day_target(d) > 0;
+    let day = match on {
+        Some(chosen) => {
+            bring_up_on(today, chosen, is_work_day).ok_or(CommandError::InvalidInput)?
+        }
+        None => next_work_day(today, is_work_day),
+    };
     let item = store.bring_up(owner, &title, day, Some(about)).await?;
     Ok(next_up_views(vec![item]).remove(0))
+}
+
+/// Maps to `DataApi.pastedTickets()`: the tickets in text pasted on the Desk, or `None`
+/// when it isn't only tickets (then it becomes a jot).
+#[tauri::command]
+pub fn pasted_tickets(text: String) -> Option<Vec<String>> {
+    shiftbook_core::capture::pasted_tickets(&text)
+}
+
+/// Maps to `DataApi.findDay()`: the day Find's text names ("fri", "last friday", "12 oct"),
+/// or `None`.
+#[tauri::command]
+pub async fn find_day(
+    s: State<'_, VaultSession>,
+    text: String,
+    today: String,
+) -> Res<Option<String>> {
+    let (store, owner) = s.data().await?;
+    let start = week_start(&store, owner).await?;
+    Ok(shiftbook_core::find::find_day(&text, date_arg(&today)?, start).map(format_date))
+}
+
+/// Maps to `DataApi.standup()`: "Copy for stand-up" from `today`. "Done" is the last day
+/// before today with entries (within two weeks), "next" what you start with today: things
+/// brought up for today, then the wrap-up list.
+#[tauri::command]
+pub async fn standup(s: State<'_, VaultSession>, today: String) -> Res<String> {
+    use shiftbook_core::standup::{standup_text, DoneLine};
+    let today = date_arg(&today)?;
+    let (store, owner) = s.data().await?;
+    let prefs = store.prefs(owner).await?;
+    let earlier = store
+        .list_entries(owner, add_days(today, -14), add_days(today, -1))
+        .await?;
+    let last_day = earlier.iter().map(|r| r.entry.date).max();
+    let mut done = Vec::new();
+    let mut closed = 0;
+    if let Some(day) = last_day {
+        done = earlier
+            .iter()
+            .filter(|r| r.entry.date == day && !r.is_tray)
+            .map(|r| DoneLine {
+                title: r.entry.description.clone(),
+                tickets: r.tickets.iter().map(|t| t.ticket_number.clone()).collect(),
+            })
+            .collect();
+        closed = store
+            .tray_day(owner, day)
+            .await?
+            .items
+            .iter()
+            .filter(|i| i.done)
+            .count();
+    }
+    let open: Vec<_> = store
+        .next_up_all(owner)
+        .await?
+        .into_iter()
+        .filter(|i| i.done_at.is_none() && i.show_from.is_none_or(|d| d <= today))
+        .collect();
+    let next: Vec<String> = open
+        .iter()
+        .filter(|i| i.show_from.is_some())
+        .chain(open.iter().filter(|i| i.show_from.is_none()))
+        .map(|i| i.text.clone())
+        .collect();
+    let words = &prefs.standup_words;
+    Ok(standup_text((&words.0, &words.1), &done, closed, &next))
 }
 
 /// Maps to `DataApi.tickNextUp()`.
@@ -1310,6 +1415,13 @@ pub fn timer_offer(seconds: u64, quiet: Vec<u64>) -> Res<TimerOffer> {
         return Err(CommandError::InvalidInput);
     }
     Ok(shiftbook_core::timer::timer_offer(seconds, &quiet))
+}
+
+/// Maps to `DataApi.timerAwayQuestion()`: after time in the background with the timer
+/// running (phone), the minutes to ask about, or null when it's short enough to just count.
+#[tauri::command]
+pub fn timer_away_question(seconds: u64) -> Option<Minutes> {
+    shiftbook_core::timer::away_question(seconds)
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@
   import { openMenu, paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, projectById, projectColor, setView } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, setView, ticketTimes, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
@@ -19,10 +19,12 @@
 
   const STEP = 5;
   /** Choices in the "time on it so far?" box. */
-  const SO_FAR = [5, 15, 30, 45, 60, 120];
+  const SO_FAR = $derived(ticketTimes());
   let text = $state('');
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);
+  /** More than one ticket was pasted, so each row keeps its number even once others are answered. */
+  let askedMany = $state(false);
 
   async function add(pasted: string) {
     if (!pasted.trim()) return;
@@ -32,7 +34,10 @@
     text = '';
     const added = result.items.filter((i) => !before.has(i.id)).map((i) => i.id);
     await applyTray(result);
-    if (added.length) asking = added;
+    if (added.length) {
+      asking = added;
+      askedMany = added.length > 1;
+    }
     else toast('Those tickets are already in the tray.');
   }
 
@@ -99,7 +104,7 @@
 
 <article class="paper card">
   <h3>
-    <span class="title"><Icon name="tray" size={16} /> Tickets</span>
+    <span class="title"><Icon name="tray" size={16} /> {words().tickets}</span>
     <span class="right">
       <button
         type="button"
@@ -143,7 +148,7 @@
       </span>
       {#each askingItems as item (item.id)}
         <span class="ask-row">
-          {#if askingItems.length > 1}<span class="mono ask-tk">{item.ticket}</span>{/if}
+          {#if askedMany}<span class="mono ask-tk">{item.ticket}</span>{/if}
           <span class="picks">
             {#each SO_FAR as m (m)}
               <button type="button" class:on={item.minutes === m} onclick={() => void soFar(item, m)}>{fmtMinutes(m)}</button>

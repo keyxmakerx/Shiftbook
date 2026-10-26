@@ -14,7 +14,8 @@
 >
   <span>{toastState.text}</span>
   {#if toastState.action}
-    <button type="button" onclick={runToastAction}>{toastState.action}</button>
+    <!-- Out of the tab order while hidden, so a faded-out Undo can't be reached. -->
+    <button type="button" tabindex={toastState.on ? 0 : -1} aria-hidden={!toastState.on} onclick={runToastAction}>{toastState.action}</button>
   {/if}
 </div>
 

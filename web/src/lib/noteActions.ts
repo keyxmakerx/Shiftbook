@@ -5,10 +5,8 @@ import { api } from './api';
 import type { Note } from './api';
 import { fmtMinutes } from './format';
 import type { MenuSection } from './menu.svelte';
-import { app, attempt, flashEntry, refresh } from './store.svelte';
+import { app, attempt, flashEntry, refresh, timeButtons } from './store.svelte';
 import { toast } from './toast.svelte';
-
-const TIMES = [15, 30, 45, 60, 120];
 
 /** Log `note` as an entry with `minutes`; `after` runs once it's done (and after Undo). */
 export async function logNote(note: Note, minutes: number, after?: () => void): Promise<void> {
@@ -32,6 +30,6 @@ export async function logNote(note: Note, minutes: number, after?: () => void): 
 export function logNoteSection(note: Note, after?: () => void): MenuSection {
   return {
     head: 'Log it as an entry',
-    choices: TIMES.map((m) => ({ label: fmtMinutes(m), color: null, checked: false, act: () => void logNote(note, m, after) })),
+    choices: timeButtons().map((m) => ({ label: fmtMinutes(m), color: null, checked: false, act: () => void logNote(note, m, after) })),
   };
 }

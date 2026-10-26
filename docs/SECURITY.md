@@ -208,3 +208,98 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   gone the database key is gone, so recovered database blocks can't be read. An old copy of
   `vault.json` in a user's own file backup, together with recovered database blocks and the
   password of that time, would still open them (see "Old copies of `vault.json`" above).
+
+## Quick unlock with a PIN
+Approved in sign-off round 15 and built then. Rules: `crates/core/src/quickunlock.rs`; the
+wrap: `PinWrap` in `crates/storage/src/vault.rs`; the window: `PinWindow` in
+`apps/desktop/src-tauri/src/session.rs`.
+
+**The problem.** Auto-lock after 15 minutes idle is the right default, but every unlock needs the
+full master password (12+ characters). On a day of short breaks people turn auto-lock off or
+raise it to hours, which leaves the app open for longer than a PIN would.
+
+**What it does.** An optional 6-digit PIN, turned on in Settings → Security (needs the password). After
+an idle lock or Lock now, the unlock screen asks for the PIN instead of the password. It works
+only inside a **PIN window** that starts at a full unlock (password or recovery key) and ends at
+the first of: midnight, 10 hours after that unlock, the app quitting, the computer sleeping (the
+gap the page already detects), 3 wrong PINs, or "Use my password instead" on the unlock screen.
+Outside the window the unlock screen asks for the password as now.
+
+**Typing the PIN each day.** The PIN is never stored and the window ends at midnight, so the app
+has to be told the PIN once a day. After the day's first password unlock, a small box asks for
+today's PIN (Skip leaves locks on the password for the day); Settings → Security can set it too.
+Turning Quick unlock on stores only a flag (`security.quick_unlock`), never the PIN.
+
+**How the key is held during a PIN lock.** The database is closed and the DEK is wiped exactly as
+in a normal lock. When today's PIN is typed (while unlocked), the DEK is wrapped
+(XChaCha20-Poly1305, fresh random nonce, AAD purpose `pin`) with a **PIN KEK** = Argon2id(PIN,
+random 16-byte salt, same parameters as the password KEK), and the PIN and KEK are wiped at once;
+the wrap stays for the window. The
+wrapped DEK, salt and nonce are kept **in memory only**, in `zeroize` types in the Rust session.
+They are never written to disk, to `vault.json` or to backups. A PIN unlock derives the PIN KEK,
+unwraps the DEK and opens the database as a normal unlock does.
+
+**Wrong PINs.** The attempt count lives in the Rust session, not the page, and counts wrong PINs
+in a row (a right one starts it again). The third wrong PIN wipes the wrapped DEK and the salt at
+once, so further guesses are impossible and only the
+password or recovery key can open the app. There is no back-off delay for PINs; the hard limit of
+3 replaces it.
+
+**What a PIN protects, and what it doesn't.**
+- The database file on disk is unchanged: encrypted with the DEK, which is wrapped only by the
+  password and recovery KEKs. Copying the file (or a backup) and guessing the PIN gets nothing.
+- Someone at the unlocked computer during a PIN lock gets 3 guesses at 1,000,000 PINs.
+- Someone who can read Shiftbook's memory during a PIN lock (malware running as the user, a
+  memory dump, a hibernation file) can find the wrapped DEK and try all PINs offline. At ~0.5 s
+  per Argon2id guess that is roughly 6 core-days for the whole space, much less on many cores.
+  Today the same attacker reading memory while the app is **unlocked** gets the DEK directly, so
+  this adds a small window, not a new kind of attack. It is why the PIN window ends at sleep
+  (hibernation) and after 10 hours.
+- The PIN itself is never stored. Only the in-memory salt and wrapped DEK exist, and only during
+  the window.
+
+**Not chosen.**
+- Keeping the database open behind a lock screen ("soft lock"): simpler, but the DEK and sqlx's
+  copy of the key would stay in memory in the clear for the whole lock.
+- Storing a PIN-wrapped key on disk so the PIN survives a restart: a 6-digit PIN on disk is
+  brute-forced offline in days, which would make the PIN the real strength of the file.
+- The OS keychain or Windows Hello: needs new plugins and behaves differently on each OS; the
+  Android thread's fingerprint option can revisit this.
+
+**Sleep.** Two checks end the window after the computer sleeps: the page's own timer gap (as for
+auto-lock, on the unlock screen too), and in Rust the computer's clock running more than 60 s
+ahead of the app's monotonic clock since the full unlock (the monotonic clock stops during sleep
+on Linux and macOS).
+
+**Tests** (`quick_unlock_with_a_pin` in session.rs, plus core and vault tests). PIN unlock inside the window; refusal after midnight, after 10 hours,
+after quit and after a sleep gap; the third wrong PIN wipes the wrapped key (a fourth attempt with
+the right PIN fails); nothing PIN-related appears in `vault.json`, the database or a backup;
+changing the password or recovery key ends the window.
+
+## Android additions (round 15)
+- **Same vault, same SQLCipher database** as the computer; the storage tests run on an Android
+  emulator in CI. Password hashing calibrates as on the computer but stops at 256 MiB of memory
+  on a phone and adds passes instead.
+- **Nothing leaves the phone:** no `INTERNET` permission in release builds (debug builds add it
+  for `tauri android dev` only); Android cloud backup and device-to-device transfer are off
+  (`allowBackup="false"`, `data_extraction_rules.xml` excludes everything); the FileProvider only
+  covers the app's cache.
+- **Screenshots:** `FLAG_SECURE` from the first frame, which also blanks the recent-apps preview;
+  the Protected pill turns it off for 10 minutes like the computer.
+- **Lock after leaving the app** (1 minute by default; straight away, 5 or 15 minutes). The timer
+  carries on in a notification that shows only "Timer running" and a clock.
+- **Fingerprint unlock** (off by default): turning it on checks the password, then Android asks for
+  a fingerprint and the password is encrypted with an AES-GCM key in the Android Keystore that
+  needs strong biometrics for every use and is wiped when a fingerprint is added. Unlocking hands
+  the decrypted password from Android to Rust, which unlocks the vault; it never reaches the
+  page. After the phone restarts the password must be typed once (boot count check). Changing the
+  password turns fingerprint unlock off. The password is a Kotlin string for a moment while it
+  is encrypted or decrypted, which can't be wiped; that's the same as any Android password field.
+- **Lock-screen text:** the timer notification, the timer tile, the due reminder and the wrap-up
+  nudge show counts and times only, never titles, projects or tickets.
+- **Shared text and shortcuts** only say why the app was opened; they're acted on after unlock.
+- **Sync files** (`.shiftsync`) are backups by format: XChaCha20-Poly1305 with the database key,
+  a copy of the vault in the header, everything checked before anything changes. Bringing one in
+  makes a safety backup first and merges in one transaction. The last swap time is kept in a
+  small file next to the vault (`last-swap`, a timestamp only) so it never travels.
+

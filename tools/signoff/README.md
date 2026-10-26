@@ -1,9 +1,10 @@
 # Sign-off sheet
 
 A live page where Claude brings decisions, mockups and screenshots, and the owner approves or asks
-for changes. Live copy: https://claude.ai/artifact/UxX7VX1HE8E53TR5VkEdiC (private to the owner; from round 15.
-Earlier rounds are on https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T and, before that,
-https://claude.ai/artifact/FDWT4t9XNKtL2n22wvJcx1).
+for changes. Live copy: https://claude.ai/artifact/UxX7VX1HE8E53TR5VkEdiC (private to the owner),
+from round 15 on. Rounds 8 to 14 are on an earlier sheet in another account that this project can't
+reach; their approved decisions are in `docs/DECISIONS.md`. Rounds 1 to 7 are on
+https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T.
 
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.

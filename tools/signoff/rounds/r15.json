@@ -1,0 +1,435 @@
+{
+ "meta": {
+  "round": 15,
+  "heading": "Round 15: today's ideas, plans and reviews",
+  "intro": "A fresh sheet for this project. These cards come from today's threads: quality of life, home use, tickets and projects, and Android. More arrive here on their own as bug testing, the tester run and the docs review finish."
+ },
+ "cards": {
+  "r15-sheet": {
+   "round": 15,
+   "order": 5,
+   "area": "This sheet",
+   "version": 1,
+   "title": "A fresh sign-off sheet for this project",
+   "body": [
+    "Rounds 8 to 14 live on a sheet in your other Claude account, which this project can't reach, so this is a new sheet. It works the same way: my pick is selected, press **Approve** or write a note and press **Needs changes**, and the **Notes to Claude** tab is for anything that isn't on a card.",
+    "Every decision you approved up to round 14 is already in `docs/DECISIONS.md` in the repo, so nothing is lost. Rounds 1 to 7 are still on the [old sheet](https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T) if you want to look back.",
+    "Today's seven threads put their questions here from now on. Bug testing, the human tester run and the docs and code review are still working, so their cards will appear on their own when they're ready."
+   ],
+   "questions": [
+    {
+     "id": "carry",
+     "legend": "Anything still open from rounds 8 to 14 that should come over?",
+     "type": "text",
+     "placeholder": "e.g. the question about opening links from round 14"
+    }
+   ],
+   "pick": "Use this sheet for everything from round 15 on."
+  },
+  "r15-qol": {
+   "round": 15,
+   "order": 20,
+   "area": "Quality of life",
+   "version": 1,
+   "title": "Smaller steps for every day: which to build",
+   "body": [
+    "Fifteen small fixes for frictions you hit many times a day. Each cuts a click, a trip to another screen, or something you'd have to remember. The full list, with what bugs you today and small pictures, is in [Shiftbook Smaller Steps](https://claude.ai/artifact/6nnqjjm7UQVBYSBRVD75Uk). You don't need to pick there as well; this card is enough.",
+    "The first five are ticked: all small, and together about one pull request. Quick unlock is on its own card because it touches security."
+   ],
+   "questions": [
+    {
+     "id": "build",
+     "legend": "Build these",
+     "type": "many",
+     "options": [
+      {
+       "value": "Paste a ticket anywhere on the Desk with Ctrl+V",
+       "on": true
+      },
+      {
+       "value": "Find can run every action, and / opens it",
+       "on": true
+      },
+      {
+       "value": "\"Bring up…\" with Tomorrow, Monday, In a week or a day you pick",
+       "on": true
+      },
+      {
+       "value": "Copy yesterday for stand-up",
+       "on": true
+      },
+      {
+       "value": "Ctrl+Z undo that still works after the Undo button goes",
+       "on": true
+      },
+      {
+       "value": "Your own time buttons (e.g. 10m, 20m, 3h)",
+       "on": false
+      },
+      {
+       "value": "Log a meeting from the bell in one click",
+       "on": false
+      },
+      {
+       "value": "Today's hours in the window title",
+       "on": false
+      },
+      {
+       "value": "A quiet \"Anything to log?\" after 90 minutes (off by default)",
+       "on": false
+      },
+      {
+       "value": "\"Just today\" switch that fades older cards on the Desk",
+       "on": false
+      },
+      {
+       "value": "Timesheet reminder on your last work day",
+       "on": false
+      },
+      {
+       "value": "A short week recap in the wrap-up",
+       "on": false
+      },
+      {
+       "value": "Switches to turn off Desk tools you don't use",
+       "on": false
+      },
+      {
+       "value": "Use the Desk from the keyboard (arrows, D, B, P)",
+       "on": false
+      }
+     ]
+    }
+   ],
+   "pick": "The first five, in one pull request."
+  },
+  "r15-unlock": {
+   "round": 15,
+   "order": 25,
+   "area": "Quality of life · security",
+   "version": 1,
+   "title": "Quick unlock with a PIN after an idle lock",
+   "body": [
+    "Shiftbook locks after 15 minutes idle, and every unlock needs your full password. On a day of short breaks that adds up, and the temptation is to turn auto-lock off.",
+    "The idea: an optional 6-digit PIN that reopens Shiftbook after an idle lock, for the rest of that day. The full password is still needed after you quit, after the computer sleeps or locks, after midnight, or after 3 wrong PINs.",
+    "**The trade-off:** to allow this, the key stays in memory during an idle lock, so the PIN protects the screen, not the file. The file on disk stays fully encrypted either way."
+   ],
+   "questions": [
+    {
+     "id": "unlock",
+     "legend": "What next?",
+     "options": [
+      {
+       "value": "Write up the security side in SECURITY.md for me to approve first",
+       "rec": true
+      },
+      {
+       "value": "Not now, keep the full password every time"
+      }
+     ]
+    }
+   ],
+   "pick": "A write-up first; nothing gets built until you approve it."
+  },
+  "r15-home": {
+   "round": 15,
+   "order": 30,
+   "area": "Home use",
+   "version": 1,
+   "title": "Is Shiftbook for home life too?",
+   "body": [
+    "Shiftbook's ADHD helpers (Where was I?, Bring up, pins, the Tickets tray for chasing claim numbers) already suit home life. What gets in the way is that everything is worded and set up for work: tickets, timesheet codes, an 8 h ring that reads as a failure on a day at home. The full review is in [Shiftbook at home: everyday life review](https://claude.ai/artifact/SgVfgGUkmbRtD37Nvqq2r9).",
+    "The first question decides how much of the rest is worth doing now. If home is just a side effect, only the next card (repeating things and reminders) is worth it, because it helps work just as much."
+   ],
+   "questions": [
+    {
+     "id": "goal",
+     "legend": "Home use is…",
+     "options": [
+      {
+       "value": "A real goal",
+       "why": "Build the setup choice and the home-friendly changes below."
+      },
+      {
+       "value": "A nice side effect",
+       "why": "Only build what helps work too (the next card)."
+      }
+     ]
+    },
+    {
+     "id": "setup",
+     "legend": "A \"What's Shiftbook for?\" choice at setup: Work, Home or Both",
+     "options": [
+      {
+       "value": "Yes, if home is a goal",
+       "rec": true,
+       "why": "Home hides the Timesheet, turns the hours ring off, and renames tickets to references, meetings to regular events and MOPs to step-by-step guides. It only changes labels and defaults, so it can be switched later."
+      },
+      {
+       "value": "No"
+      }
+     ]
+    },
+    {
+     "id": "notime",
+     "legend": "Done without time",
+     "options": [
+      {
+       "value": "Let Log work save a line with no minutes in Home mode, shown as a tick",
+       "rec": true
+      },
+      {
+       "value": "Always ask for minutes"
+      }
+     ]
+    },
+    {
+     "id": "lists",
+     "legend": "Reusable lists (shopping, packing) as checklists you can reset",
+     "options": [
+      {
+       "value": "Yes, with Tasks (M4)",
+       "rec": true
+      },
+      {
+       "value": "No"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "legend": "Anything to change?",
+     "type": "text",
+     "placeholder": "e.g. I'd use Both on one laptop"
+    }
+   ],
+   "pick": "Your call on the first question. If home is a goal, yes to the other three."
+  },
+  "r15-recurring": {
+   "round": 15,
+   "order": 35,
+   "area": "Home use · also work",
+   "version": 1,
+   "title": "Repeating things, and reminders when Shiftbook is closed",
+   "body": [
+    "**Repeating things:** bills, bins, filters, the car service, renewals, birthdays, and at work certificates and patching. The rules (next due, warn days, Overdue and Due soon) are already written and tested in `crates/core`; there's just no screen yet.",
+    "**Reminders:** the bell only rings while Shiftbook is open, so after two days with the laptop shut everything is missed. The cheap fix is a \"While you were away\" list that opens on unlock. Real system notifications need a new plugin and would reverse the round 12 choice of in-app only."
+   ],
+   "questions": [
+    {
+     "id": "screen",
+     "legend": "Recurring things screen",
+     "options": [
+      {
+       "value": "Build it now: Mark done, Due soon on the Desk and the bell, and a yearly option",
+       "rec": true
+      },
+      {
+       "value": "Later"
+      }
+     ]
+    },
+    {
+     "id": "remind",
+     "legend": "Reminders when Shiftbook is closed",
+     "options": [
+      {
+       "value": "A \"While you were away\" list on unlock; no new plugin",
+       "rec": true
+      },
+      {
+       "value": "Real system notifications (adds tauri-plugin-notification, reverses round 12)"
+      },
+      {
+       "value": "Neither for now"
+      }
+     ]
+    }
+   ],
+   "pick": "Build the screen, with the catch-up list on unlock."
+  },
+  "r15-things": {
+   "area": "Tickets, plans and projects",
+   "body": [
+    "Shiftbook has no single record for \"a thing I'm working on\". A ticket touched on three days is three tray rows plus a row on each entry, and the app has to tick them all and pick the newest notepad. \"Same work\" is guessed from matching titles. Reminders come from four places (Bring up tomorrow, a pin's chase day, Next up, still open).",
+    "My proposal: one new record, an **item** (a ticket, a task or a chore), that time, notes and pins point at, with one notepad and one **follow-up date**. Projects stay as they are; their box, drawer and board are views of the same project. The full write-up, with a picture of the model and the four build steps, is in [Tickets, plans and projects: one clearer model](https://claude.ai/artifact/KhY1cyvt1PcBJYiGYSzyEZ)."
+   ],
+   "bullets": [
+    "**Step 1 (about one round-14 change):** one item per ticket number. Tick once, one notepad, no copying forward. Nothing you see moves.",
+    "**Step 2:** Bring up tomorrow and a pin's chase day become one follow-up date; the bell lists each item once.",
+    "**Step 3:** time entries point at items, so \"4 h · 2 days\" comes from the data and renaming is safe.",
+    "**Step 4:** tasks and recurring chores become items too, so they can sit on the Desk, in project boxes and in Next up."
+   ],
+   "order": 40,
+   "questions": [
+    {
+     "id": "model",
+     "legend": "One item per ticket, task or chore",
+     "options": [
+      {
+       "rec": true,
+       "value": "Yes, start with step 1",
+       "why": "Fixes ticking, notepads and the bell with the least change."
+      },
+      {
+       "value": "Yes, all four steps in one go"
+      },
+      {
+       "value": "Not now, keep the current model"
+      }
+     ]
+    },
+    {
+     "id": "name",
+     "legend": "What should the app call one?",
+     "options": [
+      {
+       "rec": true,
+       "value": "Item",
+       "why": "Reads well on a button: New item, Open item."
+      },
+      {
+       "value": "Thing"
+      },
+      {
+       "value": "Job"
+      }
+     ]
+    },
+    {
+     "id": "reuse",
+     "legend": "A ticket number comes back months later",
+     "options": [
+      {
+       "rec": true,
+       "value": "Same ticket, reopened, old notes kept"
+      },
+      {
+       "value": "Ask me each time"
+      }
+     ]
+    },
+    {
+     "id": "plans",
+     "legend": "When you said \"plans\", did you mean...",
+     "options": [
+      {
+       "rec": true,
+       "value": "Next up, Bring up and reminders (what I looked at)"
+      },
+      {
+       "value": "The hidden Planner (week, month, year view)"
+      },
+      {
+       "value": "Something else (say below)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. keep the Tickets tray exactly as it is",
+     "type": "text"
+    }
+   ],
+   "round": 15,
+   "title": "One record per ticket, task or chore",
+   "version": 1
+  },
+  "r15-android": {
+   "area": "Android",
+   "body": [
+    "**Short answer: yes.** Tauri 2 builds Android apps from the same code, so the rules, the encrypted database and the screens come along. The work is a phone layout, phone versions of a few desktop features (file picking, screenshot protection, locking when you leave), and deciding how the phone and the computer share data.",
+    "**What it would look like:** the same paper look with a bottom bar for the five views, a big + button for capture, the Desk shown as a list, and quiet reminders that never show titles on the lock screen. Mockups and the full write-up: [Shiftbook in your pocket](https://claude.ai/artifact/CufAB8vtd1KpGsRzwTH967).",
+    "**First step either way:** a small test build that sets up, locks and unlocks on an Android emulator. That proves the encrypted database works on a phone, which is the one part that could fail."
+   ],
+   "order": 60,
+   "pick": "Next: the test build on an emulator, then the phone layout.",
+   "questions": [
+    {
+     "id": "data",
+     "legend": "Phone and computer data",
+     "options": [
+      {
+       "value": "The phone on its own (a separate notebook)"
+      },
+      {
+       "rec": true,
+       "value": "Swap an encrypted sync file, moved any way you like; Shiftbook still never goes online"
+      },
+      {
+       "value": "Wait for the Phase 2 server"
+      }
+     ]
+    },
+    {
+     "id": "scope",
+     "legend": "What the phone is for first",
+     "options": [
+      {
+       "rec": true,
+       "value": "A companion: log work, capture, today, the bell, reading notes"
+      },
+      {
+       "value": "The whole app, Desk canvas included"
+      }
+     ]
+    },
+    {
+     "id": "finger",
+     "legend": "Fingerprint unlock",
+     "options": [
+      {
+       "rec": true,
+       "value": "Offer it, off until I turn it on (adds Tauri's official biometric plugin)"
+      },
+      {
+       "value": "Password only"
+      }
+     ]
+    },
+    {
+     "id": "remind",
+     "legend": "Due reminders on the phone",
+     "options": [
+      {
+       "rec": true,
+       "value": "A quiet \"2 things are due today\" with no titles (adds Tauri's official notification plugin)"
+      },
+      {
+       "value": "Show the titles too"
+      },
+      {
+       "value": "No reminders"
+      }
+     ]
+    },
+    {
+     "id": "install",
+     "legend": "Getting it onto a phone",
+     "options": [
+      {
+       "rec": true,
+       "value": "A signed APK from GitHub releases"
+      },
+      {
+       "value": "The Play Store"
+      },
+      {
+       "value": "F-Droid"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. I'd mostly use it at home",
+     "type": "text"
+    }
+   ],
+   "round": 15,
+   "title": "Shiftbook on an Android phone",
+   "version": 1
+  }
+ }
+}
