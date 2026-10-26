@@ -21,6 +21,7 @@
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
   import { workTickets } from '../lib/workTickets';
+  import { dragButton } from '../lib/rightDrag';
 
   let {
     card,
@@ -121,8 +122,11 @@
 
   // ----- moving -----
   function down(e: PointerEvent) {
-    if (e.button !== 0) return;
+    if (!dragButton(e)) return;
+    // A right-click that doesn't move is for the menu: it never opens or picks the card.
+    const left = e.button === 0;
     if (linking) {
+      if (!left) return;
       e.stopPropagation();
       onpick?.();
       return;
@@ -139,7 +143,7 @@
     window.getSelection()?.removeAllRanges();
     el?.focus({ preventScroll: true });
     if (locked) {
-      clicked();
+      if (left) clicked();
       return;
     }
     e.stopPropagation();
@@ -159,7 +163,7 @@
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
       if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy), { cx: u.clientX, cy: u.clientY });
-      else clicked();
+      else if (left) clicked();
       drag = null;
     };
     el?.addEventListener('pointermove', move);

@@ -139,6 +139,8 @@ export interface Prefs {
   timeButtons: number[];
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
+  /** The right mouse button drags on the Desk too (off by default, round 15). */
+  rightDrag: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -313,7 +315,8 @@ export type PrefKey =
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
-  | 'security.quick_unlock';
+  | 'security.quick_unlock'
+  | 'ui.right_drag';
 
 export interface Project {
   id: string;

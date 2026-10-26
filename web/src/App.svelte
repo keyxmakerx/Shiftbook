@@ -14,6 +14,7 @@
   import { phone } from './lib/phone.svelte';
   import { timerBack, timerHidden } from './lib/timer.svelte';
   import { planNudges } from './lib/launch.svelte';
+  import { watchRightDrag } from './lib/rightDrag';
   import TodayPin from './components/TodayPin.svelte';
 
   type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
@@ -69,6 +70,12 @@
       clearInterval(timer);
       for (const name of events) window.removeEventListener(name, onActivity);
     };
+  });
+
+  // Drag with the right button too (Settings → Look): keeps a plain right-click opening its menu.
+  $effect(() => {
+    if (!unlocked || !app.prefs?.rightDrag) return;
+    return watchRightDrag(window);
   });
 
   // Phone: lock after being away from the app (another app, the home screen or the screen off)

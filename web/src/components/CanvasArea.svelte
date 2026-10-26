@@ -9,6 +9,7 @@
   import { MIN_AREA, type DeskBox } from '../lib/canvasView';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { projectById, projectColor } from '../lib/store.svelte';
+  import { dragButton } from '../lib/rightDrag';
   import Icon from './Icon.svelte';
 
   let {
@@ -55,7 +56,7 @@
       e.stopPropagation();
       return;
     }
-    if (e.button !== 0 || renaming) return;
+    if (!dragButton(e) || renaming) return;
     e.stopPropagation();
     e.preventDefault();
     const target = e.currentTarget as HTMLElement;

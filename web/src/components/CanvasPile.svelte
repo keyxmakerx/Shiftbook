@@ -8,6 +8,7 @@
   import { focusNow } from '../lib/focus';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL } from '../lib/notes';
+  import { dragButton } from '../lib/rightDrag';
 
   let {
     pile,
@@ -60,7 +61,7 @@
   });
 
   function down(e: PointerEvent) {
-    if (e.button !== 0 || renaming) return;
+    if (!dragButton(e) || renaming) return;
     if ((e.target as HTMLElement).closest('input, button')) return;
     e.stopPropagation();
     // No text selection or browser drag from a pile (see CanvasCard).
@@ -81,7 +82,8 @@
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
       if (moved && drag) onmove(Math.round(pile.x + drag.dx), Math.round(pile.y + drag.dy), { cx: u.clientX, cy: u.clientY });
-      else ontoggle();
+      // A right-click that didn't move is for the menu, not for fanning the pile.
+      else if (e.button === 0) ontoggle();
       drag = null;
     };
     el?.addEventListener('pointermove', move);

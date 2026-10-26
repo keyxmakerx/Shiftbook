@@ -66,6 +66,9 @@ pub const KEY_STANDUP_WORDS: &str = "day.standup_words";
 pub const MAX_STANDUP_WORD_CHARS: usize = 20;
 /// Quick unlock with a PIN is turned on (round 15). Only a flag: the PIN is never stored.
 pub const KEY_QUICK_UNLOCK: &str = "security.quick_unlock";
+/// Drag on the Desk with the right mouse button too, `true` or `false` (off by default, round 15).
+/// A right-click that doesn't move still opens the menu.
+pub const KEY_RIGHT_DRAG: &str = "ui.right_drag";
 /// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
 pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The time buttons everyone starts with.
@@ -207,6 +210,8 @@ pub struct Prefs {
     pub wrapup_nudge: bool,
     /// Quick unlock with a PIN is turned on.
     pub quick_unlock: bool,
+    /// The right mouse button drags too.
+    pub right_drag: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -248,6 +253,7 @@ impl Default for Prefs {
             wrapup_nudge: false,
             timer: false,
             quick_unlock: false,
+            right_drag: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
@@ -343,7 +349,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK => {
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK | KEY_RIGHT_DRAG => {
             ok(&["true", "false"])
         }
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
@@ -482,6 +488,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
+            KEY_RIGHT_DRAG => prefs.right_drag = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
@@ -741,6 +748,15 @@ mod tests {
         let p = prefs_from_settings(&[("ui.text_size", "130"), ("day.wrapup_at", "17:30")]);
         assert_eq!(p.text_size, 130);
         assert_eq!(p.wrapup_at.as_deref(), Some("17:30"));
+    }
+
+    #[test]
+    fn right_button_drag_is_off_until_switched_on() {
+        assert!(!Prefs::default().right_drag);
+        assert_eq!(validate_pref(KEY_RIGHT_DRAG, " true "), Ok("true".into()));
+        assert!(validate_pref(KEY_RIGHT_DRAG, "yes").is_err());
+        assert!(prefs_from_settings(&[(KEY_RIGHT_DRAG, "true")]).right_drag);
+        assert!(!prefs_from_settings(&[(KEY_RIGHT_DRAG, "maybe")]).right_drag);
     }
 
     #[test]
