@@ -116,6 +116,11 @@ Built as pictured on the `r15-qol-*` mockups; the owner will try them and say wh
   the day's first password unlock a small box asks for today's PIN (Skip is fine). The owner was
   asked on a card whether to keep that box or set it only from Settings.
 - **The 11 newer ideas** (`r15-qol-new`) wait until the owner has tried these.
+- **Drag with the right button too** (card `r15-rightdrag`, approved 26 Oct): Settings → Look →
+  Mouse, off by default. When on, a right press that moves drags cards, piles and areas, slides
+  the Desk, or moves a window or drawer; one that doesn't move still opens the menu, on every
+  system (the menu is held until release where the browser sends it on press). Selecting and
+  Box stay on the left button. Pref `ui.right_drag`; menu timing in `web/src/lib/rightDrag.ts`.
 
 ## Round 14 — 20 Oct 2026
 - **Done tickets** (asked in chat after trying 0.4.0): tickets ticked done today gather in a

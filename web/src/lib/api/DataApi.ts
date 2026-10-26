@@ -143,6 +143,8 @@ export interface Prefs {
   blockCopy: boolean;
   /** The window is hidden from screenshots until allowed for 10 minutes (on by default). */
   hideScreenshots: boolean;
+  /** The right mouse button drags on the Desk too (off by default, round 15). */
+  rightDrag: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -319,7 +321,8 @@ export type PrefKey =
   | 'day.time_buttons'
   | 'security.quick_unlock'
   | 'security.block_copy'
-  | 'security.hide_screenshots';
+  | 'security.hide_screenshots'
+  | 'ui.right_drag';
 
 export interface Project {
   id: string;

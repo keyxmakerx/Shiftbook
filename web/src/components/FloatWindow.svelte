@@ -9,6 +9,7 @@
   import { closeWindow, focusWindow, moveWindow, resizeWindow, setWindowMode, windows, winKey } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import { phone } from '../lib/phone.svelte';
+  import { dragButton } from '../lib/rightDrag';
 
   let { win }: { win: WindowSpot } = $props();
 
@@ -100,7 +101,7 @@
   }
 
   function drag(e: PointerEvent, resize: boolean) {
-    if (e.button !== 0 || win.mode === 'full') return;
+    if (!dragButton(e) || win.mode === 'full') return;
     if (!resize && (e.target as HTMLElement).closest('button')) return;
     e.preventDefault();
     focusWindow(key);

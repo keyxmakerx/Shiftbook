@@ -93,6 +93,22 @@
   </article>
 
   <article class="paper cz-card">
+    <h3>Mouse</h3>
+    <p class="sub">
+      Hold the right button and move to drag cards, piles and areas, slide the Desk, or move a
+      window. A right-click without moving still opens the menu. Off unless you turn it on.
+    </p>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={prefs.rightDrag}
+        onchange={(e) => set('ui.right_drag', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      Drag with the right button too
+    </label>
+  </article>
+
+  <article class="paper cz-card">
     <h3>Accent</h3>
     <p class="sub">Used for focus rings, the selected week and the tray.</p>
     <div class="cz-row">
