@@ -1,0 +1,41 @@
+{
+ "meta": {"round": 15},
+ "cards": {
+  "r15-protect-switch": {
+   "round": 15,
+   "order": 70,
+   "area": "Security",
+   "version": 1,
+   "title": "A switch to turn off copy blocking",
+   "body": [
+    "Today Shiftbook blocks copying text out of the app, and the **Protected** button in the top bar lets copying through for 10 minutes before the timer turns it back on. That button also hides the window from screenshots.",
+    "You asked for a way to turn this off for people who don't want it. Here is a new switch in **Settings → Security**. Both stay on by default for new installs, so nothing changes unless someone turns it off.",
+    "The recovery key's own Copy button still empties the clipboard after 60 seconds either way, since that key unlocks everything."
+   ],
+   "figures": [
+    {"html_file": "mocks/r15-protect-switch.html", "caption": "**Settings → Security** with the two switches (dashed), and what the top-bar button does in each case."}
+   ],
+   "questions": [
+    {
+     "id": "what",
+     "legend": "What should the switch cover?",
+     "options": [
+      {"value": "Two switches: copying and screenshots separately", "rec": true, "why": "Someone who wants to copy freely can still keep their screen hidden in screen shares."},
+      {"value": "One switch that turns both off", "why": "Simpler, but all or nothing."},
+      {"value": "Copying only; screenshots always protected", "why": "Matches the ask most narrowly."}
+     ]
+    },
+    {
+     "id": "ask",
+     "legend": "Ask \"are you sure?\" when turning one off?",
+     "options": [
+      {"value": "Yes, ask once with a short warning", "rec": true},
+      {"value": "No, just turn it off"}
+     ]
+    },
+    {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. call it \"Copy protection\" instead"}
+   ],
+   "pick": "Two separate switches, both on by default, with a one-time warning when turning one off."
+  }
+ }
+}
