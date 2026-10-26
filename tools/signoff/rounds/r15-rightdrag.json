@@ -1,0 +1,31 @@
+{
+  "meta": {"round": 15},
+  "cards": {
+    "r15-rightdrag": {
+      "round": 15,
+      "order": 27,
+      "area": "Quality of life · mouse",
+      "version": 1,
+      "title": "Drag with the right mouse button (optional)",
+      "body": [
+        "You asked for a setting so right-click can drag. I read that as: on the Desk, hold the right button and move to drag a card, and the same for piles, areas, sliding the Desk itself, and moving the floating windows and the drawer.",
+        "**The clash with menus.** Right-click opens menus today (Bring up…, Pin, and so on). With the setting on, it depends on whether the mouse moves: press and let go without moving, and you get the menu exactly as now. Press and move a little, and it becomes a drag and no menu appears afterwards.",
+        "**Where it lives.** Settings → Look, a new Mouse line with one switch. It starts off, so nothing changes until you turn it on.",
+        "**Left as is.** Selecting with Shift or the Box tool stays on the left button, and the Day, Lists and Notes screens have no dragging, so nothing changes there."
+      ],
+      "figures": [
+        {"html_file": "mocks/r15-qol-rightdrag.html", "caption": "Settings → Look: the new Mouse switch."},
+        {"html_file": "mocks/r15-qol-rightdrag-desk.html", "caption": "With it on: the right button held down drags the card. A plain right-click still opens its menu."}
+      ],
+      "questions": [
+        {"id": "ok", "legend": "Right-button drag", "options": [
+          {"value": "Approved: build it as shown", "rec": true},
+          {"value": "Change something (say below)"},
+          {"value": "Not now"}
+        ]},
+        {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. only for sliding the Desk, or on by default"}
+      ],
+      "pick": "Approve as shown; it's off until you switch it on."
+    }
+  }
+}

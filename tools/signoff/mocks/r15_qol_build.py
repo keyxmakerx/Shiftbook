@@ -520,6 +520,40 @@ MOCKS["lockwrap"] = page(
     + bottom()
 )
 
+MOCKS["rightdrag"] = page(
+    top(tab="Settings")
+    + '<div class="main"><div class="settings"><div class="snav"><span class="on">Look</span><span>Your day</span><span>Projects</span><span>Timesheet</span><span>Notes</span><span>Fields</span><span>Responses</span><span>Meetings</span><span>Backups</span><span>Security</span></div>'
+    + '<div class="sbody"><h3>Look</h3><div class="field"><div class="h">Theme</div><div class="row"><span class="btn">Follow my computer</span><span class="btn">Light</span><span class="btn">Dark</span></div></div>'
+    + '<div class="field"><div class="h">Text size</div><div class="row"><span class="btn">Small</span><span class="btn">Normal</span><span class="btn">Large</span><span class="btn">Larger</span></div></div>'
+    + '<div class="field hl"><div class="h">Mouse<small>Off to start with.</small></div>'
+    + '<span class="row" style="justify-content:space-between;align-items:flex-start"><span><b>Drag with the right button too</b><br>'
+    + '<span class="note">Hold the right button and move to drag cards, piles and areas, slide the Desk, or move a window. '
+    + 'A right-click without moving still opens the menu.</span></span><span class="sw on"></span></span></div>'
+    + "</div></div></div></div>",
+    h=330,
+)
+
+MOCKS["rightdrag-desk"] = page(
+    top()
+    + '<div class="main"><div class="desk">'
+    + "".join(
+        card(x, y, k, t, s, c, "dim" if i == 1 else "")
+        for i, (x, y, k, t, s, c) in enumerate(DESK_CARDS)
+    )
+    + '<div class="card" style="left:300px;top:96px;--c:var(--plum);box-shadow:var(--lift);transform:rotate(-1.5deg);z-index:4">'
+    + '<span class="k">Entry · 1.5 h · Tue</span><span class="t">Laptop imaging</span><span class="note">Laptop refresh</span></div>'
+    + '<span class="ptr" style="left:392px;top:140px"></span>'
+    + '<span class="callout" style="left:404px;top:162px">Right button held: dragging</span>'
+    + '<div class="pop" style="left:14px;top:280px;width:600px;padding:8px 12px;flex-direction:row;gap:22px;font-size:12.5px">'
+    + '<span><b>Right-click, let go</b><br><span class="note">the card\'s menu, same as now</span></span>'
+    + '<span><b>Right button, move</b><br><span class="note">drags it; no menu afterwards</span></span>'
+    + '<span><b>Right button on empty Desk</b><br><span class="note">slides the Desk</span></span></div>'
+    + "</div>"
+    + side_default()
+    + "</div>"
+    + bottom()
+)
+
 if __name__ == "__main__":
     for k, html in MOCKS.items():
         with open(os.path.join(HERE, f"r15-qol-{k}.html"), "w", encoding="utf-8") as f:
