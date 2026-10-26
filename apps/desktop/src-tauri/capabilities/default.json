@@ -55,6 +55,7 @@
     "allow-quick-log",
     "allow-same-work",
     "allow-items",
+    "allow-item-set-done",
     "allow-parse-capture-line",
     "allow-capture-log",
     "allow-tray-day",

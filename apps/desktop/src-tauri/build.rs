@@ -52,6 +52,7 @@ fn main() {
             "quick_log",
             "same_work",
             "items",
+            "item_set_done",
             "parse_capture_line",
             "capture_log",
             "tray_day",

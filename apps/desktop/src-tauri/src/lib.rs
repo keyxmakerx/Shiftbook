@@ -638,6 +638,7 @@ pub fn run() {
             api::quick_log,
             api::same_work,
             api::items,
+            api::item_set_done,
             api::parse_capture_line,
             api::capture_log,
             api::tray_day,

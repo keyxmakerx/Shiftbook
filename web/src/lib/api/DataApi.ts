@@ -291,6 +291,8 @@ export interface ItemSummary {
   first: IsoDate | null;
   last: IsoDate | null;
   minutes: number;
+  /** The cards it's on, latest first: `tray:id` or `entry:id`. */
+  cards: string[];
 }
 
 /** A card's follow-up day: brought up for that day, or a pin's chase day. */
@@ -1065,6 +1067,8 @@ export interface DataApi {
   sameWork(date: IsoDate, text: string): Promise<SameWork | null>;
   /** Ticket items with their time so far; with `numbers`, only those. Tauri: `items`. */
   items(numbers?: string[]): Promise<ItemSummary[]>;
+  /** The Items view's tick: done everywhere, or reopened from `today`. Tauri: `item_set_done`. */
+  itemSetDone(id: string, done: boolean, today: IsoDate): Promise<void>;
 
   // ----- capture -----
   /** What a capture line means (for the live chips). */

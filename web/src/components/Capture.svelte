@@ -118,7 +118,15 @@
     { label: 'Go to Settings', group: 'Go to', keys: '5', run: () => setView('settings') },
     { label: 'Boards', group: 'Go to', words: 'full screen projects meetings', run: () => openBoard('desk') },
     { label: 'Daily notes', group: 'Go to', words: 'board', run: () => openBoard('daily') },
-    { label: 'Done tickets', group: 'Go to', words: 'board closed', run: () => openBoard('done', 'list') },
+    {
+      label: 'Done tickets',
+      group: 'Go to',
+      words: 'board closed items',
+      run: () => {
+        app.itemsTab = 'done';
+        setView('items');
+      },
+    },
     { label: 'Archive', group: 'Go to', words: 'board archived', run: () => openBoard('archive') },
     ...app.projects
       .filter((p) => !p.archived)

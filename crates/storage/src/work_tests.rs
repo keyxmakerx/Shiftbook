@@ -1421,6 +1421,17 @@ fn known_tickets_carry_their_time_so_far() {
         assert_eq!(so_far.first, DAY);
         assert_eq!(so_far.last, date!(2026 - 10 - 19));
         assert_eq!(so_far.minutes, Minutes(15 + 90));
+        assert_eq!(item.cards.len(), 2);
+        assert!(item.cards[0].starts_with("tray:"), "latest first");
         assert!(s.item_summaries(other, None).await.unwrap().is_empty());
+        // Ticked done from the Items view: done everywhere.
+        assert!(matches!(
+            s.item_set_done(other, item.id, true, DAY).await,
+            Err(StorageError::NotFound)
+        ));
+        s.item_set_done(me, item.id, true, DAY).await.unwrap();
+        let tray = s.tray_day(me, date!(2026 - 10 - 19)).await.unwrap();
+        assert!(tray.items[0].done);
+        assert!(s.item_summaries(me, None).await.unwrap()[0].done);
     });
 }

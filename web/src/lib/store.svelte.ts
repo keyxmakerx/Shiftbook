@@ -29,6 +29,8 @@ export const app = $state({
   today: toIso(new Date()),
   selected: toIso(new Date()),
   view: 'desk' as View,
+  /** Which part of the Items view shows (round 15). */
+  itemsTab: 'open' as 'open' | 'follow' | 'done',
   /** The view we came from, for the direction of the slide. */
   previousView: 'desk' as View,
   prefs: null as Prefs | null,

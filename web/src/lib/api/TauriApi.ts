@@ -230,6 +230,9 @@ export class TauriApi implements DataApi {
   items(numbers?: string[]): Promise<ItemSummary[]> {
     return call('items', { numbers: numbers ?? null });
   }
+  itemSetDone(id: string, done: boolean, today: IsoDate): Promise<void> {
+    return call('item_set_done', { id, done, today });
+  }
 
   parseCapture(text: string, today: IsoDate): Promise<Capture> {
     return call('parse_capture_line', { text, today });

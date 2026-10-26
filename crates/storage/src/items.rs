@@ -375,6 +375,8 @@ pub struct ItemSummary {
     pub recurring: Option<RecurringTaskId>,
     /// When it was worked and how long, if it's on anything.
     pub so_far: Option<SoFar>,
+    /// The cards it's on, latest first: `tray:id` for tray rows, `entry:id` for entries.
+    pub cards: Vec<String>,
 }
 
 impl crate::SqliteStore {
@@ -412,18 +414,19 @@ impl crate::SqliteStore {
                 project: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
                 recurring: opt_uuid(row.try_get("recurring_id")?)?.map(RecurringTaskId::from_uuid),
                 so_far: None,
+                cards: Vec::new(),
             });
         }
         if items.is_empty() {
             return Ok(items);
         }
-        // (item, date, minutes, title): tray rows, then entries (not the roll-ups, which
-        // only mirror the tray).
-        let worked: Vec<(String, String, i64, String)> = sqlx::query_as(
-            "SELECT item_id, date, minutes, '' FROM ticket_tray WHERE owner_id = $1 \
-             AND item_id IS NOT NULL AND deleted_at IS NULL \
+        // (item, date, minutes, title, card): tray rows, then entries (not the roll-ups,
+        // which only mirror the tray).
+        let worked: Vec<(String, String, i64, String, String)> = sqlx::query_as(
+            "SELECT item_id, date, minutes, '', 'tray:' || id FROM ticket_tray \
+             WHERE owner_id = $1 AND item_id IS NOT NULL AND deleted_at IS NULL \
              UNION ALL \
-             SELECT t.item_id, e.date, e.minutes, e.description FROM tickets t \
+             SELECT t.item_id, e.date, e.minutes, e.description, 'entry:' || e.id FROM tickets t \
              JOIN time_entries e ON e.id = t.time_entry_id \
              WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.item_id IS NOT NULL \
              AND t.deleted_at IS NULL AND e.deleted_at IS NULL \
@@ -432,24 +435,55 @@ impl crate::SqliteStore {
         .bind(owner.to_string())
         .fetch_all(&mut *conn)
         .await?;
-        // Per item: (day, minutes) worked, and the latest (day, title).
-        type Worked = (Vec<(Date, Minutes)>, Option<(Date, String)>);
+        // Per item: (day, minutes) worked, the latest (day, title), and (day, card).
+        type Worked = (
+            Vec<(Date, Minutes)>,
+            Option<(Date, String)>,
+            Vec<(Date, String)>,
+        );
         let mut by_item: HashMap<String, Worked> = HashMap::new();
-        for (item, date, minutes, title) in worked {
+        for (item, date, minutes, title, card) in worked {
             let date = corrupt_date(&date)?;
             let slot = by_item.entry(item).or_default();
             slot.0
                 .push((date, Minutes(u32::try_from(minutes).unwrap_or(0))));
+            slot.2.push((date, card));
             if !title.trim().is_empty() && slot.1.as_ref().is_none_or(|(d, _)| date >= *d) {
                 slot.1 = Some((date, title));
             }
         }
         for item in &mut items {
-            if let Some((rows, title)) = by_item.get(&item.id.to_string()) {
+            if let Some((rows, title, cards)) = by_item.get_mut(&item.id.to_string()) {
                 item.so_far = ticket_so_far(rows);
+                cards.sort_by(|a, b| b.0.cmp(&a.0));
+                item.cards = cards.iter().map(|(_, c)| c.clone()).collect();
                 item.title = title.as_ref().map(|(_, t)| t.clone()).unwrap_or_default();
             }
         }
         Ok(items)
+    }
+
+    /// The Items view's tick: finish a ticket everywhere, or reopen it from `from` on.
+    pub async fn item_set_done(
+        &self,
+        owner: OwnerId,
+        item: ItemId,
+        done: bool,
+        from: Date,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        let n: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM items WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(item.to_string())
+        .bind(owner.to_string())
+        .fetch_one(&mut *tx)
+        .await?;
+        if n == 0 {
+            return Err(crate::StorageError::NotFound);
+        }
+        set_item_done(&mut tx, owner, item, done, from).await?;
+        tx.commit().await?;
+        Ok(())
     }
 }

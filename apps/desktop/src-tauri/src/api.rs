@@ -695,6 +695,8 @@ pub struct ItemView {
     first: Option<String>,
     last: Option<String>,
     minutes: u32,
+    /// The cards it's on, latest first (`tray:id`, `entry:id`).
+    cards: Vec<String>,
 }
 
 /// Maps to `DataApi.items()`: every ticket item, or with `numbers` only those (known tickets).
@@ -716,8 +718,23 @@ pub async fn items(s: State<'_, VaultSession>, numbers: Option<Vec<String>>) -> 
             first: i.so_far.map(|f| format_date(f.first)),
             last: i.so_far.map(|f| format_date(f.last)),
             minutes: i.so_far.map_or(0, |f| f.minutes.get()),
+            cards: i.cards,
         })
         .collect())
+}
+
+/// Maps to `DataApi.itemSetDone()`: the Items view's tick (reopening counts from `today`).
+#[tauri::command]
+pub async fn item_set_done(
+    s: State<'_, VaultSession>,
+    id: String,
+    done: bool,
+    today: String,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .item_set_done(owner, id_arg(&id)?, done, date_arg(&today)?)
+        .await?)
 }
 
 /// Maps to `DataApi.parseCapture()`: what a capture line means, for the live chips.
