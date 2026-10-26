@@ -194,6 +194,9 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   protected the page blocks `copy` and `cut` everywhere (text boxes included); the explicit Copy
   buttons write through the Clipboard API and still work. Copying the recovery key keeps its
   60-second clipboard clear.
+  Either half can be turned off in Settings → Security (`security.block_copy`,
+  `security.hide_screenshots`, both on by default). The window stays content-protected while
+  locked; the screenshot setting applies when prefs are loaded after unlock.
 - **Links are never opened.** Link fields (for example Jira) only build text to show and copy;
   templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
 - **New commands** each have their own permission; errors stay short codes. The capability still

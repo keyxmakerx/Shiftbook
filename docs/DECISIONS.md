@@ -2,6 +2,12 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 26 Oct 2026 (turning protection off)
+- **Copy and screenshot protection switches:** Settings → Security gets two switches, "Block
+  copying text" and "Hide from screenshots", both on by default. Turning one off asks once with a
+  short warning. With one off, the Protected button guards only the other; with both off it
+  leaves the top bar. The recovery key's Copy button keeps its 60-second clipboard clear.
+
 ## Round 15 — 25 Oct 2026 (one item per ticket)
 - **One item per ticket, task or chore** (asked in chat: "I like all your recommendations";
   write-up "Tickets, plans and projects: one clearer model"): a new **item** record that
