@@ -4,8 +4,10 @@
 // partly macOS; Linux can't) and copying or cutting text out of the page is blocked. The
 // pill allows both for ten minutes; a timer in the app turns protection back on. The
 // explicit Copy buttons always work because they go through `copyText`.
+// Either half can be turned off in Settings → Security (round 15); with both off the pill goes.
 
 import { api } from './api';
+import { app } from './store.svelte';
 import { toast } from './toast.svelte';
 
 export const protection = $state({ on: true, secondsLeft: 0 });
@@ -19,8 +21,19 @@ function stopTicker(): void {
   ticker = null;
 }
 
+/** What the Protected pill guards, from Settings. */
+export function guards(): { copy: boolean; screens: boolean } {
+  return { copy: app.prefs?.blockCopy ?? true, screens: app.prefs?.hideScreenshots ?? true };
+}
+
+/** "Screenshots and copying are", "Copying is" or "Screenshots are": what the pill guards. */
+export function guardedWords(): string {
+  const g = guards();
+  return g.copy && g.screens ? 'Screenshots and copying are' : g.copy ? 'Copying is' : 'Screenshots are';
+}
+
 function guard(event: ClipboardEvent): void {
-  if (!protection.on || bypass) return;
+  if (!protection.on || bypass || !guards().copy) return;
   event.preventDefault();
   toast('Copying is blocked while Shiftbook is protected. Use a Copy button, or allow it for 10 minutes.');
 }

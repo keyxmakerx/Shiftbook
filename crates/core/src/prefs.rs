@@ -66,6 +66,12 @@ pub const KEY_STANDUP_WORDS: &str = "day.standup_words";
 pub const MAX_STANDUP_WORD_CHARS: usize = 20;
 /// Quick unlock with a PIN is turned on (round 15). Only a flag: the PIN is never stored.
 pub const KEY_QUICK_UNLOCK: &str = "security.quick_unlock";
+/// Copying text out of the page is blocked until allowed for a while: `true` or `false`
+/// (on by default; round 15).
+pub const KEY_BLOCK_COPY: &str = "security.block_copy";
+/// The window is hidden from screenshots and screen sharing until allowed for a while:
+/// `true` or `false` (on by default; round 15).
+pub const KEY_HIDE_SCREENSHOTS: &str = "security.hide_screenshots";
 /// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
 pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The time buttons everyone starts with.
@@ -207,6 +213,10 @@ pub struct Prefs {
     pub wrapup_nudge: bool,
     /// Quick unlock with a PIN is turned on.
     pub quick_unlock: bool,
+    /// Copying text out is blocked until allowed (the Protected button).
+    pub block_copy: bool,
+    /// The window is hidden from screenshots until allowed (the Protected button).
+    pub hide_screenshots: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -248,6 +258,8 @@ impl Default for Prefs {
             wrapup_nudge: false,
             timer: false,
             quick_unlock: false,
+            block_copy: true,
+            hide_screenshots: true,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
@@ -343,9 +355,8 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK => {
-            ok(&["true", "false"])
-        }
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY
+        | KEY_HIDE_SCREENSHOTS => ok(&["true", "false"]),
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -482,6 +493,8 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
+            KEY_BLOCK_COPY => prefs.block_copy = v == "true",
+            KEY_HIDE_SCREENSHOTS => prefs.hide_screenshots = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
@@ -508,6 +521,21 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn copy_and_screenshot_protection_are_on_unless_turned_off() {
+        let p = Prefs::default();
+        assert!(p.block_copy && p.hide_screenshots);
+        assert_eq!(validate_pref(KEY_BLOCK_COPY, "false"), Ok("false".into()));
+        assert!(validate_pref(KEY_HIDE_SCREENSHOTS, "off").is_err());
+        let p = prefs_from_settings(&[(KEY_BLOCK_COPY, "false")]);
+        assert!(!p.block_copy && p.hide_screenshots);
+        let p = prefs_from_settings(&[(KEY_HIDE_SCREENSHOTS, "false"), (KEY_BLOCK_COPY, "x")]);
+        assert!(p.block_copy && !p.hide_screenshots);
+        let json = serde_json::to_value(Prefs::default()).unwrap();
+        assert_eq!(json["blockCopy"], true);
+        assert_eq!(json["hideScreenshots"], true);
+    }
 
     #[test]
     fn use_mode_and_last_open() {

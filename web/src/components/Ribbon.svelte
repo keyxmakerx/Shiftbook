@@ -5,7 +5,7 @@
   import type { RibbonDay } from '../lib/api';
   import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
-  import { allowCapture, countdown, protection, protectNow } from '../lib/protection.svelte';
+  import { allowCapture, countdown, guardedWords, guards, protection, protectNow } from '../lib/protection.svelte';
   import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView, shownViews } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { VIEW_NAMES } from '../lib/keys';
@@ -120,12 +120,12 @@
     await attempt(async () => {
       if (protection.on) {
         await allowCapture();
-        toast('Screenshots and copying are allowed for 10 minutes.', 'Protect now', () => {
+        toast(`${guardedWords()} allowed for 10 minutes.`, 'Protect now', () => {
           void attempt(protectNow);
         });
       } else {
         await protectNow();
-        toast('Protected again. Screenshots and copying are blocked.');
+        toast(`Protected again. ${guardedWords()} blocked.`);
       }
     });
   }
@@ -137,17 +137,19 @@
     <button class="cap-btn" type="button" onclick={onCapture} title="Log, note or find (Ctrl+Space)">
       <span>Log or note something…</span><kbd class="kbd">Ctrl Space</kbd>
     </button>
+    {#if guards().copy || guards().screens}
     <button
       class="icon-btn prot"
       class:open={!protection.on}
       type="button"
       onclick={toggleProtection}
       title={protection.on
-        ? 'Screenshots, screen sharing and copying are blocked. Click to allow for 10 minutes.'
+        ? `${guardedWords()} blocked. Click to allow for 10 minutes. Change this in Settings → Security.`
         : 'Allowed for now. Click to protect again.'}
     >
       <i></i><span>{protection.on ? 'Protected' : `Allowed ${countdown(protection.secondsLeft)}`}</span>
     </button>
+    {/if}
     <button class="icon-btn" type="button" onclick={onLock} title="Lock now (Ctrl+L)">
       <Icon name="lock" size={15} /><span>Lock</span>
     </button>

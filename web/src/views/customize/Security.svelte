@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Settings → Security: change password, auto-lock time, Quick unlock with a PIN (round 15),
-  // a new recovery key and deleting all data.
+  // Settings → Security: change password, copy and screenshot protection, auto-lock time,
+  // Quick unlock with a PIN (round 15), a new recovery key and deleting all data.
   import { api } from '../../lib/api';
   import type { FingerprintStatus } from '../../lib/api';
   import { CLEAR_AFTER_MS, copySecret } from '../../lib/clipboard';
@@ -90,6 +90,26 @@
     toast('Quick unlock is off. Locks ask for your password.');
   }
 
+  // Copy and screenshot protection (round 15): on by default; turning one off asks once.
+  type GuardKey = 'security.block_copy' | 'security.hide_screenshots';
+  const GUARD_OFF: Record<GuardKey, { ask: string; done: string }> = {
+    'security.block_copy': {
+      ask: 'Turn off copy blocking? Anyone at this computer can copy your notes and tickets out.',
+      done: 'Copy blocking is off. Copy and paste work like any other app.',
+    },
+    'security.hide_screenshots': {
+      ask: 'Stop hiding from screenshots? Screenshots and screen shares will show Shiftbook.',
+      done: 'Screenshots and screen sharing now show Shiftbook.',
+    },
+  };
+  let askOff = $state<GuardKey | null>(null);
+
+  async function setGuard(key: GuardKey, on: boolean) {
+    askOff = null;
+    if (!(await savePref(key, on ? 'true' : 'false'))) return;
+    toast(on ? 'Protection is back on for this.' : GUARD_OFF[key].done);
+  }
+
   async function saveMinutes() {
     const p = await attempt(() => api.savePref('security.auto_lock_minutes', String(minutes)));
     if (p) {
@@ -172,6 +192,44 @@
   {:else}
     <div><button class="btn" type="button" onclick={() => (changing = true)}>Change password</button></div>
   {/if}
+</article>
+
+<article class="paper cz-card">
+  <h3>Copy and screenshot protection</h3>
+  <p class="sub">
+    The Protected button at the top allows both for 10 minutes, then turns them back on. Turn one
+    off here to leave it off. The Copy buttons always work.
+  </p>
+  {#each [
+    { key: 'security.block_copy' as const, on: app.prefs?.blockCopy ?? true, label: 'Block copying text', note: 'Copying or cutting text out of Shiftbook is blocked until you allow it.' },
+    { key: 'security.hide_screenshots' as const, on: app.prefs?.hideScreenshots ?? true, label: 'Hide from screenshots', note: phone.on ? 'Screenshots and screen recordings show a blank screen.' : 'Screenshots and screen sharing show a blank window. Works on Windows, partly on Mac, not on Linux.' },
+  ] as g (g.key)}
+    <div class="guard">
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={g.on}
+        onchange={(e) => {
+          const box = e.currentTarget as HTMLInputElement;
+          if (box.checked) void setGuard(g.key, true);
+          else {
+            box.checked = true;
+            askOff = g.key;
+          }
+        }}
+      />
+      {g.label}
+    </label>
+    <p class="note">{g.note}</p>
+    </div>
+    {#if askOff === g.key}
+      <div class="cz-row" role="alert">
+        <span class="cz-grow">{GUARD_OFF[g.key].ask}</span>
+        <button class="btn primary" type="button" onclick={() => void setGuard(g.key, false)}>Turn off</button>
+        <button class="btn" type="button" onclick={() => (askOff = null)}>Keep it on</button>
+      </div>
+    {/if}
+  {/each}
 </article>
 
 <article class="paper cz-card">
@@ -385,6 +443,13 @@
 </article>
 
 <style>
+  .guard {
+    display: grid;
+    gap: 2px;
+  }
+  .guard .note {
+    margin: 0 0 0 28px;
+  }
   .leave {
     display: grid;
     grid-template-columns: 1fr 1fr;

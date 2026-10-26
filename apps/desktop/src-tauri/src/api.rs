@@ -312,10 +312,16 @@ fn apply_text_size(webview: &tauri::Webview, prefs: &Prefs) {
 
 /// Maps to `DataApi.loadPrefs()`.
 #[tauri::command]
-pub async fn load_prefs(webview: tauri::Webview, s: State<'_, VaultSession>) -> Res<Prefs> {
+pub async fn load_prefs(
+    webview: tauri::Webview,
+    window: tauri::WebviewWindow,
+    guard: State<'_, crate::protect::CaptureGuard>,
+    s: State<'_, VaultSession>,
+) -> Res<Prefs> {
     let (store, owner) = s.data().await?;
     let prefs = store.prefs(owner).await?;
     apply_text_size(&webview, &prefs);
+    crate::protect::apply_setting(&window, &guard, prefs.hide_screenshots);
     Ok(prefs)
 }
 
@@ -323,6 +329,8 @@ pub async fn load_prefs(webview: tauri::Webview, s: State<'_, VaultSession>) -> 
 #[tauri::command]
 pub async fn save_pref(
     webview: tauri::Webview,
+    window: tauri::WebviewWindow,
+    guard: State<'_, crate::protect::CaptureGuard>,
     s: State<'_, VaultSession>,
     key: String,
     value: String,
@@ -331,6 +339,7 @@ pub async fn save_pref(
     store.set_pref(owner, &key, &value).await?;
     let prefs = store.prefs(owner).await?;
     apply_text_size(&webview, &prefs);
+    crate::protect::apply_setting(&window, &guard, prefs.hide_screenshots);
     Ok(prefs)
 }
 

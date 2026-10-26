@@ -13,7 +13,7 @@
   import { KIND_LABEL } from '../lib/notes';
   import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
   import type { SettingsSection } from '../lib/keys';
-  import { allowCapture, protectNow } from '../lib/protection.svelte';
+  import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
   import {
     app,
     attempt,
@@ -145,16 +145,22 @@
       : []),
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book today as holiday (8 h)', group: 'Do', words: 'leave vacation', run: () => holiday() },
-    {
-      label: 'Allow screenshots for 10 minutes',
-      group: 'Do',
-      run: () => attempt(allowCapture).then(() => toast('Screenshots and copying are allowed for 10 minutes.')),
-    },
-    {
-      label: 'Protect now (block screenshots)',
-      group: 'Do',
-      run: () => attempt(protectNow).then(() => toast('Protected again.')),
-    },
+    ...(guards().copy || guards().screens
+      ? [
+          {
+            label: guards().screens ? 'Allow screenshots for 10 minutes' : 'Allow copying for 10 minutes',
+            group: 'Do' as const,
+            words: 'copy screenshot protection',
+            run: () => attempt(allowCapture).then(() => toast(`${guardedWords()} allowed for 10 minutes.`)),
+          },
+          {
+            label: guards().screens ? 'Protect now (block screenshots)' : 'Protect now (block copying)',
+            group: 'Do' as const,
+            words: 'copy screenshot protection',
+            run: () => attempt(protectNow).then(() => toast('Protected again.')),
+          },
+        ]
+      : []),
     ...SETTINGS.map((p): Command => ({ label: `Settings: ${p.label}`, group: 'Settings', words: p.words, run: () => settings(p.id) })),
   ]);
 

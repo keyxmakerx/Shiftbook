@@ -139,6 +139,10 @@ export interface Prefs {
   timeButtons: number[];
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
+  /** Copying text out is blocked until allowed for 10 minutes (on by default). */
+  blockCopy: boolean;
+  /** The window is hidden from screenshots until allowed for 10 minutes (on by default). */
+  hideScreenshots: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -313,7 +317,9 @@ export type PrefKey =
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
-  | 'security.quick_unlock';
+  | 'security.quick_unlock'
+  | 'security.block_copy'
+  | 'security.hide_screenshots';
 
 export interface Project {
   id: string;
