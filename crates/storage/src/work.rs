@@ -114,6 +114,17 @@ pub struct TrayDay {
     pub minutes: Minutes,
 }
 
+/// A still-open ticket from an earlier day that comes back in a tray (see
+/// [`SqliteStore::tray_carried`]): a tray row, or a ticket on one of the user's entries.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CarriedTicket {
+    /// The ticket as a tray row. For a ticket on an entry, `id` is the entry ticket's id,
+    /// `date` the entry's day, `minutes` 0 (its time is the entry's) and `note` its notepad.
+    pub item: TrayItem,
+    /// The entry it is on, with the entry's title, when it isn't a tray row.
+    pub entry: Option<(TimeEntryId, String)>,
+}
+
 pub(crate) fn corrupt_date(text: &str) -> Result<Date> {
     parse_date(text).map_err(|_| StorageError::Corrupt("date"))
 }
@@ -1902,9 +1913,11 @@ impl SqliteStore {
         Ok(day)
     }
 
-    /// Still-open tickets from before `date` that come back in its tray (latest row per
-    /// ticket, oldest first), leaving out tickets already in that day's tray.
-    pub async fn tray_carried(&self, owner: OwnerId, date: Date) -> Result<Vec<TrayItem>> {
+    /// Still-open tickets from before `date` that come back in its tray (latest day per
+    /// ticket, oldest first), leaving out tickets already in that day's tray. Tray rows and
+    /// tickets on the user's entries both count (round 14: an entry's ticket starts still
+    /// open too); a ticket on both on its latest day shows as the tray row.
+    pub async fn tray_carried(&self, owner: OwnerId, date: Date) -> Result<Vec<CarriedTicket>> {
         let mut conn = self.pool.acquire().await?;
         let rows = sqlx::query(concat!(
             "SELECT ",
@@ -1916,7 +1929,50 @@ impl SqliteStore {
         .bind(format_date(date))
         .fetch_all(&mut *conn)
         .await?;
-        let open: Vec<TrayItem> = rows.iter().map(tray_from_row).collect::<Result<_>>()?;
+        let mut open: Vec<CarriedTicket> = rows
+            .iter()
+            .map(|r| {
+                Ok(CarriedTicket {
+                    item: tray_from_row(r)?,
+                    entry: None,
+                })
+            })
+            .collect::<Result<_>>()?;
+        // Tickets on the user's own entries (the roll-ups only mirror the tray).
+        let rows = sqlx::query(
+            "SELECT t.id, t.ticket_number, t.note, t.created_at, t.updated_at, \
+             e.id AS entry_id, e.date, e.description FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.done = FALSE AND e.date < $2 \
+             AND t.deleted_at IS NULL AND e.deleted_at IS NULL AND e.source IS NULL \
+             ORDER BY e.date, t.created_at, t.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &rows {
+            open.push(CarriedTicket {
+                item: TrayItem {
+                    id: TrayItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
+                    owner_id: owner,
+                    date: corrupt_date(row.try_get("date")?)?,
+                    ticket_number: row.try_get("ticket_number")?,
+                    minutes: Minutes(0),
+                    note: row.try_get("note")?,
+                    done: false,
+                    project_id: None,
+                    recurring_id: None,
+                    created_at: parse_ts(row.try_get("created_at")?)?,
+                    updated_at: parse_ts(row.try_get("updated_at")?)?,
+                    deleted_at: None,
+                },
+                entry: Some((
+                    TimeEntryId::from_uuid(parse_uuid(row.try_get("entry_id")?)?),
+                    row.try_get("description")?,
+                )),
+            });
+        }
         let today: Vec<String> = tray_items(&mut conn, owner, date)
             .await?
             .into_iter()
@@ -1924,7 +1980,7 @@ impl SqliteStore {
             .collect();
         let pairs: Vec<(&str, Date)> = open
             .iter()
-            .map(|i| (i.ticket_number.as_str(), i.date))
+            .map(|c| (c.item.ticket_number.as_str(), c.item.date))
             .collect();
         Ok(carried_open(&pairs, &today, date)
             .into_iter()

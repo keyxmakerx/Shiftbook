@@ -14,7 +14,7 @@ use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, Note, TrayItem};
 use shiftbook_core::notes::{archive_outlook, ArchiveOutlook, NoteKind};
 use shiftbook_storage::notes::facts;
-use shiftbook_storage::work::EntryRecord;
+use shiftbook_storage::work::{CarriedTicket, EntryRecord};
 use shiftbook_storage::{SqliteStore, StorageError};
 use time::OffsetDateTime;
 
@@ -73,6 +73,17 @@ pub struct TrayItemView {
     pub project_id: Option<ProjectId>,
     pub recurring_id: Option<RecurringTaskId>,
     pub links: Vec<LinkView>,
+}
+
+/// A still-open ticket from an earlier day in a tray: a tray row, or a ticket on an entry
+/// (then `entry_id` and `entry_title` say which, and `id` is the entry ticket's id).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CarriedView {
+    #[serde(flatten)]
+    pub item: TrayItemView,
+    pub entry_id: Option<TimeEntryId>,
+    pub entry_title: Option<String>,
 }
 
 /// An Inbox scrap.
@@ -150,6 +161,15 @@ pub fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
         done: item.done,
         project_id: item.project_id,
         recurring_id: item.recurring_id,
+    }
+}
+
+pub fn carried_view(c: CarriedTicket, fields: &[CustomField]) -> CarriedView {
+    let (entry_id, entry_title) = c.entry.unzip();
+    CarriedView {
+        item: tray_item_view(c.item, fields),
+        entry_id,
+        entry_title,
     }
 }
 

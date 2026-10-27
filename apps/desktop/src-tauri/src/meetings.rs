@@ -251,7 +251,7 @@ pub async fn bell_for(
         .tray_carried(owner, today)
         .await?
         .into_iter()
-        .map(|i| i.ticket_number)
+        .map(|c| c.item.ticket_number)
         .collect();
     open.extend(
         store

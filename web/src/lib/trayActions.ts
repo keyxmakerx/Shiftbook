@@ -2,7 +2,7 @@
 // Desk's side panel and by ticket cards on the Desk: tick it done or keep it open, give it
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
-import type { TrayDay, TrayItem } from './api';
+import type { CarriedItem, TrayDay, TrayItem } from './api';
 import { bringUp, bringUpSection } from './bringUp';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
@@ -58,6 +58,27 @@ export async function setTrayRepeating(item: TrayItem, recurringId: string | nul
 /** Work on a still-open ticket again today: it joins today's tray with 15 minutes. */
 export async function carryTray(item: TrayItem): Promise<void> {
   await applyTray(await attempt(() => api.trayCarry(item.id, app.selected)));
+}
+
+/** Tick a still-open ticket from before done (or back): a tray ticket, or one on an entry. */
+export async function setCarriedDone(item: CarriedItem, done: boolean): Promise<void> {
+  if (!item.entryId) return setTrayDone(item, done);
+  const set = async (d: boolean) => {
+    if (await attempt(() => api.ticketSetDone(item.id, d))) await refresh();
+  };
+  await set(done);
+  toast(
+    done ? `${item.ticket} is done` : `${item.ticket} is still open. It comes back each day until you tick it.`,
+    'Undo',
+    () => void set(!done),
+    () => void set(done),
+  );
+}
+
+/** Work on a still-open ticket from before again: it joins the open day's tray with 15 minutes. */
+export async function carryCarried(item: CarriedItem): Promise<void> {
+  if (!item.entryId) return carryTray(item);
+  await applyTray(await attempt(() => api.trayAdd(app.selected, item.ticket)));
 }
 
 export async function removeTray(item: TrayItem): Promise<void> {
@@ -116,6 +137,37 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
       bringUpSection('tray', item.id, item.ticket),
       { head: 'Count its time under', choices },
       { items: [{ label: 'Take out of the tray', icon: 'trash', danger: true, top: true, act: () => void removeTray(item) }] },
+    ],
+  };
+}
+
+/**
+ * The paper menu of a still-open ticket from before. One on an entry has no tray row to
+ * change, so it gets the few things that apply: done, work on it again, copy.
+ */
+export function carriedMenu(item: CarriedItem, notepad?: () => void): MenuSpec {
+  if (!item.entryId) return trayMenu(item, notepad);
+  return {
+    sections: [
+      {
+        head: item.entryTitle ? `${item.ticket} · on ${item.entryTitle}` : item.ticket,
+        items: [
+          { label: 'Done', icon: 'check', side: true, act: () => void setCarriedDone(item, true) },
+          {
+            label: app.selected === app.today ? 'Worked on it today' : 'Worked on it this day',
+            icon: 'plus',
+            side: true,
+            act: () => void carryCarried(item),
+          },
+          { label: 'Copy ticket number', icon: 'copy', top: true, act: () => void copy(item.ticket, item.ticket) },
+          ...item.links.map((l) => ({
+            label: `Copy ${l.fieldName} link`,
+            icon: 'link' as const,
+            top: true,
+            act: () => void copy(l.url, 'the link'),
+          })),
+        ],
+      },
     ],
   };
 }
