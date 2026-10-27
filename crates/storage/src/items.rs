@@ -212,13 +212,16 @@ pub(crate) async fn set_item_done(
     from: Date,
 ) -> Result<()> {
     let now = now_text();
-    sqlx::query("UPDATE items SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4")
-        .bind(done)
-        .bind(&now)
-        .bind(item.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *conn)
-        .await?;
+    sqlx::query(
+        "UPDATE items SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4 \
+         AND done <> $1",
+    )
+    .bind(done)
+    .bind(&now)
+    .bind(item.to_string())
+    .bind(owner.to_string())
+    .execute(&mut *conn)
+    .await?;
     let tray: Vec<(String, String, bool)> = sqlx::query_as(
         "SELECT id, date, done FROM ticket_tray WHERE owner_id = $1 AND item_id = $2",
     )
@@ -311,6 +314,42 @@ pub(crate) async fn set_item_home(
     .bind(owner.to_string())
     .execute(&mut *conn)
     .await?;
+    Ok(())
+}
+
+/// Bring every copy of an item back in step after rows came in from elsewhere (a sync file):
+/// its done tick follows its newest live day, a done item finishes every row, and every row
+/// shows the item's notepad. Rows already in step aren't touched, so their `updated_at` stays.
+pub(crate) async fn repair_item(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    item: ItemId,
+) -> Result<()> {
+    refresh_item(conn, owner, item).await?;
+    let (done, note): (bool, Option<String>) =
+        sqlx::query_as("SELECT done, note FROM items WHERE id = $1 AND owner_id = $2")
+            .bind(item.to_string())
+            .bind(owner.to_string())
+            .fetch_one(&mut *conn)
+            .await?;
+    if done {
+        set_item_done(conn, owner, item, true, Date::MIN).await?;
+    }
+    let now = now_text();
+    for sql in [
+        "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE owner_id = $3 AND item_id = $4 \
+         AND COALESCE(note, '') <> COALESCE($1, '')",
+        "UPDATE tickets SET note = $1, updated_at = $2 WHERE owner_id = $3 AND item_id = $4 \
+         AND COALESCE(note, '') <> COALESCE($1, '')",
+    ] {
+        sqlx::query(sql)
+            .bind(note.as_deref())
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(item.to_string())
+            .execute(&mut *conn)
+            .await?;
+    }
     Ok(())
 }
 

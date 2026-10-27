@@ -547,7 +547,8 @@ async fn set_minutes(
         return Err(CoreError::HoursTooLarge.into());
     }
     sqlx::query(
-        "UPDATE time_entries SET minutes = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        "UPDATE time_entries SET minutes = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4 \
+         AND minutes <> $1",
     )
     .bind(i64::from(minutes.get()))
     .bind(now_text())
@@ -736,7 +737,11 @@ const TRAY_DAY_ITEMS: &str = "SELECT item_id FROM ticket_tray WHERE owner_id = $
 
 /// Bring the day's roll-up entries (one per project, plus the plain one) in line with
 /// its tray.
-async fn sync_tray(conn: &mut SqliteConnection, owner: OwnerId, date: Date) -> Result<()> {
+pub(crate) async fn sync_tray(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    date: Date,
+) -> Result<()> {
     let items = tray_items(conn, owner, date).await?;
     let triples: Vec<(String, Minutes, TrayHome)> = items
         .iter()

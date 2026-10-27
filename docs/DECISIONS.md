@@ -2,6 +2,22 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Code review — 27 Oct 2026 (keeping tickets in step)
+The owner asked for a step back over the whole app and approved the cleanup plan in chat
+("confirmed please continue"), including ts-rs for the UI's types (decision card).
+- **Back-dated work doesn't reopen a ticket.** Adding a ticket to a day before its newest day
+  (logging forgotten work) takes the ticket as it stands: a done ticket stays done. Work on its
+  newest day or later still reopens it, as before (`core::items::back_dated`).
+- **Taking a ticket out puts its tick back.** Removing a tray row, an entry's ticket or a whole
+  entry (and Undo) sets the ticket's done tick from its newest day still there
+  (`core::items::done_from`). A ticket on no day any more leaves the Items view.
+- **Mark done on a repeating thing** always makes or ticks its own entry, never the Tickets
+  tray's roll-up, which comes and goes with the tray.
+- **Sync keeps tickets used on both devices.** Two items for one ticket number become one (the
+  notepads merged, none lost) instead of the second being left out with its tray rows and
+  entry tickets. After a merge each touched day's Tickets entries are counted again from its
+  tray, and every touched ticket's copies are put back in step.
+
 ## Round 15 — 27 Oct 2026 (lining cards up)
 Card `r15-lineup` (`tools/signoff/rounds/r15-lineup.json`, mockups `mocks/r15-lineup-*.html`),
 approved with A and the buttons:
