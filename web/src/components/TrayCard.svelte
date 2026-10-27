@@ -119,10 +119,9 @@
         type="button"
         class="resp-btn"
         title="Copy a saved response"
-        aria-label="Copy a saved response"
         onclick={(e) => void openResponses(e.currentTarget as HTMLElement)}
       >
-        <Icon name="copy" size={15} />
+        <Icon name="copy" size={14} /> Responses
       </button>
       <span class="total mono">{app.tray?.hours ?? '0'} h</span>
     </span>
@@ -326,10 +325,14 @@
     border: 1px solid var(--rule);
     background: var(--paper);
     color: var(--ink-2);
-    width: 30px;
     height: 28px;
-    display: grid;
-    place-items: center;
+    padding: 0 9px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 600;
     border-radius: 7px;
     cursor: pointer;
   }
