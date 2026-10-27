@@ -24,7 +24,8 @@
         "height": 760,
         "minWidth": 480,
         "minHeight": 400,
-        "contentProtected": true
+        "contentProtected": true,
+        "dragDropEnabled": false
       }
     ],
     "security": {

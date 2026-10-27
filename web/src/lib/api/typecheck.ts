@@ -44,6 +44,10 @@ import type { MeetingToday as GenMeetingToday } from './generated/MeetingToday';
 import type { Motion as GenMotion } from './generated/Motion';
 import type { NextUpView as GenNextUpItem } from './generated/NextUpView';
 import type { NoteView as GenNote } from './generated/NoteView';
+import type { CheckLine as GenCheckLine } from './generated/CheckLine';
+import type { MopBook as GenMopBook } from './generated/MopBook';
+import type { MopImport as GenMopImport } from './generated/MopImport';
+import type { MopView as GenMopView } from './generated/MopView';
 import type { NoteKind as GenNoteKind } from './generated/NoteKind';
 import type { NoteListView as GenNoteList } from './generated/NoteListView';
 import type { PastTimeView as GenPastTime } from './generated/PastTimeView';
@@ -134,6 +138,10 @@ export type Checks = [
   Assert<Same<Ui.Motion, GenMotion>>,
   Assert<Same<Ui.NextUpItem, GenNextUpItem>>,
   Assert<Same<Ui.Note, GenNote>>,
+  Assert<Same<Ui.CheckLine, GenCheckLine>>,
+  Assert<Same<Ui.MopBook, GenMopBook>>,
+  Assert<Same<Ui.MopImport, GenMopImport>>,
+  Assert<Same<Ui.MopView, GenMopView>>,
   Assert<Same<Ui.NoteKind, GenNoteKind>>,
   Assert<Same<Ui.NoteList, GenNoteList>>,
   Assert<Same<Ui.PastTime, GenPastTime>>,

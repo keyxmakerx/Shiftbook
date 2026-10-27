@@ -7,6 +7,9 @@
 use shiftbook_core::dates::format_timestamp;
 use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
 use shiftbook_core::model::Note;
+use shiftbook_core::mop::{
+    clean_ticks, clean_values, fill_blanks, filled_title, join_ticks, parse_ticks,
+};
 use shiftbook_core::notes::{
     archive_outlook, join_tags, note_title, parse_tags, validate_body, ArchiveFacts,
     ArchiveOutlook, NoteKind,
@@ -33,12 +36,14 @@ pub struct NoteInput {
     pub project: Option<ProjectId>,
     /// Tags as typed, comma-separated.
     pub tags: String,
+    /// Written as a MOP template (only when created; see [`SqliteStore::set_note_template`]).
+    pub template: bool,
 }
 
 macro_rules! note_columns {
     () => {
         "id, owner_id, kind, title, body, project_id, tags, keep, archived_at, \
-         created_at, updated_at, deleted_at"
+         created_at, updated_at, deleted_at, template, ticks"
     };
 }
 
@@ -58,6 +63,8 @@ fn note_from_row(row: &SqliteRow) -> Result<Note> {
             .transpose()?,
         tags: parse_tags(&row.try_get::<String, _>("tags")?).unwrap_or_default(),
         keep: row.try_get("keep")?,
+        template: row.try_get("template")?,
+        ticks: parse_ticks(&row.try_get::<String, _>("ticks")?),
         archived_at: parse_opt_ts(row.try_get("archived_at")?)?,
         created_at: parse_ts(row.try_get("created_at")?)?,
         updated_at: parse_ts(row.try_get("updated_at")?)?,
@@ -115,7 +122,7 @@ impl SqliteStore {
         sqlx::query(concat!(
             "INSERT INTO notes (",
             note_columns!(),
-            ") VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, NULL, $8, $8, NULL)"
+            ") VALUES ($1, $2, $3, $4, $5, $6, $7, FALSE, NULL, $8, $8, NULL, $9, '')"
         ))
         .bind(id.to_string())
         .bind(owner.to_string())
@@ -125,6 +132,7 @@ impl SqliteStore {
         .bind(input.project.map(|p| p.to_string()))
         .bind(&tags)
         .bind(now_text())
+        .bind(input.template)
         .execute(&mut *conn)
         .await?;
         drop(conn);
@@ -220,6 +228,75 @@ impl SqliteStore {
             return Err(StorageError::NotFound);
         }
         Ok(())
+    }
+
+    /// Mark a note as a MOP template, or back to a plain MOP.
+    pub async fn set_note_template(
+        &self,
+        owner: OwnerId,
+        id: NoteId,
+        template: bool,
+    ) -> Result<()> {
+        let done = sqlx::query(
+            "UPDATE notes SET template = $1, updated_at = $2 \
+             WHERE id = $3 AND owner_id = $4 AND deleted_at IS NULL",
+        )
+        .bind(template)
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&self.pool)
+        .await?;
+        if done.rows_affected() == 0 {
+            return Err(StorageError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Keep what's ticked off on a note in Checklist mode (keys that no longer match a
+    /// line are dropped). An empty list clears the ticks for a fresh run.
+    pub async fn set_note_ticks(
+        &self,
+        owner: OwnerId,
+        id: NoteId,
+        ticks: &[String],
+    ) -> Result<Note> {
+        let note = self.get_note(owner, id).await?;
+        let ticks = join_ticks(&clean_ticks(&note.body, ticks));
+        sqlx::query(
+            "UPDATE notes SET ticks = $1, updated_at = $2 \
+             WHERE id = $3 AND owner_id = $4 AND deleted_at IS NULL",
+        )
+        .bind(&ticks)
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&self.pool)
+        .await?;
+        self.get_note(owner, id).await
+    }
+
+    /// A new MOP from a template: its blanks filled with `values` (blanks left empty stay
+    /// as `[[name]]`), the same project and tags, nothing ticked. A blank `title` uses the
+    /// template's title with its blanks filled.
+    pub async fn note_from_template(
+        &self,
+        owner: OwnerId,
+        template: NoteId,
+        title: &str,
+        values: &[(String, String)],
+    ) -> Result<Note> {
+        let values = clean_values(values)?;
+        let from = self.get_note(owner, template).await?;
+        let input = NoteInput {
+            kind: NoteKind::Mop,
+            title: filled_title(title, &from.title, &values),
+            body: fill_blanks(&from.body, &values),
+            project: from.project_id,
+            tags: join_tags(&from.tags),
+            template: false,
+        };
+        self.create_note(owner, &input).await
     }
 
     /// Move every note that auto-archive says is due (see

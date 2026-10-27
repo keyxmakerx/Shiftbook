@@ -4,6 +4,7 @@
 use std::fmt::Write;
 
 use crate::canvas::{new_area, CARD_H, CARD_W, GAP, MIN_AREA};
+use crate::mop::MAX_TABS;
 use crate::nextup::MAX_NEXT_UP;
 use crate::prefs::{DEFAULT_TIME_BUTTONS, MAX_TIME_BUTTONS, TEXT_SIZES};
 use crate::windows::MAX_WINDOWS;
@@ -39,6 +40,10 @@ pub fn module() -> String {
     line(
         "Most windows at once; opening one more closes the oldest.",
         format!("MAX_WINDOWS = {MAX_WINDOWS}"),
+    );
+    line(
+        "Most MOPs open as tabs in the MOP notebook; opening one more closes the oldest.",
+        format!("MAX_TABS = {MAX_TABS}"),
     );
     line(
         "The time buttons everyone starts with, in minutes.",

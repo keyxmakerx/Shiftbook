@@ -13,6 +13,8 @@ export interface Words {
   meetings: string;
   /** "MOP" / "Step-by-step guide" (the note kind). */
   mop: string;
+  /** "MOP notebook" / "Guide notebook" (the round 16 window). */
+  book: string;
   /** "Log work" / "Done something?". */
   logWork: string;
 }
@@ -22,6 +24,7 @@ const WORK: Words = {
   ticket: 'ticket',
   meetings: 'Meetings',
   mop: 'MOP',
+  book: 'MOP notebook',
   logWork: 'Log work',
 };
 
@@ -30,6 +33,7 @@ const HOME: Words = {
   ticket: 'reference',
   meetings: 'Regular events',
   mop: 'Step-by-step guide',
+  book: 'Guide notebook',
   logWork: 'Done something?',
 };
 

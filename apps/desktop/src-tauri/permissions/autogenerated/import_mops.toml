@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-import-mops"
+description = "Enables the import_mops command without any pre-configured scope."
+commands.allow = ["import_mops"]
+
+[[permission]]
+identifier = "deny-import-mops"
+description = "Denies the import_mops command without any pre-configured scope."
+commands.deny = ["import_mops"]

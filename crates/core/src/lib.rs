@@ -21,6 +21,7 @@ pub mod items;
 pub mod meetings;
 pub mod minutes;
 pub mod model;
+pub mod mop;
 pub mod nextup;
 pub mod notes;
 pub mod nudge;

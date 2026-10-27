@@ -203,6 +203,10 @@ pub struct NoteView {
     pub project_id: Option<ProjectId>,
     pub tags: Vec<String>,
     pub keep: bool,
+    /// A MOP template (round 16).
+    pub template: bool,
+    /// What is ticked off in Checklist mode.
+    pub ticks: Vec<String>,
     pub archived: bool,
     /// Days until auto-archive moves it, when its warning should show.
     pub archive_in_days: Option<u32>,
@@ -226,6 +230,8 @@ pub fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
         project_id: n.project_id,
         tags: n.tags,
         keep: n.keep,
+        template: n.template,
+        ticks: n.ticks,
         archived: n.archived_at.is_some(),
         archive_in_days,
         created_at: format_timestamp(n.created_at),

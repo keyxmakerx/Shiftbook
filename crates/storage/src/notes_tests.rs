@@ -37,6 +37,7 @@ fn note(kind: NoteKind, title: &str, body: &str) -> NoteInput {
         body: body.into(),
         project: None,
         tags: String::new(),
+        template: false,
     }
 }
 
@@ -203,5 +204,78 @@ fn auto_archive_moves_only_due_notes() {
             0,
             "only once"
         );
+    });
+}
+
+#[test]
+fn templates_fill_their_blanks_into_a_new_mop() {
+    let dir = TestDir::new("notes-template");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let mut input = note(
+            NoteKind::Mop,
+            "Swap at [[site]]",
+            "# Swap at [[Site]]\n1. Ticket [[ticket]]\n2. Tell [[site]]",
+        );
+        input.tags = "mop".into();
+        input.template = true;
+        let tpl = s.create_note(me, &input).await.unwrap();
+        assert!(tpl.template);
+
+        let values = vec![
+            ("SITE".to_string(), "North".to_string()),
+            ("ticket".to_string(), String::new()),
+        ];
+        let made = s.note_from_template(me, tpl.id, "", &values).await.unwrap();
+        assert_eq!(made.title, "Swap at North");
+        assert_eq!(
+            made.body,
+            "# Swap at North\n1. Ticket [[ticket]]\n2. Tell North"
+        );
+        assert_eq!(made.kind, NoteKind::Mop);
+        assert_eq!(made.tags, ["mop"]);
+        assert!(!made.template && made.ticks.is_empty());
+        let named = s.note_from_template(me, tpl.id, "Mine", &[]).await.unwrap();
+        assert_eq!(named.title, "Mine");
+
+        // Not someone else's, and a bad value is refused.
+        assert!(matches!(
+            s.note_from_template(other, tpl.id, "", &[]).await,
+            Err(StorageError::NotFound)
+        ));
+        let two_lines = vec![("site".to_string(), "a\nb".to_string())];
+        assert!(s
+            .note_from_template(me, tpl.id, "", &two_lines)
+            .await
+            .is_err());
+
+        s.set_note_template(me, tpl.id, false).await.unwrap();
+        assert!(!s.get_note(me, tpl.id).await.unwrap().template);
+        assert!(matches!(
+            s.set_note_template(other, tpl.id, true).await,
+            Err(StorageError::NotFound)
+        ));
+    });
+}
+
+#[test]
+fn ticks_are_kept_cleaned_and_cleared() {
+    let dir = TestDir::new("notes-ticks");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let n = s
+            .create_note(me, &note(NoteKind::Mop, "Run", "# Prep\n1. Back up\n2. Go"))
+            .await
+            .unwrap();
+        let keys = shiftbook_core::mop::tick_keys(&n.body);
+        let ticks = vec![keys[1].clone(), "1|not here".to_string(), keys[0].clone()];
+        let n = s.set_note_ticks(me, n.id, &ticks).await.unwrap();
+        assert_eq!(n.ticks, [keys[0].clone(), keys[1].clone()]);
+        assert!(matches!(
+            s.set_note_ticks(other, n.id, &ticks).await,
+            Err(StorageError::NotFound)
+        ));
+        let n = s.set_note_ticks(me, n.id, &[]).await.unwrap();
+        assert!(n.ticks.is_empty());
     });
 }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mop-blanks"
+description = "Enables the mop_blanks command without any pre-configured scope."
+commands.allow = ["mop_blanks"]
+
+[[permission]]
+identifier = "deny-mop-blanks"
+description = "Denies the mop_blanks command without any pre-configured scope."
+commands.deny = ["mop_blanks"]

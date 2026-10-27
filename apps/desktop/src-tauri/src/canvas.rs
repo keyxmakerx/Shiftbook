@@ -473,6 +473,7 @@ mod tests {
                         body: "Order patch cables".into(),
                         project: None,
                         tags: String::new(),
+                        template: false,
                     },
                 )
                 .await

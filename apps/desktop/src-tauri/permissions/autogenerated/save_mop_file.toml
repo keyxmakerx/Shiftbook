@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-mop-file"
+description = "Enables the save_mop_file command without any pre-configured scope."
+commands.allow = ["save_mop_file"]
+
+[[permission]]
+identifier = "deny-save-mop-file"
+description = "Denies the save_mop_file command without any pre-configured scope."
+commands.deny = ["save_mop_file"]

@@ -14,6 +14,8 @@ export const NEW_AREA = { w: 512, h: 336 };
 export const MAX_NEXT_UP = 7;
 /** Most windows at once; opening one more closes the oldest. */
 export const MAX_WINDOWS = 12;
+/** Most MOPs open as tabs in the MOP notebook; opening one more closes the oldest. */
+export const MAX_TABS = 20;
 /** The time buttons everyone starts with, in minutes. */
 export const DEFAULT_TIME_BUTTONS = [15, 30, 45, 60, 120];
 /** Most time buttons. */

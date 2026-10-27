@@ -80,6 +80,19 @@ works the way it does is in `DECISIONS.md`.
   Auto-archive (Settings → Notes, 3 months by default, can be off) moves Jot, Daily and Meeting
   notes that haven't changed for that long, after a week of warning on the note with a Keep
   button. Capture's Find shows notes too, archived ones included.
+- **MOP notebook:** a window like Notepad++ with a tab per MOP (Notes → MOP → Open the MOP
+  notebook, Open in notebook on a MOP, or Ctrl+Space "Open the MOP notebook"). It rolls up,
+  minimises to the bottom bar or fills the screen, and saves as you type. Three ways to show a
+  MOP, switched at the top of the window, all still editable: **Numbered** (line numbers you can
+  hide, colours for headings, numbered steps, Verify/Expected lines, Rollback sections and
+  `[[blanks]]`, and a status bar with the line, column, lines, characters and what's
+  selected), **Minimal** (just the text) and **Checklist** (tick a line, or Ctrl+Enter; a
+  ticked heading or step crosses out the section under it; Clear ticks starts a fresh run).
+  Ctrl+F finds. **Use as template** keeps a MOP's `[[blanks]]`; **New from this** asks for
+  each blank once and fills it in everywhere (empty ones stay highlighted). Drop text files
+  (.txt, .md…) anywhere on Shiftbook, or use Add MOP files…, to copy them in as encrypted
+  MOPs or templates; the files themselves are untouched. Word files need saving as plain text
+  first. Save as a text file writes an unencrypted copy, after a warning.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list.
@@ -112,6 +125,6 @@ works the way it does is in `DECISIONS.md`.
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 
-Not in the alpha yet: Planner, pictures in notes, the meeting canvas, MOPs, OneNote import, the notes map, a global (outside the app)
+Not in the alpha yet: Planner, pictures in notes, the meeting canvas, Word (.docx) MOP import, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.
 See “Known gaps in alpha” in `ROADMAP.md`.

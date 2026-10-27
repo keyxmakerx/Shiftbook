@@ -13,8 +13,9 @@
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
   import { openMenu } from '../lib/menu.svelte';
   import { logNoteSection } from '../lib/noteActions';
-  import { app, attempt, projectColor, projectName } from '../lib/store.svelte';
+  import { app, attempt, projectColor, projectName, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
   import Icon from '../components/Icon.svelte';
 
   const SAVE_AFTER_MS = 700;
@@ -139,6 +140,14 @@
     }, () => void attempt(() => api.setNoteArchived(n.id, archived)).then(() => refreshOpen(n.id)).then(load));
   }
 
+  async function setTemplate(n: Note, template: boolean) {
+    await flush();
+    if (!(await attempt(() => api.setNoteTemplate(n.id, template).then(() => true)))) return;
+    await refreshOpen(n.id);
+    await load();
+    toast(template ? 'Now a template. Open it in the notebook and press New from this.' : 'Back to a plain MOP.');
+  }
+
   async function keep(n: Note) {
     if (!(await attempt(() => api.setNoteKeep(n.id, true).then(() => true)))) return;
     await refreshOpen(n.id);
@@ -223,6 +232,12 @@
           <button type="button" aria-pressed={kind === k} onclick={() => setKind(k)}>{KIND_LABEL[k]}</button>
         {/each}
       </div>
+      {#if kind === 'mop'}
+        <div class="mops">
+          <button type="button" class="btn" onclick={() => openMopBook()}><Icon name="book" size={15} /> Open the {words().book}</button>
+          <button type="button" class="btn" onclick={pickMopFiles} title="Copy text files in; you can also drop them anywhere"><Icon name="upload" size={15} /> Add {words().mop} files…</button>
+        </div>
+      {/if}
       <label class="check-row arch">
         <input type="checkbox" bind:checked={includeArchived} />
         Include archived
@@ -244,6 +259,7 @@
           <span class="row1">
             <b>{#each highlight(n.title, query) as p, j (j)}{#if p.hit}<mark>{p.text}</mark>{:else}{p.text}{/if}{/each}</b>
             <span class="kind">{KIND_LABEL[n.kind]}</span>
+            {#if n.template}<span class="kind">Template</span>{/if}
             {#if n.archived}<span class="kind a">Archived</span>{/if}
             {#if n.archiveInDays !== null}<span class="kind soon" title={archiveWarning(n.archiveInDays)}>Moves soon</span>{/if}
           </span>
@@ -360,6 +376,28 @@
               <Icon name="log" size={15} />Log it as an entry
             </button>
           {/if}
+          {#if current.kind === 'mop'}
+            <button
+              type="button"
+              class="btn"
+              title="Open it in the notebook: line numbers, Checklist mode, Find"
+              onclick={async () => {
+                await flush();
+                if (current) openMopBook(current.id);
+              }}
+            >
+              <Icon name="book" size={15} />Open in notebook
+            </button>
+            <button
+              type="button"
+              class="btn"
+              aria-pressed={current.template}
+              title="A template keeps its [[blanks]]; the notebook's New from this fills them in"
+              onclick={() => current && void setTemplate(current, !current.template)}
+            >
+              <Icon name="copy" size={15} />{current.template ? 'Template' : 'Use as template'}
+            </button>
+          {/if}
           <button type="button" class="btn" onclick={() => current && setArchived(current, !current.archived)}>
             <Icon name="archive" size={15} />{current.archived ? 'Bring back' : 'Archive'}
           </button>
@@ -418,6 +456,13 @@
     gap: 8px;
     align-items: center;
     justify-content: space-between;
+  }
+
+  .mops {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
   }
 
   .arch {

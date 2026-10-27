@@ -6,7 +6,15 @@ import type { ProjectId } from "./ProjectId";
 /**
  * A note as the UI sees it.
  */
-export type NoteView = { id: NoteId, kind: NoteKind, title: string, body: string, projectId: ProjectId | null, tags: Array<string>, keep: boolean, archived: boolean, 
+export type NoteView = { id: NoteId, kind: NoteKind, title: string, body: string, projectId: ProjectId | null, tags: Array<string>, keep: boolean, 
+/**
+ * A MOP template (round 16).
+ */
+template: boolean, 
+/**
+ * What is ticked off in Checklist mode.
+ */
+ticks: Array<string>, archived: boolean, 
 /**
  * Days until auto-archive moves it, when its warning should show.
  */

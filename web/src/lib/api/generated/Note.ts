@@ -41,6 +41,14 @@ tags: Array<string>,
  */
 keep: boolean, 
 /**
+ * A MOP template: offers "New MOP from this template" (see `crate::mop`).
+ */
+template: boolean, 
+/**
+ * What is ticked off in Checklist mode (line keys from `crate::mop::tick_keys`).
+ */
+ticks: Array<string>, 
+/**
  * When it went to the archive, if it has.
  */
 archivedAt: string | null, 
