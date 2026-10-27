@@ -411,6 +411,57 @@ fn entry_tickets_have_a_state_and_a_notepad() {
 }
 
 #[test]
+fn open_entry_tickets_come_back_in_the_tray() {
+    let dir = TestDir::new("entrycarried");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let next = date!(2026 - 10 - 16);
+        // Two tickets pasted in the tray, then all three attached to the entry: the one
+        // only on the entry comes back too (it used to be left out).
+        s.tray_add(me, DAY, "TASK1601562 TASK1601563")
+            .await
+            .unwrap();
+        let rec = s
+            .create_entry(
+                me,
+                &input(DAY, 90, "VPN request"),
+                "TASK1601562 TASK1601563 TASK1601564",
+            )
+            .await
+            .unwrap();
+        let back = s.tray_carried(me, next).await.unwrap();
+        let numbers: Vec<&str> = back.iter().map(|c| c.item.ticket_number.as_str()).collect();
+        assert_eq!(numbers, ["TASK1601562", "TASK1601563", "TASK1601564"]);
+        // The ones in the tray show as tray rows; the other says which entry it is on.
+        assert!(back[0].entry.is_none() && back[1].entry.is_none());
+        let only = &back[2];
+        assert_eq!(only.entry, Some((rec.entry.id, "VPN request".into())));
+        assert_eq!(only.item.id.to_string(), rec.tickets[2].id.to_string());
+        assert_eq!(only.item.date, DAY);
+        // Not on its own day, and not for anyone else.
+        assert!(s.tray_carried(me, DAY).await.unwrap().is_empty());
+        assert!(s.tray_carried(other, next).await.unwrap().is_empty());
+
+        // Working on it again puts it in that day's tray, and it stops showing as carried.
+        s.tray_add(me, next, "TASK1601564").await.unwrap();
+        let later = date!(2026 - 10 - 17);
+        assert_eq!(s.tray_carried(me, next).await.unwrap().len(), 2);
+        // Ticking it on the entry finishes it everywhere.
+        s.set_ticket_done(me, rec.tickets[2].id, true)
+            .await
+            .unwrap();
+        let numbers: Vec<String> = s
+            .tray_carried(me, later)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|c| c.item.ticket_number)
+            .collect();
+        assert_eq!(numbers, ["TASK1601562", "TASK1601563"]);
+    });
+}
+
+#[test]
 fn a_jot_is_logged_as_an_entry() {
     use crate::notes::NoteInput;
     use shiftbook_core::notes::NoteKind;
@@ -853,7 +904,7 @@ fn open_tickets_come_back_until_ticked() {
         // Monday: it comes back, once.
         let back = s.tray_carried(me, mon).await.unwrap();
         assert_eq!(back.len(), 1);
-        assert_eq!(back[0].ticket_number, "RITM0034567");
+        assert_eq!(back[0].item.ticket_number, "RITM0034567");
         assert!(s.tray_carried(me, fri).await.unwrap().is_empty());
 
         // Working on it Monday carries its notepad; it shows in Monday's tray, not twice.

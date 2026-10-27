@@ -5,7 +5,7 @@
   // into the day's "Tickets" entry, the others into their project's (rules in
   // crates/core/src/tray.rs). Click a ticket for its notepad and options.
   import { api } from '../lib/api';
-  import type { TrayItem } from '../lib/api';
+  import type { CarriedItem, TrayItem } from '../lib/api';
   import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
   import { openMenu, paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
@@ -13,7 +13,7 @@
   import { app, attempt, projectById, projectColor, setView, ticketTimes, words } from '../lib/store.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { applyTray, carryTray, removeTray, setTrayDone, trayMenu } from '../lib/trayActions';
+  import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import KnownTickets from './KnownTickets.svelte';
@@ -106,6 +106,9 @@
   }
 
   const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item)));
+  const carriedMenuFor = (item: CarriedItem) => carriedMenu(item, () => openNotepad(keyOf(item)));
+  /** The first line of a carried ticket's notepad, or the entry it is on. */
+  const carriedNote = (item: CarriedItem) => item.note?.split('\n')[0] ?? (item.entryTitle ? `on ${item.entryTitle}` : '');
 </script>
 
 <article class="paper card">
@@ -253,23 +256,32 @@
       <ul class="items">
         {#each app.tray.carried as item (item.id)}
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-          <li class="item still" class:opened={isOpen(item)} use:paperMenu={() => menuFor(item)} tabindex="-1" onclick={(e) => rowClick(e, item)}>
+          <li
+            class="item still"
+            class:opened={isOpen(item)}
+            use:paperMenu={() => carriedMenuFor(item)}
+            tabindex="-1"
+            onclick={(e) => {
+              // A ticket on an entry has no tray notepad or options to slide out.
+              if (!item.entryId) rowClick(e, item);
+            }}
+          >
             <button
               type="button"
               class="tick"
               title="Still open. Click when it is done."
               aria-label="{item.ticket} is still open; mark it done"
               aria-pressed="false"
-              onclick={() => void setTrayDone(item, true)}
+              onclick={() => void setCarriedDone(item, true)}
             ></button>
             <TicketChip number={item.ticket} links={item.links} color="var(--warn)" />
-            <span class="note faint" title={item.note ?? ''}>{item.note?.split('\n')[0] ?? ''}</span>
+            <span class="note faint" title={item.note ?? item.entryTitle ?? ''}>{carriedNote(item)}</span>
             <span class="since">{weekdayShort(item.date)} {dayMonth(item.date)}</span>
-            <button type="button" class="today" title="Worked on it again: add it to this day with 15 minutes" onclick={() => void carryTray(item)}>
+            <button type="button" class="today" title="Worked on it again: add it to this day with 15 minutes" onclick={() => void carryCarried(item)}>
               <Icon name="plus" size={12} /> {app.selected === app.today ? 'Today' : 'This day'}
             </button>
           </li>
-          {#if isOpen(item)}
+          {#if isOpen(item) && !item.entryId}
             <li class="under">
               <ItemPanel tray={item} menu={() => menuFor(item)} focusPad={panel.focusPad} onclose={closePanel} />
             </li>

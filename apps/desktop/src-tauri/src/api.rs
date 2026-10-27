@@ -15,7 +15,7 @@ use shiftbook_core::ids::{
 };
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{
-    CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode, TrayItem,
+    CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode,
 };
 use shiftbook_core::nextup::{bring_up_on, next_work_day};
 use shiftbook_core::prefs::Prefs;
@@ -31,13 +31,14 @@ use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
-use shiftbook_storage::work::{EntryInput, EntryRecord, ProjectInput, TrayDay};
+use shiftbook_storage::work::{CarriedTicket, EntryInput, EntryRecord, ProjectInput, TrayDay};
 use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::Date;
 
 pub(crate) use shiftbook_app::views::{
-    entry_view, inbox_view, links_for, tray_item_view, EntryView, InboxView, TrayItemView,
+    carried_view, entry_view, inbox_view, links_for, tray_item_view, CarriedView, EntryView,
+    InboxView, TrayItemView,
 };
 
 use crate::notes::{find_notes, NoteView};
@@ -97,7 +98,7 @@ pub struct TrayDayView {
     date: String,
     items: Vec<TrayItemView>,
     /// Still-open tickets from earlier days that come back in this tray.
-    carried: Vec<TrayItemView>,
+    carried: Vec<CarriedView>,
     entry_id: Option<TimeEntryId>,
     minutes: Minutes,
     hours: String,
@@ -271,7 +272,7 @@ pub struct FieldArgs {
 
 // ---------- helpers ----------
 
-fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> TrayDayView {
+fn tray_view(day: TrayDay, carried: Vec<CarriedTicket>, fields: &[CustomField]) -> TrayDayView {
     TrayDayView {
         date: format_date(day.date),
         items: day
@@ -281,7 +282,7 @@ fn tray_view(day: TrayDay, carried: Vec<TrayItem>, fields: &[CustomField]) -> Tr
             .collect(),
         carried: carried
             .into_iter()
-            .map(|i| tray_item_view(i, fields))
+            .map(|c| carried_view(c, fields))
             .collect(),
         entry_id: day.entry_id,
         hours: format_hours(day.minutes),

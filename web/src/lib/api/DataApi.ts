@@ -460,11 +460,22 @@ export interface TrayItem {
   links: TicketLink[];
 }
 
+/**
+ * A still-open ticket from an earlier day: a tray ticket, or a ticket on one of the user's
+ * entries (then `id` is the entry ticket's id and `minutes` is 0: its time is the entry's).
+ */
+export interface CarriedItem extends TrayItem {
+  /** The entry it is on, when it isn't a tray ticket. */
+  entryId: string | null;
+  /** That entry's title. */
+  entryTitle: string | null;
+}
+
 export interface TrayDay {
   date: IsoDate;
   items: TrayItem[];
-  /** Still-open tickets from earlier days, back until they are ticked. */
-  carried: TrayItem[];
+  /** Still-open tickets from earlier days (tray and entry tickets), back until they are ticked. */
+  carried: CarriedItem[];
   /** The plain "Tickets" roll-up entry (tickets without a project), if any. */
   entryId: string | null;
   minutes: number;
