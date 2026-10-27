@@ -69,7 +69,12 @@
     const r = anchor.getBoundingClientRect();
     rect = { left: r.left, top: r.top, width: r.width, height: r.height };
     const cs = getComputedStyle(anchor);
-    ghostRadius = cs.borderRadius && cs.borderRadius !== '0px' ? cs.borderRadius : '8px';
+    // The ghost's own corners match the object as drawn, zoom included.
+    const zoom = anchor.offsetWidth > 0 ? r.width / anchor.offsetWidth : 1;
+    ghostRadius =
+      cs.borderRadius && cs.borderRadius !== '0px'
+        ? cs.borderRadius.replace(/[\d.]+px/g, (px) => `${parseFloat(px) * zoom}px`)
+        : '8px';
     ghostColor = cs.getPropertyValue('--c').trim();
     phase = 'measure';
     pos = null;
@@ -86,8 +91,17 @@
       copy.style.position = 'static';
       for (const side of ['left', 'top', 'right', 'bottom', 'z-index', 'transform']) copy.style.removeProperty(side);
       copy.style.margin = '0';
-      copy.style.width = '100%';
-      copy.style.height = '100%';
+      // On a zoomed Desk the object is drawn scaled, so its box on screen differs from its own
+      // size. Lay the copy out at its own size and scale it to the box, so it looks the same
+      // instead of squashing (or stretching) its contents.
+      const w = anchor.offsetWidth;
+      const h = anchor.offsetHeight;
+      copy.style.width = `${w}px`;
+      copy.style.height = `${h}px`;
+      if (w > 0 && h > 0) {
+        copy.style.transformOrigin = '0 0';
+        copy.style.transform = `scale(${r.width / w}, ${r.height / h})`;
+      }
       copy.classList.remove('menu-source', 'rise', 'flash');
       ghostEl.replaceChildren(copy);
     }
@@ -337,10 +351,11 @@
 {/snippet}
 
 <style>
+  /* Above the toast (70), so a message that's showing can't cover the menu's options. */
   .layer {
     position: fixed;
     inset: 0;
-    z-index: 60;
+    z-index: 75;
     pointer-events: none;
   }
 
