@@ -6,9 +6,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, stays_in_just_today, ticket_home,
-    timeline, tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason, LinkText,
-    MemberState, TrayPlace, ORIGIN, RECENT_DAYS,
+    area_at, auto_links, auto_place, box_status, is_recent, moved_card_stays, stays_in_just_today,
+    ticket_home, timeline, tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason,
+    LinkText, MemberState, TrayPlace, ORIGIN,
 };
 use shiftbook_core::dates::format_date;
 use shiftbook_core::hours::format_hours;
@@ -392,6 +392,7 @@ pub async fn drawers(
         let exists = match drawer {
             Drawer::Project(id) => projects.iter().any(|p| *p.id.as_uuid() == id),
             Drawer::Folder(id) => folders.iter().any(|f| f.id == id),
+            Drawer::Archive => true,
         };
         if !exists {
             continue;
@@ -403,17 +404,26 @@ pub async fn drawers(
         }
     }
     let count = |key: &str| filed.get(key).map_or(0, Vec::len);
-    let mut views: Vec<DrawerView> = projects
-        .iter()
-        .map(|p| (Drawer::Project(*p.id.as_uuid()).key(), p))
-        .filter(|(key, p)| !p.archived || count(key) > 0)
-        .map(|(key, p)| DrawerView {
-            count: count(&key),
-            key,
-            name: p.name.clone(),
-            color: p.color.clone(),
-        })
-        .collect();
+    // The Archive (round 15) is always first: put-away cards wait there.
+    let archive = Drawer::Archive.key();
+    let mut views: Vec<DrawerView> = vec![DrawerView {
+        count: count(&archive),
+        key: archive,
+        name: "Archive".into(),
+        color: None,
+    }];
+    views.extend(
+        projects
+            .iter()
+            .map(|p| (Drawer::Project(*p.id.as_uuid()).key(), p))
+            .filter(|(key, p)| !p.archived || count(key) > 0)
+            .map(|(key, p)| DrawerView {
+                count: count(&key),
+                key,
+                name: p.name.clone(),
+                color: p.color.clone(),
+            }),
+    );
     views.extend(folders.into_iter().map(|f| {
         let key = Drawer::Folder(f.id).key();
         DrawerView {
@@ -511,9 +521,9 @@ pub async fn desk(
     owner: OwnerId,
     today: Date,
 ) -> Result<(DeskView, Vec<Option<Uuid>>)> {
-    let from = today - Duration::days(RECENT_DAYS - 1);
     let fields = links_for(store, owner).await?;
     let prefs = store.prefs(owner).await?;
+    let from = today - Duration::days(i64::from(prefs.desk_days.max(1)) - 1);
     let after = prefs.notes_auto_archive_days;
     let now = OffsetDateTime::now_utc();
     let spots: HashMap<(CardKind, Uuid), CanvasSpot> = store
@@ -530,7 +540,7 @@ pub async fn desk(
 
     let mut all: Vec<Pending> = Vec::new();
     for rec in store.list_entries(owner, from, today).await? {
-        if !rec.is_tray && is_recent(rec.entry.date, today) {
+        if !rec.is_tray && is_recent(rec.entry.date, today, prefs.desk_days) {
             all.push(entry_card(rec, &fields));
         }
     }
@@ -565,8 +575,26 @@ pub async fn desk(
     }
     let mut all = rest;
 
-    // Older entries and Done tickets the owner moved stay where they put them.
+    // Older entries and Done tickets the owner moved stay where they put them while they're
+    // recent, pinned, or the owner keeps moved cards (round 15: see `moved_card_stays`).
     let shown: HashSet<(CardKind, Uuid)> = all.iter().map(|p| (p.kind, p.id)).collect();
+    let pinned_now: HashSet<(CardKind, Uuid)> = store
+        .pins(owner)
+        .await?
+        .into_iter()
+        .map(|p| (p.kind, p.record_id))
+        .collect();
+    // A moved card counts from its own day or the day it was last moved, whichever is later
+    // (a UTC day ahead of the local one counts as today).
+    let stays = |spot: &CanvasSpot, date: Date| {
+        moved_card_stays(
+            spot.touched.map_or(date, |t| t.min(today).max(date)),
+            today,
+            prefs.desk_days,
+            pinned_now.contains(&(spot.kind, spot.record_id)),
+            prefs.moved_stay,
+        )
+    };
     for spot in spots.values() {
         if shown.contains(&(spot.kind, spot.record_id))
             || filed_ids.contains(&(spot.kind, spot.record_id))
@@ -577,7 +605,7 @@ pub async fn desk(
             CardKind::Entry => {
                 let id = TimeEntryId::from_uuid(spot.record_id);
                 if let Some(rec) = skip_missing(store.get_entry(owner, id).await)? {
-                    if !rec.is_tray {
+                    if !rec.is_tray && stays(spot, rec.entry.date) {
                         all.push(entry_card(rec, &fields));
                     }
                 }
@@ -585,7 +613,10 @@ pub async fn desk(
             CardKind::Tray => {
                 let id = TrayItemId::from_uuid(spot.record_id);
                 if let Some(item) = store.tray_item(owner, id).await? {
-                    if tray_place(item.done, item.date, today, true) != TrayPlace::Off {
+                    let open = !item.done;
+                    if tray_place(item.done, item.date, today, true) != TrayPlace::Off
+                        || (!open && stays(spot, item.date))
+                    {
                         all.push(tray_card(item, &fields));
                     }
                 }

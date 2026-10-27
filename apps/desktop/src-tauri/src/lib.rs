@@ -713,6 +713,7 @@ pub fn run() {
             canvas::canvas_stack_rename,
             canvas::canvas_stack_dissolve,
             canvas::canvas_file,
+            canvas::canvas_file_many,
             canvas::canvas_file_stack,
             canvas::canvas_unfile,
             canvas::canvas_drawer,

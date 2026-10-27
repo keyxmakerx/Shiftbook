@@ -122,6 +122,7 @@
     "allow-canvas-stack-rename",
     "allow-canvas-stack-dissolve",
     "allow-canvas-file",
+    "allow-canvas-file-many",
     "allow-canvas-file-stack",
     "allow-canvas-unfile",
     "allow-canvas-drawer",

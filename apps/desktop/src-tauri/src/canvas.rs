@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use shiftbook_core::canvas::{tidy_groups, Area, CardKind, Drawer};
 use shiftbook_core::ids::ProjectId;
 use shiftbook_storage::canvas::{CanvasSpot, CardRef};
@@ -180,6 +180,29 @@ pub async fn canvas_file(
     Ok(store
         .file_card(owner, ref_arg(&kind, &id)?, drawer_arg(&drawer)?)
         .await?)
+}
+
+/// One card, as the screen sends it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CardArg {
+    kind: String,
+    id: String,
+}
+
+/// Maps to `DataApi.canvasFileMany()`: file several cards in one drawer at once, all or
+/// nothing (round 15: Tidy up puts them in the Archive).
+#[tauri::command]
+pub async fn canvas_file_many(
+    s: State<'_, VaultSession>,
+    cards: Vec<CardArg>,
+    drawer: String,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    let refs = cards
+        .iter()
+        .map(|c| ref_arg(&c.kind, &c.id))
+        .collect::<Res<Vec<CardRef>>>()?;
+    Ok(store.file_cards(owner, &refs, drawer_arg(&drawer)?).await?)
 }
 
 /// Maps to `DataApi.canvasFileStack()`: file a whole pile. Returns the cards filed.

@@ -358,6 +358,24 @@ impl SqliteStore {
         Ok(())
     }
 
+    /// File several cards in one drawer at once (round 15: Tidy up puts them in the Archive).
+    /// All or nothing.
+    pub async fn file_cards(
+        &self,
+        owner: OwnerId,
+        cards: &[CardRef],
+        drawer: Drawer,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        for &card in cards {
+            let left = stack_of(&mut tx, owner, card).await?;
+            place(&mut tx, owner, card, None, None, Some(drawer)).await?;
+            settle(&mut tx, owner, left).await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// File a whole pile: its cards go in the drawer and the pile goes away.
     pub async fn file_stack(
         &self,

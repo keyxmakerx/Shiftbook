@@ -72,9 +72,23 @@ impl FromStr for CardKind {
 }
 
 /// True when a dated card (an entry or a Done ticket) from `date` shows without having been
-/// moved: it's from the last [`RECENT_DAYS`] days, today included.
-pub fn is_recent(date: Date, today: Date) -> bool {
-    date <= today && date > today - Duration::days(RECENT_DAYS)
+/// moved: it's from the last `days` days, today included (the owner picks `days`, round 15;
+/// [`RECENT_DAYS`] by default).
+pub fn is_recent(date: Date, today: Date, days: u32) -> bool {
+    date <= today && date > today - Duration::days(i64::from(days.max(1)))
+}
+
+/// True when a card the owner moved, from `date`, is still on the Desk (round 15): moved cards
+/// leave after the same `days` as the rest, unless pinned or the owner keeps moved cards
+/// (`moved_stay`) until they're put away.
+pub fn moved_card_stays(
+    date: Date,
+    today: Date,
+    days: u32,
+    pinned: bool,
+    moved_stay: bool,
+) -> bool {
+    is_recent(date, today, days) || pinned || moved_stay
 }
 
 /// True when two entries are the same work (round 14): the same title (ignoring case and
@@ -494,26 +508,33 @@ pub fn clean_folder_name(name: &str) -> Result<String, CoreError> {
     crate::validate::validate_required("The folder name", name, MAX_PILE_NAME_CHARS)
 }
 
-/// A drawer in the cabinet (round 8): one per project, plus folders the owner makes.
+/// A drawer in the cabinet (round 8): one per project, plus folders the owner makes, plus the
+/// Archive (round 15), always there, where cards that are put away go.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Drawer {
     /// A project's drawer.
     Project(Uuid),
     /// A folder the owner made.
     Folder(Uuid),
+    /// The Archive: put away, off the Desk, with everything kept.
+    Archive,
 }
 
 impl Drawer {
-    /// The stored form: `project:<id>` or `folder:<id>`.
+    /// The stored form: `project:<id>`, `folder:<id>` or `archive`.
     pub fn key(self) -> String {
         match self {
             Drawer::Project(id) => format!("project:{id}"),
             Drawer::Folder(id) => format!("folder:{id}"),
+            Drawer::Archive => "archive".into(),
         }
     }
 
     /// Read the stored form.
     pub fn parse(text: &str) -> Option<Self> {
+        if text.trim() == "archive" {
+            return Some(Drawer::Archive);
+        }
         let (kind, id) = text.trim().split_once(':')?;
         let id = Uuid::parse_str(id).ok()?;
         match kind {
@@ -607,10 +628,40 @@ mod tests {
     #[test]
     fn recent_is_the_last_seven_days() {
         let today = date!(2026 - 10 - 19);
-        assert!(is_recent(today, today));
-        assert!(is_recent(date!(2026 - 10 - 13), today));
-        assert!(!is_recent(date!(2026 - 10 - 12), today));
-        assert!(!is_recent(date!(2026 - 10 - 20), today), "future days wait");
+        assert!(is_recent(today, today, 7));
+        assert!(is_recent(date!(2026 - 10 - 13), today, 7));
+        assert!(!is_recent(date!(2026 - 10 - 12), today, 7));
+        assert!(
+            !is_recent(date!(2026 - 10 - 20), today, 7),
+            "future days wait"
+        );
+        assert!(is_recent(today, today, 1));
+        assert!(!is_recent(date!(2026 - 10 - 18), today, 1), "only today");
+        assert!(is_recent(date!(2026 - 10 - 6), today, 14));
+    }
+
+    #[test]
+    fn moved_cards_leave_too_unless_pinned_or_kept() {
+        let today = date!(2026 - 10 - 19);
+        let old = date!(2026 - 10 - 1);
+        assert!(moved_card_stays(today, today, 7, false, false));
+        assert!(!moved_card_stays(old, today, 7, false, false));
+        assert!(moved_card_stays(old, today, 7, true, false), "pinned");
+        assert!(
+            moved_card_stays(old, today, 7, false, true),
+            "kept until put away"
+        );
+    }
+
+    #[test]
+    fn the_archive_is_a_drawer() {
+        assert_eq!(Drawer::Archive.key(), "archive");
+        assert_eq!(Drawer::parse(" archive "), Some(Drawer::Archive));
+        let id = Uuid::now_v7();
+        assert_eq!(
+            Drawer::parse(&Drawer::Folder(id).key()),
+            Some(Drawer::Folder(id))
+        );
     }
 
     #[test]

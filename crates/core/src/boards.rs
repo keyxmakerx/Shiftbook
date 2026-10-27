@@ -180,6 +180,7 @@ pub fn boards_for(facts: Facts<'_>, series: &[(Uuid, &str)]) -> Vec<Board> {
     match facts.drawer {
         Some(Drawer::Folder(f)) => out.push(Board::Folder(f)),
         Some(Drawer::Project(d)) if facts.project != Some(d) => out.push(Board::Project(d)),
+        Some(Drawer::Archive) => out.push(Board::Archive),
         _ => {}
     }
     out
@@ -285,6 +286,12 @@ mod tests {
             ..scrap
         };
         assert!(boards_for(loose, &series).is_empty());
+        let put_away = Facts {
+            kind: CardKind::Entry,
+            drawer: Some(Drawer::Archive),
+            ..scrap
+        };
+        assert_eq!(boards_for(put_away, &series), [Board::Archive]);
     }
 
     #[test]

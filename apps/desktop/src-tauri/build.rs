@@ -119,6 +119,7 @@ fn main() {
             "canvas_stack_rename",
             "canvas_stack_dissolve",
             "canvas_file",
+            "canvas_file_many",
             "canvas_file_stack",
             "canvas_unfile",
             "canvas_drawer",

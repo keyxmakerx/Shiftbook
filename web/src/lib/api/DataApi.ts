@@ -147,6 +147,11 @@ export interface Prefs {
   hideScreenshots: boolean;
   /** The right mouse button drags on the Desk too (off by default, round 15). */
   rightDrag: boolean;
+  /** Days an entry card stays on the Desk by itself: 1, 3, 7 or 14 (`desk.entry_days`). */
+  deskDays: number;
+  /** Cards you moved stay until put away (`desk.moved_stay`); otherwise they leave after
+   *  `deskDays` too, unless pinned. */
+  movedStay: boolean;
   /** What Shiftbook is for (round 15). Change it with `setUseMode`, not `savePref`. */
   useMode: UseMode;
 }
@@ -375,7 +380,9 @@ export type PrefKey =
   | 'security.quick_unlock'
   | 'security.block_copy'
   | 'security.hide_screenshots'
-  | 'ui.right_drag';
+  | 'ui.right_drag'
+  | 'desk.entry_days'
+  | 'desk.moved_stay';
 
 export interface Project {
   id: string;
@@ -727,7 +734,8 @@ export interface CanvasStack {
   done: boolean;
 }
 
-/** A drawer in the cabinet: a project's (key `project:<id>`) or a folder (`folder:<id>`). */
+/** A drawer in the cabinet: the Archive (key `archive`, always first), a project's
+ *  (`project:<id>`) or a folder (`folder:<id>`). */
 export interface CanvasDrawer {
   key: string;
   name: string;
@@ -1183,6 +1191,9 @@ export interface DataApi {
   canvasStackDissolve(id: string): Promise<void>;
   /** File a card in a drawer (off the Desk). */
   canvasFile(card: CardRef, drawer: string): Promise<void>;
+  /** File several cards in one drawer at once, all or nothing (Tidy up puts them in the
+   *  Archive drawer, key `archive`). */
+  canvasFileMany(cards: CardRef[], drawer: string): Promise<void>;
   /** File a whole pile; returns the cards filed. */
   canvasFileStack(id: string, drawer: string): Promise<CardRef[]>;
   /** Back on the Desk at x, y. */

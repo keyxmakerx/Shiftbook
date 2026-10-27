@@ -8,6 +8,20 @@ Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
   short warning. With one off, the Protected button guards only the other; with both off it
   leaves the top bar. The recovery key's Copy button keeps its 60-second clipboard clear.
 
+## Round 15 — 27 Oct 2026 (putting entries away)
+Card `r15-putaway` (`tools/signoff/rounds/r15-putaway.json`, mockups `mocks/r16-putaway.html`),
+all approved. The owner suggested a built-in drawer called Archive, which is how it's built:
+- **Put away** (entry cards and done tickets, in the card's menu) files the card in the
+  **Archive** drawer, always first in the cabinet. An entry card takes its other days of the
+  same work with it. Undo is offered; the Archive drawer and the Archive board have Back on the
+  Desk. Hours, tickets and notes are never touched.
+- **Tidy up…** on the Desk's bottom bar: everything from before today, everything older than
+  this week, or the cards picked with Select. Notes, open tickets and pinned cards stay.
+- **How long entries stay:** Settings → Look → The Desk, 1, 3, 7 (default) or 14 days.
+- **Cards I moved** leave after the same time, unless pinned, counted from the later of their
+  own day and the day they were last moved (so a card brought back doesn't vanish at once).
+  A switch keeps moved cards until they're put away, as before.
+
 ## Round 15 — 26 Oct 2026 (changing an entry's name)
 Card `r15-rename` (`tools/signoff/rounds/r15-rename.json`, mockups `mocks/r16-rename.html`),
 both parts approved:
