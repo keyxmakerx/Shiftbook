@@ -1,0 +1,32 @@
+{
+ "cards": {
+  "r15-putaway": {
+   "area": "Day and the Desk",
+   "round": 15,
+   "order": 49,
+   "version": 1,
+   "title": "Putting entries away (archive)",
+   "body": [
+    "You asked why entries can't be archived and when they go away. Today an entry card shows on the Desk for **7 days**, then leaves on its own. Its hours stay on Day, the Timesheet, Items and Find; nothing is ever thrown away. But a card you **moved** stays on the Desk for good, and the only ways to clear it are filing it in a drawer or deleting it, which loses the hours.",
+    "Below: a **Put away** that takes a card off the Desk and keeps everything, a **Tidy up** for many at once, and a setting for how long cards stay. Pick any mix."
+   ],
+   "bullets": [
+    "**Put away:** in an entry card's right-click menu (and its details). Undo is offered; the details get a Back on the Desk button.",
+    "**Tidy up:** one button on the Desk toolbar puts away everything from before today, or older than this week, or the cards you tick.",
+    "**How long cards stay:** a setting (1, 3, 7 or 14 days), and whether cards you moved leave too."
+   ],
+   "questions": [
+    {"id": "putaway", "legend": "Put away one card", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
+    {"id": "tidy", "legend": "Tidy up many at once", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
+    {"id": "days", "legend": "How long entries stay on the Desk by themselves", "options": [{"value": "Let me choose; start at 7 days", "rec": true}, {"value": "Keep 7 days, no setting"}, {"value": "Only today's, no setting"}]},
+    {"id": "moved", "legend": "Cards I moved", "options": [{"value": "Leave after the same time, unless pinned", "rec": true}, {"value": "Stay until I put them away (as now)"}]},
+    {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. call it Archive instead of Put away"}
+   ],
+   "figures": [
+    {"caption": "How entries leave the Desk today.", "html_file": "mocks/r16-putaway.html", "start": "now"},
+    {"caption": "Put one card away: off the Desk, hours kept, with Undo.", "html_file": "mocks/r16-putaway.html", "start": "card"},
+    {"caption": "Tidy up many at once, and the setting for how long cards stay.", "html_file": "mocks/r16-putaway.html", "start": "tidy"}
+   ]
+  }
+ }
+}

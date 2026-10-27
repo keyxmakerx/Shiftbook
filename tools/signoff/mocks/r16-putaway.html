@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 16 put away mockups</title>
+<!-- Round 16 mockups: putting entries away from the Desk. Pick a state with window.SB_START or
+     the hash: #now, #card, #tidy. Made for 1200 x 640. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --a: #b0603d; --b: #3d8bb0; --c: #7a5bb0;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); padding: 18px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px; }
+  .tag.new { color: var(--accent); }
+  .why { color: var(--mut); font-size: 12.5px; margin: 10px 2px 0; max-width: 620px; }
+  .paper { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 16px 18px; }
+  .btn { display: inline-block; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 5px 12px; font: 600 13px var(--ui); color: var(--ink); white-space: nowrap; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+  .life { list-style: none; margin: 0; padding: 0; }
+  .life li { display: grid; grid-template-columns: 120px 1fr; gap: 12px; padding: 9px 0; border-top: 1px solid var(--rule); }
+  .life li:first-child { border-top: 0; }
+  .life b { font-size: 13px; }
+  .bad { color: #b03a2e; font-weight: 600; }
+
+  .deskbg { position: relative; height: 330px; background: #dfe3e7; border-radius: 12px; overflow: hidden; }
+  .card { position: absolute; width: 190px; background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); padding: 9px 11px; border-left: 4px solid var(--a); }
+  .card .k { font: 700 9.5px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--mut); }
+  .card .t { font-weight: 600; font-size: 13px; }
+  .card .s { font-size: 11.5px; color: var(--mut); }
+  .card.old { opacity: .55; }
+  .card.hi { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .menu { position: absolute; width: 250px; background: var(--paper); border-radius: 10px; box-shadow: var(--lift); padding: 5px; font-size: 13px; }
+  .menu div { padding: 6px 10px; border-radius: 6px; }
+  .menu div.hi { background: #e9edf7; font-weight: 600; }
+  .menu .head { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); }
+  .menu hr { border: 0; border-top: 1px solid var(--rule); margin: 4px 6px; }
+  .toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--ink); color: #fff; border-radius: 10px; padding: 8px 14px; font-size: 13px; white-space: nowrap; }
+  .toast u { color: #b9c8f2; text-decoration: none; font-weight: 700; margin-left: 12px; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  .dialog { width: 440px; }
+  .dialog h3 { margin: 0 0 4px; font: 700 18px var(--display); }
+  .opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 9px; margin-top: 8px; background: #fff; }
+  .opt.on { border-color: var(--accent); background: #f1f4fb; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--mut); margin-top: 3px; flex: none; }
+  .opt.on .dot { border-color: var(--accent); background: radial-gradient(var(--accent) 45%, transparent 50%); }
+  .opt small { display: block; color: var(--mut); font-size: 12px; }
+  .row { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  .settings .line { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); }
+  .settings .line:first-of-type { border-top: 0; }
+  .sel { border: 1px solid var(--accent); border-radius: 8px; padding: 4px 10px; background: #fff; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- 1. How it works today -->
+<section class="state" id="now">
+  <div class="pair">
+    <div>
+      <p class="tag">Today: an entry's life on the Desk</p>
+      <div class="paper">
+        <ul class="life">
+          <li><b>Days 1 to 7</b><span>The card shows on the Desk by itself. "Just today" fades the older ones back.</span></li>
+          <li><b>After 7 days</b><span>The card leaves the Desk on its own. The entry and its hours stay on Day, the Timesheet, Items and Find.</span></li>
+          <li><b>If you moved it</b><span class="bad">It stays on the Desk for good. Nothing takes it off except filing it in a drawer or deleting it.</span></li>
+          <li><b>Delete</b><span>Removes the hours too, so it's the wrong tool for tidying.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <p class="tag">What's missing</p>
+      <div class="paper">
+        <p>A way to say "I'm done looking at this" without losing the hours. Notes already have <b>Archive</b>; entries don't.</p>
+        <p style="color:var(--mut);font-size:12.5px;margin-bottom:0">Nothing is ever thrown away on its own. Entries only go off the Desk; they never disappear from your records.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 2. Put one card away -->
+<section class="state" id="card">
+  <div class="pair">
+    <div>
+      <p class="tag new">Right-click an entry card → Put away</p>
+      <div class="deskbg">
+        <div class="card" style="left:20px;top:20px"><div class="k">Entry · 2 h</div><div class="t">Laptop imaging</div><div class="s">Operations</div></div>
+        <div class="card hi" style="left:20px;top:110px;border-color:var(--b)"><div class="k">Entry · 1.5 h · last Tue</div><div class="t">Printer queue</div><div class="s">Operations</div></div>
+        <div class="menu" style="left:225px;top:96px">
+          <div class="head">Printer queue</div>
+          <div>✎ Rename</div>
+          <div>Open details</div>
+          <div>Follow up tomorrow</div>
+          <hr>
+          <div class="hi">⤓ Put away (off the Desk)</div>
+          <div style="color:#b03a2e">Delete</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="tag new">A moment later</p>
+      <div class="deskbg">
+        <div class="card" style="left:20px;top:20px"><div class="k">Entry · 2 h</div><div class="t">Laptop imaging</div><div class="s">Operations</div></div>
+        <div class="toast">Put away “Printer queue”. Its hours are kept.<u>Undo</u></div>
+      </div>
+      <p class="why">A put-away entry stays on Day, the Timesheet, Items and Find, with a small "Put away" note and a <b>Back on the Desk</b> button in its details. Work you log on it again brings it back.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Tidy the whole Desk -->
+<section class="state" id="tidy">
+  <div class="pair">
+    <div>
+      <p class="tag new">Desk toolbar → Tidy up</p>
+      <div class="toolbar"><span class="btn">Just today</span><span class="btn primary">Tidy up…</span></div>
+      <div class="paper dialog">
+        <h3>Tidy the Desk</h3>
+        <p style="margin:0;color:var(--mut);font-size:13px">Put entry cards away. Their hours and tickets are kept.</p>
+        <div class="opt on"><span class="dot"></span><span>Everything from before today<small>11 cards, 4 of them ones you moved</small></span></div>
+        <div class="opt"><span class="dot"></span><span>Everything older than this week<small>3 cards</small></span></div>
+        <div class="opt"><span class="dot"></span><span>Only the ones I pick<small>Tick cards on the Desk, then press Put away</small></span></div>
+        <p style="font-size:12px;color:var(--mut);margin:10px 0 0">Notes, open tickets and pinned cards stay.</p>
+        <div class="row"><span class="btn">Cancel</span><span class="btn primary">Put 11 away</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="tag new">Customize → Desk</p>
+      <div class="paper settings">
+        <div class="line"><span>Entries stay on the Desk for</span><span class="sel">7 days ▾</span></div>
+        <div class="line"><span>Cards I moved leave too</span><span class="sel">Yes, after the same time ▾</span></div>
+      </div>
+      <p class="why">Choices: 1 day (today only), 3 days, 7 days, 14 days. "Cards I moved" can also be "No, keep them until I put them away" (how it works now). Pinned cards always stay.</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'now');
+  (document.getElementById(pick) || document.getElementById('now')).classList.add('on');
+</script>
+</body>
+</html>
