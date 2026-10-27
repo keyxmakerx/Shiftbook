@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOP notebook mockups</title>
+<!-- Round 16 mockups: a Notepad++-style MOP notebook, dropping MOP files in, and templates.
+     Pick a state with window.SB_START or the hash: #a, #b, #c, #drop, #tpl. Made for 1200 x 640.
+     Made-up MOP text only. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --bad: #b03a2e; --warn: #9f5a06; --mop: #178f7c;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.4 var(--ui); padding: 14px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .tag { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px; }
+  .tag.new { color: var(--accent); }
+  .why { color: var(--mut); font-size: 12.5px; margin: 8px 2px 0; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; cursor: pointer; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn:active { transform: scale(.97); }
+
+  /* The app behind the window */
+  .app { position: relative; height: 560px; background: #dfe3e7; border-radius: 12px; overflow: hidden; }
+  .app .bg { position: absolute; inset: 0 0 34px; padding: 14px; }
+  .ghost { position: absolute; width: 180px; background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); padding: 9px 11px; border-left: 4px solid #3d8bb0; opacity: .8; font-size: 12px; }
+  .ghost b { display: block; font-size: 13px; }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: rgba(255,255,255,.75); border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12px; }
+  .bar .chip { border: 1px solid var(--rule); background: #fff; border-radius: 7px; padding: 3px 9px; cursor: pointer; display: none; }
+  .bar .chip.on { display: inline-flex; gap: 6px; align-items: center; }
+  .bar .chip i { width: 8px; height: 8px; border-radius: 2px; background: var(--mop); }
+  .bar .bell { margin-left: auto; color: var(--mut); }
+
+  /* The notebook window */
+  .win { position: absolute; background: var(--paper); border-radius: 10px; box-shadow: var(--lift); display: flex; flex-direction: column; overflow: hidden; transition: transform .28s cubic-bezier(.2,.9,.25,1.08), opacity .2s; }
+  .win.min { transform: translateY(420px) scale(.2); opacity: 0; pointer-events: none; }
+  .tb { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 12px; background: color-mix(in srgb, var(--mop) 14%, #fff); border-bottom: 1px solid var(--rule); cursor: move; }
+  .tb b { font: 650 14px var(--display); }
+  .tb small { color: var(--mut); font-size: 11.5px; }
+  .tb .ctl { margin-left: auto; display: flex; gap: 2px; }
+  .tb .ctl span { width: 24px; height: 22px; display: grid; place-items: center; border-radius: 5px; cursor: pointer; color: var(--mut); font-size: 13px; }
+  .tb .ctl span:hover { background: rgba(0,0,0,.07); color: var(--ink); }
+  .tabs { display: flex; gap: 2px; padding: 5px 8px 0; background: #f2efe7; border-bottom: 1px solid var(--rule); }
+  .tabs .t { padding: 5px 10px; border-radius: 7px 7px 0 0; font-size: 12.5px; cursor: pointer; color: var(--mut); display: flex; gap: 6px; align-items: center; border: 1px solid transparent; border-bottom: 0; }
+  .tabs .t.on { background: var(--paper); color: var(--ink); border-color: var(--rule); font-weight: 600; margin-bottom: -1px; }
+  .tabs .t .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); display: none; }
+  .tabs .t.dirty .dot { display: inline-block; }
+  .tabs .t .x { opacity: .5; }
+  .tabs .plus { padding: 5px 9px; color: var(--mut); cursor: pointer; }
+  .tools { display: flex; gap: 6px; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--rule); font-size: 12px; }
+  .tools .sp { flex: 1; }
+  .tools .find { border: 1px solid var(--rule); border-radius: 6px; padding: 3px 8px; width: 150px; font: 12px var(--ui); }
+  .body { flex: 1; display: flex; min-height: 0; }
+  .ed { position: relative; flex: 1; overflow: auto; background: #fffefb; }
+  .ed .inner { display: flex; min-height: 100%; }
+  .gut { padding: 10px 8px 10px 6px; text-align: right; color: #a3a8ae; background: #f6f4ee; border-right: 1px solid var(--rule); font: 12.5px/20px var(--mono); user-select: none; min-width: 38px; white-space: pre; }
+  .code { position: relative; flex: 1; }
+  .code pre, .code textarea { margin: 0; padding: 10px 12px; font: 12.5px/20px var(--mono); white-space: pre-wrap; word-break: break-word; tab-size: 4; }
+  .code pre { pointer-events: none; color: var(--ink); }
+  .code textarea { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; outline: 0; resize: none; background: transparent; color: transparent; caret-color: var(--ink); overflow: hidden; }
+  .h { color: var(--mop); font-weight: 700; }
+  .rb { color: var(--bad); font-weight: 700; }
+  .n { color: var(--accent); font-weight: 700; }
+  .v { color: var(--ok); }
+  .blank { background: #fbefd7; color: var(--warn); border-radius: 3px; }
+  .cm { color: #8a919a; font-style: italic; }
+  .status { display: flex; gap: 14px; padding: 4px 10px; font: 11.5px var(--ui); color: var(--mut); border-top: 1px solid var(--rule); background: #f6f4ee; }
+  .status .sp { flex: 1; }
+
+  /* B: document map */
+  .map { width: 190px; border-left: 1px solid var(--rule); background: #f8f6f0; padding: 8px; font-size: 12.5px; overflow: auto; }
+  .map .mh { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); margin: 2px 4px 6px; }
+  .map div.it { padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+  .map div.it:hover { background: rgba(0,0,0,.05); }
+  .map div.it.sub { padding-left: 20px; color: var(--mut); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .map div.it.on { background: color-mix(in srgb, var(--mop) 16%, transparent); font-weight: 600; }
+
+  /* C: docked drawer */
+  .dock { position: absolute; top: 0; right: 0; bottom: 34px; width: 560px; background: var(--paper); box-shadow: var(--lift); display: flex; flex-direction: column; transition: transform .32s cubic-bezier(.2,.9,.25,1.08); }
+  .dock.shut { transform: translateX(560px); }
+  .dock .handle { position: absolute; left: -30px; top: 120px; width: 30px; padding: 12px 0; background: color-mix(in srgb, var(--mop) 22%, #fff); border-radius: 8px 0 0 8px; writing-mode: vertical-rl; transform: rotate(180deg); font: 600 12px var(--ui); text-align: center; cursor: pointer; box-shadow: var(--shadow); }
+
+  /* Drop and templates */
+  .two { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; align-items: start; }
+  .paper { background: var(--paper); border-radius: 12px; box-shadow: var(--shadow); padding: 14px 16px; }
+  .paper h3 { margin: 0 0 4px; font: 650 17px var(--display); }
+  .sub { color: var(--mut); font-size: 12.5px; margin: 0 0 10px; }
+  .zone { position: relative; height: 210px; border-radius: 12px; background: #dfe3e7; overflow: hidden; }
+  .zone .over { position: absolute; inset: 10px; border: 2px dashed var(--mop); border-radius: 12px; background: color-mix(in srgb, var(--mop) 10%, transparent); display: grid; place-items: start center; padding-top: 34px; text-align: center; font-weight: 600; color: var(--mop); opacity: 0; transition: opacity .2s; }
+  .zone.drag .over { opacity: 1; }
+  .file { position: absolute; left: 30px; top: 30px; background: #fff; border-radius: 6px; box-shadow: var(--shadow); padding: 6px 10px; font: 12px var(--mono); transition: transform .9s cubic-bezier(.3,.8,.3,1); }
+  .zone.drag .file { transform: translate(300px, 105px) rotate(-4deg); }
+  .rows { margin-top: 10px; }
+  .row { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: center; padding: 7px 4px; border-top: 1px solid var(--rule); font-size: 13px; }
+  .row:first-child { border-top: 0; }
+  .row small { display: block; color: var(--mut); font-size: 11.5px; }
+  .row select { font: 12px var(--ui); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 4px; background: #fff; }
+  .seg { display: inline-flex; background: rgba(0,0,0,.06); border-radius: 8px; padding: 2px; }
+  .seg span { padding: 4px 10px; border-radius: 6px; font-size: 12.5px; cursor: pointer; color: var(--mut); }
+  .seg span.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .list { margin: 0; padding: 0; list-style: none; }
+  .list li { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: 13px; cursor: default; }
+  .list li:hover { background: rgba(0,0,0,.04); }
+  .badge { font: 700 10px var(--ui); padding: 1px 7px; border-radius: 99px; background: rgba(0,0,0,.07); color: var(--mut); }
+  .badge.tpl { background: #e7eefb; color: var(--accent); }
+  .menu { background: var(--paper); border-radius: 10px; box-shadow: var(--lift); padding: 5px; font-size: 13px; width: 250px; }
+  .menu div { padding: 6px 10px; border-radius: 6px; }
+  .menu div.hi { background: #e9edf7; font-weight: 600; }
+  .menu hr { border: 0; border-top: 1px solid var(--rule); margin: 4px 6px; }
+  .fill label { display: grid; grid-template-columns: 130px 1fr; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+  .fill input { border: 1px solid var(--rule); border-radius: 7px; padding: 5px 8px; font: 13px var(--ui); }
+  .preview { margin-top: 10px; background: #fffefb; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; font: 12px/18px var(--mono); white-space: pre-wrap; max-height: 170px; overflow: auto; }
+</style>
+</head>
+<body>
+
+<!-- A: Notepad++-style tabbed window -->
+<section class="state" id="a">
+  <p class="tag new">A · MOP notebook: a Notepad++-style window that floats and minimises</p>
+  <div class="app" id="appA">
+    <div class="bg">
+      <div class="ghost" style="left:30px;top:40px"><b>Firewall rule review</b>2.5 h · CHG0012345</div>
+      <div class="ghost" style="left:240px;top:150px"><b>Printer on 2nd floor</b>0.5 h</div>
+      <div class="ghost" style="left:60px;top:300px"><b>Weekly ops sync</b>Meeting</div>
+    </div>
+    <div class="win" id="winA" style="left:280px;top:20px;width:860px;height:490px"></div>
+    <div class="bar"><span class="chip" id="chipA"><i></i>MOPs · 3 open</span><span class="bell">🔔</span></div>
+  </div>
+  <p class="why">Type in it like Notepad++: plain text, line numbers, tabs for each open MOP. Headings, numbered steps, Verify lines, Rollback and [[blanks]] get a light colour so the shape shows, but nothing is forced. Press – to tuck it into the bottom bar, click the bar to bring it back. Try typing.</p>
+</section>
+
+<!-- B: same window plus a document map -->
+<section class="state" id="b">
+  <p class="tag new">B · Same window, plus a map of the MOP down the side</p>
+  <div class="app">
+    <div class="bg"></div>
+    <div class="win" id="winB" style="left:40px;top:20px;width:1100px;height:490px"></div>
+    <div class="bar"><span class="chip" id="chipB"><i></i>MOPs · 3 open</span><span class="bell">🔔</span></div>
+  </div>
+  <p class="why">Like Notepad++'s Function List: the map is built from your own headings and numbered steps as you type. Click a line to jump there. Hide it with the ☰ button when you want the room.</p>
+</section>
+
+<!-- C: docked to the side -->
+<section class="state" id="c">
+  <p class="tag new">C · Docked to the right edge: slides out over whatever you're on</p>
+  <div class="app">
+    <div class="bg">
+      <div class="ghost" style="left:30px;top:40px"><b>Firewall rule review</b>2.5 h · CHG0012345</div>
+      <div class="ghost" style="left:240px;top:150px"><b>Printer on 2nd floor</b>0.5 h</div>
+      <div class="ghost" style="left:60px;top:300px"><b>Weekly ops sync</b>Meeting</div>
+    </div>
+    <div class="dock" id="dockC"><div class="handle" id="handleC">MOPs</div></div>
+    <div class="bar"><span class="bell" style="margin-left:auto">🔔</span></div>
+  </div>
+  <p class="why">Always one click away on the right edge (or Ctrl+M). It slides back out of the way and keeps your place. It can't sit side by side with another window, but it never covers the bottom bar.</p>
+</section>
+
+<!-- Drop files in -->
+<section class="state" id="drop">
+  <div class="two">
+    <div>
+      <p class="tag new">Drag your MOP files onto Shiftbook</p>
+      <div class="zone" id="zone">
+        <div class="file">📄 UPS battery swap.txt<br>📄 Switch firmware.txt<br>📄 New starter kit.txt</div>
+        <div class="over"><div>Drop to add these as MOPs<div style="font-weight:400;font-size:12px;margin-top:4px">Shiftbook keeps its own encrypted copy</div></div></div>
+      </div>
+      <p style="margin:10px 0 0"><span class="btn" id="dropBtn">▶ Show the drop</span> <span class="btn">Or: Add MOP files…</span></p>
+      <p class="why">Works anywhere in Shiftbook, and on the MOP notebook itself. Plain text (.txt, .md, .log, whatever Notepad++ saved) comes in as is. Word files (.docx) come in as text too.</p>
+    </div>
+    <div class="paper">
+      <h3>Add 3 MOPs</h3>
+      <p class="sub">Each file becomes a MOP note with its text kept exactly. The original files aren't touched.</p>
+      <div class="rows">
+        <div class="row"><input type="checkbox" checked><span>UPS battery swap<small>UPS battery swap.txt · 64 lines · 9 steps, rollback found</small></span><select><option>MOP</option><option>Template</option></select></div>
+        <div class="row"><input type="checkbox" checked><span>Switch firmware<small>Switch firmware.txt · 120 lines · 14 steps, rollback found</small></span><select><option>MOP</option><option>Template</option></select></div>
+        <div class="row"><input type="checkbox" checked><span>New starter kit<small>New starter kit.txt · 38 lines · 4 [[blanks]] found</small></span><select><option>Template</option><option>MOP</option></select></div>
+      </div>
+      <p style="font-size:12.5px;margin:10px 0 4px">Put them in <span class="badge">Project: none ▾</span> &nbsp; Tag <span class="badge">mops</span></p>
+      <p style="text-align:right;margin:10px 0 0"><span class="btn">Cancel</span> <span class="btn primary">Add 3</span></p>
+      <hr style="border:0;border-top:1px solid var(--rule);margin:14px 0 10px">
+      <h3>Or link your MOP folder</h3>
+      <p class="sub">Pick the folder where you keep them. Shiftbook lists the files and opens one in the notebook when you click it; saving writes back to that file. Those files stay readable by anyone on the computer, as they are now, and aren't part of Shiftbook's backups.</p>
+      <ul class="list">
+        <li>📁 <b>D:\Work\MOPs</b> <span class="badge">38 files</span> <span style="margin-left:auto" class="btn">Change…</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Templates -->
+<section class="state" id="tpl">
+  <div class="two">
+    <div>
+      <p class="tag new">Use as template</p>
+      <div class="paper">
+        <ul class="list" id="tplList">
+          <li>📄 UPS battery swap <span class="badge">MOP</span></li>
+          <li style="background:#eef2fb">📄 New starter kit <span class="badge tpl">Template</span></li>
+          <li>📄 Switch firmware <span class="badge">MOP</span></li>
+          <li>📄 Patch weekend <span class="badge tpl">Template</span></li>
+        </ul>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:12px">
+        <div class="menu">
+          <div class="hi">New MOP from this template</div>
+          <div>Open the template</div>
+          <hr>
+          <div>✓ Use as template</div>
+          <div>Copy as a new MOP</div>
+          <div>Save as file…</div>
+        </div>
+        <p class="why" style="max-width:300px;margin-top:0">Right-click any MOP for <b>Use as template</b>. A template stays as it is; <b>New MOP from this template</b> makes a copy for today's job. Templates are also in the notebook's <b>+</b> menu and in Ctrl+Space ("new from …").</p>
+      </div>
+    </div>
+    <div class="paper fill">
+      <h3>New MOP from "New starter kit"</h3>
+      <p class="sub">The template has blanks written like <code>[[Name]]</code>. Fill them in and they're replaced everywhere. Leave one empty to fill in later; it stays highlighted.</p>
+      <label>Starter name <input id="f1" value="Sam Doe"></label>
+      <label>Start date <input id="f2" value="3 Nov"></label>
+      <label>Desk <input id="f3" placeholder="leave for later"></label>
+      <label>Change number <input id="f4" value="CHG0045123"></label>
+      <div class="preview" id="prev"></div>
+      <p style="text-align:right;margin:10px 0 0"><span class="btn">Cancel</span> <span class="btn primary">Make the MOP</span></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  const MOPS = [
+    { name: 'UPS battery swap', text:
+`# UPS battery swap
+Change: CHG0012345    Window: Sat 07:00-09:00
+
+## Why
+Batteries are at end of life (self-test failed twice).
+
+## Checks before starting
+- Load on the UPS is under 60%
+- Generator test passed this week
+- Tell the service desk
+
+## Steps
+1. Put the UPS into maintenance bypass
+   Verify: front panel shows BYPASS, load stays up
+2. Open the battery cabinet and swap pack A
+   Expected: cabinet LED goes green after 30 s
+3. Swap pack B the same way
+4. Run a self-test from the panel
+   Verify: self-test PASSED
+5. Take the UPS out of bypass
+
+## Rollback
+1. Leave the UPS in bypass
+2. Put the old packs back and call the vendor` },
+    { name: 'Switch firmware', text:
+`# Switch firmware, floor 2
+## Why
+Fixes the port flapping bug.
+
+## Steps
+1. Save the running config
+   Verify: copy ok
+2. Upload the image
+3. Reload the switch
+   Expected: back in under 6 minutes
+
+## Rollback
+1. Boot the previous image` },
+    { name: 'New starter kit', text:
+`# New starter kit for [[Starter name]]
+Start date: [[Start date]]    Desk: [[Desk]]
+
+## Steps
+1. Image the laptop and name it after [[Starter name]]
+2. Set up the dock at desk [[Desk]]
+3. Log the work under [[Change number]]` },
+  ];
+
+  function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  // Light colouring only: headings, Rollback, numbered steps, Verify/Expected, [[blanks]].
+  function paint(text) {
+    let inRollback = false;
+    return text.split('\n').map((line) => {
+      let s = esc(line);
+      if (/^\s*#/.test(line)) {
+        inRollback = /rollback|backout/i.test(line);
+        s = '<span class="' + (inRollback ? 'rb' : 'h') + '">' + s + '</span>';
+      } else if (/^\s*\d+[.)]/.test(line)) {
+        s = s.replace(/^(\s*\d+[.)])/, '<span class="' + (inRollback ? 'rb' : 'n') + '">$1</span>');
+      } else if (/^\s*(verify|expected|check)\b/i.test(line)) {
+        s = '<span class="v">' + s + '</span>';
+      }
+      return s.replace(/\[\[[^\]]*\]\]/g, (m) => '<span class="blank">' + m + '</span>');
+    }).join('\n') + '\n';
+  }
+
+  function outline(text) {
+    const out = [];
+    text.split('\n').forEach((line, i) => {
+      if (/^\s*#/.test(line)) out.push({ i, t: line.replace(/^\s*#+\s*/, ''), sub: false });
+      else if (/^\s*\d+[.)]/.test(line)) out.push({ i, t: line.trim(), sub: true });
+    });
+    return out;
+  }
+
+  function buildWindow(win, opts) {
+    let cur = 0;
+    const dirty = new Set();
+    win.innerHTML = '';
+    const tb = document.createElement('div'); tb.className = 'tb';
+    const b = document.createElement('b'); b.textContent = 'MOP notebook';
+    const small = document.createElement('small');
+    const ctl = document.createElement('div'); ctl.className = 'ctl';
+    [['▴', 'Roll up'], ['–', 'Minimise to the bottom bar'], ['⤢', 'Full screen'], ['✕', 'Close']].forEach(([c, t]) => {
+      const s = document.createElement('span'); s.textContent = c; s.title = t;
+      if (c === '–' && opts.onMin) s.onclick = opts.onMin;
+      ctl.append(s);
+    });
+    tb.append(b, small, ctl);
+    const tabs = document.createElement('div'); tabs.className = 'tabs';
+    const tools = document.createElement('div'); tools.className = 'tools';
+    tools.innerHTML = '<span class="btn">▶ Run it</span><span class="btn">Use as template</span><span class="btn">Save as file…</span><span class="sp"></span>';
+    const find = document.createElement('input'); find.className = 'find'; find.placeholder = 'Find (Ctrl+F)';
+    tools.append(find);
+    if (opts.map) {
+      const mb = document.createElement('span'); mb.className = 'btn'; mb.textContent = '☰ Map'; tools.append(mb);
+      mb.onclick = () => { map.style.display = map.style.display === 'none' ? '' : 'none'; };
+    }
+    const body = document.createElement('div'); body.className = 'body';
+    const ed = document.createElement('div'); ed.className = 'ed';
+    const inner = document.createElement('div'); inner.className = 'inner';
+    const gut = document.createElement('div'); gut.className = 'gut';
+    const code = document.createElement('div'); code.className = 'code';
+    const pre = document.createElement('pre');
+    const ta = document.createElement('textarea'); ta.spellcheck = false;
+    code.append(pre, ta); inner.append(gut, code); ed.append(inner); body.append(ed);
+    const map = document.createElement('div'); map.className = 'map';
+    if (opts.map) body.append(map);
+    const status = document.createElement('div'); status.className = 'status';
+    win.append(tb, tabs, tools, body, status);
+
+    function drawTabs() {
+      tabs.innerHTML = '';
+      MOPS.forEach((m, i) => {
+        const t = document.createElement('div');
+        t.className = 't' + (i === cur ? ' on' : '') + (dirty.has(i) ? ' dirty' : '');
+        const d = document.createElement('span'); d.className = 'dot';
+        const n = document.createElement('span'); n.textContent = m.name;
+        const x = document.createElement('span'); x.className = 'x'; x.textContent = '×';
+        t.append(d, n, x);
+        t.onclick = () => { cur = i; draw(); };
+        tabs.append(t);
+      });
+      const p = document.createElement('span'); p.className = 'plus'; p.textContent = '+'; p.title = 'New MOP, or new from a template';
+      tabs.append(p);
+    }
+    function drawText() {
+      const text = MOPS[cur].text;
+      pre.innerHTML = paint(text);
+      const n = text.split('\n').length;
+      gut.textContent = Array.from({ length: n }, (_, i) => i + 1).join('\n');
+      const steps = (text.match(/^\s*\d+[.)]/gm) || []).length;
+      const blanks = (text.match(/\[\[[^\]]*\]\]/g) || []).length;
+      status.innerHTML = '';
+      [n + ' lines', steps + ' numbered lines', blanks ? blanks + ' blanks to fill' : 'no blanks', dirty.has(cur) ? 'Saving…' : 'Saved'].forEach((s, i) => {
+        if (i === 3) { const sp = document.createElement('span'); sp.className = 'sp'; status.append(sp); }
+        const e = document.createElement('span'); e.textContent = s; status.append(e);
+      });
+      small.textContent = '· ' + MOPS.length + ' open';
+      if (opts.map) {
+        map.innerHTML = '';
+        const mh = document.createElement('div'); mh.className = 'mh'; mh.textContent = 'Map'; map.append(mh);
+        outline(text).forEach((o) => {
+          const d = document.createElement('div'); d.className = 'it' + (o.sub ? ' sub' : ''); d.textContent = o.t;
+          d.onclick = () => {
+            map.querySelectorAll('.it').forEach((x) => x.classList.remove('on')); d.classList.add('on');
+            ed.scrollTo({ top: o.i * 20, behavior: 'smooth' });
+          };
+          map.append(d);
+        });
+      }
+    }
+    function draw() { ta.value = MOPS[cur].text; drawTabs(); drawText(); }
+    let t = null;
+    ta.addEventListener('input', () => {
+      MOPS[cur].text = ta.value; dirty.add(cur); drawTabs(); drawText();
+      clearTimeout(t); t = setTimeout(() => { dirty.clear(); drawTabs(); drawText(); }, 800);
+    });
+    draw();
+  }
+
+  // A: minimise to the bottom bar and back.
+  const winA = document.getElementById('winA'), chipA = document.getElementById('chipA');
+  buildWindow(winA, { onMin: () => { winA.classList.add('min'); chipA.classList.add('on'); } });
+  chipA.onclick = () => { winA.classList.remove('min'); chipA.classList.remove('on'); };
+
+  const winB = document.getElementById('winB'), chipB = document.getElementById('chipB');
+  buildWindow(winB, { map: true, onMin: () => { winB.classList.add('min'); chipB.classList.add('on'); } });
+  chipB.onclick = () => { winB.classList.remove('min'); chipB.classList.remove('on'); };
+
+  // C: a dock that slides out.
+  const dock = document.getElementById('dockC');
+  const holder = document.createElement('div');
+  holder.style.cssText = 'flex:1;display:flex;flex-direction:column;min-height:0';
+  dock.append(holder);
+  buildWindow(holder, { onMin: () => dock.classList.add('shut') });
+  document.getElementById('handleC').onclick = () => dock.classList.toggle('shut');
+
+  // Drop.
+  document.getElementById('dropBtn').onclick = () => {
+    const z = document.getElementById('zone');
+    z.classList.remove('drag'); void z.offsetWidth; z.classList.add('drag');
+  };
+
+  // Template fill-in.
+  const TPL = MOPS[2].text;
+  const fields = [['Starter name', 'f1'], ['Start date', 'f2'], ['Desk', 'f3'], ['Change number', 'f4']];
+  function fill() {
+    let s = esc(TPL);
+    fields.forEach(([name, id]) => {
+      const v = document.getElementById(id).value.trim();
+      const tag = esc('[[' + name + ']]');
+      s = s.split(tag).join(v ? esc(v) : '<span class="blank">' + tag + '</span>');
+    });
+    document.getElementById('prev').innerHTML = s;
+  }
+  fields.forEach(([, id]) => document.getElementById(id).addEventListener('input', fill));
+  fill();
+
+  const pick = (window.SB_START || location.hash.slice(1) || 'a');
+  (document.getElementById(pick) || document.getElementById('a')).classList.add('on');
+  try { parent.postMessage({ sbMockHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+</script>
+</body>
+</html>

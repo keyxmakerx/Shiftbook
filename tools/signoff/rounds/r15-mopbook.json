@@ -1,0 +1,48 @@
+{
+ "cards": {
+  "r15-mopbook": {
+   "area": "Notes · MOPs",
+   "round": 15,
+   "order": 100,
+   "version": 1,
+   "title": "A MOP notebook like Notepad++, and bringing your MOP files in",
+   "body": [
+    "You write MOPs in Notepad++ today. A MOP in Shiftbook is a note for now, so this turns it into a **MOP notebook**: plain text you type freely, line numbers, a tab for each open MOP, Find, and a light colour on headings, numbered steps, Verify lines, Rollback and `[[blanks]]` so the shape shows without forcing a form on you. It floats like the notepad windows and minimises to the bottom bar.",
+    "Below are three ways to hold it (**A**, **B**, **C**), then dragging your existing MOP files in, and **Use as template**. Everything you add is kept inside Shiftbook's encrypted file unless you pick the linked folder."
+   ],
+   "bullets": [
+    "**Run it** (the step-by-step checklist from round 7) and **Save as file…** (back to .txt for sharing) sit on the notebook's toolbar.",
+    "**Templates:** right-click a MOP → **Use as template**. **New MOP from this template** copies it and asks for each `[[blank]]`, replaced everywhere. Blanks left empty stay highlighted.",
+    "**Dropping files in:** drag .txt (or .md, .log, .docx) files onto Shiftbook, check the list, press Add. Each one becomes a MOP or a template; the original files aren't touched.",
+    "**Linking a folder** instead keeps the files where they are, readable by anyone on the computer and outside Shiftbook's backups, which is why copying in is the recommended one."
+   ],
+   "figures": [
+    {"caption": "A · Notepad++-style window with tabs. Type in it, then press – to tuck it into the bottom bar and click the bar to bring it back.", "html_file": "mocks/r16-mopbook.html", "start": "a", "height": 650},
+    {"caption": "B · The same window with a map down the side, built from your headings and steps. Click a line to jump.", "html_file": "mocks/r16-mopbook.html", "start": "b", "height": 650},
+    {"caption": "C · Docked to the right edge. Click the MOPs tab to slide it in and out.", "html_file": "mocks/r16-mopbook.html", "start": "c", "height": 650},
+    {"caption": "Dragging MOP files in, or linking your MOP folder. Press Show the drop.", "html_file": "mocks/r16-mopbook.html", "start": "drop", "height": 500},
+    {"caption": "Use as template, then fill in the blanks for a new MOP. Type in the boxes.", "html_file": "mocks/r16-mopbook.html", "start": "tpl", "height": 470}
+   ],
+   "questions": [
+    {"id": "shape", "legend": "How should the MOP notebook sit?", "options": [
+      {"value": "A · Floating window with tabs", "rec": true, "why": "Closest to Notepad++, and it minimises like the notepads you already have."},
+      {"value": "B · A, plus the map down the side", "why": "Handy for long MOPs; the map can be hidden."},
+      {"value": "C · Docked to the right edge"},
+      {"value": "Mix (say below)"}
+    ]},
+    {"id": "files", "legend": "Getting your existing MOPs in", "options": [
+      {"value": "Drag and drop to copy them in", "rec": true, "why": "They end up encrypted and in backups, like everything else."},
+      {"value": "Copy in, and also link my MOP folder"},
+      {"value": "Only link my MOP folder"}
+    ]},
+    {"id": "template", "legend": "Templates", "options": [
+      {"value": "Use as template, with [[blanks]] to fill in", "rec": true},
+      {"value": "Use as template, just a plain copy"},
+      {"value": "Not needed"}
+    ]},
+    {"id": "more", "type": "text", "legend": "Anything else? (optional)", "placeholder": "e.g. what file types your MOPs are, or how you mark blanks today (XXX, <name>…)"}
+   ],
+   "pick": "A, copy in with drag and drop, and templates with [[blanks]]. If your MOPs already mark blanks another way (XXX, <CHANGE>), tell me and I'll match it."
+  }
+ }
+}
