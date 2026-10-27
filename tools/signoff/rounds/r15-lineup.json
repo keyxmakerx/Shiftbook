@@ -1,0 +1,37 @@
+{
+  "meta": {"round": 15},
+  "cards": {
+    "r15-lineup": {
+      "round": 15,
+      "order": 95,
+      "area": "Quality of life · mouse",
+      "version": 1,
+      "title": "Shift + drag to line cards up",
+      "body": [
+        "You asked for Shift + drag to line things up on the Desk. Shift + drag already draws a box when you start on **empty paper**, so the new part only applies when you start on **a card**. Starting on paper still draws a box, exactly as now.",
+        "**A. Line up with other cards (my pick).** Hold Shift while dragging a card and it pulls into line with nearby cards: same top, same left edge, same middle. Red dashed lines show what it's lining up with, and when you let go it lands exactly in line. Let go of Shift mid-drag and it moves freely again.",
+        "**B. Straight line only.** Hold Shift and the card slides only straight across or straight up and down from where it started (whichever way you move first). Handy for nudging, but it won't help you match other cards.",
+        "**Extra, either way: Line up buttons.** When you've picked several cards with the Select tool, the bar at the top gets In a row, In a column and Tidy grid. Ctrl+Z puts them back."
+      ],
+      "figures": [
+        {"html_file": "mocks/r15-lineup-snap.html", "caption": "**A.** Shift + drag a card: it lines up with the tops of the row and the left edge of the card below."},
+        {"html_file": "mocks/r15-lineup-straight.html", "caption": "**B.** Shift + drag a card: it can only go straight across from where it started."},
+        {"html_file": "mocks/r15-lineup-buttons.html", "caption": "**Extra.** Line up buttons for a selection of cards."}
+      ],
+      "questions": [
+        {"id": "ok", "legend": "What should Shift + drag on a card do?", "options": [
+          {"value": "A: line up with other cards", "rec": true},
+          {"value": "B: straight line only"},
+          {"value": "Both: line up with cards, straight line when none are near"},
+          {"value": "Change something (say below)"}
+        ]},
+        {"id": "buttons", "legend": "Also add Line up buttons for selected cards?", "options": [
+          {"value": "Yes, add them", "rec": true},
+          {"value": "No, just the drag"}
+        ]},
+        {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. line up without holding Shift, or use Alt instead"}
+      ],
+      "pick": "A, plus the Line up buttons."
+    }
+  }
+}

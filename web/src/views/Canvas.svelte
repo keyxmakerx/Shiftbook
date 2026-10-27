@@ -17,7 +17,7 @@
   // Day has for logging: today's hours, "Where was I?", Log work, Done tickets and the wrap-up.
   // Step 2 adds project areas (drop a card in to give it the project), links between cards
   // (automatic and drawn) and the timeline. Step 3 (round 12) adds the toolbox: the hand
-  // pans, Select rubber-bands cards that then move together, Box (or Shift + drag anywhere)
+  // pans, Select rubber-bands cards that then move together, Box (or Shift + drag on empty paper)
   // draws a box that becomes a project's area or a plain labelled box; boxes fold up to a
   // coloured count. Step 4 adds piles (drop a card on a card; click to fan out) and the
   // cabinet of drawers (drag a card or pile onto one to file it off the Desk), plus Tidy into
@@ -46,12 +46,16 @@
     drawerAt,
     fanSpots,
     fitAll,
+    LINE_UP_PX,
+    lineUp,
+    lineUpWith,
     MIN_AREA,
     NEW_AREA,
     rectFrom,
     toCanvas,
     zoomAt,
     type DeskBox,
+    type Guide,
     type Rect,
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
@@ -110,6 +114,9 @@
   let selected = $state(new Set<string>());
   /** The selected card being dragged and how far, so the others follow. */
   let groupDrag = $state<{ key: string; dx: number; dy: number } | null>(null);
+  /** Shift is held on a card being dragged: it lines up, and these guides show with what. */
+  let liningUp = $state(false);
+  let guides = $state<Guide[]>([]);
   /** A rubber band (Select) or a box being drawn (Box / Shift), in board pixels. */
   let band = $state<{ x0: number; y0: number; x1: number; y1: number; drawing: boolean } | null>(null);
   /** A box just drawn, waiting for "What is this box?". */
@@ -230,7 +237,25 @@
     if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
     hoverDrawer = drawerAt(at.cx, at.cy);
     const p = pos(card);
-    hoverCard = hoverDrawer || groupDrag ? null : (dropTarget(card, p.x + dx, p.y + dy)?.key ?? null);
+    hoverCard = hoverDrawer || groupDrag || liningUp ? null : (dropTarget(card, p.x + dx, p.y + dy)?.key ?? null);
+  }
+
+  /** Shift + drag a card (round 15): it pulls into line with the other cards showing, the
+   *  piles, and the inside of drawn boxes, with guide lines like a drawing app's. */
+  function lineUpCard(card: Card, x: number, y: number, on: boolean): { x: number; y: number } {
+    liningUp = on && mode === 'free';
+    if (!liningUp) {
+      guides = [];
+      return { x, y };
+    }
+    const moving = selected.has(keyOf(card)) ? selected : new Set([keyOf(card)]);
+    const others = [
+      ...shown.filter((c) => !c.stack && !moving.has(keyOf(c))).map((c) => ({ x: c.x, y: c.y })),
+      ...piles.filter((st) => st.id !== card.stack).map((st) => ({ x: st.x, y: st.y })),
+    ];
+    const lined = lineUpWith(x, y, others, boxes.filter((b) => !b.collapsed), LINE_UP_PX / view.zoom);
+    guides = lined.guides;
+    return { x: lined.x, y: lined.y };
   }
 
   async function pileMove(st: CanvasStack, x: number, y: number, at: { cx: number; cy: number }) {
@@ -438,8 +463,11 @@
     const dx = x - from.x;
     const dy = y - from.y;
     const grouped = !!groupDrag;
+    const lined = liningUp;
     groupDrag = null;
     hoverCard = null;
+    liningUp = false;
+    guides = [];
     // A selected card brings the rest of the selection along.
     const group = selected.has(keyOf(card)) ? cards.filter((c) => c !== card && selected.has(keyOf(c))) : [];
     // Dropped on a drawer: filed (with the rest of the selection).
@@ -448,7 +476,8 @@
     dragging = false;
     if (drawer) return fileThese([card, ...group], drawer);
     // Dropped on another card or a pile: they pile up.
-    const target = grouped ? null : dropTarget(card, x, y);
+    // Lining up never piles: the card lands beside the others, in line.
+    const target = grouped || lined ? null : dropTarget(card, x, y);
     if (target) {
       if (!(await attempt(() => api.canvasStack(refOf(card), target.ref, target.x, target.y).then(() => true)))) return;
       await load();
@@ -844,6 +873,25 @@
     drawn = { rect, sx: Math.min(Math.max(8, sx), w - 310), sy: Math.min(Math.max(8, sy), h - 260) };
   }
 
+  /** The Line up buttons (round 15): the selected cards in a row, a column or a grid, evenly
+   *  spaced from their top left. One Undo puts them all back. */
+  async function lineUpSelected(how: 'row' | 'column' | 'grid') {
+    const picked = cards.filter((c) => selected.has(keyOf(c)) && !c.stack);
+    if (picked.length < 2) return;
+    const before = picked.map((c) => ({ key: keyOf(c), x: c.x, y: c.y }));
+    const spots = lineUp(picked, how);
+    for (const [i, c] of picked.entries()) await place(c, Math.round(spots[i]!.x), Math.round(spots[i]!.y));
+    const word = how === 'row' ? 'in a row' : how === 'column' ? 'in a column' : 'in a grid';
+    toast(`Lined up ${picked.length} cards ${word}`, 'Undo', () =>
+      void (async () => {
+        for (const b of before) {
+          const c = cards.find((k) => keyOf(k) === b.key);
+          if (c) await place(c, b.x, b.y);
+        }
+      })(),
+    );
+  }
+
   /** "Box these": a box just around the selected cards. */
   function boxSelection() {
     const picked = cards.filter((c) => selected.has(keyOf(c)));
@@ -1155,11 +1203,24 @@
           dropping={hoverCard === keyOf(card)}
           extra={cardExtra(card)}
           ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}
+          lineUp={(x, y, on) => lineUpCard(card, x, y, on)}
           onmove={(x, y, at) => void move(card, x, y, at)}
           onchanged={() => void load()}
           onlink={() => (linkFrom = card)}
           onpick={() => void pickLinkEnd(card)}
         />
+      {/each}
+      {#each guides as g, i (i)}
+        <span
+          class="guide {g.dir}"
+          class:gap={g.gap}
+          style:left="{g.dir === 'upright' ? g.at : g.from}px"
+          style:top="{g.dir === 'upright' ? g.from : g.at}px"
+          style:width={g.dir === 'flat' ? `${g.to - g.from}px` : null}
+          style:height={g.dir === 'upright' ? `${g.to - g.from}px` : null}
+          style:--w="{1.5 / view.zoom}px"
+          aria-hidden="true"
+        ></span>
       {/each}
       {#if jot}
         <!-- svelte-ignore a11y_autofocus -->
@@ -1229,7 +1290,7 @@
           <button type="button" class="tb" aria-pressed={tool === 'select'} title="Select: drag around cards, then move them together" onclick={() => (tool = 'select')}>
             <Icon name="select" size={16} /><span>Select</span>
           </button>
-          <button type="button" class="tb" aria-pressed={tool === 'box'} title="Box: drag to draw a box for a project or a label (Shift + drag works with any tool)" onclick={() => (tool = 'box')}>
+          <button type="button" class="tb" aria-pressed={tool === 'box'} title="Box: drag to draw a box for a project or a label (Shift + drag on empty paper works with any tool)" onclick={() => (tool = 'box')}>
             <Icon name="box" size={16} /><span>Box</span>
           </button>
         {/if}
@@ -1258,6 +1319,14 @@
       <div class="selbar" role="toolbar" aria-label="Selection">
         <span>{selected.size} selected · drag one to move them all</span>
         <button type="button" class="btn" onclick={boxSelection}><Icon name="box" size={13} /> Box these</button>
+        {#if selected.size > 1}
+          <span class="lineup" role="group" aria-label="Line up">
+            <span class="lbl">Line up</span>
+            <button type="button" class="btn" onclick={() => void lineUpSelected('row')}>In a row</button>
+            <button type="button" class="btn" onclick={() => void lineUpSelected('column')}>In a column</button>
+            <button type="button" class="btn" onclick={() => void lineUpSelected('grid')}>Tidy grid</button>
+          </span>
+        {/if}
         <button type="button" class="btn" onclick={() => (selected = new Set())}>Clear</button>
       </div>
     {/if}
@@ -1334,7 +1403,7 @@
     {:else if mode === 'timeline'}
       <p class="banner" role="status">The timeline: your layout is kept. Back to my layout puts every card where it was.</p>
     {/if}
-    <p class="hint">Drag cards · Shift + drag to draw a box · double-click to jot · scroll to zoom · Shift + scroll to pan</p>
+    <p class="hint">Drag cards · Shift + drag a card to line it up · Shift + drag paper to draw a box · double-click to jot · scroll to zoom · Shift + scroll to pan</p>
   </div>
 
   <aside class="panel" aria-label="Today">
@@ -1498,6 +1567,50 @@
     color: var(--accent);
   }
 
+  /* Lining up (round 15): thin red lines, dashed for edges, solid with ends for equal gaps. */
+  .guide {
+    position: absolute;
+    z-index: 99996;
+    pointer-events: none;
+  }
+  .guide.upright {
+    width: 0;
+    border-left: var(--w) dashed var(--bad);
+  }
+  .guide.flat {
+    height: 0;
+    border-top: var(--w) dashed var(--bad);
+  }
+  .guide.gap.flat {
+    border-left: var(--w) solid var(--bad);
+    border-right: var(--w) solid var(--bad);
+    height: 10px;
+    margin-top: -5px;
+    background: linear-gradient(var(--bad), var(--bad)) center / 100% var(--w) no-repeat;
+    border-top: 0;
+  }
+  .guide.gap.upright {
+    border-top: var(--w) solid var(--bad);
+    border-bottom: var(--w) solid var(--bad);
+    width: 10px;
+    margin-left: -5px;
+    background: linear-gradient(var(--bad), var(--bad)) center / var(--w) 100% no-repeat;
+    border-left: 0;
+  }
+  .lineup {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 8px;
+    border-left: 1px solid var(--rule);
+  }
+  .lineup .lbl {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mut);
+  }
   .selbar {
     position: absolute;
     left: 50%;

@@ -2,6 +2,15 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 27 Oct 2026 (lining cards up)
+Card `r15-lineup` (`tools/signoff/rounds/r15-lineup.json`, mockups `mocks/r15-lineup-*.html`),
+approved with A and the buttons:
+- **Shift + drag a card lines it up** (A). Shift + drag on empty paper still draws a box. The
+  owner asked for it to be "dynamic like Lucidchart" and to "consider drawn boxes and lining up
+  inside them", so it uses smart guides: other cards' edges, a box's inside edges and middle,
+  and even spacing with the row or column, each shown with red guide lines.
+- **Line up buttons:** In a row, In a column and Tidy grid on the selection bar, with Undo.
+
 ## Round 15 — 26 Oct 2026 (turning protection off)
 - **Copy and screenshot protection switches:** Settings → Security gets two switches, "Block
   copying text" and "Hide from screenshots", both on by default. Turning one off asks once with a

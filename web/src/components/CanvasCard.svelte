@@ -37,6 +37,7 @@
     faded = false,
     extra,
     ondrag,
+    lineUp,
     onmove,
     onchanged,
     onlink,
@@ -66,6 +67,8 @@
     extra?: () => MenuSpec['sections'];
     /** Being dragged this far (canvas units), with the pointer's screen point. */
     ondrag?: (dx: number, dy: number, at: { cx: number; cy: number }) => void;
+    /** Where a drag to (x, y) lands, given whether Shift is held to line it up (round 15). */
+    lineUp?: (x: number, y: number, on: boolean) => { x: number; y: number };
     /** "Link to another card" was chosen on this card. */
     onlink?: () => void;
     /** This card was picked as the other end of a link. */
@@ -151,19 +154,30 @@
     e.stopPropagation();
     const start = { x: e.clientX, y: e.clientY };
     let moved = false;
+    let last = start;
     el?.setPointerCapture(e.pointerId);
+    const follow = (shift: boolean) => {
+      const to = { x: x + (last.x - start.x) / zoom, y: y + (last.y - start.y) / zoom };
+      const at = lineUp ? lineUp(to.x, to.y, shift) : to;
+      drag = { dx: at.x - x, dy: at.y - y };
+      ondrag?.(drag.dx, drag.dy, { cx: last.x, cy: last.y });
+    };
     const move = (m: PointerEvent) => {
-      const dx = (m.clientX - start.x) / zoom;
-      const dy = (m.clientY - start.y) / zoom;
       if (!moved && Math.hypot(m.clientX - start.x, m.clientY - start.y) < 4) return;
       moved = true;
-      drag = { dx, dy };
-      ondrag?.(dx, dy, { cx: m.clientX, cy: m.clientY });
+      last = { x: m.clientX, y: m.clientY };
+      follow(m.shiftKey);
+    };
+    // Pressing or letting go of Shift mid-drag lines up (or lets go) without moving the mouse.
+    const shiftKey = (k: KeyboardEvent) => {
+      if (k.key === 'Shift' && moved) follow(k.type === 'keydown');
     };
     const up = (u: PointerEvent) => {
       el?.removeEventListener('pointermove', move);
       el?.removeEventListener('pointerup', up);
       el?.removeEventListener('pointercancel', up);
+      window.removeEventListener('keydown', shiftKey);
+      window.removeEventListener('keyup', shiftKey);
       if (moved && drag) onmove(Math.round(x + drag.dx), Math.round(y + drag.dy), { cx: u.clientX, cy: u.clientY });
       else if (left) clicked();
       drag = null;
@@ -171,6 +185,8 @@
     el?.addEventListener('pointermove', move);
     el?.addEventListener('pointerup', up);
     el?.addEventListener('pointercancel', up);
+    window.addEventListener('keydown', shiftKey);
+    window.addEventListener('keyup', shiftKey);
   }
 
   // ----- opening -----
