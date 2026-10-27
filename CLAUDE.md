@@ -50,7 +50,8 @@ docs/               SPEC, ARCHITECTURE, SECURITY, ROADMAP, IMPORT_FORMAT
    Pre-approved (still mention when you add them): `tauri` + plugins `dialog`/`fs`, `serde`,
    `serde_json`, `sqlx` (sqlite, sqlcipher via `libsqlite3-sys`), `uuid`, `time` or `chrono`,
    `thiserror`, `argon2`, `chacha20poly1305`, `rand`, `zeroize`, `secrecy`, `rust_xlsxwriter`,
-   `csv`, `zip`, `zstd` or `flate2`, `svelte`, `vite`, `typescript`, `vitest`.
+   `csv`, `zip`, `zstd` or `flate2`, `svelte`, `vite`, `typescript`, `vitest`, `ts-rs` (build-time
+   only, behind each crate's `ts` feature).
 8. **Never commit user data.** `*.db`, `*.sqlite*`, `*.json` exports and anything in `data/` or
    `local-data/` are gitignored. The import file lives outside the repo.
 9. **Cross-platform:** use standard web APIs only (WebView2, WebKit and WebKitGTK must all work).

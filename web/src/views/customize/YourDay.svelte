@@ -3,12 +3,13 @@
   // end-of-day wrap-up (round 7), the optional timer (off by default) and the headings of
   // "Copy for stand-up" and your own time buttons (round 15).
   import { api } from '../../lib/api';
+  import { MAX_TIME_BUTTONS } from '../../lib/api/generated/constants';
   import { fmtMinutes } from '../../lib/format';
   import { app, DEFAULT_TIMES, savePref, timeButtons } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
 
-  /** Most time buttons (`shiftbook_core::prefs::MAX_TIME_BUTTONS`). */
-  const MAX_TIMES = 5;
+  /** Most time buttons (core's `MAX_TIME_BUTTONS`). */
+  const MAX_TIMES = MAX_TIME_BUTTONS;
 
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 

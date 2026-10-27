@@ -21,13 +21,16 @@ pub const MAX_OFFSET: i32 = 4000;
 
 /// How a window shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum WindowMode {
     /// Floating where it was put.
     Open,
     /// Just the title bar.
     Rolled,
-    /// Only its button in the bottom bar.
+    /// Only its button in the bottom bar. Sent as "min", the word the UI and the stored
+    /// setting use (it was "minimised", so a minimised window came back wrong after a restart).
+    #[serde(rename = "min")]
     Minimised,
     /// Fills the space above the bottom bar.
     Full,
@@ -56,6 +59,7 @@ impl WindowMode {
 
 /// One window: what it shows, how and where (pixels, top left of the work area).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct WindowSpot {
     /// The record it shows.
@@ -187,5 +191,14 @@ mod tests {
             .join(";");
         assert_eq!(parse_windows(&many).len(), MAX_WINDOWS);
         assert!(parse_windows("").is_empty());
+    }
+
+    #[test]
+    fn a_minimised_window_goes_out_as_min() {
+        // The word the UI and the stored setting use; "minimised" came back wrong.
+        assert_eq!(
+            serde_json::to_value(WindowMode::Minimised).unwrap(),
+            serde_json::json!("min")
+        );
     }
 }

@@ -23,8 +23,12 @@
 ## Key decisions
 - **One `DataApi` contract.** Each method maps 1:1 to a Tauri command *and* a future REST
   endpoint (e.g. `listTimeEntries(range)` ↔ `GET /api/time-entries?from=&to=`). Define request and
-  response types once in Rust with `serde` and generate TS types (e.g. `ts-rs` — ask before adding)
-  so desktop and server share the same shapes.
+  response types once in Rust with `serde`; `ts-rs` writes them as TypeScript into
+  `web/src/lib/api/generated/` (`npm run types`, which runs `cargo test --features ts`; the `ts`
+  feature is never on in a release build). Core's numbers the UI needs (card size, limits) are
+  written there too (`core::ts_constants`), so the UI imports them instead of copying them.
+  `lib/api/typecheck.ts` checks at compile time that every type in `DataApi.ts` is exactly the
+  generated one, and CI fails if the generated files are out of date.
 - **Owner scoping everywhere.** Every repository method takes an `OwnerId`. Desktop passes the
   single local user; the server passes the authenticated user. This is what makes multi-user a
   configuration change, not a rewrite.

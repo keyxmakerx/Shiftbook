@@ -8,6 +8,7 @@
   import { focusNow } from '../lib/focus';
   import { fmtMinutes } from '../lib/format';
   import { KIND_LABEL } from '../lib/notes';
+  import { untrack } from 'svelte';
   import { openBoard } from '../lib/boards.svelte';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { openWindow } from '../lib/windows.svelte';
@@ -47,10 +48,11 @@
     cards = (await attempt(() => api.canvasDrawer(drawer.key))) ?? [];
   }
 
-  // Loads on opening, and again when the drawer's count changes.
+  // Loads on opening, and again when the drawer's count or anything else changes.
   $effect(() => {
     void drawer.count;
-    void load();
+    void app.changed;
+    untrack(() => void load());
   });
 
   function title(c: CanvasCard): { kind: string; text: string } {

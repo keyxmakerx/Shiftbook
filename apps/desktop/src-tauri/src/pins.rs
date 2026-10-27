@@ -17,6 +17,7 @@ type Res<T> = Result<T, CommandError>;
 
 /// One chip.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct PinView {
     kind: CardKind,
@@ -136,6 +137,7 @@ pub async fn unpin(s: State<'_, VaultSession>, kind: String, id: String) -> Res<
 
 /// One card's follow-up day.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct FollowUpView {
     kind: CardKind,

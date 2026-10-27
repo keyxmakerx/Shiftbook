@@ -1,7 +1,9 @@
 // The end-of-day wrap-up: when it shows, and the "Tomorrow I start with…" lines.
 
-/** Most lines on the list (matches `shiftbook_core::nextup::MAX_NEXT_UP`). */
-export const MAX_LINES = 7;
+import { MAX_NEXT_UP } from './api/generated/constants';
+
+/** Most lines on the list (core's `MAX_NEXT_UP`). */
+export const MAX_LINES = MAX_NEXT_UP;
 
 /** True from the wrap-up time (`HH:MM`, local) until midnight; never when it's off. */
 export function isWrapupTime(now: Date, at: string | null): boolean {

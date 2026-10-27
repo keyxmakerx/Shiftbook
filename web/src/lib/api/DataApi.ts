@@ -784,7 +784,7 @@ export interface CardRef {
 export interface CanvasLink {
   a: CardRef;
   b: CardRef;
-  reason: { kind: 'ticket' | 'word'; text: string } | null;
+  reason: { kind: 'ticket'; text: string } | { kind: 'word'; text: string } | null;
   drawn: boolean;
 }
 
@@ -1193,8 +1193,6 @@ export interface DataApi {
   canvasLabelRemove(id: string, removed: boolean): Promise<void>;
   /** Drop a card on another (shown at `onto` x, y): they pile up, or it joins that pile. */
   canvasStack(card: CardRef, onto: CardRef, ontoX: number, ontoY: number): Promise<string>;
-  /** Take a card off its pile, to x, y. */
-  canvasUnstack(card: CardRef, x: number, y: number): Promise<void>;
   canvasStackMove(id: string, x: number, y: number): Promise<void>;
   /** Name a pile; blank shows its count. */
   canvasStackRename(id: string, name: string): Promise<void>;

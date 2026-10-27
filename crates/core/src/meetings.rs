@@ -110,6 +110,7 @@ pub fn meeting_finished(
 
 /// Where today's meeting of a series stands at `now` (minutes since local midnight).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case", tag = "state", content = "minutes")]
 pub enum MeetingToday {
     /// Later today, before its reminder starts.

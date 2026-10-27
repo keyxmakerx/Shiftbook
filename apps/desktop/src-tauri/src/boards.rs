@@ -26,6 +26,7 @@ type Res<T> = Result<T, CommandError>;
 
 /// One step on the way down from the Desk.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CrumbView {
     key: String,
@@ -34,6 +35,7 @@ pub struct CrumbView {
 
 /// A board inside a board, for the list and the tree.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ChildView {
     key: String,
@@ -48,6 +50,7 @@ pub struct ChildView {
 
 /// A board as its full screen shows it.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct BoardView {
     key: String,

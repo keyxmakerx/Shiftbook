@@ -117,7 +117,6 @@
     "allow-canvas-label-save",
     "allow-canvas-label-remove",
     "allow-canvas-stack",
-    "allow-canvas-unstack",
     "allow-canvas-stack-move",
     "allow-canvas-stack-rename",
     "allow-canvas-stack-dissolve",

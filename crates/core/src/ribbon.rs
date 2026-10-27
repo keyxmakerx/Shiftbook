@@ -23,6 +23,7 @@ pub const RIBBON_WEEKS: u32 = 4;
 
 /// Minutes on one project on one day.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct DayPart {
     /// The project (`None` = No project).
@@ -33,10 +34,12 @@ pub struct DayPart {
 
 /// One day in the ribbon.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct RibbonDay {
     /// The date.
     #[serde(with = "iso_date")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub date: Date,
     /// Total minutes.
     pub minutes: Minutes,
@@ -52,10 +55,12 @@ pub struct RibbonDay {
 
 /// One week in the ribbon.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct RibbonWeek {
     /// First day.
     #[serde(with = "iso_date")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub week_start: Date,
     /// Total minutes.
     pub minutes: Minutes,

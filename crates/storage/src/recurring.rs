@@ -168,7 +168,8 @@ fn checked(owner: OwnerId, id: RecurringTaskId, input: &RecurringInput) -> Resul
 }
 
 /// Mark `task` done on `date` (see [`SqliteStore::mark_recurring_done`]), noting the expiry
-/// date it was renewed to, if any.
+/// date it was renewed to, if any. The Tickets tray's roll-up for the thing is never the one
+/// marked: it comes and goes with the tray, and the Done would go with it.
 async fn mark_done_in(
     conn: &mut SqliteConnection,
     owner: OwnerId,
@@ -179,7 +180,8 @@ async fn mark_done_in(
     let id = task.id;
     let existing: Option<String> = sqlx::query_scalar(
         "SELECT id FROM time_entries WHERE owner_id = $1 AND target_type = 'recurring' \
-         AND target_id = $2 AND date = $3 AND deleted_at IS NULL ORDER BY id LIMIT 1",
+         AND target_id = $2 AND date = $3 AND deleted_at IS NULL AND source IS NULL \
+         ORDER BY id LIMIT 1",
     )
     .bind(owner.to_string())
     .bind(id.to_string())

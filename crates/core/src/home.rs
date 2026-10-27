@@ -15,6 +15,7 @@ use crate::seed::{CATEGORIES, RECURRING_TYPES};
 
 /// What the user said Shiftbook is for.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum UseMode {
     /// Work only (the default, and Shiftbook as it was before round 15).

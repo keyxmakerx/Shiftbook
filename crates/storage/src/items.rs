@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use shiftbook_core::ids::{ItemId, OwnerId, ProjectId, RecurringTaskId};
-use shiftbook_core::items::{reopens, seed_item, ItemKind, Occurrence};
+use shiftbook_core::items::{done_from, reopens, seed_item, ItemKind, Occurrence};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
 use shiftbook_core::samework::{ticket_so_far, SoFar};
@@ -24,6 +24,8 @@ use crate::work::{corrupt_date, opt_uuid};
 pub(crate) struct ItemState {
     /// The item.
     pub id: ItemId,
+    /// Ticked done.
+    pub done: bool,
     /// Its notepad.
     pub note: Option<String>,
     /// The project it was last given.
@@ -39,7 +41,7 @@ pub(crate) async fn item_for_number(
     number: &str,
 ) -> Result<ItemState> {
     let row = sqlx::query(
-        "SELECT id, note, project_id, recurring_id FROM items WHERE owner_id = $1 \
+        "SELECT id, done, note, project_id, recurring_id FROM items WHERE owner_id = $1 \
          AND lower(number) = lower($2) AND deleted_at IS NULL",
     )
     .bind(owner.to_string())
@@ -49,6 +51,7 @@ pub(crate) async fn item_for_number(
     if let Some(row) = row {
         return Ok(ItemState {
             id: ItemId::from_uuid(parse_uuid(row.try_get("id")?)?),
+            done: row.try_get("done")?,
             note: row.try_get("note")?,
             project: opt_uuid(row.try_get("project_id")?)?.map(ProjectId::from_uuid),
             recurring: opt_uuid(row.try_get("recurring_id")?)?.map(RecurringTaskId::from_uuid),
@@ -58,6 +61,7 @@ pub(crate) async fn item_for_number(
     insert_item(conn, owner, id, number, false, None, None).await?;
     Ok(ItemState {
         id,
+        done: false,
         note: None,
         project: None,
         recurring: None,
@@ -87,6 +91,84 @@ async fn insert_item(
     .bind(now_text())
     .execute(&mut *conn)
     .await?;
+    Ok(())
+}
+
+/// An item's live occurrences as (day, done): tray rows, and tickets on the user's live
+/// entries.
+pub(crate) async fn occurrences(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    item: ItemId,
+) -> Result<Vec<(Date, bool)>> {
+    let rows: Vec<(String, bool)> = sqlx::query_as(
+        "SELECT date, done FROM ticket_tray WHERE owner_id = $1 AND item_id = $2 \
+         AND deleted_at IS NULL \
+         UNION ALL \
+         SELECT e.date, t.done FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+         WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.item_id = $2 \
+         AND t.deleted_at IS NULL AND e.deleted_at IS NULL",
+    )
+    .bind(owner.to_string())
+    .bind(item.to_string())
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.iter()
+        .map(|(d, done)| Ok((corrupt_date(d)?, *done)))
+        .collect()
+}
+
+/// The newest day an item is live on, if any.
+pub(crate) async fn newest_day(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    item: ItemId,
+) -> Result<Option<Date>> {
+    Ok(occurrences(conn, owner, item)
+        .await?
+        .into_iter()
+        .map(|(d, _)| d)
+        .max())
+}
+
+/// After occurrences were taken out or brought back: the item's done tick follows its newest
+/// live day again (`shiftbook_core::items::done_from`). An item with nothing left keeps it.
+pub(crate) async fn refresh_item(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    item: ItemId,
+) -> Result<()> {
+    if let Some(done) = done_from(&occurrences(conn, owner, item).await?) {
+        sqlx::query(
+            "UPDATE items SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4 \
+             AND done <> $1",
+        )
+        .bind(done)
+        .bind(now_text())
+        .bind(item.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(())
+}
+
+/// [`refresh_item`] for every item with a row in `sql`, a query of `item_id`s taking the
+/// owner as `$1` and one more value as `$2`.
+pub(crate) async fn refresh_items_of(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    sql: &'static str,
+    value: &str,
+) -> Result<()> {
+    let ids: Vec<Option<String>> = sqlx::query_scalar(sql)
+        .bind(owner.to_string())
+        .bind(value)
+        .fetch_all(&mut *conn)
+        .await?;
+    for id in ids.into_iter().flatten() {
+        refresh_item(conn, owner, ItemId::from_uuid(parse_uuid(&id)?)).await?;
+    }
     Ok(())
 }
 
@@ -130,13 +212,16 @@ pub(crate) async fn set_item_done(
     from: Date,
 ) -> Result<()> {
     let now = now_text();
-    sqlx::query("UPDATE items SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4")
-        .bind(done)
-        .bind(&now)
-        .bind(item.to_string())
-        .bind(owner.to_string())
-        .execute(&mut *conn)
-        .await?;
+    sqlx::query(
+        "UPDATE items SET done = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4 \
+         AND done <> $1",
+    )
+    .bind(done)
+    .bind(&now)
+    .bind(item.to_string())
+    .bind(owner.to_string())
+    .execute(&mut *conn)
+    .await?;
     let tray: Vec<(String, String, bool)> = sqlx::query_as(
         "SELECT id, date, done FROM ticket_tray WHERE owner_id = $1 AND item_id = $2",
     )
@@ -229,6 +314,42 @@ pub(crate) async fn set_item_home(
     .bind(owner.to_string())
     .execute(&mut *conn)
     .await?;
+    Ok(())
+}
+
+/// Bring every copy of an item back in step after rows came in from elsewhere (a sync file):
+/// its done tick follows its newest live day, a done item finishes every row, and every row
+/// shows the item's notepad. Rows already in step aren't touched, so their `updated_at` stays.
+pub(crate) async fn repair_item(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    item: ItemId,
+) -> Result<()> {
+    refresh_item(conn, owner, item).await?;
+    let (done, note): (bool, Option<String>) =
+        sqlx::query_as("SELECT done, note FROM items WHERE id = $1 AND owner_id = $2")
+            .bind(item.to_string())
+            .bind(owner.to_string())
+            .fetch_one(&mut *conn)
+            .await?;
+    if done {
+        set_item_done(conn, owner, item, true, Date::MIN).await?;
+    }
+    let now = now_text();
+    for sql in [
+        "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE owner_id = $3 AND item_id = $4 \
+         AND COALESCE(note, '') <> COALESCE($1, '')",
+        "UPDATE tickets SET note = $1, updated_at = $2 WHERE owner_id = $3 AND item_id = $4 \
+         AND COALESCE(note, '') <> COALESCE($1, '')",
+    ] {
+        sqlx::query(sql)
+            .bind(note.as_deref())
+            .bind(&now)
+            .bind(owner.to_string())
+            .bind(item.to_string())
+            .execute(&mut *conn)
+            .await?;
+    }
     Ok(())
 }
 
@@ -380,7 +501,8 @@ pub struct ItemSummary {
 }
 
 impl crate::SqliteStore {
-    /// Every live ticket item with its time so far; with `numbers`, only those tickets
+    /// Every ticket item still on some day, with its time so far; with `numbers`, only those
+    /// tickets
     /// (ignoring case).
     pub async fn item_summaries(
         &self,
@@ -452,6 +574,8 @@ impl crate::SqliteStore {
                 slot.1 = Some((date, title));
             }
         }
+        // A ticket with nothing left on any day (taken out, or a typo) isn't shown.
+        items.retain(|i| by_item.contains_key(&i.id.to_string()));
         for item in &mut items {
             if let Some((rows, title, cards)) = by_item.get_mut(&item.id.to_string()) {
                 item.so_far = ticket_so_far(rows);
@@ -486,4 +610,97 @@ impl crate::SqliteStore {
         tx.commit().await?;
         Ok(())
     }
+}
+
+/// Test-only check that every copy of a ticket agrees with its item, and that every day's
+/// roll-up entries match its tray (see the review in DECISIONS.md, 27 Oct). Run it at the end
+/// of a test after any mix of actions.
+#[cfg(test)]
+pub(crate) async fn assert_in_step(store: &crate::SqliteStore, owner: OwnerId) {
+    let pool = store.pool();
+    let me = owner.to_string();
+    // Every live ticket on a tray day or a user's entry belongs to an item.
+    let loose: i64 = sqlx::query_scalar(
+        "SELECT (SELECT count(*) FROM ticket_tray WHERE owner_id = $1 AND deleted_at IS NULL \
+         AND item_id IS NULL) + (SELECT count(*) FROM tickets t JOIN time_entries e \
+         ON e.id = t.time_entry_id WHERE t.owner_id = $1 AND t.deleted_at IS NULL \
+         AND e.deleted_at IS NULL AND e.source IS NULL AND t.item_id IS NULL)",
+    )
+    .bind(&me)
+    .fetch_one(pool)
+    .await
+    .unwrap();
+    assert_eq!(loose, 0, "tickets with no item");
+
+    // (item, day, updated, done, note, item done, item note) for every live occurrence.
+    type Row = (
+        String,
+        String,
+        String,
+        bool,
+        Option<String>,
+        bool,
+        Option<String>,
+    );
+    let rows: Vec<Row> = sqlx::query_as(
+        "SELECT i.id, r.date, r.updated_at, r.done, r.note, i.done, i.note \
+             FROM ticket_tray r JOIN items i ON i.id = r.item_id \
+             WHERE r.owner_id = $1 AND r.deleted_at IS NULL AND i.deleted_at IS NULL \
+             UNION ALL \
+             SELECT i.id, e.date, t.updated_at, t.done, t.note, i.done, i.note \
+             FROM tickets t JOIN time_entries e ON e.id = t.time_entry_id \
+             JOIN items i ON i.id = t.item_id \
+             WHERE t.owner_id = $1 AND t.deleted_at IS NULL AND e.deleted_at IS NULL \
+             AND i.deleted_at IS NULL",
+    )
+    .bind(&me)
+    .fetch_all(pool)
+    .await
+    .unwrap();
+    let mut newest: HashMap<String, (String, Vec<bool>, bool)> = HashMap::new();
+    for (item, date, _, done, note, item_done, item_note) in &rows {
+        assert_eq!(note, item_note, "a copy of {item}'s notepad differs");
+        if *item_done {
+            assert!(done, "{item} is done but its row on {date} is open");
+        }
+        let slot = newest
+            .entry(item.clone())
+            .or_insert_with(|| (date.clone(), Vec::new(), *item_done));
+        if *date > slot.0 {
+            *slot = (date.clone(), Vec::new(), *item_done);
+        }
+        if *date == slot.0 {
+            slot.1.push(*done);
+        }
+    }
+    for (item, (date, dones, item_done)) in &newest {
+        assert!(
+            dones.iter().all(|d| d == item_done),
+            "{item}: its newest day {date} says {dones:?} but the item says {item_done}"
+        );
+    }
+
+    // Each day's roll-ups hold exactly its tray: (day, project, repeating thing, minutes).
+    let mut tray: Vec<(String, String, String, i64)> = sqlx::query_as(
+        "SELECT date, COALESCE(project_id, ''), COALESCE(recurring_id, ''), sum(minutes) \
+         FROM ticket_tray WHERE owner_id = $1 AND deleted_at IS NULL \
+         GROUP BY date, COALESCE(project_id, ''), COALESCE(recurring_id, '')",
+    )
+    .bind(&me)
+    .fetch_all(pool)
+    .await
+    .unwrap();
+    let mut rollups: Vec<(String, String, String, i64)> = sqlx::query_as(
+        "SELECT date, COALESCE(tray_project_id, ''), \
+         CASE WHEN tray_project_id IS NULL AND target_type = 'recurring' THEN target_id \
+         ELSE '' END, minutes FROM time_entries \
+         WHERE owner_id = $1 AND source = 'tray' AND deleted_at IS NULL",
+    )
+    .bind(&me)
+    .fetch_all(pool)
+    .await
+    .unwrap();
+    tray.sort();
+    rollups.sort();
+    assert_eq!(tray, rollups, "the Tickets entries don't match the tray");
 }

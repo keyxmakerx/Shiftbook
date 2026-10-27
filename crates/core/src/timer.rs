@@ -32,6 +32,7 @@ pub fn round_timer(seconds: u64) -> Minutes {
 
 /// What Stop offers to add.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TimerOffer {
     /// All the counted time, rounded.
@@ -70,6 +71,7 @@ pub fn away_question(seconds: u64) -> Option<Minutes> {
 
 /// A timer paused by locking: which entry, and what it had counted so far.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct PausedTimer {
     /// The entry the time goes to.

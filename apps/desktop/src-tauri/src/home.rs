@@ -40,6 +40,7 @@ fn id_arg<T: std::str::FromStr>(text: &str) -> Res<T> {
 
 /// One repeating thing with everything worked out.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct RecurringView {
     id: RecurringTaskId,
@@ -215,6 +216,7 @@ pub async fn recurring_save(
 
 /// What Mark done did, for Undo.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct MarkedView {
     entry_id: String,
@@ -268,6 +270,7 @@ pub async fn recurring_renewed(
 
 /// One past round of a repeating thing (see `shiftbook_core::recurring::past_times`).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct PastTimeView {
     date: String,
@@ -326,6 +329,7 @@ pub async fn recurring_set_deleted(
 
 /// One frequency for the "every…" picker.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct FrequencyView {
     id: FrequencyId,
@@ -334,6 +338,7 @@ pub struct FrequencyView {
 
 /// The pickers on the Repeating view's form.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ChoicesView {
     frequencies: Vec<FrequencyView>,
@@ -367,6 +372,7 @@ pub async fn recurring_choices(s: State<'_, VaultSession>) -> Res<ChoicesView> {
 
 /// One list item.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ListItemView {
     id: ChecklistItemId,
@@ -376,6 +382,7 @@ pub struct ListItemView {
 
 /// One list with its items.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ListView {
     id: TaskId,
@@ -505,6 +512,7 @@ pub async fn set_use_mode(s: State<'_, VaultSession>, mode: String) -> Res<Prefs
 
 /// What came due while Shiftbook was closed.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct AwayView {
     /// The last day it was open, `YYYY-MM-DD`.

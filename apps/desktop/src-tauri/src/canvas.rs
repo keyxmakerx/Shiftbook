@@ -132,21 +132,6 @@ pub async fn canvas_stack(
     Ok(pile.to_string())
 }
 
-/// Maps to `DataApi.canvasUnstack()`: take a card off its pile, to `x`, `y`.
-#[tauri::command]
-pub async fn canvas_unstack(
-    s: State<'_, VaultSession>,
-    kind: String,
-    id: String,
-    x: i32,
-    y: i32,
-) -> Res<()> {
-    let (store, owner) = s.data().await?;
-    Ok(store
-        .unstack_card(owner, ref_arg(&kind, &id)?, x, y)
-        .await?)
-}
-
 /// Maps to `DataApi.canvasStackMove()`.
 #[tauri::command]
 pub async fn canvas_stack_move(s: State<'_, VaultSession>, id: String, x: i32, y: i32) -> Res<()> {
@@ -263,6 +248,7 @@ pub async fn canvas_drawer(s: State<'_, VaultSession>, drawer: String) -> Res<Ve
 
 /// One folder.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct FolderView {
     id: String,
@@ -301,6 +287,7 @@ pub async fn canvas_folder_remove(
 
 /// A card's spot before Tidy into stacks, for Undo.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct WasAt {
     kind: CardKind,
@@ -311,6 +298,7 @@ pub struct WasAt {
 
 /// What Tidy into stacks did.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TidyView {
     /// The piles it made.

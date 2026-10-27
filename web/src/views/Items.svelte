@@ -4,7 +4,7 @@
   // on); chores are the repeating things. Open, Follow up and Done split them; the project and
   // kind chips and the find box narrow them. It takes over the Done tickets board: Done lists
   // every ticket ticked done. Tasks join when Tasks are built.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
@@ -46,8 +46,12 @@
   }
 
   onMount(() => {
-    void load();
     void refreshRepeating();
+  });
+  // Loads on opening, and again whenever something changes elsewhere.
+  $effect(() => {
+    void app.changed;
+    untrack(() => void load());
   });
 
   function ticketFollow(t: ItemSummary): string | null {
@@ -152,9 +156,9 @@
     const done = !t.done;
     const ok = await attempt(() => api.itemSetDone(t.id, done, app.today).then(() => true));
     if (!ok) return;
-    await Promise.all([load(), refresh()]);
+    await refresh();
     toast(done ? `${t.number} done` : `${t.number} open again`, 'Undo', () => {
-      void attempt(() => api.itemSetDone(t.id, !done, app.today)).then(() => Promise.all([load(), refresh()]));
+      void attempt(() => api.itemSetDone(t.id, !done, app.today)).then(refresh);
     });
   }
 

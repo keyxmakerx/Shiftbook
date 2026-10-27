@@ -2,7 +2,7 @@
   // One window (round 12): a notepad or a note floating over Shiftbook. Drag the title bar to
   // move it, the corner to resize it. ▴ rolls it up to the title bar, – tucks it into the
   // bottom bar, ⤢ fills the screen, ✕ closes it. What's typed saves as you go.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { Note, WindowSpot } from '../lib/api';
   import { app, attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
@@ -17,62 +17,101 @@
   const key = $derived(winKey(win));
   const front = $derived(windows.front === key);
 
-  // What the window shows, loaded once; the text is the window's own draft from then on.
+  // What the window shows. It loads again when something changes elsewhere, unless there's
+  // typing here not saved yet; a save first checks nothing else wrote the notepad meanwhile.
   let title = $state('');
   let sub = $state('');
   let color = $state('var(--accent)');
   let text = $state('');
   let saved = '';
   let note: Note | null = null;
-  let gone = $state(false);
+  let isGone = $state(false);
   let status = $state<'' | 'saving' | 'saved'>('');
+  /** The newer text written somewhere else while this window had unsaved typing. */
+  let clash = $state<string | null>(null);
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   // Live position and size while dragging; saved when let go.
   let live = $state<{ x: number; y: number; w: number; h: number } | null>(null);
 
+  // Loading happens in the effect below (on opening, and after changes elsewhere).
   onMount(() => {
-    void load();
     return () => {
-      if (timer) {
-        clearTimeout(timer);
-        void save();
+      if (timer || clash !== null) {
+        if (timer) clearTimeout(timer);
+        void save(true);
       }
     };
   });
 
+  // Something changed elsewhere (a card, the tray, a sync): show it, unless typing is waiting.
+  $effect(() => {
+    void app.changed;
+    untrack(() => {
+      if (!timer && clash === null && text === saved) void load();
+    });
+  });
+
+  /** Load what the window shows; false when it's gone. */
   async function load() {
+    const now = await current();
+    if (now === null) return;
+    text = saved = now;
+  }
+
+  /** The text as stored now (and the title and colour), or null when it's gone. */
+  async function current(): Promise<string | null> {
     if (win.kind === 'entry') {
       const e = await attempt(() => api.getEntry(win.id));
-      if (!e) return void (gone = true);
+      if (!e) return gone(true);
       title = e.description || 'Untitled';
       sub = projectById(e.projectId)?.name ?? 'No project';
       color = projectColor(e.projectId);
-      text = saved = e.notes ?? '';
+      return e.notes ?? '';
     } else if (win.kind === 'tray') {
       const t = await attempt(() => api.trayItem(win.id));
-      if (!t) return void (gone = true);
+      if (!t) return gone(true);
       title = t.ticket;
       sub = t.done ? 'Ticket' : 'Ticket · still open';
       color = t.projectId ? projectColor(t.projectId) : 'var(--accent)';
-      text = saved = t.note ?? '';
+      return t.note ?? '';
     } else if (win.kind === 'note') {
       const n = await attempt(() => api.getNote(win.id));
-      if (!n) return void (gone = true);
+      if (!n) return gone(true);
       note = n;
       title = n.title;
       sub = `${n.kind[0]!.toUpperCase()}${n.kind.slice(1)} note`;
       color = n.projectId ? projectColor(n.projectId) : 'var(--warn)';
-      text = saved = n.body;
-    } else {
-      gone = true;
+      return n.body;
     }
+    return gone(true);
   }
 
-  async function save() {
+  function gone(yes: true): null {
+    isGone = yes;
+    return null;
+  }
+
+  /**
+   * Save the typing. If the notepad was written somewhere else since this window loaded it,
+   * nothing is overwritten: the window asks which to keep. `closing` keeps both instead (the
+   * newer text, then this window's), as there's no window left to ask in.
+   */
+  async function save(closing = false) {
     timer = null;
-    if (text === saved) return;
-    const body = text;
+    if (text === saved && clash === null) return;
+    const stored = await current();
+    if (stored === null) return;
+    let body = text;
+    if (stored !== saved && stored !== text) {
+      if (!closing) {
+        clash = stored;
+        status = '';
+        return;
+      }
+      body = `${stored}\n\n${text}`;
+    }
+    clash = null;
     status = 'saving';
     let ok = false;
     if (win.kind === 'entry') {
@@ -93,6 +132,21 @@
     }
     if (ok) saved = body;
     status = ok ? 'saved' : '';
+  }
+
+  /** Overwrite the newer text with this window's. */
+  function keepMine() {
+    if (clash === null) return;
+    saved = clash;
+    clash = null;
+    void save();
+  }
+
+  /** Drop this window's typing and show the newer text. */
+  function useNewer() {
+    if (clash === null) return;
+    text = saved = clash;
+    clash = null;
   }
 
   function typed() {
@@ -189,7 +243,7 @@
     </button>
   </header>
   {#if win.mode !== 'rolled'}
-    {#if gone}
+    {#if isGone}
       <p class="gone">This is no longer here. It may have been deleted or taken out of the tray.</p>
     {:else}
       <textarea
@@ -204,7 +258,15 @@
         }}
       ></textarea>
       <footer>
-        <span aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : 'Saves as you type'}</span>
+        {#if clash !== null}
+          <span class="clash" role="alert">
+            Changed somewhere else since you opened this.
+            <button type="button" onclick={keepMine}>Keep mine</button>
+            <button type="button" onclick={useNewer}>Show the newer one</button>
+          </span>
+        {:else}
+          <span aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : 'Saves as you type'}</span>
+        {/if}
         {#if win.mode !== 'full'}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span class="grip" title="Drag to resize" onpointerdown={(e) => drag(e, true)}></span>
@@ -231,6 +293,10 @@
       top calc(0.25s * var(--m)) var(--ease),
       width calc(0.25s * var(--m)) var(--ease),
       height calc(0.25s * var(--m)) var(--ease);
+  }
+
+  .clash button {
+    margin-left: 6px;
   }
 
   .win.moving {

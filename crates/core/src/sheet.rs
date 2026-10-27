@@ -43,6 +43,7 @@ pub const NO_PROJECT_KEY: &str = "none";
 
 /// How the crib sheet groups each day's entries.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum GroupBy {
     /// One line per timesheet code (the default).
@@ -54,6 +55,7 @@ pub enum GroupBy {
 
 /// How comments are written.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CommentFormat {
     /// Put the tickets in brackets after each title.
@@ -111,6 +113,7 @@ pub struct SheetContext<'a> {
 
 /// One comment item: entries with the same title merged.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SheetItem {
     /// The title.
@@ -125,6 +128,7 @@ pub struct SheetItem {
 
 /// One line to type into the timesheet.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SheetLine {
     /// Stable key for tick-offs: a code id, a project id, `unassigned` or `none`.
@@ -151,10 +155,12 @@ pub struct SheetLine {
 
 /// One day of the week.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SheetDay {
     /// The date.
     #[serde(with = "iso_date")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub date: Date,
     /// Total minutes.
     pub minutes: Minutes,
@@ -166,6 +172,7 @@ pub struct SheetDay {
 
 /// Minutes on one project in the week.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectEffort {
     /// The project (`None` = No project).
@@ -180,6 +187,7 @@ pub struct ProjectEffort {
 
 /// Something to check before submitting the timesheet.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum SheetWarning {
     /// Minutes with no timesheet code.
@@ -193,12 +201,14 @@ pub enum SheetWarning {
     NothingLogged {
         /// The day.
         #[serde(with = "iso_date")]
+        #[cfg_attr(feature = "ts", ts(type = "string"))]
         date: Date,
     },
     /// A day over 12 hours.
     LongDay {
         /// The day.
         #[serde(with = "iso_date")]
+        #[cfg_attr(feature = "ts", ts(type = "string"))]
         date: Date,
         /// As decimal hours.
         hours: String,
@@ -207,10 +217,12 @@ pub enum SheetWarning {
 
 /// The whole crib sheet for one week.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct WeekSheet {
     /// First day.
     #[serde(with = "iso_date")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub week_start: Date,
     /// How it is grouped.
     pub group_by: GroupBy,
