@@ -633,7 +633,7 @@ pub(crate) async fn assert_in_step(store: &crate::SqliteStore, owner: OwnerId) {
     assert_eq!(loose, 0, "tickets with no item");
 
     // (item, day, updated, done, note, item done, item note) for every live occurrence.
-    let rows: Vec<(
+    type Row = (
         String,
         String,
         String,
@@ -641,7 +641,8 @@ pub(crate) async fn assert_in_step(store: &crate::SqliteStore, owner: OwnerId) {
         Option<String>,
         bool,
         Option<String>,
-    )> = sqlx::query_as(
+    );
+    let rows: Vec<Row> = sqlx::query_as(
         "SELECT i.id, r.date, r.updated_at, r.done, r.note, i.done, i.note \
              FROM ticket_tray r JOIN items i ON i.id = r.item_id \
              WHERE r.owner_id = $1 AND r.deleted_at IS NULL AND i.deleted_at IS NULL \
