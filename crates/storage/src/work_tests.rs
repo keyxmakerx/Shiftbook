@@ -423,7 +423,9 @@ fn ticking_an_entry_ticket_closes_it_in_the_tray() {
             .create_entry(me, &input(DAY, 30, "Printer"), "INC5001")
             .await
             .unwrap();
-        s.set_ticket_done(me, rec.tickets[0].id, true).await.unwrap();
+        s.set_ticket_done(me, rec.tickets[0].id, true)
+            .await
+            .unwrap();
         assert!(s.tray_day(me, DAY).await.unwrap().items[0].done);
         assert!(s.tray_day(me, next).await.unwrap().items[0].done);
         assert!(s
