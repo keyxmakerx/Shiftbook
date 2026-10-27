@@ -1,0 +1,34 @@
+{
+ "meta": {"round": 15},
+ "cards": {
+  "r15-protect-responses": {
+   "round": 15,
+   "order": 71,
+   "area": "Security",
+   "version": 1,
+   "title": "Copying responses while Protected",
+   "body": [
+    "**How it works today.** Copy blocking stops Ctrl+C and right-click Copy on anything you select, typing boxes included. Every **Copy button** still works, because it hands the text over directly. Pasting into Shiftbook is never blocked.",
+    "**Tickets:** clicking a ticket chip copies its number, and right-click offers the number or its link. Those always work. Only selecting a ticket's text and pressing Ctrl+C is blocked. Pasting tickets into the Tickets tray always works.",
+    "**Responses:** there is already a button for them, but it's easy to miss. It's the bare ⧉ icon at the top of the Tickets card. It lists your responses, and picking one copies it even while Protected. In Settings → Responses there's no Copy button, so selecting the text and pressing Ctrl+C is blocked there.",
+    "Here's my proposal: add a Copy button to each response in Settings, and give the Tickets card button the word **Responses** so it's easy to find."
+   ],
+   "figures": [
+    {"html_file": "mocks/r15-protect-responses.html", "caption": "Left: **Settings → Responses** with a Copy button on each one. Right: the Tickets card's button with a label, and the menu it opens."}
+   ],
+   "questions": [
+    {
+     "id": "how",
+     "legend": "What should change for responses?",
+     "options": [
+      {"value": "Copy buttons in Settings, and label the Tickets button", "rec": true, "why": "Copy blocking stays as it is, and responses are one click away in both places."},
+      {"value": "Let Ctrl+C work anywhere on the Responses settings page", "why": "Ctrl+C works on that page. Elsewhere it's still blocked."},
+      {"value": "Both of the above"}
+     ]
+    },
+    {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. also a Responses item in Find"}
+   ],
+   "pick": "Copy buttons in Settings → Responses, and a \"Responses\" label on the Tickets card's button."
+  }
+ }
+}
