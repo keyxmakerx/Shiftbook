@@ -67,8 +67,10 @@ names the round it came from. Nothing here is optional unless it says so.
    scraps as cards; drag, pan and zoom, Fit everything; double-click to open or to jot; paper
    menus; a side panel with today's hours, "Where was I?", Log work, Done tickets and the
    wrap-up; the tab rename (Desk, Day, Timesheet, Notes, Settings on keys 1 to 5).
-   Which records show: entries and Done tickets from the last 7 days, plus older ones the owner
-   moved; every live note and Inbox scrap. The day's "Tickets" roll-up entry is not a card (its
+   Which records show: entries and Done tickets from the last 7 days (Settings → Look → The
+   Desk: 1, 3, 7 or 14 days, round 15), plus older ones the owner moved while they're pinned
+   or were moved within those days (or always, if "Cards I moved leave after the same time
+   too" is off); every live note and Inbox scrap. The day's "Tickets" roll-up entry is not a card (its
    tickets are). Cards nobody moved are placed newest first in rows from the top left, around
    the moved ones.
 2. **C2 Meaning (built):** project areas (right-click empty paper → Project area here; drag
@@ -93,8 +95,10 @@ names the round it came from. Nothing here is optional unless it says so.
    (a pile left with one card comes apart); drag the pile to move it; double-click its count
    to name it; right-click for Fan out, Rename, Take the pile apart and File in. **Tidy into
    stacks** (bottom bar) piles loose cards by project, two or more per project, with Undo.
-   **Drawers**: the cabinet under the toolbox, one drawer per project plus folders you make
-   (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
+   **Drawers**: the cabinet under the toolbox: the **Archive** first (round 15: **Put away**
+   on an entry or done-ticket card, or **Tidy up…** on the bottom bar for everything from
+   before today, older than this week, or the cards picked; nothing is lost, and the Archive
+   board has Back on the Desk), then one drawer per project plus folders you make (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
    drawer to file it off the Desk (a project's drawer also gives the cards that project), with
    Undo. Click a drawer to see what's in it, Open or Put back each thing; dropping a card or a
    pile on that open panel files it there too, and its title bar drags it out of the way

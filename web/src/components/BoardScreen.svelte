@@ -212,6 +212,16 @@
     await reload();
   }
 
+  /** A card put away in the Archive drawer (round 15) goes back on the Desk, top left. */
+  async function bringBackCard(c: Card) {
+    const ref = { kind: c.kind, id: c.id };
+    if (!(await attempt(() => api.canvasUnfile(ref, 40, 40).then(() => true)))) return;
+    toast('Back on the Desk, top left', 'Undo', () => {
+      void attempt(() => api.canvasFile(ref, 'archive')).then(reload);
+    });
+    await reload();
+  }
+
   async function bringBackProject() {
     const id = data?.key.slice('project:'.length);
     const p = projectById(id);
@@ -375,7 +385,7 @@
             {/if}
             {#if data.cards.length}
               <div class="list-head">
-                <h2 class="lbl">{data.key === 'archive' ? 'Archived notes' : data.key === 'done' ? 'Ticked done, newest first' : 'On this board'}</h2>
+                <h2 class="lbl">{data.key === 'archive' ? 'Archived notes and put-away cards' : data.key === 'done' ? 'Ticked done, newest first' : 'On this board'}</h2>
                 {#if data.cards.length > 5}
                   <input
                     class="filter"
@@ -399,6 +409,10 @@
                       <button type="button" class="btn slim" onclick={() => void bringBack(n)}>
                         <Icon name="undo" size={13} />Bring back
                       </button>
+                    {:else if data.key === 'archive' && (c.entry || c.tray)}
+                      <button type="button" class="btn slim" onclick={() => void bringBackCard(c)}>
+                        <Icon name="undo" size={13} />Back on the Desk
+                      </button>
                     {:else if c.note}
                       {@const n = c.note}
                       <button type="button" class="btn slim ghost" onclick={() => openInNotebook(n)}>Open</button>
@@ -412,7 +426,7 @@
             {#if !data.children.length && !data.cards.length}
               <p class="empty">
                 {data.key === 'archive'
-                  ? 'Nothing is archived. Notes you archive, and ones left alone for a while, wait here.'
+                  ? 'Nothing is archived. Notes you archive, ones left alone for a while, and cards you put away wait here.'
                   : data.key === 'done'
                     ? 'No tickets ticked done in the last 90 days. Older ones turn up in Find.'
                     : 'Nothing here yet.'}

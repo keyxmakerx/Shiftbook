@@ -62,6 +62,8 @@
   import { closePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { pins } from '../lib/pins.svelte';
+  import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
   import BoxPrompt from '../components/BoxPrompt.svelte';
   import PastePrompt from '../components/PastePrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
@@ -299,6 +301,7 @@
    *  them the project. One Undo puts everything back. */
   async function fileThese(list: Card[], key: string, pile?: CanvasStack) {
     if (!list.length) return;
+    if (key === ARCHIVE && !pile) return putAway(list);
     const was = list.map((c) => ({ ref: refOf(c), x: c.x, y: c.y }));
     const ok = pile
       ? await attempt(() => api.canvasFileStack(pile.id, key).then(() => true))
@@ -322,6 +325,47 @@
         await load();
       })(),
     );
+  }
+
+  // ----- putting away (round 15) -----
+  /** Put cards away in the Archive drawer: off the Desk, everything kept. Entry cards take
+   *  their other days of the same work with them. One Undo puts them all back. */
+  async function putAway(list: Card[]) {
+    const was = list.flatMap((c) => refsOf(c).map((ref) => ({ ref, x: c.x, y: c.y })));
+    if (!was.length) return;
+    if (!(await attempt(() => api.canvasFileMany(was.map((w) => w.ref), ARCHIVE).then(() => true)))) return;
+    selected = new Set();
+    tidying = false;
+    await load();
+    const what = list.length === 1 ? `“${titleOf(list[0])}”` : `${list.length} cards`;
+    toast(`Put away ${what}. Hours and tickets are kept; find them in the Archive drawer.`, 'Undo', () =>
+      void (async () => {
+        for (const w of was) await attempt(() => api.canvasUnfile(w.ref, w.x, w.y));
+        await load();
+      })(),
+    );
+  }
+
+  /** The "Put away" item for a card's menu (entries and done tickets). */
+  function putAwaySection(card: Card): MenuSpec['sections'] {
+    if (!canPutAway(card)) return [];
+    const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c)) && canPutAway(c)) : [card];
+    const label = list.length > 1 ? `Put ${list.length} away (off the Desk)` : 'Put away (off the Desk)';
+    return [{ items: [{ label, icon: 'archive', top: true, act: () => void putAway(list) }] }];
+  }
+
+  // Tidy up: put away many at once.
+  let tidying = $state(false);
+  const pinnedKeys = $derived(new Set(pins.list.map((p) => `${p.kind}:${p.id}`)));
+  const beforeToday = $derived(tidyCandidates(cards, app.today, pinnedKeys));
+  const beforeWeek = $derived(tidyCandidates(cards, week?.weekStart ?? app.today, pinnedKeys));
+  const picked = $derived(cards.filter((c) => selected.has(keyOf(c)) && canPutAway(c)));
+  let tidyChoice = $state<'today' | 'week' | 'picked'>('today');
+  const tidyList = $derived(tidyChoice === 'today' ? beforeToday : tidyChoice === 'week' ? beforeWeek : picked);
+
+  function openTidy() {
+    tidyChoice = picked.length ? 'picked' : 'today';
+    tidying = !tidying;
   }
 
   async function addFolder(name: string) {
@@ -350,7 +394,10 @@
   }
 
   /** The Desk's own menu sections for a card: file it. */
-  const cardExtra = (card: Card) => () => fileSection((key) => void fileThese(selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card], key));
+  const cardExtra = (card: Card) => () => [
+    ...putAwaySection(card),
+    ...fileSection((key) => void fileThese(selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card], key)),
+  ];
 
   async function tidy() {
     const done = await attempt(() => api.canvasTidy(app.today));
@@ -1241,8 +1288,47 @@
         <button type="button" class="wide" title="Pile loose cards by project" onclick={() => void tidy()}>
           <Icon name="box" size={14} />Tidy into stacks
         </button>
+        <button type="button" class="wide" aria-expanded={tidying} title="Put older cards away, off the Desk" onclick={openTidy}>
+          <Icon name="archive" size={14} />Tidy up…
+        </button>
       {/if}
     </div>
+    {#if tidying}
+      <div
+        class="paper tidyup"
+        role="dialog"
+        aria-label="Tidy the Desk"
+        tabindex="-1"
+        onkeydown={(e) => {
+          if (e.key === 'Escape') {
+            e.stopPropagation();
+            tidying = false;
+          }
+        }}
+      >
+        <h3>Tidy the Desk</h3>
+        <p class="sub">Put entry cards and done tickets away. Their hours and tickets are kept, in the Archive drawer.</p>
+        <label class="opt" class:on={tidyChoice === 'today'}>
+          <input type="radio" name="tidy" value="today" bind:group={tidyChoice} />
+          <span>Everything from before today<small>{beforeToday.length} {beforeToday.length === 1 ? 'card' : 'cards'}</small></span>
+        </label>
+        <label class="opt" class:on={tidyChoice === 'week'}>
+          <input type="radio" name="tidy" value="week" bind:group={tidyChoice} />
+          <span>Everything older than this week<small>{beforeWeek.length} {beforeWeek.length === 1 ? 'card' : 'cards'}</small></span>
+        </label>
+        <label class="opt" class:on={tidyChoice === 'picked'}>
+          <input type="radio" name="tidy" value="picked" bind:group={tidyChoice} />
+          <span>Only the ones I pick<small>{picked.length ? `${picked.length} picked` : 'Pick cards with the Select tool first'}</small></span>
+        </label>
+        <p class="note">Notes, open tickets and pinned cards stay.</p>
+        <div class="row">
+          <button type="button" class="btn" onclick={() => (tidying = false)}>Cancel</button>
+          <button type="button" class="btn primary" disabled={!tidyList.length} onclick={() => void putAway(tidyList)}>
+            {tidyList.length ? `Put ${tidyList.length} away` : 'Nothing to put away'}
+          </button>
+        </div>
+      </div>
+    {/if}
     {#if linkFrom}
       <p class="banner" role="status">Click the card to link with “{titleOf(linkFrom)}” · Esc to cancel</p>
     {:else if mode === 'timeline'}
@@ -1568,6 +1654,60 @@
   .empty .big {
     font: 600 22px var(--display);
     color: var(--ink-2);
+  }
+
+  .tidyup {
+    position: absolute;
+    left: 12px;
+    bottom: 60px;
+    z-index: 100000;
+    width: min(400px, calc(100% - 24px));
+    padding: 14px 16px;
+  }
+
+  .tidyup h3 {
+    margin: 0 0 2px;
+    font-size: 16px;
+  }
+
+  .tidyup .sub,
+  .tidyup .note {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--mut);
+  }
+
+  .tidyup .note {
+    margin-top: 8px;
+  }
+
+  .tidyup .opt {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 9px;
+    cursor: pointer;
+  }
+
+  .tidyup .opt.on {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
+  }
+
+  .tidyup .opt small {
+    display: block;
+    font-size: 12px;
+    color: var(--mut);
+  }
+
+  .tidyup .row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 12px;
   }
 
   .tools {

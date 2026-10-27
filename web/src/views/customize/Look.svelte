@@ -109,6 +109,32 @@
   </article>
 
   <article class="paper cz-card">
+    <h3>The Desk</h3>
+    <p class="sub">
+      Entry cards leave the Desk on their own after a while. Nothing is deleted: they stay on
+      Day, the Timesheet, Items and Find. Put a card away sooner from its menu, or with Tidy up.
+      Pinned cards always stay.
+    </p>
+    <label class="cz-row">
+      <span>Entries stay on the Desk for</span>
+      <select class="text-in" value={String(prefs.deskDays)} onchange={(e) => set('desk.entry_days', (e.currentTarget as HTMLSelectElement).value)}>
+        <option value="1">1 day (today only)</option>
+        <option value="3">3 days</option>
+        <option value="7">7 days</option>
+        <option value="14">14 days</option>
+      </select>
+    </label>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={!prefs.movedStay}
+        onchange={(e) => set('desk.moved_stay', (e.currentTarget as HTMLInputElement).checked ? 'false' : 'true')}
+      />
+      Cards I moved leave after the same time too
+    </label>
+  </article>
+
+  <article class="paper cz-card">
     <h3>Accent</h3>
     <p class="sub">Used for focus rings, the selected week and the tray.</p>
     <div class="cz-row">

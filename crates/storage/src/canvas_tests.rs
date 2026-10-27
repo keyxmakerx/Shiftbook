@@ -309,3 +309,40 @@ fn cards_and_piles_are_filed_in_drawers() {
         assert_eq!(s.canvas_folders(me).await.unwrap().len(), 1);
     });
 }
+
+#[test]
+fn cards_are_put_away_in_the_archive_together() {
+    let dir = TestDir::new("canvas-archive");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let archive = shiftbook_core::canvas::Drawer::Archive;
+        let (a, b, c) = (
+            (CardKind::Entry, Uuid::now_v7()),
+            (CardKind::Entry, Uuid::now_v7()),
+            (CardKind::Entry, Uuid::now_v7()),
+        );
+        let pile = s.stack_cards(me, b, c, (0, 0)).await.unwrap();
+        s.file_cards(me, &[a, b], archive).await.unwrap();
+        let spots = s.canvas_spots(me).await.unwrap();
+        let in_archive = |id: Uuid| {
+            spots
+                .iter()
+                .any(|sp| sp.record_id == id && sp.drawer == Some(archive))
+        };
+        assert!(in_archive(a.1) && in_archive(b.1) && !in_archive(c.1));
+        // A pile left with one card goes away.
+        assert!(s
+            .canvas_stacks(me)
+            .await
+            .unwrap()
+            .iter()
+            .all(|st| st.id != pile));
+        assert!(s.canvas_spots(other).await.unwrap().is_empty());
+        s.unfile_card(me, a, 40, 40).await.unwrap();
+        let back = s.canvas_spots(me).await.unwrap();
+        assert_eq!(
+            back.iter().find(|sp| sp.record_id == a.1).unwrap().drawer,
+            None
+        );
+    });
+}

@@ -403,6 +403,9 @@ export class TauriApi implements DataApi {
   canvasFile(card: CardRef, drawer: string): Promise<void> {
     return call('canvas_file', { kind: card.kind, id: card.id, drawer });
   }
+  canvasFileMany(cards: CardRef[], drawer: string): Promise<void> {
+    return call('canvas_file_many', { cards, drawer });
+  }
   canvasFileStack(id: string, drawer: string): Promise<CardRef[]> {
     return call('canvas_file_stack', { id, drawer });
   }

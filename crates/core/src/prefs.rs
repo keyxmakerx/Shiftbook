@@ -75,6 +75,13 @@ pub const KEY_HIDE_SCREENSHOTS: &str = "security.hide_screenshots";
 /// Drag on the Desk with the right mouse button too, `true` or `false` (off by default, round 15).
 /// A right-click that doesn't move still opens the menu.
 pub const KEY_RIGHT_DRAG: &str = "ui.right_drag";
+/// Days an entry card stays on the Desk by itself, one of [`DESK_DAYS_CHOICES`] (round 15).
+pub const KEY_DESK_DAYS: &str = "desk.entry_days";
+/// Cards the owner moved stay on the Desk until put away: `true` or `false` (off by default:
+/// they leave after the same days, unless pinned).
+pub const KEY_DESK_MOVED_STAY: &str = "desk.moved_stay";
+/// The choices for [`KEY_DESK_DAYS`].
+pub const DESK_DAYS_CHOICES: [u32; 4] = [1, 3, 7, 14];
 /// Your own time buttons (round 15): minutes, comma-separated, or blank for the defaults.
 pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The timesheet code for each day's "Tickets" roll-up entry (round 15): a code id, or
@@ -225,6 +232,10 @@ pub struct Prefs {
     pub hide_screenshots: bool,
     /// The right mouse button drags too.
     pub right_drag: bool,
+    /// Days an entry card stays on the Desk by itself (today counts as one).
+    pub desk_days: u32,
+    /// Cards the owner moved stay until put away (otherwise they leave after `desk_days`).
+    pub moved_stay: bool,
     /// A timer paused by locking, to pick up after unlock.
     pub paused_timer: Option<PausedTimer>,
     /// Days without a change before a note moves to the archive (0 = off).
@@ -271,6 +282,8 @@ impl Default for Prefs {
             block_copy: true,
             hide_screenshots: true,
             right_drag: false,
+            desk_days: crate::canvas::RECENT_DAYS as u32,
+            moved_stay: false,
             paused_timer: None,
             notes_auto_archive_days: DEFAULT_AUTO_ARCHIVE_DAYS,
             windows: Vec::new(),
@@ -368,7 +381,11 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
         KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY
-        | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG => ok(&["true", "false"]),
+        | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
+        KEY_DESK_DAYS => match v.parse::<u32>() {
+            Ok(n) if DESK_DAYS_CHOICES.contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_WEEK_START => ok(&WEEKDAY_NAMES.map(|(n, _)| n)),
         KEY_ACCENT => {
             if v.is_empty() {
@@ -513,6 +530,12 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_BLOCK_COPY => prefs.block_copy = v == "true",
             KEY_HIDE_SCREENSHOTS => prefs.hide_screenshots = v == "true",
             KEY_RIGHT_DRAG => prefs.right_drag = v == "true",
+            KEY_DESK_DAYS => {
+                if let Some(n) = v.parse().ok().filter(|n| DESK_DAYS_CHOICES.contains(n)) {
+                    prefs.desk_days = n;
+                }
+            }
+            KEY_DESK_MOVED_STAY => prefs.moved_stay = v == "true",
             KEY_TIMER_PAUSED => prefs.paused_timer = PausedTimer::parse(&v),
             KEY_NOTES_AUTO_ARCHIVE => {
                 prefs.notes_auto_archive_days = v.parse().unwrap_or(DEFAULT_AUTO_ARCHIVE_DAYS)
@@ -811,6 +834,22 @@ mod tests {
         assert!(validate_pref(KEY_RIGHT_DRAG, "yes").is_err());
         assert!(prefs_from_settings(&[(KEY_RIGHT_DRAG, "true")]).right_drag);
         assert!(!prefs_from_settings(&[(KEY_RIGHT_DRAG, "maybe")]).right_drag);
+    }
+
+    #[test]
+    fn how_long_entries_stay_on_the_desk() {
+        let p = Prefs::default();
+        assert_eq!((p.desk_days, p.moved_stay), (7, false));
+        assert_eq!(validate_pref(KEY_DESK_DAYS, " 3 "), Ok("3".into()));
+        assert!(validate_pref(KEY_DESK_DAYS, "5").is_err());
+        assert_eq!(prefs_from_settings(&[(KEY_DESK_DAYS, "14")]).desk_days, 14);
+        assert_eq!(
+            prefs_from_settings(&[(KEY_DESK_DAYS, "5")]).desk_days,
+            7,
+            "not a choice"
+        );
+        assert!(validate_pref(KEY_DESK_MOVED_STAY, "yes").is_err());
+        assert!(prefs_from_settings(&[(KEY_DESK_MOVED_STAY, "true")]).moved_stay);
     }
 
     #[test]

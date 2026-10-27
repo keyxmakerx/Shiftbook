@@ -29,6 +29,9 @@ pub struct CanvasSpot {
     pub stack: Option<Uuid>,
     /// The drawer it's filed in, if any (it's off the Desk).
     pub drawer: Option<Drawer>,
+    /// The (UTC) day it was last moved, filed or taken out: a card brought back from a drawer
+    /// counts from then, so it doesn't leave the Desk straight away (round 15).
+    pub touched: Option<time::Date>,
 }
 
 fn spot_from_row(row: &SqliteRow) -> Result<CanvasSpot> {
@@ -48,6 +51,10 @@ fn spot_from_row(row: &SqliteRow) -> Result<CanvasSpot> {
         drawer: row
             .try_get::<Option<String>, _>("drawer")?
             .and_then(|d| Drawer::parse(&d)),
+        touched: row
+            .try_get::<Option<String>, _>("updated_at")?
+            .and_then(|t| crate::repo::parse_ts(&t).ok())
+            .map(|t| t.date()),
     })
 }
 
@@ -55,7 +62,7 @@ impl SqliteStore {
     /// Every moved card's spot.
     pub async fn canvas_spots(&self, owner: OwnerId) -> Result<Vec<CanvasSpot>> {
         let rows = sqlx::query(
-            "SELECT record_kind, record_id, x, y, z, stack_id, drawer FROM canvas_cards \
+            "SELECT record_kind, record_id, x, y, z, stack_id, drawer, updated_at FROM canvas_cards \
              WHERE owner_id = $1 AND deleted_at IS NULL ORDER BY z",
         )
         .bind(owner.to_string())
@@ -124,6 +131,7 @@ impl SqliteStore {
             z,
             stack: None,
             drawer: None,
+            touched: Some(time::OffsetDateTime::now_utc().date()),
         })
     }
 

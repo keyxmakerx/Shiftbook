@@ -30,7 +30,10 @@ data: codes, categories and lists are the user's own.
   Priority, Next step.
 - **Entries from earlier days are visually muted** (grey) but remain editable.
 - Filter by project/task, category, status, ticket text. Free-text search.
-- No manual archive — older weeks are simply filtered out of the default view.
+- No manual archive in the Time Log: older weeks are simply filtered out of the default view.
+  On the Desk, entry cards leave on their own after 1, 3, 7 (default) or 14 days, and can be
+  **put away** sooner into the Archive drawer, one at a time or with **Tidy up** (round 15).
+  Putting away never deletes: hours, tickets and notes stay on Day, the Timesheet, Items and Find.
 
 ### 2.3 Tickets (behaviour inside entries)
 - On any entry, click **+ Ticket** → an input appears; paste and press Enter → becomes a chip.
