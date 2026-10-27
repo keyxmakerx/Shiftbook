@@ -82,12 +82,21 @@ names the round it came from. Nothing here is optional unless it says so.
    **Boxes and the toolbox (built, round 12):** a toolbox down the left of the Desk (fold it
    away with its arrow) with Move (drag paper to pan), Select (drag around cards; dragging one
    moves them all; Box these puts a box around them) and Box (drag to draw a box). Shift + drag
-   draws a box with any tool. A new box asks what it is: a project (the cards inside get it,
+   on empty paper draws a box with any tool. A new box asks what it is: a project (the cards inside get it,
    with one Undo; a project that already has a box moves it here), a new project, or Just a
    label (a plain dashed box that only groups cards; double-click its name to rename it).
    Every box folds up (▴ on its name) to its name and a count; the count is grey when nothing
    is waiting, blue when something is from today and orange when a ticket is still open or
    something is brought up. Folded cards and their links hide until it opens again.
+   **Lining up (built, round 15):** Shift + drag a card and it pulls into line, with red
+   guide lines like a drawing app's smart guides: onto another card's or pile's edge, onto a
+   drawn box's inside edges (24 in from the sides, 36 below the top for the name tab) or its
+   middle, or evenly spaced with the cards in its row or column (the usual 24 gap, a gap two of
+   them already have, or halfway between two). It pulls within 12 screen pixels; pressing or
+   letting go of Shift mid-drag switches it on or off. A lined-up card never piles. With two or
+   more cards selected, the selection bar adds **Line up: In a row, In a column, Tidy grid**
+   (from the cards' top left, one Undo). The maths is `lineUpWith` and `lineUp` in
+   `web/src/lib/canvasView.ts`, which only place cards and hold no rules about records.
 3. **C3 Tidy (built):** **piles**: drop a card on a card (or on a pile) and they pile up
    with a count; click the pile to fan its cards out beside it, drag one away to take it off
    (a pile left with one card comes apart); drag the pile to move it; double-click its count

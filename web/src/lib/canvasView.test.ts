@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, HOME, MAX_ZOOM, MIN_ZOOM, rectFrom, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, rectFrom, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -94,5 +94,92 @@ describe('piles', () => {
     const f = fanSpots(0, 0, 5, 4);
     expect(f[0]).toEqual({ x: CARD_W + 16, y: 0 });
     expect(f[4]).toEqual({ x: CARD_W + 16, y: CARD_H + 16 });
+  });
+
+  it('pulls a card held with Shift into line with nearby cards', () => {
+    const others = [
+      { x: 0, y: 0 },
+      { x: 300, y: 0 },
+      { x: 0, y: 200 },
+    ];
+    // Near the top of the row and the left edge of the column: both lines.
+    const both = lineUpWith(8, 6, others, [], 12);
+    expect({ x: both.x, y: both.y }).toEqual({ x: 0, y: 0 });
+    expect(both.guides).toContainEqual({ dir: 'upright', at: 0, from: 0, to: 200 + CARD_H });
+    expect(both.guides).toContainEqual({ dir: 'flat', at: 0, from: 0, to: 300 + CARD_W });
+    // Too far from everything: it stays where it is.
+    expect(lineUpWith(150, 100, others, [], 12)).toEqual({ x: 150, y: 100, guides: [] });
+    // The nearest edge wins.
+    expect(lineUpWith(297, 500, [{ x: 290, y: 0 }, { x: 300, y: 0 }], [], 12).x).toBe(300);
+  });
+
+  it('spaces a card evenly with its row', () => {
+    // Two cards 40 apart; the third lands 40 after the second, and both gaps show.
+    const row = [
+      { x: 0, y: 0 },
+      { x: CARD_W + 40, y: 0 },
+    ];
+    const next = lineUpWith(2 * (CARD_W + 40) + 7, 5, row, [], 12);
+    expect({ x: next.x, y: next.y }).toEqual({ x: 2 * (CARD_W + 40), y: 0 });
+    const gaps = next.guides.filter((g) => g.gap);
+    expect(gaps).toHaveLength(2);
+    expect(gaps.every((g) => g.to - g.from === 40)).toBe(true);
+    // Halfway between two cards is a choice too.
+    const wide = [
+      { x: 0, y: 0 },
+      { x: 1000, y: 0 },
+    ];
+    expect(lineUpWith(495, 0, wide, [], 12).x).toBe(500);
+    // A card in another row doesn't count.
+    expect(lineUpWith(CARD_W + 30, 400, [{ x: 0, y: 0 }], [], 12).x).toBe(CARD_W + 30);
+  });
+
+  it('lines a card up inside a drawn box', () => {
+    const box = { x: 100, y: 100, w: 600, h: 400 };
+    const inside = lineUpWith(130, 130, [], [box], 12);
+    expect({ x: inside.x, y: inside.y }).toEqual({ x: 100 + BOX_INSET.side, y: 100 + BOX_INSET.top });
+    expect(inside.guides).toContainEqual({ dir: 'upright', at: 100 + BOX_INSET.side, from: 100, to: 500 });
+    // The right side inside, and the middle.
+    expect(lineUpWith(700 - BOX_INSET.side - CARD_W - 5, 300, [], [box], 12).x).toBe(700 - BOX_INSET.side - CARD_W);
+    const mid = lineUpWith(400 - CARD_W / 2 + 4, 300, [], [box], 12);
+    expect(mid.x).toBe(400 - CARD_W / 2);
+    expect(mid.guides).toContainEqual({ dir: 'upright', at: 400, from: 100, to: 500 });
+    // A card's edge wins over a box's when they're as near.
+    expect(lineUpWith(126, 600, [{ x: 126, y: 0 }], [box], 12).x).toBe(126);
+  });
+
+  it('lines selected cards up in a row, a column or a grid', () => {
+    const step = { x: CARD_W + LINE_UP_GAP, y: CARD_H + LINE_UP_GAP };
+    const spots = [
+      { x: 400, y: 90 },
+      { x: 50, y: 120 },
+      { x: 200, y: 40 },
+    ];
+    // Same order in, new spots out: left to right along the top.
+    expect(lineUp(spots, 'row')).toEqual([
+      { x: 50 + 2 * step.x, y: 40 },
+      { x: 50, y: 40 },
+      { x: 50 + step.x, y: 40 },
+    ]);
+    // Top to bottom down the left edge.
+    expect(lineUp(spots, 'column')).toEqual([
+      { x: 50, y: 40 + step.y },
+      { x: 50, y: 40 + 2 * step.y },
+      { x: 50, y: 40 },
+    ]);
+    // Four cards make two by two, read like a page: cards with near tops share a line.
+    const four = [
+      { x: 500, y: 10 },
+      { x: 0, y: 300 },
+      { x: 100, y: 0 },
+      { x: 400, y: 320 },
+    ];
+    expect(lineUp(four, 'grid')).toEqual([
+      { x: step.x, y: 0 },
+      { x: 0, y: step.y },
+      { x: 0, y: 0 },
+      { x: step.x, y: step.y },
+    ]);
+    expect(lineUp([], 'row')).toEqual([]);
   });
 });

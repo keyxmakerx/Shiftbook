@@ -140,6 +140,164 @@ export function fanSpots(x: number, y: number, count: number, perRow = 4): { x: 
   }));
 }
 
+// ----- lining up (round 15) -----
+
+/** How near, in screen pixels, a card held with Shift has to come to pull into line. */
+export const LINE_UP_PX = 12;
+/** Space the Line up buttons leave between cards; matches `GAP` in crates/core/src/canvas.rs. */
+export const LINE_UP_GAP = 24;
+
+/** How far in from a box's sides a card lines up inside it; the top leaves room for the name tab
+ *  (as `boxAround` does). */
+export const BOX_INSET = { side: 24, top: 36 };
+
+/**
+ * A guide line while lining up, in canvas units: `upright` lines run down at x = `at`, `flat`
+ * ones run across at y = `at`, from `from` to `to`. `gap` marks one of a run of equal gaps.
+ */
+export interface Guide {
+  dir: 'upright' | 'flat';
+  at: number;
+  from: number;
+  to: number;
+  gap?: boolean;
+}
+
+type Spot = { x: number; y: number };
+type Axis = 'x' | 'y';
+type Choice =
+  | { v: number; kind: 'edge' }
+  | { v: number; kind: 'box'; box: Rect; line: number }
+  | { v: number; kind: 'gap'; size: number };
+
+const SIZE = { x: CARD_W, y: CARD_H };
+const cross = (a: Axis): Axis => (a === 'x' ? 'y' : 'x');
+const boxSize = (b: Rect, a: Axis) => (a === 'x' ? b.w : b.h);
+
+/** Where along one axis a card at `p` could line up, nearest first, and which one wins. */
+function pickAlong(a: Axis, p: Spot, others: Spot[], boxes: Rect[], within: number): Choice | null {
+  const c = cross(a);
+  const size = SIZE[a];
+  const options: Choice[] = [];
+  // Another card's edge (cards are all one size, so its left, middle and right line up together).
+  for (const o of others) options.push({ v: o[a], kind: 'edge' });
+  // A box's inside edges and its middle.
+  for (const b of boxes) {
+    const start = b[a] + (a === 'x' ? BOX_INSET.side : BOX_INSET.top);
+    const end = b[a] + boxSize(b, a) - BOX_INSET.side - size;
+    options.push({ v: start, kind: 'box', box: b, line: start });
+    options.push({ v: end, kind: 'box', box: b, line: end + size });
+    const mid = b[a] + (boxSize(b, a) - size) / 2;
+    options.push({ v: mid, kind: 'box', box: b, line: mid + size / 2 });
+  }
+  // Even spacing with the cards in the same row (or column): the usual gap, any gap already
+  // between two of them, or halfway between the two either side.
+  const band = others.filter((o) => Math.abs(o[c] - p[c]) < SIZE[c]).sort((m, n) => m[a] - n[a]);
+  const gaps = new Set([LINE_UP_GAP]);
+  for (let i = 1; i < band.length; i++) {
+    const g = band[i]![a] - band[i - 1]![a] - size;
+    if (g > 0 && g < 3 * size) gaps.add(g);
+  }
+  const before = band.filter((o) => o[a] + size / 2 <= p[a] + size / 2).at(-1);
+  const after = band.find((o) => o[a] + size / 2 > p[a] + size / 2);
+  for (const g of gaps) {
+    if (before) options.push({ v: before[a] + size + g, kind: 'gap', size: g });
+    if (after) options.push({ v: after[a] - size - g, kind: 'gap', size: g });
+  }
+  if (before && after) {
+    const g = (after[a] - before[a] - 2 * size) / 2;
+    if (g > 0) options.push({ v: before[a] + size + g, kind: 'gap', size: g });
+  }
+  let best: Choice | null = null;
+  for (const o of options) {
+    const d = Math.abs(o.v - p[a]);
+    // Lining up with a card beats a box, and a box beats spacing, when they're as near.
+    if (d <= within && (!best || d < Math.abs(best.v - p[a]) - 0.5)) best = o;
+  }
+  return best;
+}
+
+/** The guide lines that show why a card at `p` sits where it does along one axis. */
+function guidesFor(a: Axis, why: Choice, p: Spot, others: Spot[]): Guide[] {
+  const c = cross(a);
+  const size = SIZE[a];
+  const dir = a === 'x' ? 'upright' : 'flat';
+  if (why.kind === 'edge') {
+    const crosses = [p[c], ...others.filter((o) => o[a] === why.v).map((o) => o[c])];
+    return [{ dir, at: why.v, from: Math.min(...crosses), to: Math.max(...crosses) + SIZE[c] }];
+  }
+  if (why.kind === 'box') return [{ dir, at: why.line, from: why.box[c], to: why.box[c] + boxSize(why.box, c) }];
+  // Equal gaps: a short line across each gap of that size in the row, the card's own included.
+  const along = a === 'x' ? 'flat' : 'upright';
+  const row = [...others.filter((o) => Math.abs(o[c] - p[c]) < SIZE[c]), p].sort((m, n) => m[a] - n[a]);
+  const out: Guide[] = [];
+  for (let i = 1; i < row.length; i++) {
+    const m = row[i - 1]!;
+    const n = row[i]!;
+    if (Math.abs(n[a] - m[a] - size - why.size) < 0.5 && (m === p || n === p || out.length < 6)) {
+      // Across a row the marks sit near the cards' tops: cards are often shorter than CARD_H.
+      const at = a === 'x' ? Math.max(m.y, n.y) + 24 : Math.max(m.x, n.x) + CARD_W / 2;
+      out.push({ dir: along, at, from: m[a] + size, to: n[a], gap: true });
+    }
+  }
+  return out;
+}
+
+/**
+ * Pull a card at (x, y), held with Shift, into line (like the smart guides in drawing apps):
+ * onto another card's edges, a box's inside edges or middle, or evenly spaced with the cards
+ * in its row or column. Each direction only within `within` canvas units. Returns where it goes
+ * and the guide lines that show what it lined up with.
+ */
+export function lineUpWith(
+  x: number,
+  y: number,
+  others: Spot[],
+  boxes: Rect[],
+  within: number,
+): { x: number; y: number; guides: Guide[] } {
+  const p = { x, y };
+  const wy = pickAlong('y', p, others, boxes, within);
+  if (wy) p.y = wy.v;
+  // Across second, so spacing counts the row the card has just lined up with.
+  const wx = pickAlong('x', p, others, boxes, within);
+  if (wx) p.x = wx.v;
+  return {
+    ...p,
+    guides: [...(wx ? guidesFor('x', wx, p, others) : []), ...(wy ? guidesFor('y', wy, p, others) : [])],
+  };
+}
+
+/**
+ * The Line up buttons: new spots for `spots`, in the same order. A row keeps left-to-right
+ * order along the top; a column keeps top-to-bottom order down the left edge; a grid fills
+ * rows in reading order, about as many across as down. All start at the top left of the cards.
+ */
+export function lineUp(spots: { x: number; y: number }[], how: 'row' | 'column' | 'grid'): { x: number; y: number }[] {
+  if (!spots.length) return [];
+  const left = Math.min(...spots.map((s) => s.x));
+  const top = Math.min(...spots.map((s) => s.y));
+  const across = how === 'row' ? spots.length : how === 'column' ? 1 : Math.ceil(Math.sqrt(spots.length));
+  const index = spots.map((_, i) => i);
+  if (how === 'row') index.sort((a, b) => spots[a]!.x - spots[b]!.x || spots[a]!.y - spots[b]!.y);
+  else index.sort((a, b) => spots[a]!.y - spots[b]!.y || spots[a]!.x - spots[b]!.x);
+  if (how === 'grid') {
+    // Reading order: a card whose top is within half a card of the line's first card is on that line.
+    const lines: number[][] = [];
+    for (const i of index) {
+      const line = lines.at(-1);
+      if (line && spots[i]!.y - spots[line[0]!]!.y < CARD_H / 2) line.push(i);
+      else lines.push([i]);
+    }
+    index.splice(0, index.length, ...lines.flatMap((l) => l.sort((a, b) => spots[a]!.x - spots[b]!.x)));
+  }
+  const out = spots.map((s) => ({ ...s }));
+  index.forEach((i, n) => {
+    out[i] = { x: left + (n % across) * (CARD_W + LINE_UP_GAP), y: top + Math.floor(n / across) * (CARD_H + LINE_UP_GAP) };
+  });
+  return out;
+}
+
 /** The drawer under a screen point while something is dragged over the cabinet. */
 export function drawerAt(clientX: number, clientY: number): string | null {
   for (const el of document.elementsFromPoint(clientX, clientY)) {

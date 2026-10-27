@@ -18,8 +18,11 @@ works the way it does is in `DECISIONS.md`.
   (right-click empty paper) give cards dropped into them that project; **links** join cards
   that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
   Desk out by day and Back to my layout puts it back. The **toolbox** on the left has Move,
-  Select (drag around cards to move them together) and Box: draw a box (or Shift + drag) and
-  make it a project's area, a new project or just a label. Any box **folds up** to a count
+  Select (drag around cards to move them together) and Box: draw a box (or Shift + drag on
+  empty paper) and make it a project's area, a new project or just a label. **Shift + drag a
+  card** to line it up: red lines show it matching other cards, a box's edges or middle, or the
+  same gap as its neighbours. With several cards selected, **Line up** puts them in a row, a
+  column or a tidy grid. Any box **folds up** to a count
   coloured grey (nothing waiting), blue (from today) or orange (still open or brought up).
   **Pin** an entry, ticket or note (right-click → Pin to the bottom bar) to keep it in view as
   a chip on the bottom bar; right-click the chip to pick a day to chase it, and from that day
