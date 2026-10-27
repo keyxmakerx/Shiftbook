@@ -411,6 +411,30 @@ fn entry_tickets_have_a_state_and_a_notepad() {
 }
 
 #[test]
+fn ticking_an_entry_ticket_closes_it_in_the_tray() {
+    let dir = TestDir::new("entrytickclosestray");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let next = date!(2026 - 10 - 16);
+        // In the tray on two days and on an entry: one item.
+        s.tray_add(me, DAY, "INC5001").await.unwrap();
+        s.tray_add(me, next, "INC5001").await.unwrap();
+        let rec = s
+            .create_entry(me, &input(DAY, 30, "Printer"), "INC5001")
+            .await
+            .unwrap();
+        s.set_ticket_done(me, rec.tickets[0].id, true).await.unwrap();
+        assert!(s.tray_day(me, DAY).await.unwrap().items[0].done);
+        assert!(s.tray_day(me, next).await.unwrap().items[0].done);
+        assert!(s
+            .tray_carried(me, date!(2026 - 10 - 17))
+            .await
+            .unwrap()
+            .is_empty());
+    });
+}
+
+#[test]
 fn open_entry_tickets_come_back_in_the_tray() {
     let dir = TestDir::new("entrycarried");
     block_on(async {
