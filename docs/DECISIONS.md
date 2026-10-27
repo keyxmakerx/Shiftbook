@@ -24,6 +24,11 @@ The owner asked for a step back over the whole app and approved the cleanup plan
   notepads merged, none lost) instead of the second being left out with its tray rows and
   entry tickets. After a merge each touched day's Tickets entries are counted again from its
   tray, and every touched ticket's copies are put back in step.
+- **Kept on purpose:** the unused `timesheet_weeks` table stays, because dropping it would stop
+  older backups and sync files from loading. Items' `kind`/`title` columns stay for the planned
+  items work. The dead "unstack a card" command is gone (moving a card already does it).
+- **Not split yet:** the biggest files (Canvas.svelte, work.rs, api.rs) wait until the other
+  open branches touching them have landed, to avoid merge clashes.
 
 ## Round 15 — 27 Oct 2026 (lining cards up)
 Card `r15-lineup` (`tools/signoff/rounds/r15-lineup.json`, mockups `mocks/r15-lineup-*.html`),

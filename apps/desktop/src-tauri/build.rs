@@ -114,7 +114,6 @@ fn main() {
             "canvas_label_save",
             "canvas_label_remove",
             "canvas_stack",
-            "canvas_unstack",
             "canvas_stack_move",
             "canvas_stack_rename",
             "canvas_stack_dissolve",

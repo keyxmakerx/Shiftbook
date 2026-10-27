@@ -132,21 +132,6 @@ pub async fn canvas_stack(
     Ok(pile.to_string())
 }
 
-/// Maps to `DataApi.canvasUnstack()`: take a card off its pile, to `x`, `y`.
-#[tauri::command]
-pub async fn canvas_unstack(
-    s: State<'_, VaultSession>,
-    kind: String,
-    id: String,
-    x: i32,
-    y: i32,
-) -> Res<()> {
-    let (store, owner) = s.data().await?;
-    Ok(store
-        .unstack_card(owner, ref_arg(&kind, &id)?, x, y)
-        .await?)
-}
-
 /// Maps to `DataApi.canvasStackMove()`.
 #[tauri::command]
 pub async fn canvas_stack_move(s: State<'_, VaultSession>, id: String, x: i32, y: i32) -> Res<()> {

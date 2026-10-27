@@ -388,9 +388,6 @@ export class TauriApi implements DataApi {
   canvasStack(card: CardRef, onto: CardRef, ontoX: number, ontoY: number): Promise<string> {
     return call('canvas_stack', { kind: card.kind, id: card.id, ontoKind: onto.kind, ontoId: onto.id, ontoX, ontoY });
   }
-  canvasUnstack(card: CardRef, x: number, y: number): Promise<void> {
-    return call('canvas_unstack', { kind: card.kind, id: card.id, x, y });
-  }
   canvasStackMove(id: string, x: number, y: number): Promise<void> {
     return call('canvas_stack_move', { id, x, y });
   }
