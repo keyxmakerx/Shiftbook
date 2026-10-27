@@ -11,6 +11,11 @@ approved with A and the buttons:
   and even spacing with the row or column, each shown with red guide lines.
 - **Line up buttons:** In a row, In a column and Tidy grid on the selection bar, with Undo.
 
+## Round 15 — 27 Oct 2026 (copying responses while Protected)
+- **Responses stay one click away:** each response in Settings → Responses gets a Copy button,
+  and the Tickets card's copy button gets the word "Responses". Both copy even while copying is
+  blocked; Ctrl+C blocking itself is unchanged.
+
 ## Round 15 — 26 Oct 2026 (turning protection off)
 - **Copy and screenshot protection switches:** Settings → Security gets two switches, "Block
   copying text" and "Hide from screenshots", both on by default. Turning one off asks once with a

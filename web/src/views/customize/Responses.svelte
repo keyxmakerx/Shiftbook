@@ -1,9 +1,11 @@
 <script lang="ts">
   // Settings → Responses: messages you paste into tickets again and again. The Done tickets
   // tray has a button that lists them; picking one copies it. Nothing is matched to a ticket.
+  // Each one here has a Copy button too, which works while copying is blocked (round 15).
   import { onMount } from 'svelte';
   import Icon from '../../components/Icon.svelte';
   import { api } from '../../lib/api';
+  import { copyText } from '../../lib/protection.svelte';
   import type { ResponseInput } from '../../lib/api';
   import { attempt } from '../../lib/store.svelte';
   import { toast } from '../../lib/toast.svelte';
@@ -42,6 +44,11 @@
     rows.splice(j, 0, row!);
   }
 
+  async function copy(row: Row) {
+    const name = row.name.trim() || 'the response';
+    toast((await copyText(row.text.trim())) ? `Copied “${name}”` : "Couldn't copy here.");
+  }
+
   async function save() {
     const list = await attempt(() => api.saveResponses(rows.map(({ name, text }) => ({ name, text }))));
     if (!list) return;
@@ -53,8 +60,8 @@
 <article class="paper cz-card">
   <h3>Responses</h3>
   <p class="sub">
-    Messages you paste into tickets again and again. On the Desk, the <Icon name="copy" size={13} /> button on Done
-    tickets lists them; pick one and it's copied, ready to paste.
+    Messages you paste into tickets again and again. Copy one here, or use the <b>Responses</b> button on the
+    Tickets card on the Desk; pick one and it's copied, ready to paste.
   </p>
 
   {#if loaded}
@@ -68,6 +75,9 @@
             placeholder="Name in the menu, e.g. No reply from user"
             aria-label="Response {i + 1} name"
           />
+          <button class="btn copy" type="button" disabled={!row.text.trim()} onclick={() => void copy(row)}>
+            <Icon name="copy" size={14} /> Copy
+          </button>
           <span class="tools">
             <button type="button" class="ib" aria-label="Move up" disabled={i === 0} onclick={() => move(i, -1)}>
               <Icon name="left" size={14} />
@@ -136,6 +146,11 @@
     min-height: 64px;
   }
 
+  .copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
   .tools {
     display: inline-flex;
     gap: 2px;
