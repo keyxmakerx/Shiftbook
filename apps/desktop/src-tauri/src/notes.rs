@@ -26,6 +26,7 @@ fn id_arg<T: std::str::FromStr>(text: &str) -> Res<T> {
 
 /// The notes list.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct NoteListView {
     /// Notes to show: best match first when searching, else most recently changed.

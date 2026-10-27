@@ -3,12 +3,13 @@
 // list is saved as one preference (`ui.windows`, kept in bounds by
 // crates/core/src/windows.rs) so windows come back where they were.
 import { api } from './api';
+import { MAX_WINDOWS } from './api/generated/constants';
 import type { CardKind, WindowMode, WindowSpot } from './api';
 import { app } from './store.svelte';
 import { phone } from './phone.svelte';
 
 /** Most windows at once; opening one more closes the oldest (same as the core rule). */
-const MAX_WINDOWS = 12;
+
 const SIZE = { w: 420, h: 320 };
 const SAVE_AFTER_MS = 600;
 

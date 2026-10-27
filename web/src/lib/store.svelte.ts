@@ -23,6 +23,7 @@ import { useMopWord } from './notes';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
 import { hasWork, wordsFor, type Words } from './words';
+import { DEFAULT_TIME_BUTTONS } from './api/generated/constants';
 
 export const app = $state({
   ready: false,
@@ -76,8 +77,8 @@ export const app = $state({
   followUps: {} as Record<string, string>,
 });
 
-/** The time buttons everyone starts with (`shiftbook_core::prefs::DEFAULT_TIME_BUTTONS`). */
-export const DEFAULT_TIMES = [15, 30, 45, 60, 120];
+/** The time buttons everyone starts with (core's `DEFAULT_TIME_BUTTONS`). */
+export const DEFAULT_TIMES = DEFAULT_TIME_BUTTONS;
 
 /** The time buttons in Log work and on jots (Settings → Your day). */
 export function timeButtons(): number[] {

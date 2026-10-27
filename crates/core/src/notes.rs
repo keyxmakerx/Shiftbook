@@ -35,6 +35,7 @@ pub const ARCHIVE_WARN_DAYS: u32 = 7;
 
 /// What kind of note it is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum NoteKind {
     /// A quick scrap.

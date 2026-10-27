@@ -5,6 +5,8 @@
 // Ctrl +/−/0 change the text size, Esc closes the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
+import { TEXT_SIZES } from './api/generated/constants';
+
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
 export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'items' | 'settings';
 export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'repeating', 'lists', 'items', 'settings'];
@@ -118,8 +120,8 @@ export function startsHold(e: Pick<KeyInfo, 'key' | 'altKey' | 'shiftKey'>): boo
   return (e.key === 'Control' || e.key === 'Meta') && !e.altKey && !e.shiftKey;
 }
 
-/** Text sizes offered, in percent (see `shiftbook_core::prefs::TEXT_SIZES`). */
-export const TEXT_SIZES = [90, 100, 115, 130] as const;
+/** Text sizes offered, in percent (core's `TEXT_SIZES`). */
+export { TEXT_SIZES };
 
 /** The text size one step bigger (1) or smaller (-1) than `now`, or normal (0). */
 export function nextTextSize(now: number, step: -1 | 0 | 1): number {

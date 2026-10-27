@@ -30,6 +30,7 @@ type Result<T> = std::result::Result<T, StorageError>;
 
 /// A Done ticket on the Canvas, with the day it belongs to.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TrayCardView {
     pub item: TrayItemView,
@@ -38,6 +39,7 @@ pub struct TrayCardView {
 
 /// One card: where it sits and the record it shows (exactly one of the four is set).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CardView {
     pub kind: CardKind,
@@ -72,6 +74,7 @@ pub struct CardView {
 
 /// A project's area.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct AreaView {
     pub project_id: ProjectId,
@@ -87,6 +90,7 @@ pub struct AreaView {
 
 /// A plain labelled box.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct LabelView {
     pub id: String,
@@ -103,6 +107,7 @@ pub struct LabelView {
 
 /// A pile of cards.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct StackView {
     pub id: String,
@@ -120,6 +125,7 @@ pub const DONE_PILE: &str = "done";
 
 /// A drawer in the cabinet: a project's or a folder.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct DrawerView {
     /// `project:<id>` or `folder:<id>`.
@@ -133,6 +139,7 @@ pub struct DrawerView {
 
 /// One end of a link.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CardRefView {
     pub kind: CardKind,
@@ -141,6 +148,7 @@ pub struct CardRefView {
 
 /// A line between two cards: automatic (with its reason) or drawn by hand.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export, rename = "DeskLinkView"))]
 #[serde(rename_all = "camelCase")]
 pub struct LinkView {
     pub a: CardRefView,
@@ -151,6 +159,7 @@ pub struct LinkView {
 
 /// A day on the timeline and where its column starts.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct AxisDay {
     pub date: String,
@@ -159,6 +168,7 @@ pub struct AxisDay {
 
 /// Everything on the Desk.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct DeskView {
     /// Bottom first.

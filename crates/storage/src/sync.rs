@@ -57,6 +57,7 @@ pub const MAX_CLASHES_SHOWN: usize = 5;
 
 /// Which side's edit won a clash.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum Winner {
     /// The edit on this device was newer and stays.
@@ -67,6 +68,7 @@ pub enum Winner {
 
 /// Something edited on both devices since the last swap.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Clash {
     /// The entry's description, the note's or project's name, or what it is.
@@ -79,6 +81,7 @@ pub struct Clash {
 
 /// What bringing a sync file in does (or did).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SyncReport {
     /// When the sync file was made (UTC, RFC 3339).

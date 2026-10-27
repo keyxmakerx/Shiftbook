@@ -18,6 +18,7 @@ use crate::recurring::{came_due_since, due_words, RecurringState};
 
 /// Which part of the panel an item is in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum BellWhen {
     /// Needs you now.
@@ -28,6 +29,7 @@ pub enum BellWhen {
 
 /// What an item is about.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case", tag = "kind")]
 pub enum BellAbout {
     /// A meeting of a series today.
@@ -71,7 +73,9 @@ pub enum BellAbout {
         /// The day it was due to be followed up.
         on: String,
     },
-    /// A repeating thing that needs attention (round 15).
+    /// A repeating thing that needs attention (round 15). Its fields go out in camelCase like
+    /// the others (`nextDue`; it was `next_due`, so the bell showed no due day).
+    #[serde(rename_all = "camelCase")]
     Due {
         /// The repeating thing's id.
         id: String,
@@ -91,6 +95,7 @@ pub enum BellAbout {
 
 /// One thing in the bell's panel.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct BellItem {
     /// Now or later today.
@@ -561,5 +566,18 @@ mod tests {
                 on: "2026-10-15".into()
             }
         );
+    }
+
+    #[test]
+    fn a_due_thing_goes_out_in_camel_case() {
+        let about = BellAbout::Due {
+            id: "r1".into(),
+            state: RecurringState::Overdue,
+            next_due: "2026-10-27".into(),
+            warn: 3,
+        };
+        let v = serde_json::to_value(about).unwrap();
+        assert_eq!(v["kind"], "due");
+        assert_eq!(v["nextDue"], "2026-10-27");
     }
 }

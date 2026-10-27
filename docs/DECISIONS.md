@@ -13,6 +13,13 @@ The owner asked for a step back over the whole app and approved the cleanup plan
   (`core::items::done_from`). A ticket on no day any more leaves the Items view.
 - **Mark done on a repeating thing** always makes or ticks its own entry, never the Tickets
   tray's roll-up, which comes and goes with the tray.
+- **ts-rs for the UI's types** (decision card, "Yes, add ts-rs"): build-time only, behind a
+  `ts` feature. The first check found two real mismatches, both fixed: a minimised window was
+  sent as "minimised" where the UI expects "min" (it came back wrong after a restart), and the
+  bell's repeating-thing line was sent `next_due` where the UI reads `nextDue` (no due day).
+- **One change signal in the UI:** `refresh()` bumps `app.changed`; the Items view, drawers and
+  floating windows load again on it. A floating notepad never overwrites text written elsewhere
+  since it opened: it offers "Keep mine" or "Show the newer one" (closing keeps both).
 - **Sync keeps tickets used on both devices.** Two items for one ticket number become one (the
   notepads merged, none lost) instead of the second being left out with its tray rows and
   entry tickets. After a merge each touched day's Tickets entries are counted again from its

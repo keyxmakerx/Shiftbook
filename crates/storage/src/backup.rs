@@ -140,6 +140,7 @@ pub(crate) struct Contents {
 
 /// What a backup holds, shown before restoring.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct BackupSummary {
     /// When it was made (UTC, RFC 3339).
@@ -529,6 +530,7 @@ pub(crate) fn bind_values<'q>(
 
 /// What a file in the backups folder is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum BackupKind {
     /// Made automatically once a day.
@@ -539,6 +541,7 @@ pub enum BackupKind {
 
 /// A file in the backups folder.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct BackupFile {
     /// File name (also how the UI refers to it).

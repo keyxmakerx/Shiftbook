@@ -167,6 +167,7 @@ fn serialize_week_start<S: Serializer>(start: &WeekStart, s: S) -> Result<S::Ok,
 
 /// Light, dark or follow the system.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum Theme {
     /// Follow the operating system (default).
@@ -180,6 +181,7 @@ pub enum Theme {
 
 /// How much things move.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum Motion {
     /// No animation.
@@ -193,6 +195,7 @@ pub enum Motion {
 
 /// All preferences with their current values.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Prefs {
     /// Theme.
@@ -207,12 +210,19 @@ pub struct Prefs {
     pub comment: CommentFormat,
     /// First day of the week.
     #[serde(serialize_with = "serialize_week_start")]
+    #[cfg_attr(
+        feature = "ts",
+        ts(
+            type = "'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'"
+        )
+    )]
     pub week_start: WeekStart,
     /// Minutes before auto-lock.
     pub auto_lock_minutes: u32,
     /// Phone: minutes away from the app before it locks.
     pub leave_lock_minutes: u32,
     /// Daily target in minutes, Monday first.
+    #[cfg_attr(feature = "ts", ts(type = "number[]"))]
     pub day_targets: [u32; 7],
     /// Text size in percent.
     pub text_size: u32,

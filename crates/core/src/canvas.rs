@@ -31,6 +31,7 @@ pub const MAX_COORD: i32 = 1_000_000;
 
 /// What a card shows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum CardKind {
     /// A time entry.
@@ -243,6 +244,7 @@ pub fn new_area(x: i32, y: i32) -> Area {
 
 /// Why two cards are linked.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(tag = "kind", content = "text", rename_all = "snake_case")]
 pub enum LinkReason {
     /// Both mention this ticket.
@@ -452,6 +454,7 @@ pub fn clean_label(label: &str) -> Result<String, CoreError> {
 
 /// How a box's cards stand, for the colour of its count when it is folded up (round 12).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum BoxStatus {
     /// Nothing waiting: grey.
@@ -511,6 +514,7 @@ pub fn clean_folder_name(name: &str) -> Result<String, CoreError> {
 /// A drawer in the cabinet (round 8): one per project, plus folders the owner makes, plus the
 /// Archive (round 15), always there, where cards that are put away go.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub enum Drawer {
     /// A project's drawer.
     Project(Uuid),

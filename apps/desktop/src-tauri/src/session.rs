@@ -36,6 +36,7 @@ pub const RECOVERY_SAVED_KEY: &str = "security.recovery_key_saved_at";
 
 /// What the unlock screen should show.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum VaultStatus {
     /// First run: no vault yet.
@@ -48,6 +49,7 @@ pub enum VaultStatus {
 
 /// Errors as they cross IPC: short generic codes, never details.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum CommandError {
     /// The input broke a rule (empty name, bad colour, too long...).
@@ -206,6 +208,7 @@ impl PinWindow {
 
 /// What a PIN unlock did.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct PinOutcome {
     /// Open now.

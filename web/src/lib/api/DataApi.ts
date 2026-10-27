@@ -784,7 +784,7 @@ export interface CardRef {
 export interface CanvasLink {
   a: CardRef;
   b: CardRef;
-  reason: { kind: 'ticket' | 'word'; text: string } | null;
+  reason: { kind: 'ticket'; text: string } | { kind: 'word'; text: string } | null;
   drawn: boolean;
 }
 

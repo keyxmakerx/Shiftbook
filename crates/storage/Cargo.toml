@@ -6,6 +6,7 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+ts-rs = { workspace = true, optional = true }
 shiftbook-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -24,3 +25,8 @@ flate2.workspace = true
 
 [dev-dependencies]
 tokio.workspace = true
+
+[features]
+# Writes the UI's TypeScript types (web/src/lib/api/generated) when testing; see
+# docs/ARCHITECTURE.md. Never on in a release build.
+ts = ["dep:ts-rs", "shiftbook-core/ts"]

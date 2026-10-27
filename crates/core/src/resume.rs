@@ -17,6 +17,7 @@ pub const LOOK_BACK_DAYS: i64 = 14;
 
 /// What brought the user back.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum ResumeTrigger {
     /// Shiftbook was just unlocked.
