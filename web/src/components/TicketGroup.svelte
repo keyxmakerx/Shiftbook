@@ -9,7 +9,7 @@
   import type { CanvasCard } from '../lib/api';
   import { focusNow } from '../lib/focus';
   import { dayMonth, weekdayShort } from '../lib/format';
-  import { app, attempt, projectById, projectColor } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
@@ -28,13 +28,15 @@
   const stillOpen = $derived(tickets.filter((t) => !t.done).length);
 
   // A ticket is one item (round 15): ticking or writing on its newest place changes it
-  // everywhere it appears.
+  // everywhere it appears, so the Tickets list reloads too (applyTray does it for the tray).
   async function tick(w: WorkTicket) {
     const done = !w.done;
     const s = w.sources[0]!;
     const ok = await attempt(async () => {
-      if (s.kind === 'entry') await api.ticketSetDone(s.id, done);
-      else applyTray(await api.traySetDone(s.id, done));
+      if (s.kind === 'entry') {
+        await api.ticketSetDone(s.id, done);
+        await refresh();
+      } else applyTray(await api.traySetDone(s.id, done));
       return true;
     });
     if (ok) onchanged();
@@ -59,8 +61,10 @@
     const s = w.sources[0]!;
     const text = draft;
     const ok = await attempt(async () => {
-      if (s.kind === 'entry') await api.ticketSetNote(s.id, text);
-      else applyTray(await api.traySetNote(s.id, text));
+      if (s.kind === 'entry') {
+        await api.ticketSetNote(s.id, text);
+        await refresh();
+      } else applyTray(await api.traySetNote(s.id, text));
       return true;
     });
     if (ok) onchanged();
