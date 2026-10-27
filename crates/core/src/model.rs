@@ -710,6 +710,10 @@ pub struct Note {
     pub tags: Vec<String>,
     /// Keep was pressed: auto-archive leaves it alone.
     pub keep: bool,
+    /// A MOP template: offers "New MOP from this template" (see `crate::mop`).
+    pub template: bool,
+    /// What is ticked off in Checklist mode (line keys from `crate::mop::tick_keys`).
+    pub ticks: Vec<String>,
     /// When it went to the archive, if it has.
     #[serde(with = "rfc3339::option")]
     pub archived_at: Option<OffsetDateTime>,

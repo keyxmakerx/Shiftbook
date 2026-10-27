@@ -2,6 +2,25 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 27 Oct 2026 (the MOP notebook)
+Card `r15-mopbook` (`tools/signoff/rounds/r15-mopbook.json`, mockups `mocks/r16-mopbook.html`),
+approved. The owner writes MOPs in Notepad++ and wanted something like it:
+- **Shape (A):** a floating window with a tab per MOP, like Notepad++. It rolls up, minimises to
+  the bottom bar and fills the screen; where it is and which tabs are open come back next time.
+- **Files:** drop files anywhere on Shiftbook (or Add MOP files…) to copy them in. Each becomes
+  an encrypted MOP or template, picked per file; the files are never changed. Plain text for
+  now; Word files are told to save as plain text first (.docx reading is a later step).
+- **Templates:** Use as template keeps `[[blanks]]`; New from this template asks for each blank
+  once and fills it in everywhere. Blanks left empty stay highlighted.
+- **The owner's note:** "the option to have it be numbered" with character counts and what's
+  selected, "other modes like maybe minimal", and "checkbox style that crosses out that section
+  under it", "quickly editable via the same window". Built as three modes switched at the top of
+  the window, all editable: Numbered (a line number toggle and a status bar with line, column,
+  lines, characters and the selection), Minimal (just the text) and Checklist (ticking a heading
+  or step crosses out the lines under it, down to the next one at the same level). Ticks are
+  stored beside the MOP, not in its text, and Clear ticks starts a fresh run.
+- **Save as a text file** writes an unencrypted copy after a warning (rule 10).
+
 ## Round 15 — 27 Oct 2026 (lining cards up)
 Card `r15-lineup` (`tools/signoff/rounds/r15-lineup.json`, mockups `mocks/r15-lineup-*.html`),
 approved with A and the buttons:

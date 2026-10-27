@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-note-ticks"
+description = "Enables the set_note_ticks command without any pre-configured scope."
+commands.allow = ["set_note_ticks"]
+
+[[permission]]
+identifier = "deny-set-note-ticks"
+description = "Denies the set_note_ticks command without any pre-configured scope."
+commands.deny = ["set_note_ticks"]

@@ -221,6 +221,7 @@ pub async fn meeting_note(
                 body: String::new(),
                 project: None,
                 tags: String::new(),
+                template: false,
             };
             store.create_note(owner, &input).await?
         }

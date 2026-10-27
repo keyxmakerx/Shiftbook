@@ -99,6 +99,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "repeating work",
         include_str!("../migrations/0018_repeating_work.sql"),
     ),
+    (
+        19,
+        "MOP notebook: templates and ticks",
+        include_str!("../migrations/0019_mop_notebook.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {

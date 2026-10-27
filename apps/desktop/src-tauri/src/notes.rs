@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::OwnerId;
 use shiftbook_core::model::{Note, Project};
+use shiftbook_core::mop;
 use shiftbook_core::notes::{
     daily_note_title, is_daily_note_for, join_tags, search_text, NoteKind,
 };
@@ -43,6 +44,8 @@ pub struct NoteArgs {
     body: String,
     project_id: Option<String>,
     tags: String,
+    #[serde(default)]
+    template: bool,
 }
 
 impl NoteArgs {
@@ -58,6 +61,7 @@ impl NoteArgs {
                 .map(id_arg)
                 .transpose()?,
             tags: self.tags.clone(),
+            template: self.template,
         })
     }
 }
@@ -212,6 +216,7 @@ pub async fn save_daily_note(
                 body,
                 project: n.project_id,
                 tags: join_tags(&n.tags),
+                template: n.template,
             };
             Some(store.update_note(owner, n.id, &input).await?)
         }
@@ -223,6 +228,7 @@ pub async fn save_daily_note(
                 body,
                 project: None,
                 tags: String::new(),
+                template: false,
             };
             Some(store.create_note(owner, &input).await?)
         }
@@ -252,4 +258,128 @@ pub async fn set_note_keep(s: State<'_, VaultSession>, id: String, keep: bool) -
 pub async fn set_note_deleted(s: State<'_, VaultSession>, id: String, deleted: bool) -> Res<()> {
     let (store, owner) = s.data().await?;
     Ok(store.set_note_deleted(owner, id_arg(&id)?, deleted).await?)
+}
+
+/// Maps to `DataApi.setNoteTemplate()` (Use as template, or back to a plain MOP).
+#[tauri::command]
+pub async fn set_note_template(s: State<'_, VaultSession>, id: String, template: bool) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store
+        .set_note_template(owner, id_arg(&id)?, template)
+        .await?)
+}
+
+/// Maps to `DataApi.setNoteTicks()`: what is ticked off in Checklist mode (empty clears).
+#[tauri::command]
+pub async fn set_note_ticks(
+    s: State<'_, VaultSession>,
+    id: String,
+    ticks: Vec<String>,
+) -> Res<NoteView> {
+    let (store, owner) = s.data().await?;
+    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let note = store.set_note_ticks(owner, id_arg(&id)?, &ticks).await?;
+    Ok(note_view(note, OffsetDateTime::now_utc(), after))
+}
+
+/// One blank filled in, as the UI sends it.
+#[derive(Debug, Clone, Deserialize)]
+pub struct BlankValue {
+    name: String,
+    value: String,
+}
+
+/// Maps to `DataApi.noteFromTemplate()`: a new MOP with the template's blanks filled in.
+#[tauri::command]
+pub async fn note_from_template(
+    s: State<'_, VaultSession>,
+    id: String,
+    title: String,
+    values: Vec<BlankValue>,
+) -> Res<NoteView> {
+    let (store, owner) = s.data().await?;
+    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let values: Vec<(String, String)> = values.into_iter().map(|b| (b.name, b.value)).collect();
+    let note = store
+        .note_from_template(owner, id_arg(&id)?, &title, &values)
+        .await?;
+    Ok(note_view(note, OffsetDateTime::now_utc(), after))
+}
+
+/// Maps to `DataApi.mopBlanks()`: the `[[blanks]]` in a template, in order.
+#[tauri::command]
+pub fn mop_blanks(text: String) -> Vec<String> {
+    mop::blanks(&text)
+}
+
+/// Maps to `DataApi.mopChecklist()`: each line's tick and whether it is crossed out.
+#[tauri::command]
+pub fn mop_checklist(text: String, ticks: Vec<String>) -> Vec<mop::CheckLine> {
+    mop::checklist(&text, &ticks)
+}
+
+/// A file dropped or picked to bring in as a MOP (read as text by the webview).
+#[derive(Debug, Clone, Deserialize)]
+pub struct MopFile {
+    name: String,
+    text: String,
+    template: bool,
+}
+
+/// A file that couldn't come in, and why.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SkippedFile {
+    name: String,
+    why: String,
+}
+
+/// What bringing MOP files in did.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MopImport {
+    /// The new MOPs and templates, in the order given.
+    made: Vec<NoteView>,
+    /// Files left out.
+    skipped: Vec<SkippedFile>,
+}
+
+/// Most files brought in at once.
+const MAX_IMPORT_FILES: usize = 50;
+
+/// Maps to `DataApi.importMops()`: copy dropped files in as encrypted MOPs or templates.
+/// The files themselves are never touched.
+#[tauri::command]
+pub async fn import_mops(s: State<'_, VaultSession>, files: Vec<MopFile>) -> Res<MopImport> {
+    if files.len() > MAX_IMPORT_FILES {
+        return Err(CommandError::InvalidInput);
+    }
+    let (store, owner) = s.data().await?;
+    let after = store.prefs(owner).await?.notes_auto_archive_days;
+    let now = OffsetDateTime::now_utc();
+    let mut made = Vec::new();
+    let mut skipped = Vec::new();
+    for file in files {
+        let body = match mop::import_text(&file.text) {
+            Ok(body) => body,
+            Err(why) => {
+                skipped.push(SkippedFile {
+                    name: file.name,
+                    why: why.to_string(),
+                });
+                continue;
+            }
+        };
+        let input = NoteInput {
+            kind: NoteKind::Mop,
+            title: mop::import_title(&file.name),
+            body,
+            project: None,
+            tags: String::new(),
+            template: file.template,
+        };
+        let note = store.create_note(owner, &input).await?;
+        made.push(note_view(note, now, after));
+    }
+    Ok(MopImport { made, skipped })
 }

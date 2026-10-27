@@ -478,6 +478,7 @@ fn a_jot_is_logged_as_an_entry() {
                     body: "PSUs for the Meraki switch\nasked Sam, CHG0012345".into(),
                     project: Some(p.id),
                     tags: String::new(),
+                    template: false,
                 },
             )
             .await

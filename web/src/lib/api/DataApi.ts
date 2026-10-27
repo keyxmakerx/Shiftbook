@@ -131,6 +131,8 @@ export interface Prefs {
   notesAutoArchiveDays: number;
   /** Open windows and where they are. */
   windows: WindowSpot[];
+  /** The MOP notebook window. */
+  mopbook: MopBook;
   /** Where the Desk's "Done today" pile sits; null places it automatically. */
   donePile: [number, number] | null;
   /** The headings of "Copy for stand-up": what was done, what's next. */
@@ -373,6 +375,7 @@ export type PrefKey =
   | 'timer.paused'
   | 'notes.auto_archive_days'
   | 'ui.windows'
+  | 'ui.mopbook'
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
@@ -863,6 +866,10 @@ export interface Note {
   tags: string[];
   /** Kept out of auto-archive. */
   keep: boolean;
+  /** A MOP template: offers "New MOP from this template" (round 16). */
+  template: boolean;
+  /** What is ticked off in Checklist mode (line keys; see `mopChecklist`). */
+  ticks: string[];
   archived: boolean;
   /** Days until auto-archive moves it, when the warning should show; otherwise null. */
   archiveInDays: number | null;
@@ -880,6 +887,51 @@ export interface NoteInput {
   projectId: string | null;
   /** Tags as typed, comma-separated. */
   tags: string;
+  /** Write it as a MOP template (only when creating). */
+  template?: boolean;
+}
+
+/** One line of a MOP in Checklist mode. Mirrors `shiftbook_core::mop::CheckLine`. */
+export interface CheckLine {
+  /** What its tick is stored by; empty for a blank line. */
+  key: string;
+  ticked: boolean;
+  /** Ticked, or under a ticked heading or step. */
+  crossed: boolean;
+}
+
+/** A file dropped or picked to bring in as a MOP, read as text. */
+export interface MopFile {
+  name: string;
+  text: string;
+  /** Bring it in as a template. */
+  template: boolean;
+}
+
+/** What bringing MOP files in did. */
+export interface MopImport {
+  made: Note[];
+  /** Files left out and why (a Word file, not text…). */
+  skipped: { name: string; why: string }[];
+}
+
+/** How the MOP notebook shows a MOP. Mirrors `shiftbook_core::mop::MopView`. */
+export type MopView = 'numbered' | 'minimal' | 'checklist';
+
+/** The MOP notebook window (round 16). Mirrors `shiftbook_core::mop::MopBook`. */
+export interface MopBook {
+  shown: boolean;
+  mode: WindowMode;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  view: MopView;
+  /** Line numbers showing. */
+  numbers: boolean;
+  /** MOPs open as tabs, in order. */
+  tabs: string[];
+  active: string | null;
 }
 
 export interface NoteList {
@@ -1327,6 +1379,20 @@ export interface DataApi {
   /** Keep out of auto-archive, or let it move again. */
   setNoteKeep(id: string, keep: boolean): Promise<void>;
   setNoteDeleted(id: string, deleted: boolean): Promise<void>;
+  /** Use as template, or back to a plain MOP. */
+  setNoteTemplate(id: string, template: boolean): Promise<void>;
+  /** Keep what's ticked off in Checklist mode; an empty list clears it for a fresh run. */
+  setNoteTicks(id: string, ticks: string[]): Promise<Note>;
+  /** A new MOP from a template, its `[[blanks]]` filled (empty ones stay). Blank title uses the template's. */
+  noteFromTemplate(id: string, title: string, values: { name: string; value: string }[]): Promise<Note>;
+  /** The `[[blanks]]` in a template's text, in order. */
+  mopBlanks(text: string): Promise<string[]>;
+  /** Each line of a MOP with its tick and whether it is crossed out. */
+  mopChecklist(text: string, ticks: string[]): Promise<CheckLine[]>;
+  /** Copy files in as encrypted MOPs or templates; the files themselves are untouched. */
+  importMops(files: MopFile[]): Promise<MopImport>;
+  /** Save a MOP as a plain (not encrypted) text file; the file name, or null if cancelled. */
+  saveMopFile(id: string): Promise<string | null>;
 
   // ----- find -----
   /** Entries, Inbox scraps, notes and the given command names that match `query`. */

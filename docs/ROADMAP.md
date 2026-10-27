@@ -40,8 +40,10 @@ the README for what it does.
   toolbox and folding from round 12; the meeting canvas and pictures in notes are next (see
   `docs/CANVAS.md`).
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
-  Find). Still to come, in this order: the meeting canvas, MOPs with Run mode and export, then
-  imports (paste, MOP import with its check screen, OneNote sections), and the **notes map**.
+  Find), and the **MOP notebook** (round 16: tabs, Numbered/Minimal/Checklist, templates with
+  `[[blanks]]`, dropping text MOP files in, Save as a text file). Still to come, in this order:
+  the meeting canvas, then imports (paste, Word .docx MOPs, OneNote sections), and the
+  **notes map**.
   The Desk has a Notes card (Jot, Today's Daily note, Meetings); a strip that stays open on every
   view is still to come.
 - **Global capture shortcut** (`tauri-plugin-global-shortcut`, Ctrl+Shift+Space from anywhere):

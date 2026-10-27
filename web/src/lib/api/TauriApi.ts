@@ -47,6 +47,9 @@ import type {
   CanvasCard,
   TidyResult,
   Note,
+  CheckLine,
+  MopFile,
+  MopImport,
   NoteInput,
   NoteKind,
   NoteList,
@@ -553,6 +556,27 @@ export class TauriApi implements DataApi {
   }
   setNoteDeleted(id: string, deleted: boolean): Promise<void> {
     return call('set_note_deleted', { id, deleted });
+  }
+  setNoteTemplate(id: string, template: boolean): Promise<void> {
+    return call('set_note_template', { id, template });
+  }
+  setNoteTicks(id: string, ticks: string[]): Promise<Note> {
+    return call('set_note_ticks', { id, ticks });
+  }
+  noteFromTemplate(id: string, title: string, values: { name: string; value: string }[]): Promise<Note> {
+    return call('note_from_template', { id, title, values });
+  }
+  mopBlanks(text: string): Promise<string[]> {
+    return call('mop_blanks', { text });
+  }
+  mopChecklist(text: string, ticks: string[]): Promise<CheckLine[]> {
+    return call('mop_checklist', { text, ticks });
+  }
+  importMops(files: MopFile[]): Promise<MopImport> {
+    return call('import_mops', { files });
+  }
+  saveMopFile(id: string): Promise<string | null> {
+    return call('save_mop_file', { id });
   }
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {

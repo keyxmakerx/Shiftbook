@@ -317,6 +317,59 @@ fn file_name_of(path: &std::path::Path) -> String {
         .unwrap_or_default()
 }
 
+/// Save a MOP as a plain text file where the user chooses (the UI warns first that the file
+/// is not encrypted). Returns the file name, or `None` if the dialog was cancelled. Maps to
+/// `DataApi.saveMopFile()`.
+#[tauri::command]
+async fn save_mop_file(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+    id: String,
+) -> Result<Option<String>, CommandError> {
+    let (store, owner) = state.data().await?;
+    let id = id.parse().map_err(|_| CommandError::InvalidInput)?;
+    let note = store.get_note(owner, id).await?;
+    let file_name = shiftbook_core::mop::file_name_for(&note.title);
+    let dialog = app.dialog().file();
+    #[cfg(desktop)]
+    let dialog = dialog.set_parent(&window);
+    #[cfg(mobile)]
+    let _ = window;
+    let dialog = dialog
+        .set_title("Save the MOP as a text file")
+        .set_file_name(&file_name);
+    #[cfg(desktop)]
+    let dialog = dialog.add_filter("Text file", &["txt"]);
+    // Windows line endings, so Notepad and Notepad++ show it the same way.
+    let text = if cfg!(windows) {
+        note.body.replace('\n', "\r\n")
+    } else {
+        note.body
+    };
+    match dialog_pick(move || dialog.blocking_save_file()).await? {
+        None => Ok(None),
+        Some(tauri_plugin_dialog::FilePath::Path(path)) => {
+            std::fs::write(&path, text).map_err(|_| CommandError::StorageError)?;
+            Ok(Some(file_name_of(&path)))
+        }
+        Some(tauri_plugin_dialog::FilePath::Url(url)) => {
+            let temp = phone_temp(&app, "outgoing.txt")?;
+            let copied = std::fs::write(&temp, text)
+                .map_err(|_| CommandError::StorageError)
+                .and_then(|()| {
+                    phone::copy_to_uri(&app, &temp, url.as_str())
+                        .map_err(|()| CommandError::StorageError)
+                });
+            let _ = std::fs::remove_file(&temp);
+            copied?;
+            Ok(Some(
+                phone::display_name(&app, url.as_str()).unwrap_or(file_name),
+            ))
+        }
+    }
+}
+
 /// Save a backup where the user chooses; `today` (the local date) names the
 /// file. Returns the file name, or `None` if the dialog was cancelled. Maps to
 /// `DataApi.backupNow()`.
@@ -735,6 +788,13 @@ pub fn run() {
             notes::set_note_archived,
             notes::set_note_keep,
             notes::set_note_deleted,
+            notes::set_note_template,
+            notes::set_note_ticks,
+            notes::note_from_template,
+            notes::mop_blanks,
+            notes::mop_checklist,
+            notes::import_mops,
+            save_mop_file,
             backup_now,
             list_backups,
             pick_backup_file,

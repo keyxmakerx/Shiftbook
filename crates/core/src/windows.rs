@@ -34,7 +34,7 @@ pub enum WindowMode {
 }
 
 impl WindowMode {
-    fn as_str(self) -> &'static str {
+    pub(crate) fn as_str(self) -> &'static str {
         match self {
             WindowMode::Open => "open",
             WindowMode::Rolled => "rolled",
@@ -43,7 +43,7 @@ impl WindowMode {
         }
     }
 
-    fn parse(text: &str) -> Option<Self> {
+    pub(crate) fn parse(text: &str) -> Option<Self> {
         match text {
             "open" => Some(WindowMode::Open),
             "rolled" => Some(WindowMode::Rolled),
