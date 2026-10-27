@@ -231,7 +231,7 @@ pub async fn merge_backup(
         created_at: file.created_at.clone(),
         ..SyncReport::default()
     };
-    let mut tx = store.pool().begin().await?;
+    let mut tx = store.write_tx().await?;
 
     // Same start: every owner in the file is an owner here.
     let here: Vec<String> = sqlx::query_scalar("SELECT id FROM users")

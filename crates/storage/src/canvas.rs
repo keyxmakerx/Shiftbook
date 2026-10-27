@@ -83,7 +83,7 @@ impl SqliteStore {
     ) -> Result<CanvasSpot> {
         let (x, y) = clamp_spot(x, y);
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let top: Option<i64> = sqlx::query_scalar(
             "SELECT MAX(z) FROM canvas_cards WHERE owner_id = $1 AND deleted_at IS NULL",
         )
@@ -158,7 +158,7 @@ impl SqliteStore {
     ) -> Result<CanvasArea> {
         let area = area.clean();
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         crate::work::project_exists(&mut tx, owner, project).await?;
         let updated = sqlx::query(
             "UPDATE canvas_areas SET x = $1, y = $2, w = $3, h = $4, updated_at = $5 \
@@ -374,7 +374,7 @@ impl SqliteStore {
         }
         let (a, b) = pair(a, b);
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let updated = sqlx::query(
             "UPDATE canvas_links SET drawn = $1, updated_at = $2 WHERE owner_id = $3 \
              AND a_kind = $4 AND a_id = $5 AND b_kind = $6 AND b_id = $7 AND deleted_at IS NULL",

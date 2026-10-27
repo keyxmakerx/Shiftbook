@@ -407,12 +407,21 @@ impl SqliteStore {
         &self.pool
     }
 
+    /// Start a transaction that takes the write lock at once (`BEGIN IMMEDIATE`). A plain
+    /// `BEGIN` reads first and asks for the lock at its first write; if another connection
+    /// holds it then (say, one whose failed transaction is still being rolled back), SQLite
+    /// answers "database is locked" straight away instead of waiting. Taking it up front
+    /// lets the busy timeout wait it out.
+    pub async fn write_tx(&self) -> Result<sqlx::Transaction<'static, sqlx::Sqlite>> {
+        Ok(self.pool.begin_with("BEGIN IMMEDIATE").await?)
+    }
+
     /// First-run (and every-unlock) initialisation, in one transaction: create the
     /// local user if there is none, then seed the default lists and frequencies
     /// once. Safe to call again; nothing is duplicated.
     pub async fn initialize_local_owner(&self, display_name: &str) -> Result<User> {
         let display_name = validate_required("Name", display_name, MAX_LIST_VALUE_CHARS)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let existing = sqlx::query(
             "SELECT id, display_name, created_at, updated_at, deleted_at FROM users \
              WHERE deleted_at IS NULL ORDER BY created_at, id LIMIT 1",
@@ -541,7 +550,7 @@ impl ListOptionRepository for SqliteStore {
     ) -> Result<ListOption> {
         let value = validate_list_value(value)?;
         let color = color.map(validate_color).transpose()?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         ensure_unique_option(&mut tx, owner, list, &value, None).await?;
         let next: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM list_options \
@@ -576,7 +585,7 @@ impl ListOptionRepository for SqliteStore {
         new_value: &str,
     ) -> Result<ListOption> {
         let new_value = validate_list_value(new_value)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let current = fetch_list_option(&mut tx, owner, id).await?;
         if is_protected(current.list_name, &current.value) {
             return Err(StorageError::Protected(current.value));
@@ -615,7 +624,7 @@ impl ListOptionRepository for SqliteStore {
         id: ListOptionId,
         hidden: bool,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let current = fetch_list_option(&mut tx, owner, id).await?;
         if hidden && is_protected(current.list_name, &current.value) {
             return Err(StorageError::Protected(current.value));
@@ -662,7 +671,7 @@ impl ListOptionRepository for SqliteStore {
         list: ListName,
         ids: &[ListOptionId],
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let now = now_text();
         for (position, id) in ids.iter().enumerate() {
             let position = i64::try_from(position).map_err(|_| StorageError::NotFound)?;
@@ -748,7 +757,7 @@ impl FrequencyRepository for SqliteStore {
     ) -> Result<Frequency> {
         validate_frequency(label, months, days)?;
         let label = label.trim().to_string();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         ensure_unique_frequency(&mut tx, owner, &label, None).await?;
         let next: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM frequencies WHERE owner_id = $1",
@@ -783,7 +792,7 @@ impl FrequencyRepository for SqliteStore {
     ) -> Result<Frequency> {
         validate_frequency(label, months, days)?;
         let label = label.trim().to_string();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         fetch_frequency(&mut tx, owner, id).await?;
         ensure_unique_frequency(&mut tx, owner, &label, Some(id)).await?;
         sqlx::query(

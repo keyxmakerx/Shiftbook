@@ -292,7 +292,7 @@ impl SqliteStore {
         input: &RecurringInput,
     ) -> Result<RecurringTask> {
         let task = checked(owner, RecurringTaskId::new(), input)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         if let Some(f) = task.frequency_id {
             frequency_exists(&mut tx, owner, f).await?;
         }
@@ -331,7 +331,7 @@ impl SqliteStore {
         input: &RecurringInput,
     ) -> Result<RecurringTask> {
         let task = checked(owner, id, input)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         fetch_recurring(&mut tx, owner, id).await?;
         if let Some(f) = task.frequency_id {
             frequency_exists(&mut tx, owner, f).await?;
@@ -371,7 +371,7 @@ impl SqliteStore {
         id: RecurringTaskId,
         expires: Date,
     ) -> Result<RecurringTask> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         fetch_recurring(&mut tx, owner, id).await?;
         sqlx::query(
             "UPDATE recurring_tasks SET expiration_date = $1, updated_at = $2 \
@@ -422,7 +422,7 @@ impl SqliteStore {
         id: RecurringTaskId,
         date: Date,
     ) -> Result<MarkedDone> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let task = fetch_recurring(&mut tx, owner, id).await?;
         let marked = mark_done_in(&mut tx, owner, &task, date, None).await?;
         tx.commit().await?;
@@ -438,7 +438,7 @@ impl SqliteStore {
         date: Date,
         expires: Date,
     ) -> Result<MarkedDone> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let task = fetch_recurring(&mut tx, owner, id).await?;
         sqlx::query(
             "UPDATE recurring_tasks SET expiration_date = $1, updated_at = $2 \

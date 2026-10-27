@@ -595,7 +595,7 @@ impl crate::SqliteStore {
         done: bool,
         from: Date,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let n: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM items WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
         )

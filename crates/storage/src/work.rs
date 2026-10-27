@@ -963,7 +963,7 @@ impl SqliteStore {
         color: Option<&str>,
     ) -> Result<Project> {
         let color = color.map(validate_color).transpose()?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         ensure_unique_project(&mut tx, owner, name, None).await?;
         let used: Vec<Option<String>> = sqlx::query_scalar(
             "SELECT color FROM projects WHERE owner_id = $1 AND deleted_at IS NULL",
@@ -1014,7 +1014,7 @@ impl SqliteStore {
         input: &ProjectInput,
     ) -> Result<Project> {
         let color = input.color.as_deref().map(validate_color).transpose()?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let mut project = fetch_project(&mut tx, owner, id).await?;
         project.name = input.name.trim().to_string();
         validate_project(&project)?;
@@ -1108,7 +1108,7 @@ impl SqliteStore {
         input: &EntryInput,
         tickets: &str,
     ) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let id = create_entry_in(&mut tx, owner, input, tickets).await?;
         let rec = entry_record(&mut tx, owner, id).await?;
         tx.commit().await?;
@@ -1123,7 +1123,7 @@ impl SqliteStore {
         id: TimeEntryId,
         input: &EntryInput,
     ) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let (current, is_tray) = fetch_entry(&mut tx, owner, id).await?;
         let mut input = input.clone();
         if is_tray {
@@ -1192,7 +1192,7 @@ impl SqliteStore {
             timesheet_code_id: None,
         };
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let entry = create_entry_in(&mut tx, owner, &input, &made.tickets.join("\n")).await?;
         sqlx::query(
             "UPDATE notes SET archived_at = $1, updated_at = $1 \
@@ -1279,7 +1279,7 @@ impl SqliteStore {
         id: TimeEntryId,
         delta: i32,
     ) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let (entry, is_tray) = fetch_entry(&mut tx, owner, id).await?;
         if is_tray {
             return Err(StorageError::TrayManaged);
@@ -1300,7 +1300,7 @@ impl SqliteStore {
         notes: &str,
     ) -> Result<EntryRecord> {
         let notes = clean_notes(notes)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         fetch_entry(&mut tx, owner, id).await?;
         sqlx::query(
             "UPDATE time_entries SET next_step = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
@@ -1324,7 +1324,7 @@ impl SqliteStore {
         ids: &[TimeEntryId],
         code: Option<TimesheetCodeId>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         if let Some(c) = code {
             code_exists(&mut tx, owner, c).await?;
         }
@@ -1349,7 +1349,7 @@ impl SqliteStore {
     /// Soft-delete an entry. Deleting a tray roll-up also takes its tickets out of that
     /// day's tray: all of the plain entry's, or one project's (restoring brings both back).
     pub async fn delete_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let (entry, is_tray) = fetch_entry(&mut tx, owner, id).await?;
         let now = now_text();
         sqlx::query(
@@ -1384,7 +1384,7 @@ impl SqliteStore {
 
     /// Undo a delete.
     pub async fn restore_entry(&self, owner: OwnerId, id: TimeEntryId) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let row: Option<(String, Option<String>, String)> = sqlx::query_as(
             "SELECT date, source, deleted_at FROM time_entries \
              WHERE id = $1 AND owner_id = $2 AND deleted_at IS NOT NULL",
@@ -1444,7 +1444,7 @@ impl SqliteStore {
         id: TimeEntryId,
         text: &str,
     ) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let (_, is_tray) = fetch_entry(&mut tx, owner, id).await?;
         if is_tray {
             return Err(StorageError::TrayManaged);
@@ -1489,7 +1489,7 @@ impl SqliteStore {
         done: Option<bool>,
         note: Option<Option<String>>,
     ) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let entry: Option<String> = sqlx::query_scalar(
             "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
         )
@@ -1557,7 +1557,7 @@ impl SqliteStore {
 
     /// Remove one ticket from its entry (soft delete). Returns the entry.
     pub async fn remove_ticket(&self, owner: OwnerId, ticket: TicketId) -> Result<EntryRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let entry: Option<String> = sqlx::query_scalar(
             "SELECT time_entry_id FROM tickets WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
         )
@@ -1691,7 +1691,7 @@ impl SqliteStore {
                 is_tray: r.is_tray,
             })
             .collect();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let mut past = Self::past_use(&mut tx, owner, &capture.tickets).await?;
         if let Some(target) = same_target {
             match past.as_mut() {
@@ -1763,7 +1763,7 @@ impl SqliteStore {
     /// each gets 15 minutes and starts still open (`NEW_TICKET_DONE`). A ticket seen on an
     /// earlier day keeps its notepad and project. The roll-ups follow.
     pub async fn tray_add(&self, owner: OwnerId, date: Date, text: &str) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let existing: Vec<String> = tray_items(&mut tx, owner, date)
             .await?
             .into_iter()
@@ -1822,7 +1822,7 @@ impl SqliteStore {
         minutes: u32,
     ) -> Result<TrayDay> {
         let minutes = validate_tray_minutes(minutes)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let date = tray_item_date(&mut tx, owner, id, true).await?;
         sqlx::query(
             "UPDATE ticket_tray SET minutes = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
@@ -1847,7 +1847,7 @@ impl SqliteStore {
         note: &str,
     ) -> Result<TrayDay> {
         let note = clean_tray_note(note)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let date = tray_item_date(&mut tx, owner, id, true).await?;
         match tray_row_item(&mut tx, owner, &id.to_string()).await? {
             // One notepad per ticket (round 15): it shows wherever the ticket does.
@@ -1879,7 +1879,7 @@ impl SqliteStore {
         id: TrayItemId,
         done: bool,
     ) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let item = live_tray_item(&mut tx, owner, id).await?;
         match tray_row_item(&mut tx, owner, &id.to_string()).await? {
             Some(of) => set_item_done(&mut tx, owner, of, done, item.date).await?,
@@ -1923,7 +1923,7 @@ impl SqliteStore {
         id: TrayItemId,
         project: Option<ProjectId>,
     ) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         if let Some(p) = project {
             project_exists(&mut tx, owner, p).await?;
         }
@@ -1940,7 +1940,7 @@ impl SqliteStore {
         id: TrayItemId,
         recurring: Option<RecurringTaskId>,
     ) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         if let Some(r) = recurring {
             recurring_exists(&mut tx, owner, r).await?;
         }
@@ -2027,7 +2027,7 @@ impl SqliteStore {
     /// Carry a still-open ticket into `date`'s tray: a new open row with 15 minutes, its
     /// notepad and its project. Already there: nothing changes.
     pub async fn tray_carry(&self, owner: OwnerId, id: TrayItemId, date: Date) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let item = live_tray_item(&mut tx, owner, id).await?;
         let there = tray_items(&mut tx, owner, date)
             .await?
@@ -2058,7 +2058,7 @@ impl SqliteStore {
         id: TrayItemId,
         delete: bool,
     ) -> Result<TrayDay> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let date = tray_item_date(&mut tx, owner, id, delete).await?;
         let now = now_text();
         sqlx::query(

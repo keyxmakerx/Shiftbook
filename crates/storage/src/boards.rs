@@ -78,7 +78,7 @@ impl SqliteStore {
         let key = board_key(board)?;
         let (x, y) = clamp_spot(x, y);
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let top: Option<i64> = sqlx::query_scalar(
             "SELECT MAX(z) FROM board_cards \
              WHERE owner_id = $1 AND board = $2 AND deleted_at IS NULL",

@@ -430,3 +430,46 @@ fn frequencies_crud() {
         s.pool().close().await;
     });
 }
+
+/// What broke the Android run: one connection holds the write lock (a failed transaction
+/// still being rolled back) while another, in a plain `BEGIN`, reads and then writes.
+/// SQLite refuses that at once with "database is locked". `write_tx` takes the lock first,
+/// so it waits for the other connection instead.
+#[test]
+fn a_write_waits_for_another_writer_instead_of_failing() {
+    let dir = TestDir::new("write-lock");
+    block_on(async {
+        let s = store(&dir).await;
+        s.initialize_local_owner("Me").await.unwrap();
+        const TOUCH: &str = "UPDATE users SET display_name = display_name";
+
+        let mut holder = s.write_tx().await.unwrap();
+        sqlx::query(TOUCH).execute(&mut *holder).await.unwrap();
+
+        // The old way: read, then write, while the lock is held elsewhere.
+        let mut deferred = s.pool().begin().await.unwrap();
+        sqlx::query("SELECT count(*) FROM users")
+            .execute(&mut *deferred)
+            .await
+            .unwrap();
+        let err = sqlx::query(TOUCH)
+            .execute(&mut *deferred)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("locked"), "{err}");
+        deferred.rollback().await.unwrap();
+
+        // The new way waits for the holder, then goes ahead.
+        let s2 = s.clone();
+        let waiter = tokio::spawn(async move {
+            let mut tx = s2.write_tx().await.unwrap();
+            sqlx::query(TOUCH).execute(&mut *tx).await.unwrap();
+            tx.commit().await.unwrap();
+        });
+        for _ in 0..20 {
+            tokio::task::yield_now().await;
+        }
+        holder.commit().await.unwrap();
+        waiter.await.unwrap();
+    });
+}
