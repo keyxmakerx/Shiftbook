@@ -319,7 +319,7 @@ impl SqliteStore {
             .map(|n| n.id)
             .collect();
         let stamp = format_timestamp(now);
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         for id in &due {
             sqlx::query(
                 "UPDATE notes SET archived_at = $1 WHERE id = $2 AND owner_id = $3 \

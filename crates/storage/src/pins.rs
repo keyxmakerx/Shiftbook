@@ -49,7 +49,7 @@ impl SqliteStore {
     ) -> Result<()> {
         let now = now_text();
         let chase = chase_on.map(format_date);
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         // Check before writing anything: a refused pin must not leave a write lock behind.
         let pinned: i64 = sqlx::query_scalar(
             "SELECT COUNT(*) FROM pins WHERE owner_id = $1 AND deleted_at IS NULL",
@@ -144,7 +144,7 @@ impl SqliteStore {
     /// "No follow-up": take a card's follow-up day away, whether brought up or a chase day.
     pub async fn clear_follow_up(&self, owner: OwnerId, kind: CardKind, id: Uuid) -> Result<()> {
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         sqlx::query(
             "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
              AND about_kind = $3 AND about_id = $4 AND show_from IS NOT NULL \

@@ -141,7 +141,7 @@ impl SqliteStore {
         let title = validate_list_title(title)?;
         let lines = split_list_items(items);
         check_list_room(0, lines.len())?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let next: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM tasks WHERE owner_id = $1 AND is_list = TRUE",
         )
@@ -170,7 +170,7 @@ impl SqliteStore {
     /// Rename a list.
     pub async fn rename_list(&self, owner: OwnerId, id: TaskId, title: &str) -> Result<ListRecord> {
         let title = validate_list_title(title)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         live_list(&mut tx, owner, id).await?;
         sqlx::query("UPDATE tasks SET title = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4")
             .bind(&title)
@@ -215,7 +215,7 @@ impl SqliteStore {
         if lines.is_empty() {
             validate_list_item("")?;
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let current = record(&mut tx, owner, id).await?;
         check_list_room(current.items.len(), lines.len())?;
         let next = current
@@ -237,7 +237,7 @@ impl SqliteStore {
         item: ChecklistItemId,
         done: bool,
     ) -> Result<ListRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let list = list_of_item(&mut tx, owner, item).await?;
         sqlx::query(
             "UPDATE task_checklist_items SET done = $1, updated_at = $2 \
@@ -262,7 +262,7 @@ impl SqliteStore {
         text: &str,
     ) -> Result<ListRecord> {
         let text = validate_list_item(text)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let list = list_of_item(&mut tx, owner, item).await?;
         sqlx::query(
             "UPDATE task_checklist_items SET text = $1, updated_at = $2 \
@@ -286,7 +286,7 @@ impl SqliteStore {
         item: ChecklistItemId,
         deleted: bool,
     ) -> Result<ListRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let list = list_of_item(&mut tx, owner, item).await?;
         let now = now_text();
         sqlx::query(
@@ -306,7 +306,7 @@ impl SqliteStore {
 
     /// Reset for next time: untick every item, keep them all.
     pub async fn reset_list(&self, owner: OwnerId, id: TaskId) -> Result<ListRecord> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         live_list(&mut tx, owner, id).await?;
         sqlx::query(
             "UPDATE task_checklist_items SET done = FALSE, updated_at = $1 \

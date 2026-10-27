@@ -218,7 +218,7 @@ pub(crate) fn cell(row: &SqliteRow, i: usize) -> Result<Value, BackupError> {
 /// Read every row of every table, in one read transaction so the copy is consistent.
 async fn dump(store: &SqliteStore) -> Result<Contents, BackupError> {
     let schema_version = schema_version(store).await?;
-    let mut tx = store.pool().begin().await?;
+    let mut tx = store.write_tx().await?;
     let names: Vec<String> = sqlx::query_scalar(table_names_sql())
         .fetch_all(&mut *tx)
         .await?;
@@ -452,7 +452,7 @@ pub async fn current_schema_version(store: &SqliteStore) -> Result<i64, BackupEr
 /// added since the backup was made keep their defaults; a table or column the
 /// backup has but this version doesn't is refused.
 pub async fn restore_backup(store: &SqliteStore, backup: &OpenedBackup) -> Result<(), BackupError> {
-    let mut tx = store.pool().begin().await?;
+    let mut tx = store.write_tx().await?;
     // Rows go in table by table; check references once, at commit.
     sqlx::query("PRAGMA defer_foreign_keys = ON")
         .execute(&mut *tx)

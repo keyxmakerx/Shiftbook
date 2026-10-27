@@ -260,7 +260,7 @@ impl SqliteStore {
                 },
             ));
         }
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let left = stack_of(&mut tx, owner, moving).await?;
         let stack = match stack_of(&mut tx, owner, onto).await? {
             Some(s) => s,
@@ -332,7 +332,7 @@ impl SqliteStore {
 
     /// Take a pile apart: its cards fan out from where it was.
     pub async fn dissolve_stack(&self, owner: OwnerId, id: Uuid) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         spill(&mut tx, owner, id).await?;
         tx.commit().await?;
         Ok(())
@@ -340,7 +340,7 @@ impl SqliteStore {
 
     /// File a card in a drawer: it leaves the Desk (and its pile).
     pub async fn file_card(&self, owner: OwnerId, card: CardRef, drawer: Drawer) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let left = stack_of(&mut tx, owner, card).await?;
         place(&mut tx, owner, card, None, None, Some(drawer)).await?;
         settle(&mut tx, owner, left).await?;
@@ -356,7 +356,7 @@ impl SqliteStore {
         cards: &[CardRef],
         drawer: Drawer,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         for &card in cards {
             let left = stack_of(&mut tx, owner, card).await?;
             place(&mut tx, owner, card, None, None, Some(drawer)).await?;
@@ -373,7 +373,7 @@ impl SqliteStore {
         id: Uuid,
         drawer: Drawer,
     ) -> Result<Vec<CardRef>> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let (x, y) = stack_spot(&mut tx, owner, id).await?;
         let cards = members(&mut tx, owner, id).await?;
         for card in &cards {
@@ -391,7 +391,7 @@ impl SqliteStore {
 
     /// Take a card out of its drawer and put it back on the Desk at `x`, `y`.
     pub async fn unfile_card(&self, owner: OwnerId, card: CardRef, x: i32, y: i32) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         place(&mut tx, owner, card, Some(clamp_spot(x, y)), None, None).await?;
         tx.commit().await?;
         Ok(())

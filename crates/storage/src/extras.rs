@@ -377,7 +377,7 @@ impl SqliteStore {
         input: &CodeInput,
     ) -> Result<TimesheetCode> {
         let mut code = checked_code(owner, input)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let next: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(sort_order), 0) + 1 FROM timesheet_codes WHERE owner_id = $1",
         )
@@ -414,7 +414,7 @@ impl SqliteStore {
         input: &CodeInput,
     ) -> Result<TimesheetCode> {
         let code = checked_code(owner, input)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         not_found_if_zero(
             sqlx::query(
                 "UPDATE timesheet_codes SET area = $1, phase_label = $2, code = $3, sort_order = $4, \
@@ -494,7 +494,7 @@ impl SqliteStore {
     ) -> Result<()> {
         let [find, change, remove, add] = table.sql();
         let name = validate_list_value(name)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let now = now_text();
         let existing: Option<String> = sqlx::query_scalar(find)
             .bind(owner.to_string())
@@ -563,7 +563,7 @@ impl SqliteStore {
         done: bool,
     ) -> Result<()> {
         let key = validate_required("Line", line_key, 100)?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let now = now_text();
         let existing: Option<String> = sqlx::query_scalar(
             "SELECT id FROM timesheet_ticks WHERE owner_id = $1 AND day = $2 AND line_key = $3 \
@@ -637,7 +637,7 @@ impl SqliteStore {
             &input.link_template,
             &input.ticket_prefix,
         )?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         ensure_unique_field(&mut tx, owner, input.applies_to, &clean.name, None).await?;
         let next: i64 = sqlx::query_scalar(
             "SELECT COALESCE(MAX(sort_order), -1) + 1 FROM custom_fields WHERE owner_id = $1",
@@ -683,7 +683,7 @@ impl SqliteStore {
             &input.link_template,
             &input.ticket_prefix,
         )?;
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         fetch_field(&mut tx, owner, id).await?;
         ensure_unique_field(&mut tx, owner, input.applies_to, &clean.name, Some(id)).await?;
         sqlx::query(
@@ -751,7 +751,7 @@ impl SqliteStore {
         record: Uuid,
         value: &str,
     ) -> Result<String> {
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         let def = fetch_field(&mut tx, owner, field).await?;
         let value = validate_value(def.kind, &def.options, value)?;
         let now = now_text();
@@ -907,7 +907,7 @@ impl SqliteStore {
     ) -> Result<NextUpItem> {
         let text = bring_up_text(title)?;
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         if let Some((kind, id)) = about {
             sqlx::query(
                 "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
@@ -958,7 +958,7 @@ impl SqliteStore {
     pub async fn set_next_up(&self, owner: OwnerId, lines: &[String]) -> Result<Vec<NextUpItem>> {
         let items = clean_next_up(lines)?;
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         sqlx::query(
             "UPDATE next_up_items SET deleted_at = $1, updated_at = $1 \
              WHERE owner_id = $2 AND deleted_at IS NULL AND show_from IS NULL",
@@ -1024,7 +1024,7 @@ impl SqliteStore {
     ) -> Result<Vec<SavedResponse>> {
         let items = clean_responses(drafts)?;
         let now = now_text();
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.write_tx().await?;
         sqlx::query(
             "UPDATE saved_responses SET deleted_at = $1, updated_at = $1 \
              WHERE owner_id = $2 AND deleted_at IS NULL",
