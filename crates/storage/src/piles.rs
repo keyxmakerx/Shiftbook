@@ -291,16 +291,6 @@ impl SqliteStore {
         Ok(stack)
     }
 
-    /// Take a card off its pile and put it at `x`, `y` (a pile left with one card comes apart).
-    pub async fn unstack_card(&self, owner: OwnerId, card: CardRef, x: i32, y: i32) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-        let left = stack_of(&mut tx, owner, card).await?;
-        place(&mut tx, owner, card, Some(clamp_spot(x, y)), None, None).await?;
-        settle(&mut tx, owner, left).await?;
-        tx.commit().await?;
-        Ok(())
-    }
-
     /// Move a pile.
     pub async fn move_stack(&self, owner: OwnerId, id: Uuid, x: i32, y: i32) -> Result<()> {
         let (x, y) = clamp_spot(x, y);

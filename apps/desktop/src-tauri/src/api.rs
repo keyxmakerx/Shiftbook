@@ -70,6 +70,7 @@ async fn week_start(store: &SqliteStore, owner: OwnerId) -> Res<WeekStart> {
 
 /// A project as the UI sees it.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectView {
     id: ProjectId,
@@ -93,6 +94,7 @@ impl From<Project> for ProjectView {
 
 /// A day's tray.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TrayDayView {
     date: String,
@@ -106,6 +108,7 @@ pub struct TrayDayView {
 
 /// A timesheet code.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CodeView {
     id: TimesheetCodeId,
@@ -131,6 +134,7 @@ impl From<TimesheetCode> for CodeView {
 
 /// A category and the code it maps to.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CategoryCodeView {
     category: String,
@@ -139,6 +143,7 @@ pub struct CategoryCodeView {
 
 /// A custom field definition.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct FieldView {
     id: CustomFieldId,
@@ -168,6 +173,7 @@ impl From<CustomField> for FieldView {
 
 /// A custom value on a record (with its link, for link fields).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ValueView {
     field_id: CustomFieldId,
@@ -177,6 +183,7 @@ pub struct ValueView {
 
 /// A crib sheet tick-off.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TickView {
     day: String,
@@ -186,6 +193,7 @@ pub struct TickView {
 
 /// One thing on the "next up" list.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct NextUpView {
     id: NextUpItemId,
@@ -197,6 +205,7 @@ pub struct NextUpView {
 
 /// What `unlock` tells the UI.
 #[derive(Debug, Clone, Copy, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct UnlockOutcome {
     /// Unlocked with the recovery key: ask for a new password now.
@@ -477,6 +486,7 @@ pub async fn add_entry_minutes(
 
 /// What "+15m" on an entry did.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct AddedTimeView {
     /// The entry that got the time.
@@ -639,6 +649,7 @@ pub async fn quick_log(
 
 /// Earlier work Log work asks about ("Add to …?", round 15).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SameWorkView {
     title: String,
@@ -693,6 +704,7 @@ pub async fn same_work(
 
 /// A ticket item with its time so far (round 15): a known ticket, or a line of the Items view.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ItemView {
     id: String,
@@ -1141,6 +1153,7 @@ pub async fn set_category_code(
 
 /// One kind of repeating thing and its code, for Customize → Timesheet.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct KindCodeView {
     kind: String,
@@ -1291,6 +1304,7 @@ const SEARCH_TICKETS: usize = 6;
 
 /// What Find found.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SearchView {
     /// Entries, best first.
@@ -1576,6 +1590,7 @@ pub async fn tick_next_up(s: State<'_, VaultSession>, id: String, done: bool) ->
 
 /// One saved response.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseView {
     id: shiftbook_core::ids::SavedResponseId,
@@ -1631,6 +1646,7 @@ pub async fn save_responses(
 /// What the "Where was I?" card shows: the open wrap-up list (first item first), or
 /// else the last entry logged.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct ResumeView {
     trigger: ResumeTrigger,

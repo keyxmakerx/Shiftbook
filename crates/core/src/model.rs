@@ -692,6 +692,7 @@ pub struct SavedResponse {
 
 /// A note (see `crate::notes`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     /// Id.
@@ -716,15 +717,19 @@ pub struct Note {
     pub ticks: Vec<String>,
     /// When it went to the archive, if it has.
     #[serde(with = "rfc3339::option")]
+    #[cfg_attr(feature = "ts", ts(type = "string | null"))]
     pub archived_at: Option<OffsetDateTime>,
     /// When created (UTC).
     #[serde(with = "rfc3339")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub created_at: OffsetDateTime,
     /// When last changed (UTC).
     #[serde(with = "rfc3339")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub updated_at: OffsetDateTime,
     /// When soft-deleted, if ever.
     #[serde(with = "rfc3339::option")]
+    #[cfg_attr(feature = "ts", ts(type = "string | null"))]
     pub deleted_at: Option<OffsetDateTime>,
 }
 

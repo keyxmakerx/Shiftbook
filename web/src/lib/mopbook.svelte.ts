@@ -5,12 +5,12 @@
 // crates/core/src/mop.rs) so it comes back as it was.
 import { api } from './api';
 import type { MopBook, MopFile, MopView, WindowMode } from './api';
+import { MAX_TABS } from './api/generated/constants';
 import { formatBook, readFiles } from './mop';
 import { phone } from './phone.svelte';
 import { app } from './store.svelte';
 
 const SAVE_AFTER_MS = 600;
-const MAX_TABS = 20;
 
 export const book = $state<MopBook & { loaded: boolean }>({
   loaded: false,

@@ -122,9 +122,14 @@ pub const MAX_SHARED_CHARS: usize = 10_000;
 /// Why Shiftbook was opened, when it wasn't just its icon: text shared into it, a
 /// long-press shortcut, the timer tile or a nudge. Taken once.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Launch {
     /// `share`, `log`, `timer`, `jot`, `due` or `wrapup`.
+    #[cfg_attr(
+        feature = "ts",
+        ts(type = "'share' | 'log' | 'timer' | 'jot' | 'due' | 'wrapup'")
+    )]
     pub kind: String,
     /// The shared text, for `share`.
     pub text: Option<String>,
@@ -276,6 +281,7 @@ pub async fn plan_nudges<R: Runtime>(
 
 /// What the unlock screen and Security need to know.
 #[derive(Debug, Clone, Copy, Default, serde::Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct FingerprintStatus {
     /// This phone can do it (Android 11 or newer with a strong fingerprint sensor set up).

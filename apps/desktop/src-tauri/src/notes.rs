@@ -27,6 +27,7 @@ fn id_arg<T: std::str::FromStr>(text: &str) -> Res<T> {
 
 /// The notes list.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct NoteListView {
     /// Notes to show: best match first when searching, else most recently changed.
@@ -328,6 +329,7 @@ pub struct MopFile {
 
 /// A file that couldn't come in, and why.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SkippedFile {
     name: String,
@@ -336,6 +338,7 @@ pub struct SkippedFile {
 
 /// What bringing MOP files in did.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct MopImport {
     /// The new MOPs and templates, in the order given.

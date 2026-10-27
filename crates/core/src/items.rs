@@ -132,6 +132,26 @@ pub fn reopens(date: Date, from: Date) -> bool {
     date >= from
 }
 
+/// True when work on `date` is back-dated: earlier than the ticket's newest live day
+/// (`newest`). Back-dated work takes the ticket as it stands (a done ticket stays done)
+/// instead of reopening it, so logging forgotten work never undoes a later tick.
+pub fn back_dated(date: Date, newest: Option<Date>) -> bool {
+    newest.is_some_and(|n| date < n)
+}
+
+/// Whether an item is done, from its live occurrences as (day, done): its newest day decides,
+/// open if anything on that day is open. `None` when nothing of it is left, so the item keeps
+/// what it was (a removal can be undone).
+pub fn done_from(occurrences: &[(Date, bool)]) -> Option<bool> {
+    let newest = occurrences.iter().map(|(d, _)| *d).max()?;
+    Some(
+        occurrences
+            .iter()
+            .filter(|(d, _)| *d == newest)
+            .all(|(_, done)| *done),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -248,5 +268,23 @@ mod tests {
         assert!(reopens(date!(2026 - 10 - 14), from));
         assert!(reopens(date!(2026 - 10 - 15), from));
         assert!(!reopens(date!(2026 - 10 - 13), from));
+    }
+
+    #[test]
+    fn back_dated_is_before_the_newest_day() {
+        let d = date!(2026 - 10 - 20);
+        assert!(!back_dated(d, None));
+        assert!(!back_dated(d, Some(d)));
+        assert!(!back_dated(date!(2026 - 10 - 21), Some(d)));
+        assert!(back_dated(date!(2026 - 10 - 10), Some(d)));
+    }
+
+    #[test]
+    fn the_newest_day_decides_done() {
+        let (a, b) = (date!(2026 - 10 - 20), date!(2026 - 10 - 26));
+        assert_eq!(done_from(&[]), None);
+        assert_eq!(done_from(&[(a, false), (b, true)]), Some(true));
+        assert_eq!(done_from(&[(a, true), (b, false)]), Some(false));
+        assert_eq!(done_from(&[(b, true), (b, false), (a, true)]), Some(false));
     }
 }

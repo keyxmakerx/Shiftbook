@@ -1,6 +1,8 @@
 // Pan and zoom for the Desk (the Canvas). Cards live in canvas units; the screen shows them at
 // `zoom`, shifted by `x`/`y` pixels: screen = canvas × zoom + offset. Pure maths, tested.
 
+import { CARD_H, CARD_W, GAP, MIN_AREA } from './api/generated/constants';
+
 export interface CanvasView {
   x: number;
   y: number;
@@ -9,9 +11,8 @@ export interface CanvasView {
 
 export const MIN_ZOOM = 0.25;
 export const MAX_ZOOM = 2;
-/** Card size in canvas units; matches `CARD_W`/`CARD_H` in crates/core/src/canvas.rs. */
-export const CARD_W = 220;
-export const CARD_H = 120;
+/** Card size in canvas units, from core (`CARD_W`/`CARD_H` in crates/core/src/canvas.rs). */
+export { CARD_H, CARD_W, MIN_AREA, NEW_AREA } from './api/generated/constants';
 
 export const HOME: CanvasView = { x: 0, y: 0, zoom: 1 };
 /** The view the Desk opens with: shifted right so the first cards clear the toolbox and the Drawers button. */
@@ -46,10 +47,6 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
   };
 }
 
-/** A new project area's size; matches `new_area` in crates/core/src/canvas.rs. */
-export const NEW_AREA = { w: 2 * (CARD_W + 24) + 24, h: 2 * (CARD_H + 24) + 48 };
-/** Smallest area; matches `MIN_AREA` in crates/core/src/canvas.rs. */
-export const MIN_AREA = { w: CARD_W + 48, h: CARD_H + 72 };
 
 import type { BoxStatus, CanvasArea, CanvasLabel } from './api';
 
@@ -144,8 +141,8 @@ export function fanSpots(x: number, y: number, count: number, perRow = 4): { x: 
 
 /** How near, in screen pixels, a card held with Shift has to come to pull into line. */
 export const LINE_UP_PX = 12;
-/** Space the Line up buttons leave between cards; matches `GAP` in crates/core/src/canvas.rs. */
-export const LINE_UP_GAP = 24;
+/** Space the Line up buttons leave between cards: core's `GAP`. */
+export const LINE_UP_GAP = GAP;
 
 /** How far in from a box's sides a card lines up inside it; the top leaves room for the name tab
  *  (as `boxAround` does). */

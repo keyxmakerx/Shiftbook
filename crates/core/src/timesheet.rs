@@ -25,6 +25,7 @@ use crate::model::{CategoryCodeDefault, EntryTarget, Project, RecurringTask, Tim
 
 /// Where an entry's timesheet code came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum CodeSource {
     /// Chosen on the entry itself.
@@ -43,6 +44,7 @@ pub enum CodeSource {
 
 /// An entry's resolved code and where it came from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct ResolvedCode {
     /// The code, or `None` when Unassigned.
     pub code: Option<TimesheetCodeId>,
@@ -86,6 +88,7 @@ fn category_key(category: &str) -> String {
 
 /// The defaults needed to resolve codes for many entries at once.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 pub struct CodeDefaults {
     projects: HashMap<ProjectId, TimesheetCodeId>,
     recurring: HashMap<RecurringTaskId, TimesheetCodeId>,

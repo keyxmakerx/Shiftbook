@@ -1,0 +1,5 @@
+# Where `cargo test --features ts` writes the UI's TypeScript types (ts-rs), and numbers as
+# plain `number` (the app never sends integers past 2^53).
+[env]
+TS_RS_EXPORT_DIR = { value = "web/src/lib/api/generated", relative = true }
+TS_RS_LARGE_INT = "number"

@@ -31,10 +31,12 @@ fn id_arg(text: &str) -> Res<MeetingSeriesId> {
 
 /// One meeting series.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SeriesView {
     id: MeetingSeriesId,
     name: String,
+    #[cfg_attr(feature = "ts", ts(type = "boolean[]"))]
     days: [bool; 7],
     at: u32,
     remind_minutes: u32,

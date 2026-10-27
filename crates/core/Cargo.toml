@@ -6,6 +6,7 @@ edition.workspace = true
 publish.workspace = true
 
 [dependencies]
+ts-rs = { workspace = true, optional = true }
 serde.workspace = true
 uuid.workspace = true
 time.workspace = true
@@ -13,3 +14,8 @@ thiserror.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+
+[features]
+# Writes the UI's TypeScript types (web/src/lib/api/generated) when testing; see
+# docs/ARCHITECTURE.md. Never on in a release build.
+ts = ["dep:ts-rs"]

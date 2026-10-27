@@ -22,6 +22,7 @@ type Result<T> = std::result::Result<T, StorageError>;
 
 /// A link a ticket can be copied as (from a custom link field).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct LinkView {
     pub field_name: String,
@@ -30,6 +31,7 @@ pub struct LinkView {
 
 /// A ticket chip.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TicketView {
     pub id: String,
@@ -43,6 +45,7 @@ pub struct TicketView {
 
 /// A time entry with its tickets.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct EntryView {
     pub id: TimeEntryId,
@@ -62,6 +65,7 @@ pub struct EntryView {
 
 /// One tray ticket.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct TrayItemView {
     pub id: TrayItemId,
@@ -78,6 +82,7 @@ pub struct TrayItemView {
 /// A still-open ticket from an earlier day in a tray: a tray row, or a ticket on an entry
 /// (then `entry_id` and `entry_title` say which, and `id` is the entry ticket's id).
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CarriedView {
     #[serde(flatten)]
@@ -88,6 +93,7 @@ pub struct CarriedView {
 
 /// An Inbox scrap.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct InboxView {
     pub id: InboxItemId,
@@ -187,6 +193,7 @@ pub fn inbox_view(i: shiftbook_core::model::InboxItem) -> InboxView {
 
 /// A note as the UI sees it.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct NoteView {
     pub id: NoteId,

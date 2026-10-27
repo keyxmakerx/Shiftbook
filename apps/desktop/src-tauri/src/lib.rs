@@ -761,7 +761,6 @@ pub fn run() {
             canvas::canvas_label_save,
             canvas::canvas_label_remove,
             canvas::canvas_stack,
-            canvas::canvas_unstack,
             canvas::canvas_stack_move,
             canvas::canvas_stack_rename,
             canvas::canvas_stack_dissolve,

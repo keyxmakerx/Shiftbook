@@ -12,6 +12,7 @@ pub const MAX_ENTRY_MINUTES: u32 = 24 * 60;
 #[derive(
     Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(type = "number"))]
 #[serde(transparent)]
 pub struct Minutes(pub u32);
 

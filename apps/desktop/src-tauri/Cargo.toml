@@ -13,6 +13,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+ts-rs = { workspace = true, optional = true }
 shiftbook-core.workspace = true
 shiftbook-storage.workspace = true
 shiftbook-app.workspace = true
@@ -26,3 +27,8 @@ time.workspace = true
 tokio.workspace = true
 zeroize.workspace = true
 uuid.workspace = true
+
+[features]
+# Writes the UI's TypeScript types (web/src/lib/api/generated) when testing; see
+# docs/ARCHITECTURE.md. Never on in a release build.
+ts = ["dep:ts-rs", "shiftbook-core/ts", "shiftbook-storage/ts", "shiftbook-app/ts"]

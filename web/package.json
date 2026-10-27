@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "test": "vitest run",
+    "types": "node -e \"require('fs').rmSync('src/lib/api/generated',{recursive:true,force:true})\" && cd .. && cargo test --workspace --features ts export_bindings",
     "tauri": "cd ../apps/desktop/src-tauri && tauri"
   },
   "dependencies": {

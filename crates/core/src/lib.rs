@@ -45,6 +45,7 @@ pub mod tickets;
 pub mod timer;
 pub mod timesheet;
 pub mod tray;
+pub mod ts_constants;
 pub mod validate;
 pub mod week;
 pub mod windows;

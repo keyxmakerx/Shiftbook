@@ -57,6 +57,7 @@ pub const MAX_CLASHES_SHOWN: usize = 5;
 
 /// Which side's edit won a clash.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum Winner {
     /// The edit on this device was newer and stays.
@@ -67,6 +68,7 @@ pub enum Winner {
 
 /// Something edited on both devices since the last swap.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Clash {
     /// The entry's description, the note's or project's name, or what it is.
@@ -79,6 +81,7 @@ pub struct Clash {
 
 /// What bringing a sync file in does (or did).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct SyncReport {
     /// When the sync file was made (UTC, RFC 3339).
@@ -159,8 +162,8 @@ fn title_of(table: &str, columns: &[String], row: &[Value]) -> String {
         "notes" => "title",
         "projects" | "custom_fields" => "name",
         "inbox_items" => "text",
-        "ticket_tray" => "ticket_number",
-        "tickets" => "number",
+        "ticket_tray" | "tickets" => "ticket_number",
+        "items" => "number",
         _ => "",
     };
     let named = columns
@@ -261,6 +264,11 @@ pub async fn merge_backup(
         }
     }
 
+    // A ticket number both devices made an item for: theirs → ours. Rows pointing at theirs
+    // are brought in pointing at ours instead of being left out.
+    let mut item_map: BTreeMap<String, String> = BTreeMap::new();
+    let mut touched = Touched::default();
+
     for name in ordered_tables(&mut tx, &names).await? {
         if LOCAL_ONLY.contains(&name.as_str()) {
             continue;
@@ -299,14 +307,40 @@ pub async fn merge_backup(
             table.columns.len() + 1
         );
 
+        let item_at = matches!(name.as_str(), "ticket_tray" | "tickets")
+            .then(|| at("item_id"))
+            .flatten();
+        let owner_at = at("owner_id");
         for row in &table.rows {
             let Some(id) = row[id_at].as_str() else {
                 return Err(BackupError::Invalid);
+            };
+            let mapped;
+            let row = match item_at.and_then(|i| row[i].as_str().map(|v| (i, v))) {
+                Some((i, theirs)) if item_map.contains_key(theirs) => {
+                    let mut copy = row.clone();
+                    copy[i] = Value::from(item_map[theirs].as_str());
+                    mapped = copy;
+                    &mapped
+                }
+                _ => row,
             };
             let found = sqlx::query(sqlx::AssertSqlSafe(select.as_str()))
                 .bind(id)
                 .fetch_optional(&mut *tx)
                 .await?;
+            if found.is_none() && name == "items" {
+                if let Some(ours) = item_twin(&mut tx, &table.columns, row).await? {
+                    item_map.insert(id.to_string(), ours.clone());
+                    if let Some(o) = owner_at.and_then(|i| row[i].as_str()) {
+                        touched.items.insert((o.to_string(), ours));
+                    }
+                    if merge_twin_note(&mut tx, &table.columns, row, &item_map[id]).await? {
+                        report.other += 1;
+                    }
+                    continue;
+                }
+            }
             let Some(found) = found else {
                 if put(
                     &mut tx,
@@ -314,6 +348,7 @@ pub async fn merge_backup(
                 )
                 .await?
                 {
+                    touched.note(&name, &table.columns, row);
                     if row[deleted_at].is_null() {
                         report.count_new(&name);
                     }
@@ -339,6 +374,8 @@ pub async fn merge_backup(
                 let q =
                     bind_values(sqlx::query(sqlx::AssertSqlSafe(update.as_str())), row)?.bind(id);
                 if put(&mut tx, q).await? {
+                    touched.note(&name, &table.columns, &mine);
+                    touched.note(&name, &table.columns, row);
                     if !row[deleted_at].is_null() && mine[deleted_at].is_null() {
                         report.deleted += 1;
                     } else {
@@ -361,12 +398,169 @@ pub async fn merge_backup(
         }
     }
 
+    touched.put_in_step(&mut tx).await?;
+
     if apply {
         tx.commit().await?;
     } else {
         tx.rollback().await?;
     }
     Ok(report)
+}
+
+/// What a merge brought in, to put the Tickets tray and tickets back in step afterwards (the
+/// rules that keep them in step run on each edit, which a merge bypasses): (owner, item),
+/// (owner, tray day) and (owner, user entry).
+#[derive(Default)]
+struct Touched {
+    items: BTreeSet<(String, String)>,
+    days: BTreeSet<(String, String)>,
+    entries: BTreeSet<(String, String)>,
+}
+
+impl Touched {
+    /// Note a row that came in (or the row it replaced).
+    fn note(&mut self, table: &str, columns: &[String], row: &[Value]) {
+        let get = |col: &str| {
+            columns
+                .iter()
+                .position(|c| c == col)
+                .and_then(|i| row[i].as_str())
+        };
+        let Some(owner) = get("owner_id") else {
+            return;
+        };
+        let key = |v: &str| (owner.to_string(), v.to_string());
+        match table {
+            "items" => self.items.extend(get("id").map(key)),
+            "ticket_tray" => {
+                self.items.extend(get("item_id").map(key));
+                self.days.extend(get("date").map(key));
+            }
+            "tickets" => self.items.extend(get("item_id").map(key)),
+            "time_entries" if get("source") == Some(crate::work::SOURCE_TRAY) => {
+                self.days.extend(get("date").map(key));
+            }
+            "time_entries" => self.entries.extend(get("id").map(key)),
+            _ => {}
+        }
+    }
+
+    /// Recount each touched day's Tickets entries from its tray, and bring each touched
+    /// ticket's copies back in step with its item.
+    async fn put_in_step(
+        mut self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    ) -> Result<(), BackupError> {
+        let owners: BTreeSet<String> = self
+            .items
+            .iter()
+            .chain(&self.days)
+            .chain(&self.entries)
+            .map(|(o, _)| o.clone())
+            .collect();
+        for owner in &owners {
+            let me = owner_id(owner)?;
+            crate::items::link_items(tx, me).await?;
+        }
+        for (owner, day) in &self.days {
+            let date = shiftbook_core::dates::parse_date(day).map_err(|_| BackupError::Invalid)?;
+            crate::work::sync_tray(tx, owner_id(owner)?, date).await?;
+        }
+        for (owner, entry) in &self.entries {
+            let ids: Vec<Option<String>> = sqlx::query_scalar(
+                "SELECT item_id FROM tickets WHERE owner_id = $1 AND time_entry_id = $2",
+            )
+            .bind(owner)
+            .bind(entry)
+            .fetch_all(&mut **tx)
+            .await?;
+            self.items
+                .extend(ids.into_iter().flatten().map(|i| (owner.clone(), i)));
+        }
+        for (owner, item) in &self.items {
+            let id = shiftbook_core::ids::ItemId::from_uuid(
+                crate::repo::parse_uuid(item).map_err(|_| BackupError::Invalid)?,
+            );
+            crate::items::repair_item(tx, owner_id(owner)?, id).await?;
+        }
+        Ok(())
+    }
+}
+
+fn owner_id(text: &str) -> Result<shiftbook_core::ids::OwnerId, BackupError> {
+    Ok(shiftbook_core::ids::OwnerId::from_uuid(
+        crate::repo::parse_uuid(text).map_err(|_| BackupError::Invalid)?,
+    ))
+}
+
+/// Our live item for the same ticket number as a live item row from the file, if there is one
+/// with a different id.
+async fn item_twin(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    columns: &[String],
+    row: &[Value],
+) -> Result<Option<String>, BackupError> {
+    let get = |col: &str| columns.iter().position(|c| c == col).map(|i| &row[i]);
+    let (Some(Value::String(id)), Some(Value::String(owner)), Some(Value::String(number))) =
+        (get("id"), get("owner_id"), get("number"))
+    else {
+        return Ok(None);
+    };
+    if get("deleted_at").is_some_and(|v| !v.is_null()) {
+        return Ok(None);
+    }
+    Ok(sqlx::query_scalar(
+        "SELECT id FROM items WHERE owner_id = $1 AND lower(number) = lower($2) \
+         AND deleted_at IS NULL AND id <> $3",
+    )
+    .bind(owner)
+    .bind(number)
+    .bind(id)
+    .fetch_optional(&mut **tx)
+    .await?)
+}
+
+/// Fold the notepad of the file's item into our twin (newest first, none lost; see
+/// `shiftbook_core::items::merge_notes`). True when ours changed.
+async fn merge_twin_note(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    columns: &[String],
+    row: &[Value],
+    ours: &str,
+) -> Result<bool, BackupError> {
+    let get = |col: &str| columns.iter().position(|c| c == col).map(|i| &row[i]);
+    let Some(Value::String(theirs)) = get("note") else {
+        return Ok(false);
+    };
+    let theirs_at = get("updated_at")
+        .and_then(Value::as_str)
+        .and_then(|t| parse_ts(t).ok());
+    let (note, at): (Option<String>, String) =
+        sqlx::query_as("SELECT note, updated_at FROM items WHERE id = $1")
+            .bind(ours)
+            .fetch_one(&mut **tx)
+            .await?;
+    let ours_at = parse_ts(&at).ok();
+    let mine = note.as_deref().unwrap_or("");
+    let day = |t: Option<OffsetDateTime>| t.map_or(time::Date::MIN, OffsetDateTime::date);
+    // Newest first.
+    let both = if theirs_at > ours_at {
+        [(day(theirs_at), theirs.as_str()), (day(ours_at), mine)]
+    } else {
+        [(day(ours_at), mine), (day(theirs_at), theirs.as_str())]
+    };
+    let merged = shiftbook_core::items::merge_notes(&both);
+    if merged.as_deref() == note.as_deref() {
+        return Ok(false);
+    }
+    sqlx::query("UPDATE items SET note = $1, updated_at = $2 WHERE id = $3")
+        .bind(merged)
+        .bind(crate::repo::now_text())
+        .bind(ours)
+        .execute(&mut **tx)
+        .await?;
+    Ok(true)
 }
 
 /// Run one insert or update under a savepoint: true if it went in, false if it broke a rule
@@ -665,6 +859,117 @@ mod tests {
                 .unwrap();
             assert!(day.items.iter().any(|i| i.ticket_number == "REQ2214"));
         });
+    }
+
+    #[test]
+    fn a_ticket_used_on_both_devices_keeps_all_its_work() {
+        block_on(async {
+            let (computer, phone, _) = paired().await;
+            let pc = computer
+                .store
+                .tray_add(computer.me, date!(2026 - 10 - 26), "INC777")
+                .await
+                .unwrap();
+            computer
+                .store
+                .tray_set_note(computer.me, pc.items[0].id, "Swapped the toner")
+                .await
+                .unwrap();
+            let ph = phone
+                .store
+                .tray_add(phone.me, date!(2026 - 10 - 27), "INC777")
+                .await
+                .unwrap();
+            phone
+                .store
+                .tray_set_note(phone.me, ph.items[0].id, "Still jamming")
+                .await
+                .unwrap();
+            phone
+                .store
+                .create_entry(phone.me, &entry("Phone work"), "inc777")
+                .await
+                .unwrap();
+            let file = swap(&phone, &computer).await;
+            let done = merge_backup(&computer.store, &file, None, true)
+                .await
+                .unwrap();
+            assert_eq!(done.left_out, 0);
+            let day = computer
+                .store
+                .tray_day(computer.me, date!(2026 - 10 - 27))
+                .await
+                .unwrap();
+            assert_eq!(day.items.len(), 1);
+            assert_eq!(day.items[0].ticket_number, "INC777");
+            let work = computer
+                .store
+                .list_entries(computer.me, date!(2026 - 10 - 27), date!(2026 - 10 - 27))
+                .await
+                .unwrap()
+                .into_iter()
+                .find(|e| e.entry.description == "Phone work")
+                .unwrap();
+            assert_eq!(work.tickets.len(), 1);
+            // One item for the number, with both days on it.
+            let items = computer
+                .store
+                .item_summaries(computer.me, None)
+                .await
+                .unwrap();
+            assert_eq!(items.len(), 1);
+            assert_eq!(items[0].cards.len(), 3);
+            // Both notepads are kept, newest first.
+            let note = items[0].note.clone().unwrap();
+            assert!(note.contains("Swapped the toner") && note.contains("Still jamming"));
+            crate::items::assert_in_step(&computer.store, computer.me).await;
+
+            // And the other way round, twice, changes nothing more.
+            let back = swap(&computer, &phone).await;
+            let done = merge_backup(&phone.store, &back, None, true).await.unwrap();
+            assert_eq!(done.left_out, 0);
+            crate::items::assert_in_step(&phone.store, phone.me).await;
+            let again = merge_backup(&phone.store, &back, None, true).await.unwrap();
+            assert!(again.nothing_new(), "{again:?}");
+        });
+    }
+
+    #[test]
+    fn a_shared_tray_day_is_counted_again() {
+        block_on(async {
+            let (computer, phone, _) = paired().await;
+            phone
+                .store
+                .tray_add(phone.me, date!(2026 - 10 - 27), "REQ2210")
+                .await
+                .unwrap();
+            computer
+                .store
+                .tray_add(computer.me, date!(2026 - 10 - 27), "REQ2214")
+                .await
+                .unwrap();
+            let file = swap(&phone, &computer).await;
+            merge_backup(&computer.store, &file, None, true)
+                .await
+                .unwrap();
+            let day = computer
+                .store
+                .tray_day(computer.me, date!(2026 - 10 - 27))
+                .await
+                .unwrap();
+            assert_eq!(day.items.len(), 2);
+            assert_eq!(day.minutes, Minutes(30));
+            crate::items::assert_in_step(&computer.store, computer.me).await;
+        });
+    }
+
+    #[test]
+    fn clashes_name_tickets_by_number() {
+        let columns = vec!["id".to_string(), "ticket_number".to_string()];
+        let row = vec![Value::from("x"), Value::from("INC0045678")];
+        assert_eq!(title_of("tickets", &columns, &row), "INC0045678");
+        let columns = vec!["id".to_string(), "number".to_string()];
+        assert_eq!(title_of("items", &columns, &row), "INC0045678");
     }
 
     #[test]

@@ -23,6 +23,7 @@ import { useMopWord } from './notes';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
 import { hasWork, wordsFor, type Words } from './words';
+import { DEFAULT_TIME_BUTTONS } from './api/generated/constants';
 
 export const app = $state({
   ready: false,
@@ -56,6 +57,12 @@ export const app = $state({
   deskAsk: null as 'fit' | 'tidy' | 'timeline' | null,
   /** Entry to flash after it changed. */
   flash: { id: '', serial: 0 },
+  /**
+   * Bumped by `refresh()` after anything changes. Screens and windows that load their own
+   * data (Items, drawers, floating windows) watch it to load again, so a change made in one
+   * place shows everywhere.
+   */
+  changed: 0,
   /** The "Where was I?" card on the Desk, while it's showing. */
   resume: null as ResumeCard | null,
   /** "Later" was pressed: no more "Where was I?" until the next unlock. */
@@ -70,8 +77,8 @@ export const app = $state({
   followUps: {} as Record<string, string>,
 });
 
-/** The time buttons everyone starts with (`shiftbook_core::prefs::DEFAULT_TIME_BUTTONS`). */
-export const DEFAULT_TIMES = [15, 30, 45, 60, 120];
+/** The time buttons everyone starts with (core's `DEFAULT_TIME_BUTTONS`). */
+export const DEFAULT_TIMES = DEFAULT_TIME_BUTTONS;
 
 /** The time buttons in Log work and on jots (Settings → Your day). */
 export function timeButtons(): number[] {
@@ -166,9 +173,10 @@ export async function refreshRibbon(): Promise<void> {
   app.ribbon = await api.ribbon(app.today);
 }
 
-/** Reload the selected day and the ribbon after a change. */
+/** After a change: reload the selected day and the ribbon, and tell everything else. */
 export async function refresh(): Promise<void> {
   await attempt(() => Promise.all([refreshDay(), refreshRibbon()]));
+  app.changed++;
 }
 
 export async function refreshProjects(): Promise<void> {

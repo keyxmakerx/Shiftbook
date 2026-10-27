@@ -84,6 +84,18 @@ jobs:
       - name: cargo test
         run: cargo test --workspace
 
+      # The UI's types and core's numbers are written from Rust (ts-rs). They must be up to
+      # date: run `npm run types` in web/ and commit what it writes.
+      - name: Generated UI types are up to date
+        if: runner.os == 'Linux'
+        working-directory: web
+        shell: bash
+        run: |
+          npm run types
+          git add -N src/lib/api/generated
+          git diff --exit-code -- src/lib/api/generated
+          cargo clippy --workspace --all-targets --features ts -- -D warnings
+
   postgres:
     # Phase 2 runs on Postgres: every migration must apply there too (CLAUDE.md rule 5).
     name: Migrations on Postgres

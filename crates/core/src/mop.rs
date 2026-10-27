@@ -209,6 +209,7 @@ fn tick_text(line: &str) -> String {
 
 /// One line of a MOP in Checklist mode.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct CheckLine {
     /// What its tick is stored by; empty for a blank line (which can't be ticked).
@@ -362,6 +363,7 @@ pub fn import_text(text: &str) -> Result<String, ImportProblem> {
 
 /// How the notebook shows a MOP.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum MopView {
     /// Like Notepad++: line numbers, colours, counts.
@@ -396,6 +398,7 @@ impl MopView {
 /// The notebook window: whether it's showing, where, which MOPs are open as tabs, and how
 /// it shows them. Kept as one preference ([`crate::prefs::KEY_MOPBOOK`]).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct MopBook {
     /// Showing (in any mode); false once closed.

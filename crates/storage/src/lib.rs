@@ -97,6 +97,8 @@ mod canvas_tests;
 #[cfg(test)]
 mod home_tests;
 #[cfg(test)]
+mod items_tests;
+#[cfg(test)]
 mod notes_tests;
 #[cfg(test)]
 mod repo_tests;

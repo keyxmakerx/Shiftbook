@@ -4,7 +4,7 @@
   // just the text; Checklist puts a box by each line, and ticking one crosses it out with
   // the section under it. The text stays editable in every mode and saves as you type.
   // Templates fill their [[blanks]] into a new MOP. The rules are in crates/core/src/mop.rs.
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { CheckLine, MopView, Note } from '../lib/api';
   import { counts, findAll, hasFiles, paint } from '../lib/mop';
@@ -25,7 +25,7 @@
   } from '../lib/mopbook.svelte';
   import { openMenu } from '../lib/menu.svelte';
   import type { MenuItem } from '../lib/menu.svelte';
-  import { attempt, openNote, words } from '../lib/store.svelte';
+  import { app, attempt, openNote, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { phone } from '../lib/phone.svelte';
   import { dragButton } from '../lib/rightDrag';
@@ -48,6 +48,8 @@
   }
 
   let docs = $state<Record<string, Doc>>({});
+  /** The newer text written elsewhere while a tab had unsaved typing, by tab. */
+  let clashes = $state<Record<string, string>>({});
   let gone = $state<Record<string, boolean>>({});
   let status = $state<'' | 'saving' | 'saved'>('');
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -133,21 +135,42 @@
 
   onMount(() => () => {
     if (timer) clearTimeout(timer);
-    void saveAll();
+    void saveAll(true);
   });
 
-  async function save(id: string) {
+  /**
+   * Save a tab's typing. If the MOP was written somewhere else since it loaded here (the Notes
+   * view, a note window, a sync), nothing is overwritten: the tab asks which to keep.
+   * `closing` keeps both instead (the newer text, then this tab's), as nothing is left to ask in.
+   */
+  async function save(id: string, closing = false) {
     const d = docs[id];
-    if (!d || d.text === d.saved) return;
-    const body = d.text;
-    const n = d.note;
+    if (!d || (d.text === d.saved && clashes[id] === undefined)) return;
     status = 'saving';
+    const now = await attempt(() => api.getNote(id));
+    if (!now) {
+      status = '';
+      return;
+    }
+    let body = d.text;
+    if (now.body !== d.saved && now.body !== d.text) {
+      if (!closing) {
+        clashes[id] = now.body;
+        status = '';
+        return;
+      }
+      body = `${now.body}\n\n${d.text}`;
+    }
+    delete clashes[id];
+    // The MOP's current title, project and tags, in case they changed elsewhere.
     const updated = await attempt(() =>
-      api.updateNote(id, { kind: n.kind, title: n.title, body, projectId: n.projectId, tags: n.tags.join(', ') }),
+      api.updateNote(id, { kind: now.kind, title: now.title, body, projectId: now.projectId, tags: now.tags.join(', ') }),
     );
     if (updated) {
       d.saved = body;
+      if (closing) d.text = body;
       d.note = updated;
+      tabInfo.titles[id] = updated.title;
       tabInfo.dirty[id] = d.text !== body;
       status = 'saved';
     } else {
@@ -155,9 +178,50 @@
     }
   }
 
-  async function saveAll() {
+  /** Overwrite the newer text with this tab's. */
+  function keepMine(id: string) {
+    const d = docs[id];
+    const newer = clashes[id];
+    if (!d || newer === undefined) return;
+    d.saved = newer;
+    delete clashes[id];
+    void save(id);
+  }
+
+  /** Drop this tab's typing and show the newer text. */
+  function useNewer(id: string) {
+    const d = docs[id];
+    const newer = clashes[id];
+    if (!d || newer === undefined) return;
+    d.text = d.saved = newer;
+    delete clashes[id];
+    tabInfo.dirty[id] = false;
+  }
+
+  // Something changed elsewhere: reload the tabs with nothing typed waiting.
+  $effect(() => {
+    void app.changed;
+    untrack(() => {
+      if (timer) return;
+      for (const [id, d] of Object.entries(docs)) {
+        if (d.text !== d.saved || clashes[id] !== undefined) continue;
+        void api.getNote(id).then(
+          (n) => {
+            const now = docs[id];
+            if (!now || now.text !== now.saved) return;
+            now.note = n;
+            now.text = now.saved = n.body;
+            tabInfo.titles[id] = n.title;
+          },
+          () => undefined,
+        );
+      }
+    });
+  });
+
+  async function saveAll(closing = false) {
     timer = null;
-    for (const id of Object.keys(docs)) await save(id);
+    for (const id of Object.keys(docs)) await save(id, closing);
   }
 
   /** Save now if anything is waiting (before ticking, template work or switching tabs). */
@@ -194,7 +258,10 @@
   }
 
   async function close(id: string) {
-    await flush();
+    if (timer) clearTimeout(timer);
+    timer = null;
+    await save(id, true);
+    await saveAll();
     closeTab(id);
     delete docs[id];
     if (!book.tabs.length) closeMopBook();
@@ -577,6 +644,14 @@
     {:else if !doc}
       <p class="empty">Opening…</p>
     {:else if view === 'minimal'}
+      {#if clashes[doc.note.id] !== undefined}
+        {@const id = doc.note.id}
+        <p class="clash strip" role="alert">
+          Changed somewhere else since you opened this.
+          <button type="button" class="tool" onclick={() => keepMine(id)}>Keep mine</button>
+          <button type="button" class="tool" onclick={() => useNewer(id)}>Show the newer one</button>
+        </p>
+      {/if}
       <textarea
         bind:this={ta}
         class="plain"
@@ -656,7 +731,16 @@
           <span class:hl={stats.selChars > 0}>Sel {stats.selChars.toLocaleString()}{stats.selLines > 1 ? ` (${stats.selLines} lines)` : ''}</span>
         {/if}
         <span class="gap"></span>
-        <span aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved, encrypted' : 'Saves as you type'}</span>
+        {#if clashes[doc.note.id] !== undefined}
+          {@const id = doc.note.id}
+          <span class="clash" role="alert">
+            Changed somewhere else since you opened this.
+            <button type="button" onclick={() => keepMine(id)}>Keep mine</button>
+            <button type="button" onclick={() => useNewer(id)}>Show the newer one</button>
+          </span>
+        {:else}
+          <span aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved, encrypted' : 'Saves as you type'}</span>
+        {/if}
         {#if book.mode !== 'full'}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span class="grip" title="Drag to resize" onpointerdown={(e) => drag(e, true)}></span>
@@ -1252,6 +1336,23 @@
     background: var(--paper-2);
     white-space: nowrap;
     overflow: hidden;
+  }
+
+  .clash {
+    color: var(--warn);
+    font-weight: 600;
+  }
+
+  .clash button {
+    margin-left: 6px;
+  }
+
+  .clash.strip {
+    margin: 0;
+    padding: 5px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--warn-wash);
   }
 
   .status .hl {

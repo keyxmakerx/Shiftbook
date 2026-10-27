@@ -247,7 +247,7 @@ fn cards_pile_up_and_come_apart() {
         s.move_stack(me, pile, 500, 600).await.unwrap();
 
         // Taking cards off: with one left the pile comes apart where it was.
-        s.unstack_card(me, c, 50, 60).await.unwrap();
+        s.move_card(me, c.0, c.1, 50, 60).await.unwrap();
         assert_eq!(s.canvas_stacks(me).await.unwrap().len(), 1);
         s.move_card(me, a.0, a.1, 10, 10).await.unwrap();
         assert!(s.canvas_stacks(me).await.unwrap().is_empty());

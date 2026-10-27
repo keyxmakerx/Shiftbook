@@ -27,6 +27,9 @@ zeroize = "1.9.1"
 secrecy = "0.10.3"
 # Backups are gzip-compressed before encryption; already in the lock file through Tauri.
 flate2 = "1.1.10"
+# Build-time only (owner approved, 27 Oct): writes the UI's TypeScript types from the Rust
+# ones. Behind each crate's `ts` feature, so the shipped app never contains it.
+ts-rs = { version = "12.0.1", default-features = false, features = ["serde-compat", "uuid-impl", "no-serde-warnings"] }
 # Already in the lock file through Tauri; only features Tauri already enables.
 tokio = { version = "1.53.3", default-features = false, features = ["rt", "rt-multi-thread", "sync"] }
 

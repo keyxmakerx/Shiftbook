@@ -26,6 +26,7 @@ pub const TICKET_PLACEHOLDER: &str = "{ticket}";
 
 /// What kind of value a field holds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum FieldKind {
     /// Free text.
@@ -63,6 +64,7 @@ impl FieldKind {
 
 /// Which records a field appears on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "snake_case")]
 pub enum AppliesTo {
     /// Time entries.

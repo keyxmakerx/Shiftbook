@@ -46,6 +46,7 @@ pub struct CaptureProject<'a> {
 
 /// What a capture line means.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
 #[serde(rename_all = "camelCase")]
 pub struct Capture {
     /// How long, if a time was found.
@@ -62,6 +63,7 @@ pub struct Capture {
     pub project_query: Option<String>,
     /// The day the work belongs to (today unless a day word was used).
     #[serde(with = "iso_date")]
+    #[cfg_attr(feature = "ts", ts(type = "string"))]
     pub date: Date,
     /// The day word that set the date, as typed.
     pub day_word: Option<String>,
