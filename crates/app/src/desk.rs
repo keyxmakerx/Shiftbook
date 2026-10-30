@@ -716,7 +716,11 @@ pub async fn desk(
     // The timeline: by day, and within a day in the order things were made.
     let mut order: Vec<usize> = (0..placed.len()).collect();
     order.sort_by(|&a, &b| {
-        (placed[a].date, placed[a].created).cmp(&(placed[b].date, placed[b].created))
+        (placed[a].date, placed[a].created, placed[a].id).cmp(&(
+            placed[b].date,
+            placed[b].created,
+            placed[b].id,
+        ))
     });
     let dates: Vec<Date> = order.iter().map(|&i| placed[i].date).collect();
     let (line, days) = timeline(&dates);
@@ -725,18 +729,17 @@ pub async fn desk(
         placed[i].card.timeline_y = y;
     }
 
-    // Links: automatic ones the owner didn't hide, plus the ones they drew.
+    // Links: automatic ones the owner didn't hide, plus the ones they drew. A pair the owner
+    // drew isn't drawn twice. Cards go in oldest first (the timeline's order), so lines don't
+    // jump about when a card is raised or moved.
     let changed = store.canvas_links(owner).await?;
-    let hidden: HashSet<(CardRef, CardRef)> = changed
-        .iter()
-        .filter(|l| !l.drawn)
-        .map(|l| (l.a, l.b))
-        .collect();
-    let texts: Vec<LinkText> = placed.iter().map(|p| p.link.clone()).collect();
+    let owned: HashSet<(CardRef, CardRef)> = changed.iter().map(|l| (l.a, l.b)).collect();
+    let texts: Vec<LinkText> = order.iter().map(|&i| placed[i].link.clone()).collect();
     let mut links: Vec<LinkView> = auto_links(&texts)
         .into_iter()
+        .map(|(a, b, reason)| (order[a], order[b], reason))
         .filter(|(a, b, _)| {
-            !hidden.contains(&pair(
+            !owned.contains(&pair(
                 (placed[*a].kind, placed[*a].id),
                 (placed[*b].kind, placed[*b].id),
             ))

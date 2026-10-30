@@ -132,6 +132,8 @@
     }
     if (ok) saved = body;
     status = ok ? 'saved' : '';
+    // The Desk's links follow what notepads say.
+    if (ok) app.changed++;
   }
 
   /** Overwrite the newer text with this window's. */

@@ -9,6 +9,8 @@
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
   let toolboxOpen = true;
   let cabinetShown = false;
+  /** The Desk has opened on what's on it once since the app started. */
+  let opened = false;
 </script>
 
 <script lang="ts">
@@ -51,6 +53,7 @@
     lineUpWith,
     MIN_AREA,
     NEW_AREA,
+    openingView,
     rectFrom,
     toCanvas,
     zoomAt,
@@ -176,6 +179,12 @@
       if (openDrawer && !drawers.some((d) => d.key === openDrawer)) openDrawer = null;
       links = desk.links;
       axis = desk.axis;
+      if (!opened && board && board.clientWidth > 0) {
+        // The first time the Desk shows after starting, it opens on the middle of your cards
+        // and boxes rather than wherever the paper's corner happens to be.
+        opened = true;
+        view = openingView(everything(), board.clientWidth, board.clientHeight);
+      }
     }
     loaded = true;
   }
@@ -445,11 +454,13 @@
     return c.entry?.description || c.tray?.item.ticket || c.note?.title || c.inbox?.text || 'this card';
   }
 
-  // The Desk works on today; reload whenever the day's data changes anywhere.
+  // The Desk works on today; reload whenever the day's data changes anywhere (a notepad saved
+  // in a window counts too, so its links show straight away rather than all at once later).
   onMount(() => {
     if (app.selected !== app.today) void selectDay(app.today);
   });
   $effect(() => {
+    void app.changed;
     void app.entries;
     void app.tray;
     void app.inbox;
@@ -656,18 +667,28 @@
   }
 
   // ----- links -----
-  // Only cards that show have lines (a folded box hides its cards' lines too).
-  const centres = $derived(
-    new Map(shown.map((c) => {
+  // Cards that show have lines, and a card in a pile that isn't fanned out has its lines go to
+  // the pile, so fanning it doesn't make a bunch of lines appear at once. A folded box hides
+  // its cards' lines.
+  const centres = $derived.by(() => {
+    const at = new Map<string, { x: number; y: number }>();
+    for (const st of piles) {
+      if (st.id === fanned) continue;
+      const p = pileAt(st);
+      for (const c of pileMembers(st.id)) at.set(keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 });
+    }
+    for (const c of shown) {
       const p = pos(c);
-      return [keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 }] as const;
-    })),
-  );
+      at.set(keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 });
+    }
+    return at;
+  });
 
   function linkPath(l: CanvasLink): string | null {
     const a = centres.get(keyOf(l.a));
     const b = centres.get(keyOf(l.b));
-    if (!a || !b) return null;
+    // Two cards in the same pile need no line.
+    if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
     // A gentle curve, bowing to one side so lines that cross stay readable.
     const mx = (a.x + b.x) / 2 - (b.y - a.y) * 0.12;
     const my = (a.y + b.y) / 2 + (b.x - a.x) * 0.12;
@@ -1002,10 +1023,14 @@
     view = zoomAt(view, board.clientWidth / 2, board.clientHeight / 2, factor);
   }
 
+  /** Every card and box that shows, as card-sized spots (boxes by their corners). */
+  function everything() {
+    return [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
+  }
+
   function fit() {
     if (!board) return;
-    const spots = [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
-    view = fitAll(spots, board.clientWidth, board.clientHeight);
+    view = fitAll(everything(), board.clientWidth, board.clientHeight);
   }
 
   // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.

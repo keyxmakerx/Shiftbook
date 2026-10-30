@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, rectFrom, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -32,6 +32,20 @@ describe('canvas view', () => {
     expect(wide.zoom).toBeLessThan(1);
     // The right edge of the far card lands inside the margin.
     expect(2000 * wide.zoom + CARD_W * wide.zoom + wide.x).toBeLessThanOrEqual(800 - 40 + 0.01);
+  });
+
+  it('opens on the middle of everything on the Desk', () => {
+    expect(openingView([], 800, 600)).toEqual(START);
+    // Far from the start, and fits at 100%: centred.
+    const far = openingView([{ x: 3000, y: 2000 }], 800, 600);
+    expect(far.zoom).toBe(1);
+    expect(3000 + far.x).toBeCloseTo((800 - CARD_W) / 2);
+    expect(2000 + far.y).toBeCloseTo((600 - CARD_H) / 2);
+    // Too spread out to fit at a readable zoom: the middle of it, at that zoom.
+    const spread = openingView([{ x: 0, y: 0 }, { x: 6000, y: 0 }], 800, 600);
+    expect(spread.zoom).toBe(OPENING_MIN_ZOOM);
+    const middle = (6000 + CARD_W) / 2;
+    expect(middle * spread.zoom + spread.x).toBeCloseTo(400);
   });
 
   it('finds the area holding a card by its centre, top area first', () => {

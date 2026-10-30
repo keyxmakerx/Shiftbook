@@ -48,6 +48,21 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
 }
 
 
+/** Zoomed out no further than this when the Desk opens, so cards stay readable. */
+export const OPENING_MIN_ZOOM = 0.6;
+
+/** The view the Desk opens with: everything in the middle when it fits at a readable zoom,
+ *  otherwise the middle of everything at that zoom. With nothing on the Desk, the start view. */
+export function openingView(cards: { x: number; y: number }[], width: number, height: number): CanvasView {
+  if (cards.length === 0 || width <= 0 || height <= 0) return START;
+  const fitted = fitAll(cards, width, height);
+  if (fitted.zoom >= OPENING_MIN_ZOOM) return fitted;
+  const zoom = OPENING_MIN_ZOOM;
+  const cx = (Math.min(...cards.map((c) => c.x)) + Math.max(...cards.map((c) => c.x + CARD_W))) / 2;
+  const cy = (Math.min(...cards.map((c) => c.y)) + Math.max(...cards.map((c) => c.y + CARD_H))) / 2;
+  return { zoom, x: width / 2 - cx * zoom, y: height / 2 - cy * zoom };
+}
+
 import type { BoxStatus, CanvasArea, CanvasLabel } from './api';
 
 export interface Rect {

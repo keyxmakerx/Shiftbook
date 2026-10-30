@@ -16,7 +16,7 @@
   import { logNoteSection } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
-  import { openWindow } from '../lib/windows.svelte';
+  import { openFullWindow, openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
@@ -206,7 +206,11 @@
       app.drawer = card.entry.id;
     } else if (card.note) openNote(card.note.id);
     else if (card.inbox) void logScrap();
-    else if (card.tray) openNotepad(key);
+    else if (card.tray) {
+      // A ticket has no details screen: its notepad opens on a screen of its own.
+      closePanel();
+      openFullWindow('tray', card.tray.item.id);
+    }
   }
 
   // ----- menus -----

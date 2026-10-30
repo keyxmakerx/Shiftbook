@@ -335,31 +335,35 @@ fn link_words(text: &str) -> Vec<String> {
     out
 }
 
-/// Links drawn automatically between cards: any two that share a ticket (also one written in a
+/// Links drawn automatically between cards: cards that share a ticket (also one written in a
 /// note's text), and any two that are the only cards using the same uncommon word. A pair is
-/// linked once, by its first reason; a card gets at most [`MAX_WORD_LINKS`] word links.
+/// linked once, by its first reason.
+///
+/// Cards sharing a ticket are linked in a chain, in the order given (the Desk passes them oldest
+/// first), not every one to every other: five days on one ticket is four lines, not ten. A card
+/// gets at most [`MAX_WORD_LINKS`] word links.
 pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
     use std::collections::{BTreeMap, BTreeSet};
-    let tickets: Vec<BTreeSet<String>> = cards
-        .iter()
-        .map(|c| {
-            let mut set: BTreeSet<String> =
-                c.tickets.iter().map(|t| t.trim().to_uppercase()).collect();
-            set.extend(c.text.split_whitespace().filter_map(crate::capture::ticket));
-            set.retain(|t| !t.is_empty());
-            set
-        })
-        .collect();
+    let mut holders: BTreeMap<String, Vec<usize>> = BTreeMap::new();
+    for (i, c) in cards.iter().enumerate() {
+        let mut set: BTreeSet<String> = c.tickets.iter().map(|t| t.trim().to_uppercase()).collect();
+        set.extend(c.text.split_whitespace().filter_map(crate::capture::ticket));
+        set.retain(|t| !t.is_empty());
+        for t in set {
+            holders.entry(t).or_default().push(i);
+        }
+    }
     let mut out = Vec::new();
     let mut linked = BTreeSet::new();
-    for a in 0..cards.len() {
-        for b in a + 1..cards.len() {
-            if let Some(t) = tickets[a].intersection(&tickets[b]).next() {
-                linked.insert((a, b));
-                out.push((a, b, LinkReason::Ticket(t.clone())));
+    for (ticket, who) in &holders {
+        for w in who.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            if linked.insert((a, b)) {
+                out.push((a, b, LinkReason::Ticket(ticket.clone())));
             }
         }
     }
+    out.sort_by_key(|l| (l.0, l.1));
     let mut users: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (i, c) in cards.iter().enumerate() {
         for w in link_words(&c.text) {
@@ -385,7 +389,7 @@ pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
 }
 
 /// Most word links one card gets, so the Desk doesn't turn into a web.
-pub const MAX_WORD_LINKS: usize = 2;
+pub const MAX_WORD_LINKS: usize = 1;
 
 // ---------- timeline (step 2) ----------
 
@@ -769,13 +773,41 @@ mod tests {
         ];
         let links = auto_links(&cards);
         assert!(links.contains(&(0, 1, LinkReason::Word("cutover".into()))));
-        assert!(links.contains(&(0, 3, LinkReason::Word("switch".into()))));
+        assert!(
+            !links
+                .iter()
+                .any(|l| l.2 == LinkReason::Word("switch".into())),
+            "card 0 already has its word link"
+        );
         assert!(
             !links
                 .iter()
                 .any(|l| l.2 == LinkReason::Word("optics".into())),
             "three cards use it"
         );
+    }
+
+    #[test]
+    fn cards_sharing_a_ticket_link_in_a_chain_not_all_to_all() {
+        let cards = [
+            lt(&["INC0000001"], "Monday"),
+            lt(&["INC0000001"], "Tuesday"),
+            lt(&["inc0000001"], "Wednesday"),
+            lt(&[], "Thursday: still on INC0000001"),
+            lt(&["INC0000002"], "Other"),
+        ];
+        let links = auto_links(&cards);
+        let t = || LinkReason::Ticket("INC0000001".into());
+        assert_eq!(links, vec![(0, 1, t()), (1, 2, t()), (2, 3, t())]);
+    }
+
+    #[test]
+    fn a_pair_sharing_two_tickets_is_linked_once() {
+        let cards = [
+            lt(&["INC0000001", "INC0000002"], "a"),
+            lt(&["INC0000001", "INC0000002"], "b"),
+        ];
+        assert_eq!(auto_links(&cards).len(), 1);
     }
 
     #[test]
