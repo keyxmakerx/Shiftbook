@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -32,6 +32,23 @@ describe('canvas view', () => {
     expect(wide.zoom).toBeLessThan(1);
     // The right edge of the far card lands inside the margin.
     expect(2000 * wide.zoom + CARD_W * wide.zoom + wide.x).toBeLessThanOrEqual(800 - 40 + 0.01);
+  });
+
+  it('draws a link from card edge to card edge, whatever their height', () => {
+    const a = { x: 0, y: 0, w: 220, h: 60 };
+    const b = { x: 400, y: 0, w: 220, h: 60 };
+    const l = linkCurve(a, b)!;
+    // Leaves a's right edge and reaches b's left edge (with the small gap), level with them.
+    expect(l.from.x).toBeCloseTo(225);
+    expect(l.to.x).toBeCloseTo(395);
+    expect(l.from.y).toBeCloseTo(30);
+    // Short cards: the end sits by the card, not below it at the full card height.
+    const below = linkCurve(a, { x: 0, y: 300, w: 220, h: 60 })!;
+    expect(below.from.y).toBeCloseTo(65);
+    expect(below.to.y).toBeCloseTo(295);
+    // It bows rather than running dead straight.
+    expect(l.d).not.toMatch(/Q [\d.]+ 30 /);
+    expect(linkCurve(a, { x: 100, y: 10, w: 220, h: 60 })).toBeNull();
   });
 
   it('opens on the middle of everything on the Desk', () => {

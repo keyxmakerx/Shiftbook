@@ -51,6 +51,7 @@
     LINE_UP_PX,
     lineUp,
     lineUpWith,
+    linkCurve,
     MIN_AREA,
     NEW_AREA,
     openingView,
@@ -244,6 +245,7 @@
   function cardDragging(card: Card, dx: number, dy: number, at: { cx: number; cy: number }) {
     dragging = true;
     if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
+    else liveDrag = { key: keyOf(card), dx, dy };
     hoverDrawer = drawerAt(at.cx, at.cy);
     const p = pos(card);
     hoverCard = hoverDrawer || groupDrag || liningUp ? null : (dropTarget(card, p.x + dx, p.y + dy)?.key ?? null);
@@ -476,6 +478,7 @@
     const grouped = !!groupDrag;
     const lined = liningUp;
     groupDrag = null;
+    liveDrag = null;
     hoverCard = null;
     liningUp = false;
     guides = [];
@@ -669,30 +672,36 @@
   // ----- links -----
   // Cards that show have lines, and a card in a pile that isn't fanned out has its lines go to
   // the pile, so fanning it doesn't make a bunch of lines appear at once. A folded box hides
-  // its cards' lines.
-  const centres = $derived.by(() => {
-    const at = new Map<string, { x: number; y: number }>();
+  // its cards' lines. Lines meet each card's edge at its real height and follow a card while
+  // it's being dragged.
+  /** Each card's height as laid out (cards are only as tall as what's on them). */
+  let heights = $state<Record<string, number>>({});
+  /** The card being dragged on its own and how far, so its lines come along. */
+  let liveDrag = $state<{ key: string; dx: number; dy: number } | null>(null);
+  const cardRects = $derived.by(() => {
+    const at = new Map<string, Rect>();
     for (const st of piles) {
       if (st.id === fanned) continue;
       const p = pileAt(st);
-      for (const c of pileMembers(st.id)) at.set(keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 });
+      const top = pileMembers(st.id).at(-1);
+      const h = (top && heights[keyOf(top)]) || CARD_H;
+      for (const c of pileMembers(st.id)) at.set(keyOf(c), { x: p.x, y: p.y, w: CARD_W, h });
     }
     for (const c of shown) {
+      const k = keyOf(c);
       const p = pos(c);
-      at.set(keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 });
+      const d = liveDrag?.key === k ? liveDrag : { dx: 0, dy: 0 };
+      at.set(k, { x: p.x + d.dx, y: p.y + d.dy, w: CARD_W, h: heights[k] || CARD_H });
     }
     return at;
   });
 
-  function linkPath(l: CanvasLink): string | null {
-    const a = centres.get(keyOf(l.a));
-    const b = centres.get(keyOf(l.b));
+  function linkLine(l: CanvasLink) {
+    const a = cardRects.get(keyOf(l.a));
+    const b = cardRects.get(keyOf(l.b));
     // Two cards in the same pile need no line.
     if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
-    // A gentle curve, bowing to one side so lines that cross stay readable.
-    const mx = (a.x + b.x) / 2 - (b.y - a.y) * 0.12;
-    const my = (a.y + b.y) / 2 + (b.x - a.x) * 0.12;
-    return `M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`;
+    return linkCurve(a, b);
   }
 
   function why(l: CanvasLink): string {
@@ -1183,9 +1192,14 @@
       {#if showLinks}
         <svg class="links" aria-hidden="true">
           {#each links as l (keyOf(l.a) + '|' + keyOf(l.b))}
-            {@const d = linkPath(l)}
-            {#if d}
-              <path class="line" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'} {d} />
+            {@const line = linkLine(l)}
+            {#if line}
+              {@const d = line.d}
+              <g class="link" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'}>
+                <path class="line" {d} />
+                <circle class="end" cx={line.from.x} cy={line.from.y} r="3" />
+                <circle class="end" cx={line.to.x} cy={line.to.y} r="3" />
+              </g>
               <!-- Lines take a click or right-click; the Links button hides them all. -->
               <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
               <path class="hit" {d} oncontextmenu={(e) => void linkMenu(l, e)} onclick={(e) => void linkMenu(l, e)}><title>{why(l)}</title></path>
@@ -1228,6 +1242,9 @@
           dropping={hoverCard === keyOf(card)}
           extra={cardExtra(card)}
           ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}
+          onheight={(h) => {
+            if (heights[keyOf(card)] !== h) heights[keyOf(card)] = h;
+          }}
           lineUp={(x, y, on) => lineUpCard(card, x, y, on)}
           onmove={(x, y, at) => void move(card, x, y, at)}
           onchanged={() => void load()}
@@ -1686,22 +1703,38 @@
     pointer-events: none;
   }
 
+  /* A link: a soft curve from card edge to card edge, with a dot where it meets each card. */
+  .link {
+    --lc: color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+
+  .link.ticket {
+    --lc: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .link.drawn {
+    --lc: var(--accent);
+  }
+
   .line {
     fill: none;
-    stroke: color-mix(in srgb, var(--ink) 30%, transparent);
+    stroke: var(--lc);
     stroke-width: 1.5;
+    stroke-linecap: round;
     stroke-dasharray: 5 5;
   }
 
-  .line.ticket {
-    stroke: color-mix(in srgb, var(--accent) 60%, transparent);
+  .ticket .line {
     stroke-dasharray: none;
   }
 
-  .line.drawn {
-    stroke: var(--accent);
+  .drawn .line {
     stroke-width: 2;
     stroke-dasharray: none;
+  }
+
+  .end {
+    fill: var(--lc);
   }
 
   .hit {

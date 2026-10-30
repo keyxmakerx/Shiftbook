@@ -14,15 +14,71 @@
     "**Lines.** Cards that share a ticket link one to the next, oldest first, instead of every card to every other. A card gets one word link, not two. A line you drew is never doubled by an automatic one. Lines also update as soon as a notepad window saves, so they don't all pop in later, and a card in a pile has its lines go to the pile."
    ],
    "figures": [
-    {"caption": "Lines: one ticket over four days, before and now.", "html_file": "mocks/r16-desk.html", "start": "links"},
-    {"caption": "Where the Desk opens.", "html_file": "mocks/r16-desk.html", "start": "open"},
-    {"caption": "Double-click an entry from any day, or a ticket.", "html_file": "mocks/r16-desk.html", "start": "dbl"}
+    {
+     "caption": "Lines: one ticket over four days, before and now.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "links"
+    },
+    {
+     "caption": "Where the Desk opens.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "open"
+    },
+    {
+     "caption": "Double-click an entry from any day, or a ticket.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "dbl"
+    }
    ],
    "questions": [
-    {"id": "words", "legend": "Lines from shared words (like \"printer\" on two cards)", "options": [{"value": "Keep, one per card (as built)", "rec": true}, {"value": "Turn them off, tickets only"}, {"value": "A switch in Settings → Look"}]},
-    {"id": "open", "legend": "When Shiftbook starts, the Desk opens", "options": [{"value": "On the middle of everything (as built)", "rec": true}, {"value": "Where I left it last time"}]},
-    {"id": "dbl", "legend": "Double-clicking an entry opens", "options": [{"value": "Its details (as built)", "rec": true}, {"value": "Its notepad full screen, like tickets"}]},
-    {"id": "more", "type": "text", "legend": "Still seeing the line break, or anything else?", "placeholder": "e.g. which menu, and what you right-clicked"}
+    {
+     "id": "words",
+     "legend": "Lines from shared words (like \"printer\" on two cards)",
+     "options": [
+      {
+       "value": "Keep, one per card (as built)",
+       "rec": true
+      },
+      {
+       "value": "Turn them off, tickets only"
+      },
+      {
+       "value": "A switch in Settings → Look"
+      }
+     ]
+    },
+    {
+     "id": "open",
+     "legend": "When Shiftbook starts, the Desk opens",
+     "options": [
+      {
+       "value": "On the middle of everything (as built)",
+       "rec": true
+      },
+      {
+       "value": "Where I left it last time"
+      }
+     ]
+    },
+    {
+     "id": "dbl",
+     "legend": "Double-clicking an entry opens",
+     "options": [
+      {
+       "value": "Its details (as built)",
+       "rec": true
+      },
+      {
+       "value": "Its notepad full screen, like tickets"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Still seeing the line break, or anything else?",
+     "placeholder": "e.g. which menu, and what you right-clicked"
+    }
    ]
   },
   "r16-desk-ideas": {
@@ -35,17 +91,134 @@
     "While fixing the lines I looked for what else makes a full Desk hard to use. These four are new (none were on the earlier lists). Tick the ones you want; the first two are my picks because they help every day and are small."
    ],
    "figures": [
-    {"caption": "**Point at a card to see its lines.** The rest fade back.", "html_file": "mocks/r16-desk.html", "start": "hover"},
-    {"caption": "**Go to a box** from a list in the toolbox.", "html_file": "mocks/r16-desk.html", "start": "boxes"},
-    {"caption": "**A little map** in the corner of the Desk.", "html_file": "mocks/r16-desk.html", "start": "map"},
-    {"caption": "**Show on Desk** from Find.", "html_file": "mocks/r16-desk.html", "start": "find"}
+    {
+     "caption": "**Point at a card to see its lines.** The rest fade back.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "hover"
+    },
+    {
+     "caption": "**Go to a box** from a list in the toolbox.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "boxes"
+    },
+    {
+     "caption": "**A little map** in the corner of the Desk.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "map"
+    },
+    {
+     "caption": "**Show on Desk** from Find.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "find"
+    }
    ],
    "questions": [
-    {"id": "hover", "legend": "Point at a card to see its lines", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
-    {"id": "boxes", "legend": "Go to a box", "options": [{"value": "Build it", "rec": true}, {"value": "Not needed"}]},
-    {"id": "map", "legend": "A little map in the corner", "options": [{"value": "Build it"}, {"value": "Not needed", "rec": true}]},
-    {"id": "find", "legend": "Show on Desk from Find", "options": [{"value": "Build it"}, {"value": "Not needed", "rec": true}]},
-    {"id": "more", "type": "text", "legend": "Anything to change?", "placeholder": "e.g. the map only while zoomed out"}
+    {
+     "id": "hover",
+     "legend": "Point at a card to see its lines",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "boxes",
+     "legend": "Go to a box",
+     "options": [
+      {
+       "value": "Build it",
+       "rec": true
+      },
+      {
+       "value": "Not needed"
+      }
+     ]
+    },
+    {
+     "id": "map",
+     "legend": "A little map in the corner",
+     "options": [
+      {
+       "value": "Build it"
+      },
+      {
+       "value": "Not needed",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "find",
+     "legend": "Show on Desk from Find",
+     "options": [
+      {
+       "value": "Build it"
+      },
+      {
+       "value": "Not needed",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. the map only while zoomed out"
+    }
+   ]
+  },
+  "r16-desk-lines": {
+   "area": "Day and the Desk",
+   "round": 15,
+   "order": 14,
+   "version": 1,
+   "title": "Making the Desk's lines look right",
+   "body": [
+    "You said lines sometimes don't connect, look out of place, or run too straight. I found why they missed: each line aimed at the middle of a full-height card, but most cards are shorter, so the line could end in empty paper below the card. While you dragged a card, its lines also stayed where it had been.",
+    "**Built in the same pull request (A):** lines run from card edge to card edge at each card's real height, with a small dot where they meet. They always curve a little, more when they're long, and they follow a card while you drag it.",
+    "B and C are other looks I can switch to if A still feels off."
+   ],
+   "figures": [
+    {
+     "caption": "Before, and A (built).",
+     "html_file": "mocks/r16-desk.html",
+     "start": "look"
+    },
+    {
+     "caption": "B and C, two other looks.",
+     "html_file": "mocks/r16-desk.html",
+     "start": "look2"
+    }
+   ],
+   "questions": [
+    {
+     "id": "style",
+     "legend": "Which look?",
+     "options": [
+      {
+       "value": "A · edge to edge with dots (as built)",
+       "rec": true
+      },
+      {
+       "value": "B · out of the sides, like a mind map"
+      },
+      {
+       "value": "C · faint until I point at a card"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to change?",
+     "placeholder": "e.g. no dots, or solid lines instead of dashes"
+    }
    ]
   }
  }

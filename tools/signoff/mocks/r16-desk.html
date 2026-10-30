@@ -70,6 +70,9 @@
   .side { position: absolute; right: 0; top: 0; bottom: 0; width: 270px; background: var(--paper); box-shadow: var(--lift); padding: 14px 16px; font-size: 12.5px; }
   .side .lbl { font: 700 10px var(--ui); letter-spacing: .09em; text-transform: uppercase; color: var(--mut); margin-top: 10px; }
   .side .in { border: 1px solid var(--rule); border-radius: 7px; padding: 5px 8px; background: #fff; margin-top: 3px; }
+  svg.lines .dot2 { fill: var(--accent); opacity: .8; }
+  svg.lines path.solid { stroke-dasharray: none; }
+  svg.lines path.faint { opacity: .28; }
 </style>
 </head>
 <body>
@@ -241,6 +244,75 @@ Next: driver update, then ask the user to test.</div>
     </div>
   </div>
   <p class="why">Show on Desk glides there and the card glows for a moment, even when it's in a pile or a folded box (the pile fans out, the box opens).</p>
+</section>
+
+<!-- 8. How the lines look -->
+<section class="state" id="look">
+  <div class="pair">
+    <div>
+      <p class="tag">Before: centre to centre, at a fixed card height</p>
+      <div class="board">
+        <svg class="lines">
+          <path d="M105 100 Q 240 50 375 80" /><path d="M375 80 Q 420 160 405 280" /><path d="M115 310 Q 120 200 105 100" />
+        </svg>
+        <div class="card" style="left:30px;top:40px;--c:var(--proj)"><span class="k">Entry · Mon</span><b>Print server</b></div>
+    <div class="card" style="left:300px;top:20px;--c:var(--proj)"><span class="k">Entry · Tue</span><b>Print server again</b></div>
+    <div class="card" style="left:330px;top:220px;--c:var(--accent)"><span class="k">Ticket</span><b>INC0012345</b></div>
+    <div class="card" style="left:40px;top:250px;--c:var(--proj2)"><span class="k">Jot</span><b>printer toner</b></div>
+      </div>
+      <p class="why">Lines aimed at where the middle of a full-height card would be. Most cards are shorter, so a line could stop in empty paper below its card, and short lines ran almost straight.</p>
+    </div>
+    <div>
+      <p class="tag new">A · Now: edge to edge, a dot where it meets the card</p>
+      <div class="board">
+        <svg class="lines">
+          <path d="M185 63 Q 245 20 295 50" /><circle class="dot2" cx="185" cy="63" r="3"/><circle class="dot2" cx="295" cy="50" r="3"/>
+          <path class="solid" d="M383 77 Q 425 145 400 215" /><circle class="dot2" cx="383" cy="77" r="3"/><circle class="dot2" cx="400" cy="215" r="3"/>
+          <path d="M112 245 Q 70 170 108 97" /><circle class="dot2" cx="112" cy="245" r="3"/><circle class="dot2" cx="108" cy="97" r="3"/>
+        </svg>
+        <div class="card" style="left:30px;top:40px;--c:var(--proj)"><span class="k">Entry · Mon</span><b>Print server</b></div>
+    <div class="card" style="left:300px;top:20px;--c:var(--proj)"><span class="k">Entry · Tue</span><b>Print server again</b></div>
+    <div class="card" style="left:330px;top:220px;--c:var(--accent)"><span class="k">Ticket</span><b>INC0012345</b></div>
+    <div class="card" style="left:40px;top:250px;--c:var(--proj2)"><span class="k">Jot</span><b>printer toner</b></div>
+      </div>
+      <p class="why">Each line starts and ends at the card's own edge, whatever its height, and always curves a little (more when it's long). It follows a card while you drag it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="state" id="look2">
+  <div class="pair">
+    <div>
+      <p class="tag new">B · Out of the sides, like a mind map</p>
+      <div class="board">
+        <svg class="lines">
+          <path class="solid" d="M180 66 C 240 66 240 46 300 46" /><circle class="dot2" cx="180" cy="66" r="3.5"/><circle class="dot2" cx="300" cy="46" r="3.5"/>
+          <path class="solid" d="M450 46 C 520 46 520 246 480 246" /><circle class="dot2" cx="450" cy="46" r="3.5"/><circle class="dot2" cx="480" cy="246" r="3.5"/>
+          <path class="solid" d="M40 276 C -10 276 -10 66 30 66" /><circle class="dot2" cx="40" cy="276" r="3.5"/><circle class="dot2" cx="30" cy="66" r="3.5"/>
+        </svg>
+        <div class="card" style="left:30px;top:40px;--c:var(--proj)"><span class="k">Entry · Mon</span><b>Print server</b></div>
+    <div class="card" style="left:300px;top:20px;--c:var(--proj)"><span class="k">Entry · Tue</span><b>Print server again</b></div>
+    <div class="card" style="left:330px;top:220px;--c:var(--accent)"><span class="k">Ticket</span><b>INC0012345</b></div>
+    <div class="card" style="left:40px;top:250px;--c:var(--proj2)"><span class="k">Jot</span><b>printer toner</b></div>
+      </div>
+      <p class="why">Lines leave and arrive level, from the left or right side of a card, with smooth S-bends. Tidy when cards sit in rows; long loops when they're stacked.</p>
+    </div>
+    <div>
+      <p class="tag new">C · Quiet until you point</p>
+      <div class="board">
+        <svg class="lines">
+          <path class="faint" d="M185 63 Q 245 20 295 50" />
+          <path class="faint" d="M383 77 Q 425 145 400 215" />
+          <path class="faint" d="M112 245 Q 70 170 108 97" />
+        </svg>
+        <div class="card" style="left:30px;top:40px;--c:var(--proj)"><span class="k">Entry · Mon</span><b>Print server</b></div>
+    <div class="card" style="left:300px;top:20px;--c:var(--proj)"><span class="k">Entry · Tue</span><b>Print server again</b></div>
+    <div class="card" style="left:330px;top:220px;--c:var(--accent)"><span class="k">Ticket</span><b>INC0012345</b></div>
+    <div class="card" style="left:40px;top:250px;--c:var(--proj2)"><span class="k">Jot</span><b>printer toner</b></div>
+      </div>
+      <p class="why">A's shape, but thin and faint so they sit back on the paper. Pointing at a card brings its own lines up solid (the idea on the card above).</p>
+    </div>
+  </div>
 </section>
 
 <script>

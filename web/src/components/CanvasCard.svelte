@@ -43,6 +43,7 @@
     onlink,
     onpick,
     onopen,
+    onheight,
   }: {
     card: CanvasCard;
     zoom: number;
@@ -75,6 +76,8 @@
     onpick?: () => void;
     /** Opening it (double-click or Enter) does this instead (a board opens notes in its Notebook). */
     onopen?: () => void;
+    /** Its height as laid out (canvas units), so the Desk's lines meet its edge. */
+    onheight?: (h: number) => void;
   } = $props();
 
   let el: HTMLElement | undefined = $state();
@@ -82,6 +85,9 @@
   let group = $state(false);
   let drag = $state<{ dx: number; dy: number } | null>(null);
   let height = $state(0);
+  $effect(() => {
+    if (height > 0) onheight?.(height);
+  });
 
   const key = $derived(`${card.kind}:${card.id}`);
   const open = $derived(panel.open === key);
