@@ -300,6 +300,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
+  data-card={key}
   class="card paper"
   class:scrap={!!card.inbox}
   class:lifted={!!drag}

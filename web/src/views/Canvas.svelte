@@ -68,7 +68,8 @@
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
-  import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
+  import { easeOut, scale as motion } from '../lib/motion';
+  import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
@@ -704,6 +705,23 @@
     return linkCurve(a, b);
   }
 
+  // Lines stay faint until you point at a card (or a pile, or tab to one); then its own lines
+  // come up solid and the rest fade back (sign-off r16-desk-lines, look C).
+  let pointed = $state<string | null>(null);
+  function pointAt(e: Event) {
+    const t = e.target instanceof Element ? e.target : null;
+    const c = t?.closest('[data-card]')?.getAttribute('data-card');
+    const p = t?.closest('[data-pile]')?.getAttribute('data-pile');
+    const next = c ?? (p ? `pile:${p}` : null);
+    if (next !== pointed) pointed = next;
+  }
+  /** The card (or pile) pointed at is at one end of this link. */
+  function lit(l: CanvasLink): boolean {
+    if (!pointed) return false;
+    const ends = [l.a, l.b].map((r) => cards.find((c) => c.kind === r.kind && c.id === r.id));
+    return ends.some((c) => c && (keyOf(c) === pointed || (c.stack && c.stack !== fanned && `pile:${c.stack}` === pointed)));
+  }
+
   function why(l: CanvasLink): string {
     if (l.drawn || !l.reason) return 'Linked by you';
     return l.reason.kind === 'ticket' ? `Both mention ${l.reason.text}` : `Both say “${l.reason.text}”`;
@@ -1039,7 +1057,36 @@
 
   function fit() {
     if (!board) return;
-    view = fitAll(everything(), board.clientWidth, board.clientHeight);
+    glide(fitAll(everything(), board.clientWidth, board.clientHeight));
+  }
+
+  /** Move the view smoothly to `to` (straight there when motion is off). */
+  let gliding = 0;
+  function glide(to: CanvasView) {
+    const from = view;
+    const ms = 320 * motion();
+    const serial = ++gliding;
+    if (ms === 0) {
+      view = to;
+      return;
+    }
+    const start = performance.now();
+    const step = (now: number) => {
+      if (serial !== gliding) return;
+      const t = easeOut((now - start) / ms);
+      view = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, zoom: from.zoom + (to.zoom - from.zoom) * t };
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ----- Go to a box (sign-off r16-desk-ideas) -----
+  let goingTo = $state(false);
+  const boxName = (b: DeskBox) => (b.projectId ? (projectById(b.projectId)?.name ?? 'Project') : b.label);
+  function goToBox(b: DeskBox) {
+    goingTo = false;
+    if (!board) return;
+    glide(fitAll([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
   }
 
   // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.
@@ -1170,7 +1217,14 @@
       el.scrollTop = 0;
     }}
   >
-    <div class="world" class:moving={!!areaDrag} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="world"
+      onpointerover={pointAt}
+      onpointerleave={() => (pointed = null)}
+      onfocusin={pointAt}
+      onfocusout={() => (pointed = null)}
+      class:moving={!!areaDrag} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
       {#if mode === 'free'}
         {#each boxes as b, i (b.key)}
           <CanvasAreaBox
@@ -1190,12 +1244,12 @@
         {/each}
       {/if}
       {#if showLinks}
-        <svg class="links" aria-hidden="true">
+        <svg class="links" class:pointing={!!pointed} aria-hidden="true">
           {#each links as l (keyOf(l.a) + '|' + keyOf(l.b))}
             {@const line = linkLine(l)}
             {#if line}
               {@const d = line.d}
-              <g class="link" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'}>
+              <g class="link" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'} class:lit={lit(l)}>
                 <path class="line" {d} />
                 <circle class="end" cx={line.from.x} cy={line.from.y} r="3" />
                 <circle class="end" cx={line.to.x} cy={line.to.y} r="3" />
@@ -1335,8 +1389,38 @@
           <button type="button" class="tb" aria-pressed={tool === 'box'} title="Box: drag to draw a box for a project or a label (Shift + drag on empty paper works with any tool)" onclick={() => (tool = 'box')}>
             <Icon name="box" size={16} /><span>Box</span>
           </button>
+          <button type="button" class="tb" aria-expanded={goingTo} title="Go straight to one of your boxes" onclick={() => (goingTo = !goingTo)}>
+            <Icon name="open" size={16} /><span>Go to</span>
+          </button>
         {/if}
       </div>
+      {#if goingTo && toolbox}
+        <div
+          class="paper goto"
+          role="menu"
+          tabindex="-1"
+          aria-label="Go to a box"
+          onkeydown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              goingTo = false;
+            }
+          }}
+        >
+          {#each boxes as b (b.key)}
+            <button type="button" role="menuitem" class="go" onclick={() => goToBox(b)}>
+              <i class="gdot" style:--c={b.projectId ? projectColor(b.projectId) : 'var(--mut)'}></i>
+              <span class="gname">{boxName(b)}</span>
+              <span class="gcount">{b.count}</span>
+            </button>
+          {:else}
+            <p class="gnone">No boxes yet. Use Box (or Shift + drag) to draw one.</p>
+          {/each}
+          <button type="button" role="menuitem" class="go all" onclick={() => ((goingTo = false), fit())}>
+            <i class="gdot" style:--c="var(--none)"></i><span class="gname">Everything</span>
+          </button>
+        </div>
+      {/if}
       <Cabinet {drawers} hover={hoverDrawer} bind:open={cabinet} peek={dragging} opened={openDrawer} onopen={(k) => (openDrawer = openDrawer === k ? null : k)} onaddfolder={(n) => void addFolder(n)} />
       </div>
       {#if openDrawer}
@@ -1609,6 +1693,70 @@
     color: var(--accent);
   }
 
+  .goto {
+    position: absolute;
+    left: 74px;
+    top: 0;
+    z-index: 5;
+    width: 220px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 5px;
+    box-shadow: var(--lift);
+  }
+
+  .go {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    border: 0;
+    background: none;
+    border-radius: 7px;
+    padding: 7px 8px;
+    font: 500 13px var(--ui);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .go:hover,
+  .go:focus-visible {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .go.all {
+    border-top: 1px solid var(--rule);
+    border-radius: 0 0 7px 7px;
+  }
+
+  .gdot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--c);
+    flex: none;
+  }
+
+  .gname {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gcount {
+    color: var(--mut);
+    font-size: 12px;
+  }
+
+  .gnone {
+    margin: 6px 8px;
+    color: var(--mut);
+    font-size: 12.5px;
+  }
+
   /* Lining up (round 15): thin red lines, dashed for edges, solid with ends for equal gaps. */
   .guide {
     position: absolute;
@@ -1735,6 +1883,24 @@
 
   .end {
     fill: var(--lc);
+  }
+
+  .link {
+    opacity: 0.45;
+    transition: opacity calc(0.15s * var(--m));
+  }
+
+  .pointing .link {
+    opacity: 0.15;
+  }
+
+  .pointing .link.lit {
+    opacity: 1;
+  }
+
+  .link.lit .line {
+    stroke-width: 2.2;
+    stroke-dasharray: none;
   }
 
   .hit {

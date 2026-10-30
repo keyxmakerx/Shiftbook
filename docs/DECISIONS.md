@@ -2,6 +2,19 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 15 — 30 Oct 2026 (the Desk: lines, opening, double-click, finding your way)
+Cards `r16-desk-fixes`, `r16-desk-lines` and `r16-desk-ideas` (`tools/signoff/rounds/r16-desk.json`,
+mockups `mocks/r16-desk.html`), approved:
+- **Opening:** when Shiftbook starts, the Desk opens on the middle of the cards and boxes (zooming
+  out no further than 60%), not where it was left.
+- **Double-click:** an entry (any day) opens its details; a ticket opens its notepad full screen.
+- **Lines:** cards sharing a ticket link one to the next, oldest first; one word link per card
+  (word links stay on). Lines run edge to edge at each card's real height and follow drags.
+- **Line look (C):** lines are faint until you point at (or tab to) a card or pile; then its own
+  lines come up solid and the rest fade back.
+- **Go to:** a Go to list in the toolbox glides to a box; Everything fits the whole Desk.
+- **Not now:** a little map in the corner, and Show on Desk from Find.
+
 ## Round 15 — 27 Oct 2026 (the MOP notebook)
 Card `r15-mopbook` (`tools/signoff/rounds/r15-mopbook.json`, mockups `mocks/r16-mopbook.html`),
 approved. The owner writes MOPs in Notepad++ and wanted something like it:
