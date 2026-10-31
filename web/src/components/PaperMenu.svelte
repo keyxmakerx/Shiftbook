@@ -59,6 +59,28 @@
     return () => registerCloser(null);
   });
 
+  /** Text settings an object inherits from where it sits, copied onto its lifted copy. */
+  const INHERITED = [
+    'color',
+    'font-family',
+    'font-size',
+    'font-style',
+    'font-weight',
+    'letter-spacing',
+    'line-height',
+    'text-align',
+    'text-transform',
+    'white-space',
+    'word-break',
+    'overflow-wrap',
+  ];
+
+  /** An element's own laid-out size from its computed style (exact), else the rounded one. */
+  function ownSize(computed: string, rounded: number): number {
+    const px = computed.endsWith('px') ? parseFloat(computed) : NaN;
+    return Number.isFinite(px) && px > 0 ? px : rounded;
+  }
+
   async function setup(anchor: HTMLElement) {
     if (closeTimer !== null) {
       clearTimeout(closeTimer);
@@ -91,11 +113,16 @@
       copy.style.position = 'static';
       for (const side of ['left', 'top', 'right', 'bottom', 'z-index', 'transform']) copy.style.removeProperty(side);
       copy.style.margin = '0';
+      // The copy no longer sits inside the object's parents, so it takes the text settings it
+      // had from them along. Without these a row could pick up another font size or wrapping
+      // and break a line the object itself doesn't.
+      for (const prop of INHERITED) copy.style.setProperty(prop, cs.getPropertyValue(prop));
       // On a zoomed Desk the object is drawn scaled, so its box on screen differs from its own
       // size. Lay the copy out at its own size and scale it to the box, so it looks the same
-      // instead of squashing (or stretching) its contents.
-      const w = anchor.offsetWidth;
-      const h = anchor.offsetHeight;
+      // instead of squashing (or stretching) its contents. The size is the exact one, not
+      // rounded to whole pixels: half a pixel narrower is enough to wrap a title.
+      const w = ownSize(cs.width, anchor.offsetWidth);
+      const h = ownSize(cs.height, anchor.offsetHeight);
       copy.style.width = `${w}px`;
       copy.style.height = `${h}px`;
       if (w > 0 && h > 0) {

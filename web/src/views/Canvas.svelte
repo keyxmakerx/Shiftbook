@@ -9,6 +9,8 @@
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
   let toolboxOpen = true;
   let cabinetShown = false;
+  /** The Desk has opened on what's on it once since the app started. */
+  let opened = false;
 </script>
 
 <script lang="ts">
@@ -49,8 +51,10 @@
     LINE_UP_PX,
     lineUp,
     lineUpWith,
+    linkCurve,
     MIN_AREA,
     NEW_AREA,
+    openingView,
     rectFrom,
     toCanvas,
     zoomAt,
@@ -64,7 +68,8 @@
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
-  import { app, attempt, projectById, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
+  import { easeOut, scale as motion } from '../lib/motion';
+  import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
@@ -176,6 +181,12 @@
       if (openDrawer && !drawers.some((d) => d.key === openDrawer)) openDrawer = null;
       links = desk.links;
       axis = desk.axis;
+      if (!opened && board && board.clientWidth > 0) {
+        // The first time the Desk shows after starting, it opens on the middle of your cards
+        // and boxes rather than wherever the paper's corner happens to be.
+        opened = true;
+        view = openingView(everything(), board.clientWidth, board.clientHeight);
+      }
     }
     loaded = true;
   }
@@ -235,6 +246,7 @@
   function cardDragging(card: Card, dx: number, dy: number, at: { cx: number; cy: number }) {
     dragging = true;
     if (selected.has(keyOf(card)) && selected.size > 1) groupDrag = { key: keyOf(card), dx, dy };
+    else liveDrag = { key: keyOf(card), dx, dy };
     hoverDrawer = drawerAt(at.cx, at.cy);
     const p = pos(card);
     hoverCard = hoverDrawer || groupDrag || liningUp ? null : (dropTarget(card, p.x + dx, p.y + dy)?.key ?? null);
@@ -445,11 +457,13 @@
     return c.entry?.description || c.tray?.item.ticket || c.note?.title || c.inbox?.text || 'this card';
   }
 
-  // The Desk works on today; reload whenever the day's data changes anywhere.
+  // The Desk works on today; reload whenever the day's data changes anywhere (a notepad saved
+  // in a window counts too, so its links show straight away rather than all at once later).
   onMount(() => {
     if (app.selected !== app.today) void selectDay(app.today);
   });
   $effect(() => {
+    void app.changed;
     void app.entries;
     void app.tray;
     void app.inbox;
@@ -465,6 +479,7 @@
     const grouped = !!groupDrag;
     const lined = liningUp;
     groupDrag = null;
+    liveDrag = null;
     hoverCard = null;
     liningUp = false;
     guides = [];
@@ -656,22 +671,55 @@
   }
 
   // ----- links -----
-  // Only cards that show have lines (a folded box hides its cards' lines too).
-  const centres = $derived(
-    new Map(shown.map((c) => {
+  // Cards that show have lines, and a card in a pile that isn't fanned out has its lines go to
+  // the pile, so fanning it doesn't make a bunch of lines appear at once. A folded box hides
+  // its cards' lines. Lines meet each card's edge at its real height and follow a card while
+  // it's being dragged.
+  /** Each card's height as laid out (cards are only as tall as what's on them). */
+  let heights = $state<Record<string, number>>({});
+  /** The card being dragged on its own and how far, so its lines come along. */
+  let liveDrag = $state<{ key: string; dx: number; dy: number } | null>(null);
+  const cardRects = $derived.by(() => {
+    const at = new Map<string, Rect>();
+    for (const st of piles) {
+      if (st.id === fanned) continue;
+      const p = pileAt(st);
+      const top = pileMembers(st.id).at(-1);
+      const h = (top && heights[keyOf(top)]) || CARD_H;
+      for (const c of pileMembers(st.id)) at.set(keyOf(c), { x: p.x, y: p.y, w: CARD_W, h });
+    }
+    for (const c of shown) {
+      const k = keyOf(c);
       const p = pos(c);
-      return [keyOf(c), { x: p.x + CARD_W / 2, y: p.y + CARD_H / 2 }] as const;
-    })),
-  );
+      const d = liveDrag?.key === k ? liveDrag : { dx: 0, dy: 0 };
+      at.set(k, { x: p.x + d.dx, y: p.y + d.dy, w: CARD_W, h: heights[k] || CARD_H });
+    }
+    return at;
+  });
 
-  function linkPath(l: CanvasLink): string | null {
-    const a = centres.get(keyOf(l.a));
-    const b = centres.get(keyOf(l.b));
-    if (!a || !b) return null;
-    // A gentle curve, bowing to one side so lines that cross stay readable.
-    const mx = (a.x + b.x) / 2 - (b.y - a.y) * 0.12;
-    const my = (a.y + b.y) / 2 + (b.x - a.x) * 0.12;
-    return `M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}`;
+  function linkLine(l: CanvasLink) {
+    const a = cardRects.get(keyOf(l.a));
+    const b = cardRects.get(keyOf(l.b));
+    // Two cards in the same pile need no line.
+    if (!a || !b || (a.x === b.x && a.y === b.y)) return null;
+    return linkCurve(a, b);
+  }
+
+  // Lines stay faint until you point at a card (or a pile, or tab to one); then its own lines
+  // come up solid and the rest fade back (sign-off r16-desk-lines, look C).
+  let pointed = $state<string | null>(null);
+  function pointAt(e: Event) {
+    const t = e.target instanceof Element ? e.target : null;
+    const c = t?.closest('[data-card]')?.getAttribute('data-card');
+    const p = t?.closest('[data-pile]')?.getAttribute('data-pile');
+    const next = c ?? (p ? `pile:${p}` : null);
+    if (next !== pointed) pointed = next;
+  }
+  /** The card (or pile) pointed at is at one end of this link. */
+  function lit(l: CanvasLink): boolean {
+    if (!pointed) return false;
+    const ends = [l.a, l.b].map((r) => cards.find((c) => c.kind === r.kind && c.id === r.id));
+    return ends.some((c) => c && (keyOf(c) === pointed || (c.stack && c.stack !== fanned && `pile:${c.stack}` === pointed)));
   }
 
   function why(l: CanvasLink): string {
@@ -1002,10 +1050,43 @@
     view = zoomAt(view, board.clientWidth / 2, board.clientHeight / 2, factor);
   }
 
+  /** Every card and box that shows, as card-sized spots (boxes by their corners). */
+  function everything() {
+    return [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
+  }
+
   function fit() {
     if (!board) return;
-    const spots = [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
-    view = fitAll(spots, board.clientWidth, board.clientHeight);
+    glide(fitAll(everything(), board.clientWidth, board.clientHeight));
+  }
+
+  /** Move the view smoothly to `to` (straight there when motion is off). */
+  let gliding = 0;
+  function glide(to: CanvasView) {
+    const from = view;
+    const ms = 320 * motion();
+    const serial = ++gliding;
+    if (ms === 0) {
+      view = to;
+      return;
+    }
+    const start = performance.now();
+    const step = (now: number) => {
+      if (serial !== gliding) return;
+      const t = easeOut((now - start) / ms);
+      view = { x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t, zoom: from.zoom + (to.zoom - from.zoom) * t };
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  // ----- Go to a box (sign-off r16-desk-ideas) -----
+  let goingTo = $state(false);
+  const boxName = (b: DeskBox) => (b.projectId ? (projectById(b.projectId)?.name ?? 'Project') : b.label);
+  function goToBox(b: DeskBox) {
+    goingTo = false;
+    if (!board) return;
+    glide(fitAll([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
   }
 
   // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.
@@ -1136,7 +1217,14 @@
       el.scrollTop = 0;
     }}
   >
-    <div class="world" class:moving={!!areaDrag} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="world"
+      onpointerover={pointAt}
+      onpointerleave={() => (pointed = null)}
+      onfocusin={pointAt}
+      onfocusout={() => (pointed = null)}
+      class:moving={!!areaDrag} style:transform="translate({view.x}px, {view.y}px) scale({view.zoom})">
       {#if mode === 'free'}
         {#each boxes as b, i (b.key)}
           <CanvasAreaBox
@@ -1156,11 +1244,16 @@
         {/each}
       {/if}
       {#if showLinks}
-        <svg class="links" aria-hidden="true">
+        <svg class="links" class:pointing={!!pointed} aria-hidden="true">
           {#each links as l (keyOf(l.a) + '|' + keyOf(l.b))}
-            {@const d = linkPath(l)}
-            {#if d}
-              <path class="line" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'} {d} />
+            {@const line = linkLine(l)}
+            {#if line}
+              {@const d = line.d}
+              <g class="link" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'} class:lit={lit(l)}>
+                <path class="line" {d} />
+                <circle class="end" cx={line.from.x} cy={line.from.y} r="3" />
+                <circle class="end" cx={line.to.x} cy={line.to.y} r="3" />
+              </g>
               <!-- Lines take a click or right-click; the Links button hides them all. -->
               <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
               <path class="hit" {d} oncontextmenu={(e) => void linkMenu(l, e)} onclick={(e) => void linkMenu(l, e)}><title>{why(l)}</title></path>
@@ -1203,6 +1296,9 @@
           dropping={hoverCard === keyOf(card)}
           extra={cardExtra(card)}
           ondrag={(dx, dy, at) => cardDragging(card, dx, dy, at)}
+          onheight={(h) => {
+            if (heights[keyOf(card)] !== h) heights[keyOf(card)] = h;
+          }}
           lineUp={(x, y, on) => lineUpCard(card, x, y, on)}
           onmove={(x, y, at) => void move(card, x, y, at)}
           onchanged={() => void load()}
@@ -1293,8 +1389,38 @@
           <button type="button" class="tb" aria-pressed={tool === 'box'} title="Box: drag to draw a box for a project or a label (Shift + drag on empty paper works with any tool)" onclick={() => (tool = 'box')}>
             <Icon name="box" size={16} /><span>Box</span>
           </button>
+          <button type="button" class="tb" aria-expanded={goingTo} title="Go straight to one of your boxes" onclick={() => (goingTo = !goingTo)}>
+            <Icon name="open" size={16} /><span>Go to</span>
+          </button>
         {/if}
       </div>
+      {#if goingTo && toolbox}
+        <div
+          class="paper goto"
+          role="menu"
+          tabindex="-1"
+          aria-label="Go to a box"
+          onkeydown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              goingTo = false;
+            }
+          }}
+        >
+          {#each boxes as b (b.key)}
+            <button type="button" role="menuitem" class="go" onclick={() => goToBox(b)}>
+              <i class="gdot" style:--c={b.projectId ? projectColor(b.projectId) : 'var(--mut)'}></i>
+              <span class="gname">{boxName(b)}</span>
+              <span class="gcount">{b.count}</span>
+            </button>
+          {:else}
+            <p class="gnone">No boxes yet. Use Box (or Shift + drag) to draw one.</p>
+          {/each}
+          <button type="button" role="menuitem" class="go all" onclick={() => ((goingTo = false), fit())}>
+            <i class="gdot" style:--c="var(--none)"></i><span class="gname">Everything</span>
+          </button>
+        </div>
+      {/if}
       <Cabinet {drawers} hover={hoverDrawer} bind:open={cabinet} peek={dragging} opened={openDrawer} onopen={(k) => (openDrawer = openDrawer === k ? null : k)} onaddfolder={(n) => void addFolder(n)} />
       </div>
       {#if openDrawer}
@@ -1567,6 +1693,70 @@
     color: var(--accent);
   }
 
+  .goto {
+    position: absolute;
+    left: 74px;
+    top: 0;
+    z-index: 5;
+    width: 220px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding: 5px;
+    box-shadow: var(--lift);
+  }
+
+  .go {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    border: 0;
+    background: none;
+    border-radius: 7px;
+    padding: 7px 8px;
+    font: 500 13px var(--ui);
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .go:hover,
+  .go:focus-visible {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+
+  .go.all {
+    border-top: 1px solid var(--rule);
+    border-radius: 0 0 7px 7px;
+  }
+
+  .gdot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--c);
+    flex: none;
+  }
+
+  .gname {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gcount {
+    color: var(--mut);
+    font-size: 12px;
+  }
+
+  .gnone {
+    margin: 6px 8px;
+    color: var(--mut);
+    font-size: 12.5px;
+  }
+
   /* Lining up (round 15): thin red lines, dashed for edges, solid with ends for equal gaps. */
   .guide {
     position: absolute;
@@ -1661,21 +1851,55 @@
     pointer-events: none;
   }
 
+  /* A link: a soft curve from card edge to card edge, with a dot where it meets each card. */
+  .link {
+    --lc: color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+
+  .link.ticket {
+    --lc: color-mix(in srgb, var(--accent) 60%, transparent);
+  }
+
+  .link.drawn {
+    --lc: var(--accent);
+  }
+
   .line {
     fill: none;
-    stroke: color-mix(in srgb, var(--ink) 30%, transparent);
+    stroke: var(--lc);
     stroke-width: 1.5;
+    stroke-linecap: round;
     stroke-dasharray: 5 5;
   }
 
-  .line.ticket {
-    stroke: color-mix(in srgb, var(--accent) 60%, transparent);
+  .ticket .line {
     stroke-dasharray: none;
   }
 
-  .line.drawn {
-    stroke: var(--accent);
+  .drawn .line {
     stroke-width: 2;
+    stroke-dasharray: none;
+  }
+
+  .end {
+    fill: var(--lc);
+  }
+
+  .link {
+    opacity: 0.45;
+    transition: opacity calc(0.15s * var(--m));
+  }
+
+  .pointing .link {
+    opacity: 0.15;
+  }
+
+  .pointing .link.lit {
+    opacity: 1;
+  }
+
+  .link.lit .line {
+    stroke-width: 2.2;
     stroke-dasharray: none;
   }
 

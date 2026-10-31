@@ -89,6 +89,12 @@ export function openWindow(kind: CardKind, id: string): void {
   save();
 }
 
+/** Open a record's notepad on a screen of its own (a window filling the screen). */
+export function openFullWindow(kind: CardKind, id: string): void {
+  openWindow(kind, id);
+  setWindowMode(`${kind}:${id}`, 'full');
+}
+
 export function setWindowMode(key: string, mode: WindowMode): void {
   const w = find(key);
   if (!w) return;

@@ -99,6 +99,7 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
+  data-pile={pile.id}
   class="pile"
   class:lifted={!!drag}
   class:fanned

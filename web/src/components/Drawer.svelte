@@ -17,7 +17,25 @@
   import CodeSelect from './CodeSelect.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
 
-  const entry = $derived(app.entries.find((e) => e.id === app.drawer) ?? null);
+  // An entry from another day (a Desk card from earlier in the week) isn't in the day's list:
+  // it's fetched and kept here while the drawer shows it.
+  let other = $state<Entry | null>(null);
+  const entry = $derived(
+    app.entries.find((e) => e.id === app.drawer) ?? (other && other.id === app.drawer ? other : null),
+  );
+  $effect(() => {
+    const id = app.drawer;
+    if (!id || other?.id === id || app.entries.some((e) => e.id === id)) return;
+    void attempt(() => api.getEntry(id)).then((e) => {
+      if (e && app.drawer === id) other = e;
+    });
+  });
+
+  /** Show a change: in the day's list, or here for another day's entry. */
+  function put(updated: Entry) {
+    putEntry(updated);
+    if (other?.id === updated.id) other = updated;
+  }
   const open = $derived(entry !== null);
   const fields = $derived(app.fields.filter((f) => f.appliesTo === 'entry' && !f.hidden));
   // Repeating things hold work too (round 15); a tray roll-up belongs to a project or nothing.
@@ -142,7 +160,7 @@
     if (!e) return false;
     const updated = await attempt(() => api.updateEntry(e.id, inputOf(e, change)));
     if (!updated) return false;
-    putEntry(updated);
+    put(updated);
     void refresh();
     return true;
   }
@@ -152,7 +170,7 @@
     if (!e) return;
     const updated = await attempt(() => api.addEntryMinutes(e.id, delta));
     if (!updated) return;
-    putEntry(updated);
+    put(updated);
     flashEntry(updated.id);
     void refresh();
   }
@@ -163,7 +181,7 @@
     const updated = await attempt(() => api.addEntryTickets(e.id, text));
     if (!updated) return;
     const added = updated.tickets.length - e.tickets.length;
-    putEntry(updated);
+    put(updated);
     ticketText = '';
     toast(added > 0 ? `Added ${added} ticket${added === 1 ? '' : 's'}` : 'Those tickets are already on this entry.');
   }
@@ -171,9 +189,9 @@
   async function removeTicket(id: string, number: string) {
     const updated = await attempt(() => api.removeTicket(id));
     if (!updated) return;
-    putEntry(updated);
+    put(updated);
     toast(`Removed ${number}`, 'Undo', () => {
-      void attempt(() => api.addEntryTickets(updated.id, number)).then((u) => u && putEntry(u));
+      void attempt(() => api.addEntryTickets(updated.id, number)).then((u) => u && put(u));
     });
   }
 

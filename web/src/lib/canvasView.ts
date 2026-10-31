@@ -48,6 +48,21 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
 }
 
 
+/** Zoomed out no further than this when the Desk opens, so cards stay readable. */
+export const OPENING_MIN_ZOOM = 0.6;
+
+/** The view the Desk opens with: everything in the middle when it fits at a readable zoom,
+ *  otherwise the middle of everything at that zoom. With nothing on the Desk, the start view. */
+export function openingView(cards: { x: number; y: number }[], width: number, height: number): CanvasView {
+  if (cards.length === 0 || width <= 0 || height <= 0) return START;
+  const fitted = fitAll(cards, width, height);
+  if (fitted.zoom >= OPENING_MIN_ZOOM) return fitted;
+  const zoom = OPENING_MIN_ZOOM;
+  const cx = (Math.min(...cards.map((c) => c.x)) + Math.max(...cards.map((c) => c.x + CARD_W))) / 2;
+  const cy = (Math.min(...cards.map((c) => c.y)) + Math.max(...cards.map((c) => c.y + CARD_H))) / 2;
+  return { zoom, x: width / 2 - cx * zoom, y: height / 2 - cy * zoom };
+}
+
 import type { BoxStatus, CanvasArea, CanvasLabel } from './api';
 
 export interface Rect {
@@ -87,6 +102,32 @@ export function deskBoxes(areas: CanvasArea[], labels: CanvasLabel[]): DeskBox[]
     ...areas.map((a) => ({ ...a, key: `project:${a.projectId}`, labelId: null, label: '' })),
     ...labels.map((l) => ({ ...l, key: `label:${l.id}`, projectId: null, labelId: l.id })),
   ];
+}
+
+/** Where a line between two cards starts and ends, and the curve between: from edge to edge
+ *  (a small gap off each card) rather than centre to centre, so it always meets the cards
+ *  whatever their height. It bows to one side, more for longer lines, so it never reads as a
+ *  stray straight rule. Null when the cards overlap. */
+export function linkCurve(a: Rect, b: Rect, gap = 5): { d: string; from: { x: number; y: number }; to: { x: number; y: number } } | null {
+  const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+  const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+  const dx = cb.x - ca.x;
+  const dy = cb.y - ca.y;
+  const len = Math.hypot(dx, dy);
+  if (len === 0) return null;
+  // The share of the centre-to-centre line that lies inside a box of this size.
+  const inside = (r: Rect) => Math.min(dx ? r.w / 2 / Math.abs(dx) : Infinity, dy ? r.h / 2 / Math.abs(dy) : Infinity) + gap / len;
+  const ta = inside(a);
+  const tb = 1 - inside(b);
+  if (ta >= tb) return null;
+  const from = { x: ca.x + dx * ta, y: ca.y + dy * ta };
+  const to = { x: ca.x + dx * tb, y: ca.y + dy * tb };
+  const span = len * (tb - ta);
+  const bow = Math.min(70, Math.max(14, span * 0.18));
+  const mx = (from.x + to.x) / 2 + (-dy / len) * bow;
+  const my = (from.y + to.y) / 2 + (dx / len) * bow;
+  const r = (n: number) => Math.round(n * 10) / 10;
+  return { d: `M ${r(from.x)} ${r(from.y)} Q ${r(mx)} ${r(my)} ${r(to.x)} ${r(to.y)}`, from, to };
 }
 
 /** A rectangle from two corners, in either order. */
