@@ -8,6 +8,7 @@
 //! minutes and tickets come from the tray (see `shiftbook_core::tray`), while
 //! its title, project and notes stay editable.
 
+use shiftbook_core::canvas::CardKind;
 use shiftbook_core::capture::Capture;
 use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::error::CoreError;
@@ -1171,7 +1172,7 @@ impl SqliteStore {
     /// Log a jot (any note) as an entry on `date` (round 14, see
     /// `shiftbook_core::notes::jot_to_entry`): its title says what was done, the rest becomes
     /// the entry's notes, ticket numbers in it become tickets, and it keeps the note's project.
-    /// The note moves to the archive in the same step.
+    /// The note moves to the archive in the same step, and the entry takes its spot on the Desk.
     pub async fn log_note(
         &self,
         owner: OwnerId,
@@ -1202,6 +1203,15 @@ impl SqliteStore {
         .bind(id.to_string())
         .bind(owner.to_string())
         .execute(&mut *tx)
+        .await?;
+        // The entry's card takes the jot's spot on the Desk (and Undo brings the jot back
+        // there, since its own spot is kept).
+        crate::canvas::copy_spot(
+            &mut tx,
+            owner,
+            (CardKind::Note, *id.as_uuid()),
+            (CardKind::Entry, *entry.as_uuid()),
+        )
         .await?;
         let rec = entry_record(&mut tx, owner, entry).await?;
         tx.commit().await?;

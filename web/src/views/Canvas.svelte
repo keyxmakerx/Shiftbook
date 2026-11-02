@@ -112,6 +112,8 @@
   let viewBeforeTimeline: CanvasView | null = null;
   let showLinks = $state(linksShown);
   let linkFrom = $state<Card | null>(null);
+  /** What picking the other card does: draw a line, or add the ticket to the entry picked. */
+  let linkMode = $state<'line' | 'ticket'>('line');
   let areaDrag = $state<{ index: number; dx: number; dy: number; members: Set<string>; piles: Set<string> } | null>(null);
   let tool = $state(lastTool);
   let toolbox = $state(toolboxOpen);
@@ -761,10 +763,49 @@
     });
   }
 
+  /** Start picking the entry a ticket card goes on. */
+  function startAddTicket(card: Card) {
+    linkMode = 'ticket';
+    linkFrom = card;
+  }
+
+  /** Add the ticket on `from` (a Tickets-tray card) to the entry on `card`. The ticket keeps
+   * its own time in the tray; on the Desk it folds into the entry's tickets strip, and ticking
+   * it done ticks it on both. */
+  async function addTicketTo(from: Card, card: Card) {
+    const number = from.tray?.item.ticket;
+    const entry = card.entry;
+    if (!number) return;
+    if (!entry || entry.isTray) {
+      toast(
+        entry ? 'That card is the day’s Tickets total. Pick one of your own entries.' : 'A ticket can only go on an entry. Pick an entry card.',
+      );
+      return;
+    }
+    const before = new Set(entry.tickets.map((t) => t.id));
+    const updated = await attempt(() => api.addEntryTickets(entry.id, number));
+    if (!updated) return;
+    const added = updated.tickets.filter((t) => !before.has(t.id));
+    if (!added.length) {
+      toast(`${number} is already on “${entry.description}”.`);
+      return;
+    }
+    await refresh();
+    await load();
+    toast(`Added ${number} to “${entry.description}”`, 'Undo', () => {
+      void attempt(() => Promise.all(added.map((t) => api.removeTicket(t.id))))
+        .then(refresh)
+        .then(load);
+    });
+  }
+
   async function pickLinkEnd(card: Card) {
     const from = linkFrom;
+    const kind = linkMode;
     linkFrom = null;
+    linkMode = 'line';
     if (!from || keyOf(from) === keyOf(card)) return;
+    if (kind === 'ticket') return addTicketTo(from, card);
     if (!(await attempt(() => api.canvasLink(refOf(from), refOf(card), true).then(() => true)))) return;
     showLinks = true;
     await load();
@@ -779,6 +820,7 @@
       if (e.key === 'Escape') {
         e.stopPropagation();
         linkFrom = null;
+        linkMode = 'line';
       }
     };
     window.addEventListener('keydown', onKey, true);
@@ -1303,6 +1345,7 @@
           onmove={(x, y, at) => void move(card, x, y, at)}
           onchanged={() => void load()}
           onlink={() => (linkFrom = card)}
+          onattach={card.tray ? () => startAddTicket(card) : undefined}
           onpick={() => void pickLinkEnd(card)}
         />
       {/each}
@@ -1525,7 +1568,13 @@
       </div>
     {/if}
     {#if linkFrom}
-      <p class="banner" role="status">Click the card to link with “{titleOf(linkFrom)}” · Esc to cancel</p>
+      <p class="banner" role="status">
+        {#if linkMode === 'ticket'}
+          Click the entry to add {linkFrom.tray?.item.ticket ?? 'the ticket'} to · Esc to cancel
+        {:else}
+          Click the card to link with “{titleOf(linkFrom)}” · Esc to cancel
+        {/if}
+      </p>
     {:else if mode === 'timeline'}
       <p class="banner" role="status">The timeline: your layout is kept. Back to my layout puts every card where it was.</p>
     {/if}
