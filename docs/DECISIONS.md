@@ -2,6 +2,16 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 2 Nov 2026 (tickets onto entries, cards keep their spot)
+No mockup needed:
+- **Add to an entry:** a ticket card on the Desk (from the Tickets tray) has **Add to an entry**
+  in its menu; click the entry and the ticket number joins that entry's tickets. The ticket keeps
+  its own time in the tray, folds into the entry's tickets strip, and ticking it done ticks it on
+  both. Undo takes it off the entry again. The day's Tickets total can't be picked.
+- **Same spot after a swap:** a jot logged as an entry, or an Inbox scrap logged from its Desk
+  card, becomes an entry card in the same spot (and the same pile) it had. Undo brings the jot
+  back to its spot.
+
 ## Round 15 — 30 Oct 2026 (the Desk: lines, opening, double-click, finding your way)
 Cards `r16-desk-fixes`, `r16-desk-lines` and `r16-desk-ideas` (`tools/signoff/rounds/r16-desk.json`,
 mockups `mocks/r16-desk.html`), approved:

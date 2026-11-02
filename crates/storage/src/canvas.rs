@@ -3,7 +3,7 @@
 //! Owner-scoped, bound parameters only. Moving a card that has no spot yet creates one.
 
 use shiftbook_core::canvas::{clamp_spot, clean_label, Area, CardKind, Drawer};
-use sqlx::sqlite::SqliteRow;
+use sqlx::sqlite::{SqliteConnection, SqliteRow};
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -56,6 +56,37 @@ fn spot_from_row(row: &SqliteRow) -> Result<CanvasSpot> {
             .and_then(|t| crate::repo::parse_ts(&t).ok())
             .map(|t| t.date()),
     })
+}
+
+/// Give the card `to` the spot `from` has on the Desk (its place, height and pile), for a
+/// record that turns into another one (a jot logged as an entry): the new card shows where
+/// the old one was. Does nothing when `from` has no spot of its own or is filed in a drawer,
+/// or when `to` already has one.
+pub(crate) async fn copy_spot(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    from: (CardKind, Uuid),
+    to: (CardKind, Uuid),
+) -> Result<()> {
+    let now = now_text();
+    sqlx::query(
+        "INSERT INTO canvas_cards \
+         (id, owner_id, record_kind, record_id, x, y, z, stack_id, drawer, created_at, updated_at, deleted_at) \
+         SELECT $1, owner_id, $2, $3, x, y, z, stack_id, NULL, $4, $4, NULL FROM canvas_cards \
+         WHERE owner_id = $5 AND record_kind = $6 AND record_id = $7 AND deleted_at IS NULL \
+         AND drawer IS NULL AND NOT EXISTS (SELECT 1 FROM canvas_cards \
+         WHERE owner_id = $5 AND record_kind = $2 AND record_id = $3 AND deleted_at IS NULL)",
+    )
+    .bind(Uuid::now_v7().to_string())
+    .bind(to.0.as_str())
+    .bind(to.1.to_string())
+    .bind(&now)
+    .bind(owner.to_string())
+    .bind(from.0.as_str())
+    .bind(from.1.to_string())
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
 }
 
 impl SqliteStore {

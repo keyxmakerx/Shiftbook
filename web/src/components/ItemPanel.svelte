@@ -138,6 +138,8 @@
     const updated = await attempt(() => api.ticketSetDone(ticketId, done));
     if (!updated) return;
     putEntry(updated);
+    // The ticket is one item: its rows in the Tickets list change too, so reload them.
+    await refresh();
     onsaved?.();
   }
 

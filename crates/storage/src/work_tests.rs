@@ -411,6 +411,32 @@ fn entry_tickets_have_a_state_and_a_notepad() {
 }
 
 #[test]
+fn ticking_an_entry_ticket_closes_it_in_the_tray() {
+    let dir = TestDir::new("entrytickclosestray");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let next = date!(2026 - 10 - 16);
+        // In the tray on two days and on an entry: one item.
+        s.tray_add(me, DAY, "INC5001").await.unwrap();
+        s.tray_add(me, next, "INC5001").await.unwrap();
+        let rec = s
+            .create_entry(me, &input(DAY, 30, "Printer"), "INC5001")
+            .await
+            .unwrap();
+        s.set_ticket_done(me, rec.tickets[0].id, true)
+            .await
+            .unwrap();
+        assert!(s.tray_day(me, DAY).await.unwrap().items[0].done);
+        assert!(s.tray_day(me, next).await.unwrap().items[0].done);
+        assert!(s
+            .tray_carried(me, date!(2026 - 10 - 17))
+            .await
+            .unwrap()
+            .is_empty());
+    });
+}
+
+#[test]
 fn open_entry_tickets_come_back_in_the_tray() {
     let dir = TestDir::new("entrycarried");
     block_on(async {
@@ -495,6 +521,51 @@ fn a_jot_is_logged_as_an_entry() {
         assert_eq!(numbers(&rec), ["CHG0012345"]);
         // The jot moves to the archive.
         assert!(s.get_note(me, jot.id).await.unwrap().archived_at.is_some());
+    });
+}
+
+#[test]
+fn a_logged_jot_keeps_its_spot_on_the_desk() {
+    use crate::notes::NoteInput;
+    use shiftbook_core::canvas::CardKind;
+    use shiftbook_core::notes::NoteKind;
+    let dir = TestDir::new("logjotspot");
+    block_on(async {
+        let (s, me, _other) = setup(&dir).await;
+        let jot = |body: &str| NoteInput {
+            kind: NoteKind::Jot,
+            title: String::new(),
+            body: body.into(),
+            project: None,
+            tags: String::new(),
+            template: false,
+        };
+        let moved = s.create_note(me, &jot("Swap the fan")).await.unwrap();
+        s.move_card(me, CardKind::Note, *moved.id.as_uuid(), 420, -80)
+            .await
+            .unwrap();
+        let rec = s.log_note(me, moved.id, DAY, 15).await.unwrap();
+        let spots = s.canvas_spots(me).await.unwrap();
+        let at = |kind: CardKind, id: uuid::Uuid| {
+            spots
+                .iter()
+                .find(|p| p.kind == kind && p.record_id == id)
+                .map(|p| (p.x, p.y))
+        };
+        // The entry sits where the jot was, and the jot keeps its spot for Undo.
+        assert_eq!(
+            at(CardKind::Entry, *rec.entry.id.as_uuid()),
+            Some((420, -80))
+        );
+        assert_eq!(at(CardKind::Note, *moved.id.as_uuid()), Some((420, -80)));
+
+        // A jot that was never moved has no spot to pass on: the entry is placed as usual.
+        let loose = s.create_note(me, &jot("Label the rack")).await.unwrap();
+        let rec = s.log_note(me, loose.id, DAY, 15).await.unwrap();
+        let spots = s.canvas_spots(me).await.unwrap();
+        assert!(!spots
+            .iter()
+            .any(|p| p.kind == CardKind::Entry && p.record_id == *rec.entry.id.as_uuid()));
     });
 }
 
