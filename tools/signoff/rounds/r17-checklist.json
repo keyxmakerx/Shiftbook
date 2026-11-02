@@ -1,0 +1,580 @@
+{
+ "cards": {
+  "r17-how": {
+   "area": "This sheet",
+   "round": 17,
+   "order": 0,
+   "version": 1,
+   "title": "How this round works: try it, tick it, sign it off",
+   "body": [
+    "Everything from the last two rounds already has your answer, so the sheet looked empty. This round is a checklist instead: one card per new change, then one per part of the app, so you can walk through Shiftbook and sign each part off.",
+    "Each card lists a few things to try. Tick them as you go (they save straight away, and the card counts them). When a card is done, press **Approve**. If something didn't work, write it in the note and press **Needs changes**, and I'll pick it up.",
+    "The earlier cards are in the **Archive** tab, still searchable. Changes still waiting to be merged are marked **Not merged yet**, so try those once they are in the app."
+   ],
+   "pick": "Approve this card once you're happy with the checklist idea. Needs changes if you'd rather have it another way.",
+   "note_hint": "Anything about how this sheet works"
+  },
+  "r17-ticket-to-entry": {
+   "area": "New · not merged yet (#57)",
+   "round": 17,
+   "order": 2,
+   "version": 1,
+   "title": "Add a ticket card to an entry",
+   "body": [
+    "On the Desk, a ticket from the Tickets tray can now be added to an entry. Right-click the ticket card and pick **Add to an entry**, then click the entry.",
+    "The ticket keeps its own minutes in the tray, and folds into the entry's tickets strip because they are the same work. Ticking it done on one ticks it on the other."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Right-click a tray ticket on the Desk and the menu shows Add to an entry"
+      },
+      {
+       "value": "The Desk says \"Click the entry to add …\" and Esc cancels it"
+      },
+      {
+       "value": "Clicking an entry adds the ticket number to that entry's tickets"
+      },
+      {
+       "value": "The ticket's minutes stay the same in the tray (nothing is counted twice)"
+      },
+      {
+       "value": "The ticket card folds into the entry's tickets strip"
+      },
+      {
+       "value": "Ticking it done in one place shows it done in the other"
+      },
+      {
+       "value": "Undo takes the ticket off the entry again"
+      },
+      {
+       "value": "Clicking a card that isn't an entry shows a short message instead"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-keep-spot": {
+   "area": "New · not merged yet (#57)",
+   "round": 17,
+   "order": 3,
+   "version": 1,
+   "title": "Logged jots and scraps keep their spot on the Desk",
+   "body": [
+    "When a jot or an Inbox scrap becomes an entry, the new entry now appears exactly where the jot or scrap was, instead of jumping somewhere else. If the jot was in a pile, the entry goes into the same pile."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Right-click a jot on the Desk → Log it as an entry: the entry shows up where the jot was"
+      },
+      {
+       "value": "A jot inside a pile becomes an entry in the same pile"
+      },
+      {
+       "value": "Undo brings the jot back to the same place"
+      },
+      {
+       "value": "An Inbox scrap's Log it on the Desk: the new entry lands where the scrap was"
+      },
+      {
+       "value": "Logging a scrap onto an entry that already exists doesn't move that entry"
+      },
+      {
+       "value": "A jot filed in a drawer still logs fine (it just has no spot to keep)"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-tray-reload": {
+   "area": "New · not merged yet (#45)",
+   "round": 17,
+   "order": 4,
+   "version": 1,
+   "title": "Ticking a ticket on an entry closes it in the Tickets panel",
+   "body": [
+    "Before, ticking a ticket done on an entry left it showing open in the Tickets panel until something else reloaded it. Now the panel updates straight away."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Tick a ticket done in an entry's slide-out: the Tickets panel shows it done right away"
+      },
+      {
+       "value": "Tick it in the Desk's ticket box: the same"
+      },
+      {
+       "value": "It no longer shows under Still open from before the next day"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-desk-56": {
+   "area": "Merged (#56)",
+   "round": 17,
+   "order": 5,
+   "version": 1,
+   "title": "The Desk opens on your cards, with calmer lines",
+   "body": [
+    "Merged on 31 October: where the Desk opens, double-click fixes, which cards get linked, how the lines look, and Go to."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "After starting Shiftbook, the Desk opens on the middle of your cards (not the paper's corner)"
+      },
+      {
+       "value": "Right-click menus no longer break a title onto a second line"
+      },
+      {
+       "value": "Double-click an entry from an earlier day: its details open"
+      },
+      {
+       "value": "Double-click a ticket card: its notepad opens full screen"
+      },
+      {
+       "value": "Cards sharing a ticket link one after another, oldest first"
+      },
+      {
+       "value": "Lines are faint until you point at a card, then its own lines come up"
+      },
+      {
+       "value": "Lines run edge to edge and follow a card while you drag it"
+      },
+      {
+       "value": "Toolbox → Go to glides the Desk to the box you pick"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-recent": {
+   "area": "Merged (#36 to #48)",
+   "round": 17,
+   "order": 6,
+   "version": 1,
+   "title": "The last batch: archive, line up, MOP notebook and more",
+   "body": [
+    "Everything merged between 26 and 27 October, one line each."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Rename an entry where it sits (right-click → Rename)"
+      },
+      {
+       "value": "Put an entry away: it goes into the Archive drawer, and comes back out"
+      },
+      {
+       "value": "Shift + drag a card: red lines help line it up; Line up makes a row, column or grid"
+      },
+      {
+       "value": "Drag with the right mouse button (turn it on in Settings → Look)"
+      },
+      {
+       "value": "Settings switches turn off copy blocking and screenshot hiding"
+      },
+      {
+       "value": "Settings → Responses has a Copy button on each saved response"
+      },
+      {
+       "value": "A ticket on an entry shows under Still open from before"
+      },
+      {
+       "value": "Timesheet codes for tickets show up on the Timesheet"
+      },
+      {
+       "value": "Repeating things and the Items view work as approved"
+      },
+      {
+       "value": "MOP notebook: tabs, Numbered / Minimal / Checklist, templates and dropping a .txt file in"
+      },
+      {
+       "value": "Saving quickly many times in a row never shows a \"database is locked\" error"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-updates": {
+   "area": "Behind the scenes (#49 to #55)",
+   "round": 17,
+   "order": 7,
+   "version": 1,
+   "title": "Seven routine updates are waiting",
+   "body": [
+    "Seven small updates to the tools Shiftbook is built with are open (Tauri, Vite, Tokio, uuid and a GitHub step). They change nothing you see. Each one runs the full checks before it can go in."
+   ],
+   "questions": [
+    {
+     "id": "merge",
+     "legend": "What should happen to them",
+     "options": [
+      {
+       "value": "Merge each one once its checks pass",
+       "rec": true,
+       "why": "Keeps the app on the latest fixes."
+      },
+      {
+       "value": "Leave them until the next release"
+      }
+     ]
+    }
+   ],
+   "pick": "Merge each one once its checks pass.",
+   "note_hint": "Anything about the updates"
+  },
+  "r17-area-lock": {
+   "area": "Walk-through · Lock and protect",
+   "round": 17,
+   "order": 8,
+   "version": 1,
+   "title": "Your password, the lock and Protected mode",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Unlock with your master password"
+      },
+      {
+       "value": "Ctrl+L locks straight away"
+      },
+      {
+       "value": "Auto-lock happens after the minutes set in Settings → Security"
+      },
+      {
+       "value": "The recovery key unlocks, then asks for a new password"
+      },
+      {
+       "value": "Screenshots and copying out are blocked until you press Protected"
+      },
+      {
+       "value": "Protected lets them through for 10 minutes, then switches back"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-desk": {
+   "area": "Walk-through · Desk",
+   "round": 17,
+   "order": 9,
+   "version": 1,
+   "title": "Moving around the Desk",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Drag a card: it stays where you put it after a restart"
+      },
+      {
+       "value": "Drag empty paper or Shift + scroll pans; scroll zooms; Fit everything shows it all"
+      },
+      {
+       "value": "Click a card: its slide-out opens underneath with the notepad"
+      },
+      {
+       "value": "Double-click empty paper starts a jot"
+      },
+      {
+       "value": "Drop a card on another to make a pile, click the pile to fan it out"
+      },
+      {
+       "value": "Drag a card onto a drawer to file it off the Desk"
+      },
+      {
+       "value": "Draw a box and make it a project's area: cards dropped in get that project"
+      },
+      {
+       "value": "Pin a card to the bottom bar; it turns orange on its chase day"
+      },
+      {
+       "value": "Timeline lays the Desk out by day, Back to my layout puts it back"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-day": {
+   "area": "Walk-through · Day",
+   "round": 17,
+   "order": 10,
+   "version": 1,
+   "title": "Logging work and the Tickets tray",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Log work: type a few words and press 30m; the entry appears"
+      },
+      {
+       "value": "Logging a ticket already logged today adds the time to its entry"
+      },
+      {
+       "value": "Paste a ticket into the Tickets tray; the time box asks how long so far"
+      },
+      {
+       "value": "The tray rolls up into one Tickets entry for the day"
+      },
+      {
+       "value": "+15m on an entry from an earlier day adds the time to today, not the old day"
+      },
+      {
+       "value": "A ticket stays Still open and comes back each day until you tick it"
+      },
+      {
+       "value": "The ring and week total add up to what you logged"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-capture": {
+   "area": "Walk-through · Capture and Find",
+   "round": 17,
+   "order": 11,
+   "version": 1,
+   "title": "Ctrl+Space capture and Find",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Ctrl+Space, type \"1h test entry yesterday\", Enter: logged on yesterday"
+      },
+      {
+       "value": "Ctrl+Enter (or a line without hours) saves it to the Inbox"
+      },
+      {
+       "value": "Typing without a time finds entries, scraps, notes and commands"
+      },
+      {
+       "value": "Hold Ctrl to see every shortcut"
+      },
+      {
+       "value": "1 to 7 switch views; Ctrl + / − / 0 change text size"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-notes": {
+   "area": "Walk-through · Notes",
+   "round": 17,
+   "order": 12,
+   "version": 1,
+   "title": "Notes, windows and the bell",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Make a Jot, a Daily, a Meeting and a Page note; they save as you type"
+      },
+      {
+       "value": "Search notes: the match is highlighted"
+      },
+      {
+       "value": "Archive a note; Include archived shows it again"
+      },
+      {
+       "value": "Pop out a notepad into a window; move, resize, roll up and minimise it"
+      },
+      {
+       "value": "Windows come back where they were after you unlock"
+      },
+      {
+       "value": "The bell lists meetings about to start, brought-up things and open tickets"
+      },
+      {
+       "value": "Where was I? shows after unlocking, with Carry on and Later"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-timesheet": {
+   "area": "Walk-through · Timesheet",
+   "round": 17,
+   "order": 13,
+   "version": 1,
+   "title": "The Timesheet crib sheet",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Each day lists codes (or projects), hours and a ready-made comment"
+      },
+      {
+       "value": "Copy comment and Copy whole week paste correctly into your timesheet"
+      },
+      {
+       "value": "Ticks and the ENTERED stamp are still there after a restart"
+      },
+      {
+       "value": "Warnings show for no code yet, an empty weekday and a day over 12 h"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-home": {
+   "area": "Walk-through · Home, Repeating and Lists",
+   "round": 17,
+   "order": 14,
+   "version": 1,
+   "title": "Home use, repeating things and lists",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Settings → Look switches Work, Home or Both"
+      },
+      {
+       "value": "At home the Timesheet is hidden and Log work has ✓ Done"
+      },
+      {
+       "value": "A repeating bill shows on the Desk and in the bell when it's due soon"
+      },
+      {
+       "value": "Done marks it for today, with Undo"
+      },
+      {
+       "value": "Paste several lines into a list; Reset for next time unticks them all"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  },
+  "r17-area-settings": {
+   "area": "Walk-through · Settings and backups",
+   "round": 17,
+   "order": 15,
+   "version": 1,
+   "title": "Settings, backups and starting again",
+   "body": [
+    "Already in the app. Go through it once and sign it off, or tell me what's off."
+   ],
+   "questions": [
+    {
+     "id": "tried",
+     "type": "many",
+     "legend": "Try each of these",
+     "options": [
+      {
+       "value": "Look: theme, accent, text size and project colours all apply"
+      },
+      {
+       "value": "Projects: add, rename, colour and archive one"
+      },
+      {
+       "value": "Fields: add a custom field and fill it on an entry"
+      },
+      {
+       "value": "Back up now makes a .shiftbak file"
+      },
+      {
+       "value": "Restore from that backup brings everything back"
+      },
+      {
+       "value": "The optional timer and wrap-up card turn on and work"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it. Press **Approve** when it all works, or write what went wrong in the note and press **Needs changes**.",
+   "note_hint": "What didn't work, or what felt wrong"
+  }
+ },
+ "meta": {
+  "round": 17,
+  "heading": "Round 17: try it and sign it off",
+  "intro": "A checklist of what's in Shiftbook now. New changes come first, then one card per part of the app. Tick each line once you've tried it, then press Approve, or write a note and press Needs changes. Everything saves as you go."
+ }
+}

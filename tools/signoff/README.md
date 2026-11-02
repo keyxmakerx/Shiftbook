@@ -24,6 +24,10 @@ rounds arrive live and the page never needs a reload or republish to show them.
 3. Write each output file with an ArtifactData `batch` (`set` on `cards/<id>`, `meta/board`).
 4. Archive the previous round: `update` its cards with `{"archived": true}`.
 
+Checklist cards: a question with `"type": "many"` and unticked options is a try-it list; the page
+shows "3 of 8 ticked" under it. Round 17 (`rounds/r17-checklist.json`) is built this way: one card
+per new change, then one per part of the app.
+
 Changing a card: bump its `version`. A decision made on an older version shows as **Re-check**.
 If the owner is typing in that card, the page offers "Show the new version" instead of swapping it.
 

@@ -117,6 +117,8 @@ fieldset.q legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 .btn-change[aria-pressed="true"] { background: var(--ask); border-color: var(--ask); color: var(--paper); }
 .btn-primary { background: var(--stamp); border-color: var(--stamp); color: var(--paper); }
 .link { background: none; border: 0; padding: 0; color: var(--muted); text-decoration: underline; cursor: pointer; font-size: 0.88rem; }
+.tally { font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tally.full { color: var(--ok); font-weight: 600; }
 .saved { font-size: 0.88rem; color: var(--muted); min-height: 1.4em; }
 .saved.err { color: var(--err); }
 
@@ -267,6 +269,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
         lab.appendChild(inp); lab.appendChild(span); fs.appendChild(lab);
       });
     }
+    if (q.type === 'many') fs.appendChild(h('p', 'tally'));
     if (q.why) fs.appendChild(rich(h('p', 'why'), q.why));
     return fs;
   }
@@ -346,6 +349,16 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     return d.choice === 'approve' || d.choice === 'change' ? d.choice : 'waiting';
   }
 
+  // A checklist shows how many of its lines are ticked, so a half-tried card is easy to spot.
+  function tally(el) {
+    el.querySelectorAll('fieldset.q').forEach(function (fs) {
+      var t = fs.querySelector('.tally'); if (!t) return;
+      var all = fs.querySelectorAll('input[type="checkbox"]'), on = fs.querySelectorAll('input[type="checkbox"]:checked');
+      t.textContent = on.length + ' of ' + all.length + ' ticked' + (all.length && on.length === all.length ? ' · all done' : '');
+      t.classList.toggle('full', !!all.length && on.length === all.length);
+    });
+  }
+
   function paintCard(key) {
     var el = els[key], c = cards[key], d = decisions[key];
     if (!el || !c) return;
@@ -372,6 +385,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       if (typeof d.note === 'string') ta.value = d.note;
       if (d.answers && typeof d.answers === 'object') paintAnswers(el, d.answers);
     }
+    tally(el);
   }
 
   // ---------- syncing cards into the page without disturbing it ----------
@@ -453,7 +467,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     var e = $('empty');
     e.hidden = shown > 0;
     e.textContent = !Object.keys(cards).length ? (live ? 'No cards yet. When Claude adds a round, the cards show up here on their own.' : 'Loading cards…')
-      : view === 'needs' ? 'Nothing needs you right now. Claude will add the next round here.'
+      : view === 'needs' ? (open ? 'Nothing needs you right now: every card in this round has your answer. The This round tab shows them again.' : 'Nothing needs you right now. Claude will add the next round here.')
       : view === 'archive' ? (q ? 'Nothing in the archive matches that.' : 'Nothing archived yet. Finished rounds move here, and stay searchable.')
       : 'No open cards.';
   }
@@ -589,7 +603,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   });
   document.addEventListener('change', function (ev) {
     var el = ev.target.closest && ev.target.closest('.card');
-    if (el && ev.target.closest('fieldset.q')) changed(el, true);
+    if (el && ev.target.closest('fieldset.q')) { tally(el); changed(el, true); }
   });
   document.addEventListener('input', function (ev) {
     var el = ev.target.closest && ev.target.closest('.card');
