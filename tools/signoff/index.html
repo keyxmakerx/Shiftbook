@@ -140,6 +140,8 @@ body:not([data-view="notes"]) #notes-view, body[data-view="notes"] #cards-view {
 body:not([data-view="done"]) #archive-tools { display: none; }
 @media (max-width: 560px) { .tabs { margin-left: 0; } .card-head, .card-body { padding-left: 14px; padding-right: 14px; } }
 /* Simple decide row: one question, two big buttons, an optional note. */
+.where { padding: 10px 14px; background: var(--wash); border-radius: 6px; display: flex; flex-direction: column; gap: 4px; }
+.where ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
 .ask { font-weight: 600; font-size: 1.02rem; }
 .actions.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .actions.two .btn { min-height: 52px; font-size: 1rem; padding: 10px 12px; }
@@ -320,6 +322,12 @@ body[data-view="done"] .fold { display: inline-block; }
     (c.body || []).forEach(function (p) { prose.appendChild(rich(h('p'), p)); });
     if (c.bullets && c.bullets.length) { var ul = h('ul'); c.bullets.forEach(function (b) { ul.appendChild(rich(h('li'), b)); }); prose.appendChild(ul); }
     if (prose.childNodes.length) body.appendChild(prose);
+    // Where to look: numbered steps, so it is clear which part of the app a card means.
+    if (c.where && c.where.length) {
+      var wh = h('div', 'where'); wh.appendChild(h('span', 'label', 'Where to look'));
+      var ol = h('ol'); c.where.forEach(function (w) { ol.appendChild(rich(h('li'), w)); }); wh.appendChild(ol);
+      body.appendChild(wh);
+    }
     (c.figures || []).forEach(function (f, i) { body.appendChild(buildFigure(key, f, i)); });
     (c.tables || []).forEach(function (tb) { body.appendChild(buildTable(tb)); });
     (c.questions || []).forEach(function (q) { body.appendChild(buildQuestion(key, q)); });

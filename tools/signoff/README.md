@@ -28,6 +28,8 @@ Keep cards simple (the owner's ask after round 17, which had 15 cards and about 
 - One card asks one thing, in `"ask"`. The page shows two big buttons, **Looks good** and
   **Needs work** (or the card's own `"yes"` / `"no"` labels), and an optional note. A note is never
   required. See `rounds/r18.json`.
+- Say exactly where in the app to look: `"where"` is a list of numbered steps (which view, what to
+  click), shown in a "Where to look" box. More detail is welcome; vague cards are not.
 - Only put on the sheet what genuinely needs the owner's call. Merge related changes into one card,
   keep the body to a few lines, and use no `questions`, picks or checklists in new cards. Anything
   else goes in the thread or in `docs/DECISIONS.md`.
