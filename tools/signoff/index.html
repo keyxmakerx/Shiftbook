@@ -77,7 +77,10 @@ body[data-live="off"] .live i { background: var(--err); }
 .card[data-state="change"] .stamp { color: var(--ask); border-color: var(--ask); background: var(--ask-wash); }
 .card[data-state="stale"] .stamp { color: var(--stamp); border-color: var(--stamp); background: var(--stamp-wash); }
 .card-body { display: flex; flex-direction: column; gap: 14px; padding: 12px 18px 18px; min-width: 0; }
-.card[data-folded] .card-body { display: none; }
+body[data-view="done"] .card:not([data-open]) .card-body { display: none; }
+body[data-view="done"] .card-head { cursor: pointer; }
+.card:not([data-open]) .card-head { padding-bottom: 16px; }
+body:not([data-view="done"]) .card .card-head { padding-bottom: 0; }
 .prose { display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
 .prose ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 .update { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; background: var(--stamp-wash); border: 1px solid var(--stamp); font-size: 0.9rem; }
@@ -134,8 +137,31 @@ fieldset.q legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
 .note-item .reply { border-left: 3px solid var(--stamp); padding-left: 10px; }
 
 body:not([data-view="notes"]) #notes-view, body[data-view="notes"] #cards-view { display: none; }
-body:not([data-view="archive"]) #archive-tools { display: none; }
+body:not([data-view="done"]) #archive-tools { display: none; }
 @media (max-width: 560px) { .tabs { margin-left: 0; } .card-head, .card-body { padding-left: 14px; padding-right: 14px; } }
+/* Simple decide row: one question, two big buttons, an optional note. */
+.ask { font-weight: 600; font-size: 1.02rem; }
+.actions.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.actions.two .btn { min-height: 52px; font-size: 1rem; padding: 10px 12px; }
+.btn-approve { border-color: var(--ok); color: var(--ok); }
+.btn-change { border-color: var(--ask); color: var(--ask); }
+.after { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; }
+.note-wrap[hidden] { display: none; }
+.stamp:empty { display: none; }
+.fold { display: none; }
+body[data-view="done"] .fold { display: inline-block; }
+.tab { padding: 8px 12px; font-size: 0.95rem; }
+@media (max-width: 560px) {
+  .bar-in { gap: 6px 10px; }
+  .tabs { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+  .tab { text-align: center; padding: 8px 4px; }
+  .masthead h1 { font-size: 1.35rem; }
+  .card-head h3 { font-size: 1.06rem; }
+  .card-head { flex-wrap: wrap; row-gap: 8px; }
+  .card-head .t { flex-basis: 100%; }
+  .card-head .fold { margin-left: auto; }
+}
+.saved:empty { display: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -144,10 +170,9 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     <div class="brand"><b>Shiftbook</b><span class="label">Sign-offs</span></div>
     <span class="live" role="status"><i></i><span id="live-text">Connecting…</span></span>
     <nav class="tabs" role="tablist" aria-label="Views">
-      <button class="tab" role="tab" data-view="needs" aria-selected="true">Needs you<span class="n hot" id="n-needs">0</span></button>
-      <button class="tab" role="tab" data-view="open" aria-selected="false">This round<span class="n" id="n-open">0</span></button>
-      <button class="tab" role="tab" data-view="archive" aria-selected="false">Archive<span class="n" id="n-arch">0</span></button>
-      <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes to Claude<span class="n" id="n-notes">0</span></button>
+      <button class="tab" role="tab" data-view="todo" aria-selected="true">To do<span class="n hot" id="n-needs">0</span></button>
+      <button class="tab" role="tab" data-view="done" aria-selected="false">Done<span class="n" id="n-arch">0</span></button>
+      <button class="tab" role="tab" data-view="notes" aria-selected="false">Notes<span class="n" id="n-notes">0</span></button>
     </nav>
   </div>
 </header>
@@ -156,11 +181,11 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   <section class="masthead">
     <p class="label" id="round-label">Waiting for the first round</p>
     <h1 id="heading">Decisions for building Shiftbook</h1>
-    <p class="lede" id="intro">Each card is one decision. My pick is already selected; press Approve, or write a note and press Needs changes. Everything saves as you go, and new cards appear here without reloading the page.</p>
+    <p class="lede" id="intro">Each card asks one thing. Press one of the two buttons. A note is optional.</p>
     <p class="banner" id="banner" hidden></p>
   </section>
 
-  <div id="archive-tools"><label class="label" for="search">Search the archive</label><input id="search" class="search" type="search" placeholder="Words from a title, note or answer"></div>
+  <div id="archive-tools"><label class="label" for="search">Search everything you've answered</label><input id="search" class="search" type="search" placeholder="Words from a title or note"></div>
 
   <section id="cards-view" class="list" aria-live="polite">
     <p class="empty" id="empty">No cards yet. When Claude adds a round, the cards show up here on their own.</p>
@@ -168,7 +193,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
 
   <section id="notes-view" class="list">
     <form class="compose" id="compose">
-      <label class="label" for="note-new">Tell Claude something that isn't on a card</label>
+      <label class="label" for="note-new">Tell Claude anything that isn't on a card</label>
       <textarea id="note-new" rows="3" placeholder="e.g. an app whose look you like, or a sketch of what you pictured. Paste screenshots straight in here."></textarea>
       <div class="shots" id="shots-new"></div>
       <div class="actions"><button type="submit" class="btn btn-primary">Send note</button><label class="btn" id="attach-l" for="attach" hidden>Attach pictures</label><input id="attach" type="file" accept="image/*" multiple hidden><span class="saved" id="note-status" role="status"></span></div>
@@ -188,7 +213,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   var els = {};          // id -> card element (kept across snapshots so typing is never lost)
   var col = null, notesCol = null, writable = true, live = false;
   var queue = {}, timers = {};
-  var view = 'needs';
+  var view = 'todo';
   var recent = {};       // cards decided while on "Needs you" stay put until the view changes
 
   function $(id) { return document.getElementById(id); }
@@ -277,11 +302,11 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   function buildCard(key, c) {
     var el = h('article', 'card'); el.id = 'card-' + key; el.dataset.key = key; el.dataset.v = String(c.version || 1);
     var head = h('header', 'card-head'), t = h('div', 't');
-    t.appendChild(h('span', 'label', (c.area ? c.area + ' · ' : '') + 'Round ' + (c.round || 1) + (c.version > 1 ? ' · v' + c.version : '')));
+    if (c.area) t.appendChild(h('span', 'label', c.area));
     t.appendChild(rich(h('h3'), c.title || key));
     head.appendChild(t);
-    head.appendChild(h('span', 'stamp', 'Waiting'));
-    var fold = h('button', 'fold', 'Hide'); fold.type = 'button'; fold.dataset.act = 'fold';
+    head.appendChild(h('span', 'stamp'));
+    var fold = h('button', 'fold', 'Show'); fold.type = 'button'; fold.dataset.act = 'fold';
     head.appendChild(fold);
     el.appendChild(head);
 
@@ -302,18 +327,23 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
 
     var rb = h('div', 'reply-box'); rb.hidden = true; rb.appendChild(h('span', 'label', 'Claude replied')); rb.appendChild(h('p'));
     var dec = h('footer', 'decide');
-    var nl = h('label', 'label', 'Note (needed for Needs changes)'); nl.htmlFor = 'note-' + key;
-    var ta = h('textarea', 'note'); ta.id = 'note-' + key; ta.rows = 2; ta.placeholder = c.note_hint || 'Anything you want changed, or a question for Claude';
-    var acts = h('div', 'actions');
-    [['approve', 'Approve', 'btn btn-approve'], ['change', 'Needs changes', 'btn btn-change']].forEach(function (a) {
+    if (c.ask) dec.appendChild(rich(h('p', 'ask'), c.ask));
+    var acts = h('div', 'actions two');
+    [['approve', c.yes || 'Looks good', 'btn btn-approve'], ['change', c.no || 'Needs work', 'btn btn-change']].forEach(function (a) {
       var b = h('button', a[2], a[1]); b.type = 'button'; b.dataset.act = a[0]; b.setAttribute('aria-pressed', 'false'); acts.appendChild(b);
     });
-    var und = h('button', 'link', 'Undo my decision'); und.type = 'button'; und.dataset.act = 'undo'; und.hidden = true; acts.appendChild(und);
+    var nw = h('div', 'note-wrap'); nw.hidden = true;
+    var nl = h('label', 'label', 'Note (optional)'); nl.htmlFor = 'note-' + key;
+    var ta = h('textarea', 'note'); ta.id = 'note-' + key; ta.rows = 3; ta.placeholder = c.note_hint || 'What should change, or a question for Claude';
+    nw.appendChild(nl); nw.appendChild(ta);
+    var after = h('div', 'after');
+    var addn = h('button', 'link', 'Add a note'); addn.type = 'button'; addn.dataset.act = 'note';
+    var und = h('button', 'link', 'Change my answer'); und.type = 'button'; und.dataset.act = 'undo'; und.hidden = true;
+    after.appendChild(addn); after.appendChild(und);
     var saved = h('p', 'saved'); saved.setAttribute('role', 'status');
-    dec.appendChild(rb); dec.appendChild(nl); dec.appendChild(ta); dec.appendChild(acts); dec.appendChild(saved);
+    dec.appendChild(rb); dec.appendChild(acts); dec.appendChild(nw); dec.appendChild(after); dec.appendChild(saved);
     body.appendChild(dec);
     el.appendChild(body);
-    if (c.archived) el.dataset.folded = '1';
     return el;
   }
 
@@ -367,17 +397,20 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     var rb = el.querySelector('.reply-box'); rb.hidden = !c.reply; rb.querySelector('p').textContent = c.reply || '';
     var stamp = el.querySelector('.stamp'), saved = el.querySelector('.saved');
     var when = d ? fmt(d.at) : '';
-    stamp.textContent = s === 'approve' ? 'Approved' : s === 'change' ? 'Changes asked' : s === 'stale' ? 'Re-check' : 'Waiting';
+    var yes = c.yes || 'Looks good', no = c.no || 'Needs work';
+    stamp.textContent = s === 'approve' ? '✓ ' + yes : s === 'change' ? no : s === 'stale' ? 'Look again' : '';
     if (!saved.classList.contains('err')) {
-      if (s === 'approve') saved.textContent = 'Approved ' + when + (d.note ? ', with your note.' : '.');
-      else if (s === 'change') saved.textContent = 'You asked for changes ' + when + '. Claude sees this next time it checks the sheet.';
-      else if (s === 'stale') saved.textContent = 'You answered an earlier version. This one has changed, so please look again.';
-      else if (d && d.choice === 'draft') saved.textContent = 'Your picks and note are saved. Press Approve or Needs changes when ready.';
+      if (s === 'approve') saved.textContent = 'Saved ' + when + '.';
+      else if (s === 'change') saved.textContent = 'Saved ' + when + '. Claude picks it up next time.';
+      else if (s === 'stale') saved.textContent = 'This card changed after you answered, so please look again.';
       else saved.textContent = '';
     }
+    var nw = el.querySelector('.note-wrap'), ta0 = el.querySelector('.note');
+    if (ta0.value.trim() || el.dataset.noteOpen) nw.hidden = false;
+    el.querySelector('[data-act="note"]').hidden = !nw.hidden;
     el.querySelector('[data-act="approve"]').setAttribute('aria-pressed', String(s === 'approve'));
     el.querySelector('[data-act="change"]').setAttribute('aria-pressed', String(s === 'change'));
-    el.querySelector('[data-act="undo"]').hidden = !(s === 'approve' || s === 'change' || s === 'stale');
+    el.querySelector('[data-act="undo"]').hidden = !(s === 'approve' || s === 'change');
     el.querySelectorAll('.actions .btn').forEach(function (b) { b.disabled = !writable || !col; });
     // Saved answers fill the card only when you are not working in it.
     if (d && (d.version || 1) === (c.version || 1) && !busy(el)) {
@@ -406,8 +439,6 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
         if (busy(el) || el.dataset.pending) { el.dataset.pending = '1'; el.querySelector('.update').hidden = false; }
         else replaceCard(k);
       }
-      if (c.archived && !el.dataset.wasArchived && !busy(el)) el.dataset.folded = '1';
-      el.dataset.wasArchived = c.archived ? '1' : '';
     });
     // Put cards in order, moving only the ones that are out of place.
     var keys = Object.keys(els).filter(function (k) { return cards[k]; }).sort(order);
@@ -429,10 +460,10 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     filter();
   }
   function replaceCard(k) {
-    var old = els[k], note = old.querySelector('.note').value, folded = old.dataset.folded;
+    var old = els[k], note = old.querySelector('.note').value, opened = old.dataset.open;
     var fresh = buildCard(k, cards[k]);
     fresh.querySelector('.note').value = note;
-    if (folded && !cards[k].archived) delete fresh.dataset.folded;
+    if (opened) fresh.dataset.open = '1';
     old.replaceWith(fresh); els[k] = fresh;
     paintCard(k);
   }
@@ -450,11 +481,11 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
     Object.keys(els).forEach(function (k) {
       var c = cards[k]; if (!c) { els[k].hidden = true; return; }
       var s = stateOf(k), waiting = s === 'waiting' || s === 'stale';
-      if (!c.archived && waiting) needs++;
-      if (!c.archived) open++; else arch++;
-      var show = view === 'needs' ? !c.archived && (waiting || recent[k])
-        : view === 'open' ? !c.archived
-        : view === 'archive' ? !!c.archived && matches(k, q) : false;
+      var todo = !c.archived && waiting;
+      if (todo) needs++; else arch++;
+      if (!c.archived) open++;
+      var show = view === 'todo' ? todo || (!c.archived && recent[k])
+        : view === 'done' ? !todo && matches(k, q) : false;
       els[k].hidden = !show;
       if (show) { shown++; roundsShown[c.round || 1] = (roundsShown[c.round || 1] || 0) + 1; }
     });
@@ -463,12 +494,12 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       hd.querySelector('.rd').textContent = n + (n === 1 ? ' card' : ' cards') + (Number(hd.dataset.round) === curRound ? ' · current' : '');
     });
     var nn = $('n-needs'); nn.textContent = needs; nn.className = needs ? 'n hot' : 'n';
-    $('n-open').textContent = open; $('n-arch').textContent = arch;
+    $('n-arch').textContent = arch;
     var e = $('empty');
     e.hidden = shown > 0;
     e.textContent = !Object.keys(cards).length ? (live ? 'No cards yet. When Claude adds a round, the cards show up here on their own.' : 'Loading cards…')
-      : view === 'needs' ? (open ? 'Nothing needs you right now: every card in this round has your answer. The This round tab shows them again.' : 'Nothing needs you right now. Claude will add the next round here.')
-      : view === 'archive' ? (q ? 'Nothing in the archive matches that.' : 'Nothing archived yet. Finished rounds move here, and stay searchable.')
+      : view === 'todo' ? 'All done. Nothing needs you right now. New cards show up here on their own.'
+      : view === 'done' ? (q ? 'Nothing you answered matches that.' : 'Nothing answered yet.')
       : 'No open cards.';
   }
 
@@ -520,15 +551,13 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   }
   function decide(el, choice) {
     var s = el.querySelector('.saved');
-    if (choice === 'change' && !el.querySelector('.note').value.trim()) {
-      s.textContent = 'Write what should change in the note first, then press Needs changes again.'; s.classList.add('err');
-      el.querySelector('.note').focus(); return;
-    }
     s.classList.remove('err');
+    // Needs work opens the note so a reason is one tap away, but it never blocks the answer.
+    if (choice === 'change') el.dataset.noteOpen = '1';
     var k = el.dataset.key;
     if (timers[k]) { clearTimeout(timers[k]); delete timers[k]; }
     el.dataset.dirty = '1';
-    if (view === 'needs') recent[k] = true;
+    if (view === 'todo') recent[k] = true;
     var rec = record(el, choice);
     decisions[k] = rec; paintCard(k); filter();
     write(el, rec).catch(fail(el));
@@ -593,9 +622,15 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       filter(); return;
     }
     var b = ev.target.closest('.card [data-act]');
-    if (!b) return;
+    if (!b) {
+      // In Done, tapping a card's title opens or closes it.
+      var hd = view === 'done' && ev.target.closest('.card-head');
+      if (hd && !ev.target.closest('a')) toggleOpen(hd.closest('.card'));
+      return;
+    }
     var el = b.closest('.card'), act = b.dataset.act;
-    if (act === 'fold') { if (el.dataset.folded) delete el.dataset.folded; else el.dataset.folded = '1'; b.textContent = el.dataset.folded ? 'Show' : 'Hide'; return; }
+    if (act === 'fold') { toggleOpen(el); return; }
+    if (act === 'note') { el.dataset.noteOpen = '1'; paintCard(el.dataset.key); el.querySelector('.note').focus(); return; }
     if (act === 'reload') { replaceCard(el.dataset.key); return; }
     if (act === 'undo') { undo(el); return; }
     if (!col || !writable) return;
@@ -620,6 +655,10 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
       if (f.contentWindow === ev.source) f.style.height = Math.min(Math.max(ev.data.sbMockHeight, 120), 2400) + 'px';
     });
   });
+  function toggleOpen(el) {
+    if (el.dataset.open) delete el.dataset.open; else el.dataset.open = '1';
+    el.querySelector('.fold').textContent = el.dataset.open ? 'Hide' : 'Show';
+  }
   function flushAll() { Object.keys(els).forEach(function (k) { flush(els[k]); }); }
   window.addEventListener('pagehide', flushAll);
   document.addEventListener('visibilitychange', function () { if (document.hidden) flushAll(); });
@@ -666,7 +705,7 @@ body:not([data-view="archive"]) #archive-tools { display: none; }
   $('note-new').addEventListener('input', function () { stash('compose', $('note-new').value); });
 
   // ---------- start ----------
-  try { var v0 = sessionStorage.getItem(LS + 'view'); if (v0) { var t0 = document.querySelector('.tab[data-view="' + v0 + '"]'); if (t0) t0.click(); } } catch (e) {}
+  try { var v0 = sessionStorage.getItem(LS + 'view'); if (v0 === 'needs' || v0 === 'open') v0 = 'todo'; if (v0 === 'archive') v0 = 'done'; if (v0) { var t0 = document.querySelector('.tab[data-view="' + v0 + '"]'); if (t0) t0.click(); } } catch (e) {}
   try { var draft = unstash('compose'); if (draft) $('note-new').value = draft; } catch (e) {}
   document.body.dataset.view = view;
   paintNotes(); filter();

@@ -1,0 +1,49 @@
+{
+ "meta": {
+  "round": 18,
+  "heading": "Three quick calls",
+  "intro": "Each card asks one thing. Press one of the two buttons. A note is optional."
+ },
+ "cards": {
+  "r18-updates": {
+   "area": "Behind the scenes",
+   "round": 18,
+   "order": 1,
+   "version": 1,
+   "title": "Seven routine tool updates are waiting",
+   "body": [
+    "Small version bumps to the tools Shiftbook is built with. They change nothing you see, and each one has to pass all the checks before it goes in."
+   ],
+   "ask": "Merge them once their checks pass?",
+   "yes": "Yes, merge",
+   "no": "Not yet",
+   "note_hint": "Anything about the updates"
+  },
+  "r18-desk": {
+   "area": "Desk · changed 31 October",
+   "round": 18,
+   "order": 2,
+   "version": 1,
+   "title": "The Desk opens on your cards, with calmer lines",
+   "bullets": [
+    "It opens on the middle of your cards, not the paper's corner.",
+    "Double-click opens an older entry or a ticket's notepad.",
+    "Lines stay faint until you point at a card, and follow it while you drag."
+   ],
+   "ask": "Has the Desk felt right since then?",
+   "note_hint": "What felt wrong, if anything"
+  },
+  "r18-recent": {
+   "area": "Changed 26 to 27 October",
+   "round": 18,
+   "order": 3,
+   "version": 1,
+   "title": "Rename, put away, line up and the MOP notebook",
+   "body": [
+    "Rename in place, putting entries in the Archive drawer, Shift + drag to line cards up, the MOP notebook, timesheet codes, and the copy switches in Settings."
+   ],
+   "ask": "Working fine in everyday use?",
+   "note_hint": "Which one isn't working, and what happened"
+  }
+ }
+}

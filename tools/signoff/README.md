@@ -14,7 +14,7 @@ rounds arrive live and the page never needs a reload or republish to show them.
 |---|---|---|
 | `cards/<id>` | Claude (owner-only rule) | One decision card. See `rounds/r01.json` for the shape. |
 | `meta/board` | Claude (owner-only rule) | Current round number, heading, intro. |
-| `decisions/<card id>` | The page | `{choice: approve\|change\|draft, note, answers, version, title, at, edited}` |
+| `decisions/<card id>` | The page | `{choice: approve\|change\|draft, note, answers, version, title, at, edited}`. `approve` is the yes button, `change` the no button. |
 | `notes/<id>` | The page, then Claude | `{text, at}` from the owner; Claude adds `seen`, `reply`, `replied_at`. |
 
 ## Adding a round
@@ -24,9 +24,17 @@ rounds arrive live and the page never needs a reload or republish to show them.
 3. Write each output file with an ArtifactData `batch` (`set` on `cards/<id>`, `meta/board`).
 4. Archive the previous round: `update` its cards with `{"archived": true}`.
 
-Checklist cards: a question with `"type": "many"` and unticked options is a try-it list; the page
-shows "3 of 8 ticked" under it. Round 17 (`rounds/r17-checklist.json`) is built this way: one card
-per new change, then one per part of the app.
+Keep cards simple (the owner's ask after round 17, which had 15 cards and about 85 tick boxes):
+- One card asks one thing, in `"ask"`. The page shows two big buttons, **Looks good** and
+  **Needs work** (or the card's own `"yes"` / `"no"` labels), and an optional note. A note is never
+  required. See `rounds/r18.json`.
+- Only put on the sheet what genuinely needs the owner's call. Merge related changes into one card,
+  keep the body to a few lines, and use no `questions`, picks or checklists in new cards. Anything
+  else goes in the thread or in `docs/DECISIONS.md`.
+- Tabs are **To do** (unanswered, current round), **Done** (answered and archived, searchable, each
+  card folded until tapped) and **Notes**. The page is built for a phone first.
+
+Older cards with `questions` (radio, checkbox or text) still render in Done.
 
 Changing a card: bump its `version`. A decision made on an older version shows as **Re-check**.
 If the owner is typing in that card, the page offers "Show the new version" instead of swapping it.
