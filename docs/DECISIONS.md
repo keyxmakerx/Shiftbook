@@ -12,6 +12,19 @@ No mockup needed:
   card, becomes an entry card in the same spot (and the same pile) it had. Undo brings the jot
   back to its spot.
 
+## Round 17 — 2 Nov 2026 (try-it checklist)
+- **Sign-off sheet:** round 17 is a checklist: one card per new change, then one per part of the
+  app. Tick what you've tried, then Approve or Needs changes. Answered rounds move to Archive.
+- **Approved and merged:** adding a tray ticket card to an entry (#57), logged jots and scraps
+  keeping their Desk spot (#57), and the Tickets panel reloading after ticking an entry's ticket (#45).
+- **Idea from the owner, not built yet:** archiving an entry card that holds a ticket asks whether
+  the ticket can be closed; if not, the entry is archived and a card for the ticket takes its place
+  on the Desk.
+- **Piles:** the owner mostly uses drawn boxes rather than piles and hasn't found how piles work
+  yet, so piles need a clearer way in (worth a look on a later round).
+- **Still open on the sheet:** the routine dependency updates (#49 to #55) and the walk-through
+  cards for each part of the app.
+
 ## Round 15 — 30 Oct 2026 (the Desk: lines, opening, double-click, finding your way)
 Cards `r16-desk-fixes`, `r16-desk-lines` and `r16-desk-ideas` (`tools/signoff/rounds/r16-desk.json`,
 mockups `mocks/r16-desk.html`), approved:
