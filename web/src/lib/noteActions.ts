@@ -8,11 +8,19 @@ import type { MenuSection } from './menu.svelte';
 import { app, attempt, flashEntry, refresh, timeButtons } from './store.svelte';
 import { toast } from './toast.svelte';
 
-/** Log `note` as an entry with `minutes`; `after` runs once it's done (and after Undo). */
-export async function logNote(note: Note, minutes: number, after?: () => void): Promise<void> {
+/** Log `note` as an entry with `minutes`; `after` runs once it's done (and after Undo).
+ * The entry takes the jot's spot on the Desk: storage copies a spot the owner gave it, and
+ * `spot` is where a Desk card placed automatically was showing. */
+export async function logNote(
+  note: Note,
+  minutes: number,
+  after?: () => void,
+  spot?: { x: number; y: number },
+): Promise<void> {
   const day = app.view === 'day' ? app.selected : app.today;
   const entry = await attempt(() => api.logNote(note.id, day, minutes));
   if (!entry) return;
+  if (spot) await attempt(() => api.canvasMove('entry', entry.id, spot.x, spot.y));
   await refresh();
   flashEntry(entry.id);
   after?.();
@@ -27,9 +35,14 @@ export async function logNote(note: Note, minutes: number, after?: () => void): 
 }
 
 /** The "Log it as an entry" choices for a jot's menu. */
-export function logNoteSection(note: Note, after?: () => void): MenuSection {
+export function logNoteSection(note: Note, after?: () => void, spot?: { x: number; y: number }): MenuSection {
   return {
     head: 'Log it as an entry',
-    choices: timeButtons().map((m) => ({ label: fmtMinutes(m), color: null, checked: false, act: () => void logNote(note, m, after) })),
+    choices: timeButtons().map((m) => ({
+      label: fmtMinutes(m),
+      color: null,
+      checked: false,
+      act: () => void logNote(note, m, after, spot),
+    })),
   };
 }

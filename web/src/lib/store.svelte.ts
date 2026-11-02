@@ -45,8 +45,9 @@ export const app = $state({
   /** Entry open in the details drawer. */
   drawer: null as string | null,
   captureOpen: false,
-  /** Bumped to ask Log work to take focus, with optional text to put in it. */
-  logFocus: { serial: 0, text: '' },
+  /** Bumped to ask Log work to take focus, with optional text to put in it, and the Desk spot
+   * of the card it came from (an Inbox scrap), so the entry it makes shows there. */
+  logFocus: { serial: 0, text: '', spot: null as { x: number; y: number } | null },
   /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
   wrapupClosed: '',
   /** The date "Wrap up the day" was asked for in Find, so the wrap-up shows before its time. */
@@ -244,10 +245,10 @@ export function putEntry(entry: Entry): void {
   else app.entries.push(entry);
 }
 
-export function focusLog(text = ''): void {
+export function focusLog(text = '', spot: { x: number; y: number } | null = null): void {
   // Log work is on the Desk (the Canvas) and on Day; stay on whichever is open.
   if (app.view !== 'desk' && app.view !== 'day') setView('desk');
-  app.logFocus = { serial: app.logFocus.serial + 1, text };
+  app.logFocus = { serial: app.logFocus.serial + 1, text, spot };
 }
 
 /** Ask whether "Where was I?" should show for this return, and show it. */

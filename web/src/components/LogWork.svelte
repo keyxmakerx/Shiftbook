@@ -26,6 +26,8 @@
   // this session (by title), so it is asked once.
   let ask = $state<{ minutes: number; line: string; same: SameWork } | null>(null);
   const answered = new Map<string, boolean>();
+  /** The Desk spot of the scrap being logged: the entry it makes takes its place. */
+  let spot: { x: number; y: number } | null = null;
 
   // The week before the selected day, for "Same as yesterday".
   $effect(() => {
@@ -60,6 +62,7 @@
   $effect(() => {
     const serial = app.logFocus.serial;
     if (serial === 0) return;
+    spot = app.logFocus.spot;
     if (app.logFocus.text) {
       text = app.logFocus.text;
       recognise();
@@ -73,6 +76,7 @@
     const now = text;
     if (!now.trim()) {
       seen = null;
+      spot = null;
       return;
     }
     timer = setTimeout(async () => {
@@ -156,11 +160,17 @@
     const entry = await attempt(() => api.quickLog(app.selected, line, minutes, addTo ?? null));
     working = false;
     if (!entry) return;
+    const existed = before.has(entry.id);
+    // A new entry from a scrap on the Desk shows where the scrap was.
+    if (spot && !existed) {
+      const at = spot;
+      await attempt(() => api.canvasMove('entry', entry.id, at.x, at.y));
+    }
+    spot = null;
     text = '';
     seen = null;
     await refresh();
     flashEntry(entry.id);
-    const existed = before.has(entry.id);
     toast(
       minutes === 0
         ? existed

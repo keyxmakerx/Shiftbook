@@ -41,6 +41,7 @@
     onmove,
     onchanged,
     onlink,
+    onattach,
     onpick,
     onopen,
     onheight,
@@ -72,6 +73,8 @@
     lineUp?: (x: number, y: number, on: boolean) => { x: number; y: number };
     /** "Link to another card" was chosen on this card. */
     onlink?: () => void;
+    /** "Add to an entry" was chosen on this ticket card: the next card picked gets it. */
+    onattach?: () => void;
     /** This card was picked as the other end of a link. */
     onpick?: () => void;
     /** Opening it (double-click or Enter) does this instead (a board opens notes in its Notebook). */
@@ -201,7 +204,8 @@
     const scrap = card.inbox;
     if (await attempt(() => api.setInboxDeleted(scrap.id, true).then(() => true))) {
       await attempt(refreshInbox);
-      focusLog(scrap.text);
+      // The entry it becomes shows where the scrap was.
+      focusLog(scrap.text, { x: card.x, y: card.y });
     }
   }
 
@@ -224,9 +228,12 @@
   function menu(): MenuSpec | null {
     const own = cardMenu();
     if (!own) return null;
-    if (onlink) {
+    if (onlink || onattach) {
       own.sections.splice(1, 0, {
-        items: [{ label: 'Link to another card', icon: 'link', top: true, act: () => onlink?.() }],
+        items: [
+          ...(onattach ? [{ label: 'Add to an entry', icon: 'ticket' as const, top: true, act: () => onattach?.() }] : []),
+          ...(onlink ? [{ label: 'Link to another card', icon: 'link' as const, top: true, act: () => onlink?.() }] : []),
+        ],
       });
     }
     if (extra) own.sections.splice(Math.max(1, own.sections.length - 1), 0, ...extra());
@@ -263,7 +270,9 @@
             ],
           },
           bringUpSection('note', note.id, note.title),
-          ...(note.kind === 'jot' ? [logNoteSection(note, onchanged)] : []),
+          // A card the owner put somewhere passes its spot on in storage; one placed
+          // automatically passes on where it shows now.
+          ...(note.kind === 'jot' ? [logNoteSection(note, onchanged, card.placed ? undefined : { x: card.x, y: card.y })] : []),
         ],
       };
     }
