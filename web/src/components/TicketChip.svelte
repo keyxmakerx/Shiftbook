@@ -13,12 +13,15 @@
     color = 'var(--accent)',
     onRemove = null,
     removeLabel = 'Remove from this entry',
+    showRemove = false,
   }: {
     number: string;
     links?: TicketLink[];
     color?: string;
     onRemove?: (() => void) | null;
     removeLabel?: string;
+    /** Show a ✕ next to the chip for `onRemove` (it is always in the right-click menu too). */
+    showRemove?: boolean;
   } = $props();
 
   async function copy(text: string, what: string) {
@@ -48,6 +51,17 @@
   }
 </script>
 
+{#if showRemove && onRemove}<span class="pair">{@render chip()}<button
+  type="button"
+  class="off"
+  title="{removeLabel} ({number})"
+  aria-label="{removeLabel}: {number}"
+  onclick={(e) => {
+    e.stopPropagation();
+    onRemove?.();
+  }}>×</button></span>{:else}{@render chip()}{/if}
+
+{#snippet chip()}
 <button
   type="button"
   class="chip"
@@ -61,8 +75,34 @@
 >
   {number}{#if links.length > 0}<span class="linked" aria-label="has a link">↗</span>{/if}
 </button>
+{/snippet}
 
 <style>
+  .pair {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+  }
+
+  .off {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--mut);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .off:hover,
+  .off:focus-visible {
+    background: color-mix(in srgb, var(--bad) 14%, transparent);
+    color: var(--bad);
+  }
+
   .linked {
     font-size: 10px;
     opacity: 0.7;

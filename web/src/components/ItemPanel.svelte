@@ -218,7 +218,7 @@
           >
             {#if t.done}<Icon name="check" size={10} />{/if}
           </button>
-          <TicketChip number={t.number} links={t.links} color={projectColor(entry.projectId)} onRemove={() => void detach(t.id, t.number)} />
+          <TicketChip number={t.number} links={t.links} color={projectColor(entry.projectId)} onRemove={entry.isTray ? null : () => void detach(t.id, t.number)} showRemove />
         </span>
       {/each}
       <input

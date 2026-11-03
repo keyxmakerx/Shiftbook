@@ -337,6 +337,7 @@
               links={t.links}
               color={projectColor(entry.projectId)}
               onRemove={entry.isTray ? null : () => void removeTicket(t.id, t.number)}
+              showRemove
             />
           {:else}
             <span class="note">No tickets yet.</span>
