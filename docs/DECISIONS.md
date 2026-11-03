@@ -310,6 +310,9 @@ Built as pictured on the `r15-qol-*` mockups; the owner will try them and say wh
   total time and the days ("4 h · 2 days"). A Tickets-tray ticket with a number the work has
   folds into its tickets strip. In the tickets box each number shows once; ticking it ticks
   it everywhere it appears. Day and the timesheet still keep each day's entry.
+  Giving that card a project (menu, slide-out, dragging into a project's area or Give a
+  project) or renaming it changes every day's entry in it, so the card never splits in two
+  and the older day never looks like a new copy (fix, 3 Nov 2026). The notepad stays per day.
 - **Tickets on entries** (round 14): a ticket added to an entry (Log work, Attach) has the
   same round tick (starts still open) and its own notepad as Tickets-tray tickets; its time
   is the entry's. On the Desk they fold into a strip on the entry's card ("3 tickets · 1

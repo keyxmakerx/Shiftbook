@@ -4,6 +4,7 @@
 import { api } from './api';
 import type { Entry } from './api';
 import { bringUp, bringUpSection } from './bringUp';
+import { sameWork } from './sameWork';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
 import { pinMenuItem } from './pins.svelte';
@@ -56,29 +57,61 @@ export async function addEntryTime(entry: Entry, minutes: number): Promise<void>
   });
 }
 
-/** Give the entry a project (null for none), with Undo. */
-export async function moveEntryTo(entry: Entry, projectId: string | null): Promise<void> {
-  const before = { projectId: entry.projectId, recurringId: entry.recurringId };
-  const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId, recurringId: null })));
-  if (!updated) return;
-  putEntry(updated);
+/**
+ * Save the same change on each entry, then show them. Undo puts back what this changed (the
+ * name, project and repeating thing) and keeps anything written since, like the notepad.
+ */
+async function changeAll(
+  list: Entry[],
+  change: (e: Entry) => ReturnType<typeof input>,
+): Promise<(() => void) | null> {
+  const pairs: { before: Entry; after: Entry }[] = [];
+  for (const before of list) {
+    const after = await attempt(() => api.updateEntry(before.id, change(before)));
+    if (!after) break;
+    pairs.push({ before, after });
+  }
+  if (!pairs.length) return null;
+  for (const p of pairs) putEntry(p.after);
   void refresh();
-  toast(`Moved to ${projectById(projectId)?.name ?? 'No project'}`, 'Undo', () => {
-    void attempt(() => api.updateEntry(updated.id, input(updated, before))).then(refresh);
-  });
+  return () =>
+    void Promise.all(
+      pairs.map(({ before, after }) =>
+        attempt(() =>
+          api.updateEntry(after.id, {
+            ...input(after, { projectId: before.projectId, recurringId: before.recurringId }),
+            description: before.description,
+          }),
+        ),
+      ),
+    ).then(refresh);
 }
 
-/** File an entry under a repeating thing (round 15): it leaves its project. */
-export async function moveEntryToRepeating(entry: Entry, recurringId: string): Promise<void> {
-  const before = { projectId: entry.projectId, recurringId: entry.recurringId };
-  const updated = await attempt(() => api.updateEntry(entry.id, input(entry, { projectId: null, recurringId })));
-  if (!updated) return;
-  putEntry(updated);
-  void refresh();
+/**
+ * Give the entry a project (null for none), with Undo. `also` is the same work on other days
+ * that its Desk card folds in: they move with it, so the card stays one card.
+ */
+export async function moveEntryTo(entry: Entry, projectId: string | null, also: readonly Entry[] = []): Promise<void> {
+  const undo = await changeAll(sameWork(entry, also), (e) => input(e, { projectId, recurringId: null }));
+  if (undo) toast(`Moved to ${projectById(projectId)?.name ?? 'No project'}`, 'Undo', undo);
+}
+
+/** File an entry under a repeating thing (round 15): it leaves its project. `also` as above. */
+export async function moveEntryToRepeating(entry: Entry, recurringId: string, also: readonly Entry[] = []): Promise<void> {
+  const undo = await changeAll(sameWork(entry, also), (e) => input(e, { projectId: null, recurringId }));
+  if (!undo) return;
   const name = repeating.items.find((r) => r.id === recurringId)?.name ?? 'the repeating thing';
-  toast(`Moved to ${name}`, 'Undo', () => {
-    void attempt(() => api.updateEntry(updated.id, input(updated, before))).then(refresh);
-  });
+  toast(`Moved to ${name}`, 'Undo', undo);
+}
+
+/** Rename an entry and the same work folded into its Desk card (see `rename.svelte.ts`). */
+export async function renameAll(entry: Entry, name: string, also: readonly Entry[] = []): Promise<boolean> {
+  const next = name.trim();
+  if (!next || next === entry.description) return false;
+  const undo = await changeAll(sameWork(entry, also), (e) => ({ ...input(e, {}), description: next }));
+  if (!undo) return false;
+  toast(`Renamed to “${next}”`, 'Undo', undo);
+  return true;
 }
 
 async function setColor(entry: Entry, c: string) {
@@ -132,8 +165,8 @@ async function copyTickets(entry: Entry) {
   toast((await copyText(text)) ? 'Copied' : "Couldn't copy here.");
 }
 
-/** The entry's paper menu. */
-export function entryMenu(entry: Entry): MenuSpec {
+/** The entry's paper menu. `also` is the same work its Desk card folds in (see `sameWork`). */
+export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
   const project = projectById(entry.projectId);
   const timing = timer.running && timer.target?.entryId === entry.id;
   const main: MenuItem[] = [
@@ -164,8 +197,8 @@ export function entryMenu(entry: Entry): MenuSpec {
   const choices = [
     ...app.projects
       .filter((p) => !p.archived)
-      .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveEntryTo(entry, p.id) })),
-    { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveEntryTo(entry, null) },
+      .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveEntryTo(entry, p.id, also) })),
+    { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveEntryTo(entry, null, also) },
   ];
   const sections: MenuSpec['sections'] = [
     { head: entry.description || 'Untitled', items: main },

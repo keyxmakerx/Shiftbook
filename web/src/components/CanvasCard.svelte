@@ -241,7 +241,7 @@
   }
 
   function cardMenu(): MenuSpec | null {
-    if (card.entry) return entryMenu(card.entry);
+    if (card.entry) return entryMenu(card.entry, card.work);
     if (card.tray) return trayMenu(card.tray.item, () => openNotepad(key));
     if (card.note) {
       const note = card.note;
@@ -358,7 +358,7 @@
       {:else}Entry · {e.hours} h{dayWord(e.date)}{/if}
     </span>
     {#if renaming.id === e.id}
-      <RenameBox entry={e} />
+      <RenameBox entry={e} also={card.work} />
     {:else}
       <span class="named">
         <span class="title">{e.description || 'Untitled'}</span>
@@ -423,6 +423,7 @@
   <div class="under" style:left="{x}px" style:top="{y + height}px">
     <ItemPanel
       entry={card.entry}
+      also={card.work}
       tray={card.tray?.item}
       menu={() => menu() ?? { sections: [] }}
       focusPad={panel.focusPad}

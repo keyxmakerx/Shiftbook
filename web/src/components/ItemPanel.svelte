@@ -21,6 +21,7 @@
 
   let {
     entry = null,
+    also = [],
     tray = null,
     menu,
     onclose,
@@ -28,6 +29,8 @@
     focusPad = false,
   }: {
     entry?: Entry | null;
+    /** The same work on other days folded into the entry's Desk card: a new project goes to them too. */
+    also?: readonly Entry[];
     tray?: TrayItem | null;
     /** The full paper menu, for "More". */
     menu: () => MenuSpec;
@@ -97,11 +100,11 @@
 
   function pickProject(anchor: HTMLElement) {
     const pick = (id: string | null) => {
-      if (entry) void moveEntryTo(entry, id);
+      if (entry) void moveEntryTo(entry, id, also);
       else if (tray) void setTrayProject(tray, id);
     };
     const pickRepeating = (id: string) => {
-      if (entry) void moveEntryToRepeating(entry, id);
+      if (entry) void moveEntryToRepeating(entry, id, also);
       else if (tray) void setTrayRepeating(tray, id);
     };
     openMenu(anchor, {

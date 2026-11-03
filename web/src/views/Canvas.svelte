@@ -63,6 +63,7 @@
     type Rect,
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
+  import { sameWork } from '../lib/sameWork';
   import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
   import { menuOpen, openMenu, type MenuSpec } from '../lib/menu.svelte';
   import { applyTray } from '../lib/trayActions';
@@ -525,7 +526,7 @@
 
   async function setProject(card: Card, projectId: string | null) {
     if (card.entry) {
-      await moveEntryTo(card.entry, projectId);
+      await moveEntryTo(card.entry, projectId, card.work);
       return;
     }
     const note = card.note;
@@ -997,10 +998,13 @@
   async function giveProject(list: Card[], projectId: string) {
     const undo: (() => Promise<unknown>)[] = [];
     for (const c of list) {
-      if (c.entry && c.entry.projectId !== projectId && !c.entry.isTray) {
-        const e = c.entry;
-        if (await attempt(() => api.updateEntry(e.id, entryInput(e, { projectId })))) {
-          undo.push(() => api.updateEntry(e.id, entryInput(e, {})));
+      if (c.entry && !c.entry.isTray && sameWork(c.entry, c.work).some((e) => e.projectId !== projectId)) {
+        // The same work folded into the card moves with it, so the card stays one card.
+        for (const e of sameWork(c.entry, c.work)) {
+          if (e.projectId === projectId) continue;
+          if (await attempt(() => api.updateEntry(e.id, entryInput(e, { projectId })))) {
+            undo.push(() => api.updateEntry(e.id, entryInput(e, {})));
+          }
         }
       } else if (c.note && c.note.projectId !== projectId) {
         const n = c.note;
