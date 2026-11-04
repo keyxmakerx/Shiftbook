@@ -1,9 +1,10 @@
 <script lang="ts">
+  const BLANKS = '{{blanks}}';
   // The MOP notebook (round 16, card r15-mopbook): a Notepad++-style window with a tab per
   // MOP. Numbered shows line numbers (a toggle), light colours and the counts; Minimal is
   // just the text; Checklist puts a box by each line, and ticking one crosses it out with
   // the section under it. The text stays editable in every mode and saves as you type.
-  // Templates fill their [[blanks]] into a new MOP. The rules are in crates/core/src/mop.rs.
+  // Templates fill their {{blanks}} into a new MOP. The rules are in crates/core/src/mop.rs.
   import { onMount, untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { CheckLine, MopView, Note } from '../lib/api';
@@ -333,7 +334,7 @@
     if (!d) return;
     if (!(await attempt(() => api.setNoteTemplate(d.note.id, on).then(() => true)))) return;
     d.note = { ...d.note, template: on };
-    toast(on ? 'Now a template. Use "New MOP from this" to fill in its [[blanks]].' : 'Back to a plain MOP.');
+    toast(on ? 'Now a template. Use "New MOP from this" to fill in its {{blanks}}.' : 'Back to a plain MOP.');
   }
 
   async function startFill(id: string) {
@@ -591,11 +592,11 @@
       {#if doc}
         <button type="button" class="tool" title="Find (Ctrl+F)" aria-label="Find" onclick={openFind}><Icon name="search" size={14} /></button>
         {#if doc.note.template}
-          <button type="button" class="tool strong" title="Make a new {words().mop} and fill in the [[blanks]]" onclick={() => doc && void startFill(doc.note.id)}>
+          <button type="button" class="tool strong" title="Make a new {words().mop} and fill in the {BLANKS}" onclick={() => doc && void startFill(doc.note.id)}>
             <Icon name="copy" size={14} /> New from this
           </button>
         {:else}
-          <button type="button" class="tool" title="Keep this as a template with [[blanks]] to fill in" onclick={() => void setTemplate(true)}>
+          <button type="button" class="tool" title="Keep this as a template with {BLANKS} to fill in" onclick={() => void setTemplate(true)}>
             <Icon name="copy" size={14} /> Use as template
           </button>
         {/if}
@@ -761,7 +762,7 @@
             <div class="fields">
               {#each filling.blanks as b, i (b)}
                 <label class="field">
-                  <span class="lbl blank">[[{b}]]</span>
+                  <span class="lbl blank">{"{{"}{b}{"}}"}</span>
                   {#if i === 0}
                     <input class="text-in" bind:value={filling.values[b]} use:focusNow onkeydown={(e) => e.key === 'Enter' && void fill()} />
                   {:else}
@@ -771,7 +772,7 @@
               {/each}
             </div>
           {:else}
-            <p class="mut">This template has no [[blanks]] yet, so you'll get a plain copy. Type [[a name]] wherever something changes each time.</p>
+            <p class="mut">This template has no {BLANKS} yet, so you'll get a plain copy. Type {'{{a name}}'} wherever something changes each time.</p>
           {/if}
           <label class="field">
             <span class="lbl">Title (blank uses the template's, filled in)</span>

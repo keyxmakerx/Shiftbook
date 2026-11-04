@@ -146,6 +146,11 @@ impl SqliteStore {
         if let Some(p) = input.project {
             project_exists(&mut conn, owner, p).await?;
         }
+        drop(conn);
+        // A wiki page keeps what it said before as an earlier version (round 18).
+        let before = self.get_note(owner, id).await?;
+        let mut conn = self.pool.begin().await?;
+        crate::wiki::keep_version(&mut conn, &before, &title, &input.body).await?;
         let done = sqlx::query(
             "UPDATE notes SET kind = $1, title = $2, body = $3, project_id = $4, tags = $5, \
              updated_at = $6 WHERE id = $7 AND owner_id = $8 AND deleted_at IS NULL",
@@ -163,7 +168,7 @@ impl SqliteStore {
         if done.rows_affected() == 0 {
             return Err(StorageError::NotFound);
         }
-        drop(conn);
+        conn.commit().await?;
         self.get_note(owner, id).await
     }
 
@@ -277,7 +282,7 @@ impl SqliteStore {
     }
 
     /// A new MOP from a template: its blanks filled with `values` (blanks left empty stay
-    /// as `[[name]]`), the same project and tags, nothing ticked. A blank `title` uses the
+    /// as `{{name}}`), the same project and tags, nothing ticked. A blank `title` uses the
     /// template's title with its blanks filled.
     pub async fn note_from_template(
         &self,

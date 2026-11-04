@@ -307,7 +307,7 @@ pub async fn note_from_template(
     Ok(note_view(note, OffsetDateTime::now_utc(), after))
 }
 
-/// Maps to `DataApi.mopBlanks()`: the `[[blanks]]` in a template, in order.
+/// Maps to `DataApi.mopBlanks()`: the `{{blanks}}` in a template, in order.
 #[tauri::command]
 pub fn mop_blanks(text: String) -> Vec<String> {
     mop::blanks(&text)

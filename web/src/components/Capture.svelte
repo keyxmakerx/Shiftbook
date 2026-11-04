@@ -20,6 +20,7 @@
     flashEntry,
     focusLog,
     openNote,
+    openWiki,
     projectById,
     projectColor,
     refresh,
@@ -55,6 +56,9 @@
     /** Needs the Desk or a full-screen board, which the phone layout doesn't have. */
     desk?: boolean;
   };
+  /** Wiki pages and MOP templates open in the wiki (round 18). */
+  const inWiki = (n: Note) => n.kind === 'page' || (n.kind === 'mop' && n.template);
+
   type Hit =
     | { kind: 'entry'; entry: Entry }
     | { kind: 'scrap'; item: InboxItem }
@@ -302,9 +306,11 @@
           : []),
         ...(found
           ? [
+              // Wiki pages come first (round 18): they're what you wrote down to find again.
+              ...found.notes.filter(inWiki).map((note): Hit => ({ kind: 'note', note })),
               ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
               ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
-              ...found.notes.map((note): Hit => ({ kind: 'note', note })),
+              ...found.notes.filter((n) => !inWiki(n)).map((note): Hit => ({ kind: 'note', note })),
               ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ]
           : []),
@@ -356,7 +362,8 @@
       await selectDay(hit.date);
       setView(hit.sheet ? 'timesheet' : 'day');
     } else if (hit.kind === 'note') {
-      openNote(hit.note.id);
+      if (inWiki(hit.note)) openWiki(hit.note.id);
+      else openNote(hit.note.id);
     } else if (hit.kind === 'ticket') {
       openWindow('tray', hit.ticket.id);
     } else if (hit.kind === 'entry') {
@@ -432,7 +439,9 @@
       : hit.kind === 'ticket'
         ? 'Tickets'
         : hit.kind === 'note'
-          ? 'Notes'
+          ? inWiki(hit.note)
+            ? 'Wiki'
+            : 'Notes'
           : hit.kind === 'scrap'
             ? 'Inbox'
             : hit.kind === 'day'

@@ -32,6 +32,7 @@
   import Repeating from '../views/Repeating.svelte';
   import Lists from '../views/Lists.svelte';
   import Projects from '../views/Projects.svelte';
+  import Wiki from '../views/Wiki.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
@@ -161,6 +162,8 @@
             <Lists />
           {:else if app.view === 'projects'}
             <Projects />
+          {:else if app.view === 'wiki'}
+            <Wiki />
           {:else}
             <Settings />
           {/if}

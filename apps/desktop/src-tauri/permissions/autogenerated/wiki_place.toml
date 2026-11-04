@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-wiki-place"
+description = "Enables the wiki_place command without any pre-configured scope."
+commands.allow = ["wiki_place"]
+
+[[permission]]
+identifier = "deny-wiki-place"
+description = "Denies the wiki_place command without any pre-configured scope."
+commands.deny = ["wiki_place"]

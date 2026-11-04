@@ -49,6 +49,8 @@ export const app = $state({
   captureOpen: false,
   /** The Organise menu in the ribbon (round 18). */
   organiseOpen: false,
+  /** The wiki page to show (round 18), bumped by `openWiki`. */
+  wikiOpen: { id: null as string | null, edit: false, serial: 0 },
   /** Bumped to ask Log work to take focus, with optional text to put in it, and the Desk spot
    * of the card it came from (an Inbox scrap), so the entry it makes shows there. */
   logFocus: { serial: 0, text: '', spot: null as { x: number; y: number } | null },
@@ -217,7 +219,12 @@ export function openNote(id: string | null): void {
   setView('notes');
 }
 
-/** The tabs that show, in order (no Timesheet at home). */
+/** Open a page in the wiki (round 18); `edit` opens it ready to type. */
+export function openWiki(id: string | null, edit = false): void {
+  app.wikiOpen = { id, edit, serial: app.wikiOpen.serial + 1 };
+  setView('wiki');
+}
+
 /** Every view in this mode (tabs, the Organise menu, Settings). */
 export function shownViews(): readonly View[] {
   return viewsFor(hasWork(app.prefs?.useMode));

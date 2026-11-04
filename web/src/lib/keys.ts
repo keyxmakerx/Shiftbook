@@ -9,10 +9,10 @@
 import { TEXT_SIZES } from './api/generated/constants';
 
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
-export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'items' | 'projects' | 'settings';
+export type View = 'desk' | 'day' | 'timesheet' | 'wiki' | 'notes' | 'repeating' | 'lists' | 'items' | 'projects' | 'settings';
 
 /** Tabs are where you work (round 18). */
-export const TABS: readonly View[] = ['desk', 'day', 'timesheet'];
+export const TABS: readonly View[] = ['desk', 'day', 'timesheet', 'wiki'];
 /** The Organise menu: places you go to look after your things. */
 export const ORGANISE: readonly View[] = ['items', 'projects', 'repeating', 'lists', 'notes'];
 
@@ -33,6 +33,7 @@ export const VIEW_NAMES: Record<View, string> = {
   desk: 'Desk',
   day: 'Day',
   timesheet: 'Timesheet',
+  wiki: 'Wiki',
   notes: 'Notes',
   repeating: 'Repeating',
   lists: 'Lists',
@@ -118,7 +119,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Ctrl Space  or  /', what: 'Log, note or find anything (type "help" for everything)' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
-  { keys: '1  2  3', what: 'Desk, Day, Timesheet' },
+  { keys: '1  2  3  4', what: 'Desk, Day, Timesheet, Wiki' },
   { keys: '↑  ↓', what: 'Move between entries' },
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },

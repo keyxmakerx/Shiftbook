@@ -104,6 +104,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "MOP notebook: templates and ticks",
         include_str!("../migrations/0019_mop_notebook.sql"),
     ),
+    (
+        20,
+        "wiki: spaces, places and earlier versions",
+        include_str!("../migrations/0020_wiki.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -322,6 +327,7 @@ mod tests {
                     "list_options",
                     "meeting_series",
                     "next_up_items",
+                    "note_versions",
                     "notes",
                     "pins",
                     "projects",
@@ -336,7 +342,9 @@ mod tests {
                     "timesheet_codes",
                     "timesheet_ticks",
                     "timesheet_weeks",
-                    "users"
+                    "users",
+                    "wiki_places",
+                    "wiki_spaces"
                 ]
             );
             // Every table has the common columns.

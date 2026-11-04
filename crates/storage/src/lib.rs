@@ -38,6 +38,7 @@ pub mod recurring;
 pub mod repo;
 pub mod sync;
 pub mod vault;
+pub mod wiki;
 pub mod wipe;
 pub mod work;
 
@@ -102,6 +103,8 @@ mod items_tests;
 mod notes_tests;
 #[cfg(test)]
 mod repo_tests;
+#[cfg(test)]
+mod wiki_tests;
 #[cfg(test)]
 mod work_tests;
 

@@ -39,6 +39,9 @@ the README for what it does.
   (it is the Desk: piles, drawers and full-screen boards with the Archive too), plus boxes, the
   toolbox and folding from round 12; the meeting canvas and pictures in notes are next (see
   `docs/CANVAS.md`).
+- **Wiki (round 18):** spaces, pages under pages, `[[links]]` with Linked from and On tickets,
+  earlier versions, wiki pages first in Find, and writing a space out as Markdown files.
+  Template blanks are `{{name}}`. Sharing a space with a team waits for Phase 2.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
   Find), and the **MOP notebook** (round 16: tabs, Numbered/Minimal/Checklist, templates with
   `[[blanks]]`, dropping text MOP files in, Save as a text file). Still to come, in this order:

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-export-wiki-space"
+description = "Enables the export_wiki_space command without any pre-configured scope."
+commands.allow = ["export_wiki_space"]
+
+[[permission]]
+identifier = "deny-export-wiki-space"
+description = "Denies the export_wiki_space command without any pre-configured scope."
+commands.deny = ["export_wiki_space"]

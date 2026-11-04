@@ -1,9 +1,10 @@
-//! The MOP notebook (round 16, card r15-mopbook): `[[blanks]]` in templates, ticking a MOP
+//! The MOP notebook (round 16, card r15-mopbook): `{{blanks}}` in templates (written
+//! `[[blanks]]` until round 18, when `[[` came to mean a wiki link), ticking a MOP
 //! off as a checklist, MOP files brought in from disk, and where the notebook window is.
 //!
-//! A template is a MOP with blanks such as `[[site]]` or `[[ticket]]`. "New MOP from this
+//! A template is a MOP with blanks such as `{{site}}` or `{{ticket}}`. "New MOP from this
 //! template" asks for each blank once and fills it in everywhere; a blank left empty stays
-//! as `[[name]]` so it is easy to spot later.
+//! as `{{name}}` so it is easy to spot later.
 //!
 //! In Checklist mode any line with something on it can be ticked. Ticking a line crosses it
 //! out along with the section under it: everything after it that sits deeper, until the
@@ -19,7 +20,7 @@ use crate::error::{preview, CoreError};
 use crate::notes::{validate_body, MAX_TITLE_CHARS};
 use crate::windows::{WindowMode, MAX_OFFSET, MAX_WINDOW, MIN_WINDOW};
 
-/// Longest blank name inside `[[ ]]`.
+/// Longest blank name inside `{{ }}` (and wiki link inside `[[ ]]`).
 pub const MAX_BLANK_CHARS: usize = 60;
 /// Most different blanks in one template.
 pub const MAX_BLANKS: usize = 50;
@@ -34,8 +35,8 @@ pub const IMPORTED_TITLE: &str = "Imported MOP";
 /// Most MOPs open as tabs at once.
 pub const MAX_TABS: usize = 20;
 
-/// The `[[blanks]]` in a template, in the order they first appear. Names are trimmed and
-/// matched ignoring case (the first spelling wins); text in `[[ ]]` that is empty, too
+/// The `{{blanks}}` in a template, in the order they first appear. Names are trimmed and
+/// matched ignoring case (the first spelling wins); text in `{{ }}` that is empty, too
 /// long or spans lines isn't a blank.
 pub fn blanks(text: &str) -> Vec<String> {
     let mut out: Vec<String> = Vec::new();
@@ -47,31 +48,58 @@ pub fn blanks(text: &str) -> Vec<String> {
     out
 }
 
-/// Each blank in `text`: its byte start and end (covering the brackets) and trimmed name.
+/// Each blank in `text`: its byte start and end (covering the braces) and trimmed name.
 fn blank_spans(text: &str) -> Vec<(usize, usize, &str)> {
+    bracket_spans(text, "{{", "}}")
+}
+
+/// Each `open … close` pair in `text` (blanks are `{{ }}`, wiki links `[[ ]]`): its byte
+/// start and end (covering the brackets) and the trimmed text inside. Empty, too long or
+/// multi-line insides don't count; in `[[a [[b]]` only the innermost `[[b]]` does.
+pub(crate) fn bracket_spans<'a>(
+    text: &'a str,
+    open: &str,
+    close: &str,
+) -> Vec<(usize, usize, &'a str)> {
+    let first = open.chars().next().unwrap_or('[');
     let mut out = Vec::new();
     let mut from = 0;
-    while let Some(open) = text[from..].find("[[").map(|i| from + i) {
-        let inner_start = open + 2;
-        let Some(close) = text[inner_start..].find("]]").map(|i| inner_start + i) else {
+    while let Some(start) = text[from..].find(open).map(|i| from + i) {
+        let inner_start = start + open.len();
+        let Some(end) = text[inner_start..].find(close).map(|i| inner_start + i) else {
             break;
         };
-        let inner = &text[inner_start..close];
-        // `[[a [[b]]`: the blank is the innermost `[[b]]`.
-        if let Some(again) = inner.rfind("[[") {
+        let inner = &text[inner_start..end];
+        if let Some(again) = inner.rfind(open) {
             from = inner_start + again;
             continue;
         }
         let name = inner.trim();
         if !name.is_empty()
             && !inner.contains('\n')
-            && !inner.contains('[')
+            && !inner.contains(first)
             && name.chars().count() <= MAX_BLANK_CHARS
         {
-            out.push((open, close + 2, name));
+            out.push((start, end + close.len(), name));
         }
-        from = close + 2;
+        from = end + close.len();
     }
+    out
+}
+
+/// Blanks were written `[[name]]` before round 18, when `[[` came to mean a wiki link: the
+/// same text with each old blank written `{{name}}`.
+pub fn old_blanks_to_new(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut at = 0;
+    for (start, end, name) in bracket_spans(text, "[[", "]]") {
+        out.push_str(&text[at..start]);
+        out.push_str("{{");
+        out.push_str(name);
+        out.push_str("}}");
+        at = end;
+    }
+    out.push_str(&text[at..]);
     out
 }
 
@@ -104,7 +132,7 @@ pub fn clean_values(values: &[(String, String)]) -> Result<Vec<(String, String)>
         .collect()
 }
 
-/// Fill the blanks: every `[[name]]` with a value (matched ignoring case) is replaced by it,
+/// Fill the blanks: every `{{name}}` with a value (matched ignoring case) is replaced by it,
 /// everywhere. Blanks without a value, or with an empty one, stay as they are.
 pub fn fill_blanks(text: &str, values: &[(String, String)]) -> String {
     let mut out = String::with_capacity(text.len());
@@ -523,28 +551,28 @@ mod tests {
 
     #[test]
     fn blanks_are_found_once_in_order() {
-        let text = "Change on [[ Site ]] for [[ticket]]\nReboot [[site]] then [[]] and [[a\nb]] \
-                    and [[outer [[inner]]";
+        let text = "Change on {{ Site }} for {{ticket}}\nReboot {{site}} then {{}} and {{a\nb}} \
+                    and {{outer {{inner}}";
         assert_eq!(blanks(text), ["Site", "ticket", "inner"]);
-        assert!(blanks("no blanks [here] or [[ ]]").is_empty());
-        let long = format!("[[{}]]", "x".repeat(MAX_BLANK_CHARS + 1));
+        assert!(blanks("no blanks [here] or {{ }} or [[links]]").is_empty());
+        let long = format!("{{{{{}}}}}", "x".repeat(MAX_BLANK_CHARS + 1));
         assert!(blanks(&long).is_empty());
     }
 
     #[test]
     fn filling_replaces_every_copy_and_leaves_empty_ones() {
-        let text = "# [[Site]] change\n1. Log in to [[site]]\n2. Note [[ticket]]\n";
+        let text = "# {{Site}} change\n1. Log in to {{site}}\n2. Note {{ticket}}\n";
         let out = fill_blanks(text, &v(&[("SITE", " North hall "), ("ticket", "  ")]));
         assert_eq!(
             out,
-            "# North hall change\n1. Log in to North hall\n2. Note [[ticket]]\n"
+            "# North hall change\n1. Log in to North hall\n2. Note {{ticket}}\n"
         );
         assert_eq!(fill_blanks("plain", &v(&[("a", "b")])), "plain");
         assert_eq!(
-            filled_title("", "MOP [[site]]", &v(&[("site", "A")])),
+            filled_title("", "MOP {{site}}", &v(&[("site", "A")])),
             "MOP A"
         );
-        assert_eq!(filled_title(" Mine ", "MOP [[site]]", &[]), "Mine");
+        assert_eq!(filled_title(" Mine ", "MOP {{site}}", &[]), "Mine");
     }
 
     #[test]
@@ -667,5 +695,14 @@ mod tests {
         assert_eq!((odd.x, odd.y, odd.w), (-MAX_OFFSET, 0, MIN_WINDOW.0));
         let none = MopBook::default().format();
         assert_eq!(MopBook::parse(&none), MopBook::default());
+    }
+
+    #[test]
+    fn old_blanks_become_braces() {
+        assert_eq!(
+            old_blanks_to_new("Change on [[ Site ]] for [[ticket]], [x] and [[]] stay"),
+            "Change on {{Site}} for {{ticket}}, [x] and [[]] stay"
+        );
+        assert_eq!(blanks(&old_blanks_to_new("[[site]] [[Site]]")), ["site"]);
     }
 }

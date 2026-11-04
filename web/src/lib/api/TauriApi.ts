@@ -43,6 +43,9 @@ import type {
   DeskData,
   PinItem,
   ProjectGlance,
+  WikiList,
+  WikiPage,
+  NoteVersion,
   PinOutcome,
   CardKind,
   CanvasCard,
@@ -578,7 +581,31 @@ export class TauriApi implements DataApi {
   }
   saveMopFile(id: string): Promise<string | null> {
     return call('save_mop_file', { id });
+  }  wiki(): Promise<WikiList> {
+    return call('wiki');
   }
+  wikiPage(id: string): Promise<WikiPage> {
+    return call('wiki_page', { id });
+  }
+  wikiPageByTitle(title: string): Promise<string | null> {
+    return call('wiki_page_by_title', { title });
+  }
+  wikiSpaceSave(id: string | null, name: string, color: string | null): Promise<string> {
+    return call('wiki_space_save', { id, name, color });
+  }
+  wikiSpaceDelete(id: string): Promise<void> {
+    return call('wiki_space_delete', { id });
+  }
+  wikiPlace(id: string, spaceId: string | null, parentId: string | null, position: number | null): Promise<void> {
+    return call('wiki_place', { id, spaceId, parentId, position });
+  }
+  noteVersions(id: string): Promise<NoteVersion[]> {
+    return call('note_versions', { id });
+  }
+  exportWikiSpace(spaceId: string | null, name: string): Promise<string | null> {
+    return call('export_wiki_space', { spaceId, name });
+  }
+
 
   search(query: string, today: IsoDate, commands: string[]): Promise<SearchResult> {
     return call('search', { query, today, commands });

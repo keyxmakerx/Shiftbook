@@ -48,6 +48,7 @@ pub mod tray;
 pub mod ts_constants;
 pub mod validate;
 pub mod week;
+pub mod wiki;
 pub mod windows;
 pub mod wipe;
 

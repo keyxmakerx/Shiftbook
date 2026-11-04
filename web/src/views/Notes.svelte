@@ -392,7 +392,7 @@
               type="button"
               class="btn"
               aria-pressed={current.template}
-              title="A template keeps its [[blanks]]; the notebook's New from this fills them in"
+              title={"A template keeps its {{blanks}}; the notebook's New from this fills them in"}
               onclick={() => current && void setTemplate(current, !current.template)}
             >
               <Icon name="copy" size={15} />{current.template ? 'Template' : 'Use as template'}

@@ -107,7 +107,7 @@
           <button type="button" class="btn primary" use:focusNow onclick={close}>OK</button>
         </div>
       {:else}
-        <p class="mut">Each file becomes an encrypted {words().mop} in Shiftbook. A template keeps its [[blanks]] to fill in each time. Your files stay where they are, unchanged.</p>
+        <p class="mut">Each file becomes an encrypted {words().mop} in Shiftbook. A template keeps its {'{{blanks}}'} to fill in each time. Your files stay where they are, unchanged.</p>
         <ul class="list">
           {#each rows as r, i (i)}
             <li>

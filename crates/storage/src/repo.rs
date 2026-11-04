@@ -355,7 +355,7 @@ async fn insert_frequency(conn: &mut SqliteConnection, f: &Frequency) -> Result<
     Ok(())
 }
 
-async fn upsert_setting(
+pub(crate) async fn upsert_setting(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     key: &str,
@@ -475,6 +475,8 @@ impl SqliteStore {
         }
         // Tickets from before items (round 15), or brought back by a restore, join theirs.
         link_items(&mut tx, user.id).await?;
+        // MOPs from before the wiki move into it, once (round 18).
+        crate::wiki::move_in(&mut tx, user.id).await?;
         tx.commit().await?;
         Ok(user)
     }
