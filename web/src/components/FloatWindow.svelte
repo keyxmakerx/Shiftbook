@@ -9,6 +9,7 @@
   import { closeWindow, focusWindow, moveWindow, resizeWindow, setWindowMode, windows, winKey } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
+  import MopRun from './MopRun.svelte';
   import { phone } from '../lib/phone.svelte';
   import { dragButton } from '../lib/rightDrag';
   import { paperMenu } from '../lib/menu.svelte';
@@ -29,6 +30,8 @@
   let saved = '';
   let note: Note | null = null;
   let isGone = $state(false);
+  /** A MOP on a ticket (round 18): the window shows its status, Read / Edit / Run and run log. */
+  let isMop = $state(false);
   let status = $state<'' | 'saving' | 'saved'>('');
   /** The newer text written somewhere else while this window had unsaved typing. */
   let clash = $state<string | null>(null);
@@ -82,8 +85,9 @@
       const n = await attempt(() => api.getNote(win.id));
       if (!n) return gone(true);
       note = n;
+      isMop = n.kind === 'mop' && !n.template;
       title = n.title;
-      sub = `${n.kind[0]!.toUpperCase()}${n.kind.slice(1)} note`;
+      sub = isMop ? 'MOP' : `${n.kind[0]!.toUpperCase()}${n.kind.slice(1)} note`;
       color = n.projectId ? projectColor(n.projectId) : 'var(--warn)';
       return n.body;
     }
@@ -255,6 +259,15 @@
   {#if win.mode !== 'rolled'}
     {#if isGone}
       <p class="gone">This is no longer here. It may have been deleted or taken out of the tray.</p>
+    {:else if isMop}
+      <div class="mopbody"><MopRun id={win.id} ontitle={(t) => (title = t)} /></div>
+      {#if win.mode !== 'full'}
+        <footer>
+          <span>MOP · saves as you type</span>
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <span class="grip" title="Drag to resize" onpointerdown={(e) => drag(e, true)}></span>
+        </footer>
+      {/if}
     {:else}
       <textarea
         class="body"
@@ -288,6 +301,13 @@
 </section>
 
 <style>
+  .mopbody {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: var(--paper);
+  }
+
   .wl {
     padding: 0 10px;
   }

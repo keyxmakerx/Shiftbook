@@ -14,7 +14,8 @@
   import { app, attempt } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
-  import { blocks, type Part } from '../lib/wikiText';
+  import { attachMop } from '../lib/mops.svelte';
+  import WikiText from '../components/WikiText.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -29,8 +30,8 @@
   let shownVersion = $state<NoteVersion | null>(null);
   let naming = $state<{ id: string | null; name: string } | null>(null);
   let moving = $state<{ space: string; parent: string } | null>(null);
+  let useOn = $state<string | null>(null);
 
-  const read = $derived(page ? blocks(page.note.body) : []);
   const needle = $derived(find.trim().toLowerCase());
   const match = (r: WikiRow) => !needle || r.title.toLowerCase().includes(needle);
   const isTemplate = $derived(!!page?.note.template);
@@ -323,18 +324,6 @@
   const KIND_WORD: Record<string, string> = { jot: 'Jot', daily: 'Daily note', meeting: 'Meeting note', page: 'Page', mop: 'MOP' };
 </script>
 
-{#snippet line(ps: Part[])}
-  {#each ps as p, i (i)}
-    {#if p.kind === 'link'}
-      <button type="button" class="wlink" onclick={() => void follow(p.title)}>{p.title}</button>
-    {:else if p.kind === 'blank'}
-      <span class="blank">{'{{'}{p.name}{'}}'}</span>
-    {:else if p.kind === 'code'}
-      <code>{p.text}</code>
-    {:else}{p.text}{/if}
-  {/each}
-{/snippet}
-
 {#snippet rows(list: WikiRow[])}
   <ul class="tree">
     {#each list.filter(match) as r (r.id)}
@@ -432,6 +421,23 @@
         {/each}
         <span class="here">{page.note.title}</span>
         <span class="grow"></span>
+        {#if isTemplate && !editing}
+          {#if useOn !== null}
+            <form
+              class="use"
+              onsubmit={(e) => {
+                e.preventDefault();
+                if (useOn?.trim() && page) attachMop(useOn.trim(), '', page.note.id);
+                useOn = null;
+              }}
+            >
+              <input class="text-in" bind:value={useOn} use:focusNow placeholder="Ticket, e.g. CHG0146615" aria-label="Ticket to use it on" />
+              <button type="submit" class="btn primary slim">Use</button>
+            </form>
+          {:else}
+            <button type="button" class="btn primary slim" onclick={() => (useOn = '')}><Icon name="ticket" size={13} /> Use on a ticket…</button>
+          {/if}
+        {/if}
         {#if editing}
           <button type="button" class="btn primary slim" onclick={() => void done()}><Icon name="check" size={13} /> Done</button>
         {:else}
@@ -483,23 +489,7 @@
               >{page.versions} earlier {page.versions === 1 ? 'version' : 'versions'}</button
             >{/if}{#if page.spaceName}{' · in '}<b>{page.spaceName}</b>{/if}
         </p>
-        <div class="read">
-          {#each read as b, i (i)}
-            {#if b.kind === 'heading'}
-              {#if b.level === 1}<h2>{@render line(b.parts)}</h2>{:else if b.level === 2}<h3>{@render line(b.parts)}</h3>{:else}<h4>{@render line(b.parts)}</h4>{/if}
-            {:else if b.kind === 'item'}
-              <p class="item" style:padding-left="{18 + b.depth * 18}px"><span class="mk">{b.marker}</span>{@render line(b.parts)}</p>
-            {:else if b.kind === 'code'}
-              <pre>{b.text}</pre>
-            {:else if b.kind === 'para'}
-              <p>{@render line(b.parts)}</p>
-            {:else}
-              <div class="gap"></div>
-            {/if}
-          {:else}
-            <p class="empty">Nothing written yet. Press Edit to start.</p>
-          {/each}
-        </div>
+        <WikiText body={page.note.body} onlink={(t) => void follow(t)} />
       {/if}
     {:else}
       <div class="welcome">
@@ -721,6 +711,11 @@
     flex: 1;
   }
 
+  .use {
+    display: flex;
+    gap: 6px;
+  }
+
   .moving {
     display: flex;
     flex-wrap: wrap;
@@ -802,92 +797,24 @@
     color: var(--ink);
   }
 
-  .read {
-    font-size: 14.5px;
-    line-height: 1.55;
-    user-select: text;
-  }
 
-  .read h2,
-  .read h3,
-  .read h4 {
-    font-family: var(--display);
-    margin: 14px 0 4px;
-  }
 
-  .read h2 {
-    font-size: 19px;
-  }
 
-  .read h3 {
-    font-size: 16.5px;
-  }
 
-  .read h4 {
-    font-size: 15px;
-  }
 
-  .read p {
-    margin: 2px 0;
-  }
 
-  .read .item {
-    position: relative;
-  }
 
-  .read .mk {
-    position: absolute;
-    margin-left: -18px;
-    color: var(--mut);
-    min-width: 16px;
-  }
 
-  .read .gap {
-    height: 8px;
-  }
 
-  pre,
-  code {
-    font-family: var(--mono);
-    background: color-mix(in srgb, var(--ink) 6%, transparent);
-    border-radius: 5px;
-  }
 
-  pre {
-    padding: 8px 10px;
-    margin: 6px 0;
-    white-space: pre-wrap;
-    font-size: 13px;
-  }
 
   code {
     padding: 1px 5px;
     font-size: 13px;
   }
 
-  .wlink {
-    border: 0;
-    background: none;
-    padding: 0;
-    font: inherit;
-    color: var(--accent);
-    border-bottom: 1px dashed var(--accent);
-    cursor: pointer;
-  }
 
-  .blank {
-    background: color-mix(in srgb, var(--warn) 14%, transparent);
-    border: 1px dashed var(--warn);
-    border-radius: 4px;
-    padding: 0 4px;
-    font: 600 13px var(--mono);
-    color: var(--warn);
-  }
 
-  .empty {
-    color: var(--mut);
-    font-style: italic;
-  }
 
   .welcome {
     max-width: 520px;

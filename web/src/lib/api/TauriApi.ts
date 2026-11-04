@@ -44,6 +44,9 @@ import type {
   PinItem,
   ProjectGlance,
   WikiList,
+  MopRun,
+  MopStatus,
+  MopTemplate,
   WikiPage,
   NoteVersion,
   PinOutcome,
@@ -581,7 +584,28 @@ export class TauriApi implements DataApi {
   }
   saveMopFile(id: string): Promise<string | null> {
     return call('save_mop_file', { id });
-  }  wiki(): Promise<WikiList> {
+  }  mopTemplates(ticket: string): Promise<MopTemplate[]> {
+    return call('mop_templates', { ticket });
+  }
+  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string): Promise<Note> {
+    return call('attach_mop', { ticket, templateId, pageId, values, title });
+  }
+  mopRuns(ticket: string | null): Promise<MopRun[]> {
+    return call('mop_runs', { ticket });
+  }
+  mopRun(id: string): Promise<MopRun | null> {
+    return call('mop_run', { id });
+  }
+  mopSetStatus(id: string, status: MopStatus): Promise<void> {
+    return call('mop_set_status', { id, status });
+  }
+  mopSetWindow(id: string, on: IsoDate | null, at: number | null): Promise<void> {
+    return call('mop_set_window', { id, on, at });
+  }
+  mopTick(id: string, ticks: string[]): Promise<Note> {
+    return call('mop_tick', { id, ticks });
+  }
+  wiki(): Promise<WikiList> {
     return call('wiki');
   }
   wikiPage(id: string): Promise<WikiPage> {

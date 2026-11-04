@@ -13,9 +13,10 @@
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
   import { openMenu } from '../lib/menu.svelte';
   import { logNoteSection } from '../lib/noteActions';
-  import { app, attempt, projectColor, projectName, words } from '../lib/store.svelte';
+  import { app, attempt, openWiki, projectColor, projectName, words } from '../lib/store.svelte';
+  import { openMopWindow } from '../lib/mops.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
+  import { pickMopFiles } from '../lib/mopbook.svelte';
   import Icon from '../components/Icon.svelte';
   import WikiLinks from '../components/WikiLinks.svelte';
 
@@ -235,7 +236,7 @@
       </div>
       {#if kind === 'mop'}
         <div class="mops">
-          <button type="button" class="btn" onclick={() => openMopBook()}><Icon name="book" size={15} /> Open the {words().book}</button>
+          <button type="button" class="btn" onclick={() => openWiki(null)}><Icon name="book" size={15} /> Templates in the wiki</button>
           <button type="button" class="btn" onclick={pickMopFiles} title="Copy text files in; you can also drop them anywhere"><Icon name="upload" size={15} /> Add {words().mop} files…</button>
         </div>
       {/if}
@@ -382,13 +383,15 @@
             <button
               type="button"
               class="btn"
-              title="Open it in the notebook: line numbers, Checklist mode, Find"
+              title={current.template ? 'Open it in the wiki' : 'Open it in a window: Read, Edit and Run'}
               onclick={async () => {
                 await flush();
-                if (current) openMopBook(current.id);
+                if (!current) return;
+                if (current.template) openWiki(current.id);
+                else openMopWindow(current.id);
               }}
             >
-              <Icon name="book" size={15} />Open in notebook
+              <Icon name="book" size={15} />{current.template ? 'Open in the wiki' : 'Open the MOP'}
             </button>
             <button
               type="button"

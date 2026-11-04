@@ -11,14 +11,14 @@ import { noticeReturn } from './resume';
 import { restoreTimer, timerActivity } from './timer.svelte';
 import { app, checkResume, loadAll, rollDay } from './store.svelte';
 import { loadWindows } from './windows.svelte';
-import { loadMopBook } from './mopbook.svelte';
+import { refreshMops } from './mops.svelte';
 
 /** Call from a component's `onMount`; returns the cleanup. */
 export function startShell(onProblem: (message: string) => void): () => void {
   loadAll()
     .then(() => {
       loadWindows();
-      loadMopBook();
+      void refreshMops();
       return Promise.all([checkResume('unlocked').then(openAway), restoreTimer(), refreshBell(), refreshPins()]);
     })
     .catch((e: unknown) => onProblem(errorMessage(e)));
@@ -54,6 +54,6 @@ export function followDay(): void {
   $effect(() => {
     void app.tray;
     void app.entries;
-    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins()]));
+    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins(), refreshMops()]));
   });
 }

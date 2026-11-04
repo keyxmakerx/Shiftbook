@@ -18,6 +18,7 @@
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
+  import { openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
 
   const away = $derived(bell.away);
   const now = $derived(away ? [] : bell.items.filter((i) => i.when === 'now'));
@@ -150,6 +151,8 @@
       }
       case 'due':
         return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${relativeDay(i.about.nextDue, app.today)}`;
+      case 'change_window':
+        return `MOP · ${STATUS_WORD[i.about.status]}`;
       case 'still_open':
         return i.about.tickets.join(' · ');
     }
@@ -187,7 +190,7 @@
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} class:late={i.about.kind === 'due' && i.about.state === 'overdue'} style:--i={n}>
               <span class="ico" aria-hidden="true">
                 <Icon
-                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : 'clock'}
+                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : 'clock'}
                   size={16}
                 />
               </span>
@@ -221,6 +224,12 @@
                     <button type="button" class="btn primary" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done</button>
                     <button type="button" class="btn" onclick={() => openDue(id, false)}>Open</button>
                   {/if}
+                {:else if i.about.kind === 'change_window'}
+                  {@const mop = i.about.mop}
+                  <button type="button" class="btn primary" onclick={() => {
+                    openMopWindow(mop);
+                    close();
+                  }}>Open the MOP</button>
                 {:else}
                   <button type="button" class="btn" onclick={showDay}>Show</button>
                 {/if}

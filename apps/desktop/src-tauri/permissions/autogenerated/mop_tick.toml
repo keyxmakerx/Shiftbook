@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mop-tick"
+description = "Enables the mop_tick command without any pre-configured scope."
+commands.allow = ["mop_tick"]
+
+[[permission]]
+identifier = "deny-mop-tick"
+description = "Denies the mop_tick command without any pre-configured scope."
+commands.deny = ["mop_tick"]

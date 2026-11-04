@@ -214,3 +214,97 @@ fn old_mops_move_into_the_wiki_once() {
         assert_eq!(s.wiki_spaces(me).await.unwrap().len(), 1);
     });
 }
+
+#[test]
+fn a_mop_on_its_ticket() {
+    use crate::change::MopFrom;
+    use shiftbook_core::change::MopStatus;
+    use time::macros::date;
+
+    let dir = TestDir::new("mop-runs");
+    block_on(async {
+        let (s, me) = setup(&dir).await;
+        s.tray_add(me, date!(2026 - 11 - 04), "CHG0146615")
+            .await
+            .unwrap();
+        let mut tpl = NoteInput {
+            kind: NoteKind::Mop,
+            body: "# {{ticket}} at {{site}}\n1. Tell {{who}}\n2. Swap it".into(),
+            ..page("Change for {{ticket}}")
+        };
+        tpl.template = true;
+        let tpl = s.create_note(me, &tpl).await.unwrap();
+        let values = vec![("site".to_string(), "Site B".to_string())];
+        let mop = s
+            .attach_mop(
+                me,
+                "chg0146615",
+                MopFrom::Template {
+                    id: tpl.id,
+                    values,
+                    title: String::new(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(mop.kind, NoteKind::Mop);
+        assert_eq!(mop.title, "Change for CHG0146615");
+        assert_eq!(
+            mop.body,
+            "# CHG0146615 at Site B\n1. Tell {{who}}\n2. Swap it"
+        );
+        // A ticket that isn't there: refused.
+        assert!(s
+            .attach_mop(me, "CHG404", MopFrom::Blank(String::new()))
+            .await
+            .is_err());
+
+        let runs = s.mop_runs(me, Some("CHG0146615")).await.unwrap();
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].status, MopStatus::Draft);
+        assert_eq!(runs[0].template, Some(*tpl.id.as_uuid()));
+        assert!(s
+            .templates_last_used(me)
+            .await
+            .unwrap()
+            .contains_key(tpl.id.as_uuid()));
+
+        s.set_mop_status(me, mop.id, MopStatus::Running)
+            .await
+            .unwrap();
+        s.set_mop_window(me, mop.id, Some((date!(2026 - 11 - 04), 22 * 60)))
+            .await
+            .unwrap();
+        assert!(s
+            .set_mop_window(me, mop.id, Some((date!(2026 - 11 - 04), 24 * 60)))
+            .await
+            .is_err());
+        let keys = shiftbook_core::mop::tick_keys(&mop.body);
+        s.tick_mop(me, mop.id, &[keys[1].clone()]).await.unwrap();
+        let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
+        assert_eq!(run.status, MopStatus::Running);
+        assert!(run.started_at.is_some());
+        assert_eq!(run.window, Some((date!(2026 - 11 - 04), 22 * 60)));
+        assert_eq!(run.tick_times.len(), 1);
+        assert_eq!(run.tick_times[0].0, keys[1]);
+        // Unticking drops its time.
+        s.tick_mop(me, mop.id, &[]).await.unwrap();
+        assert!(s
+            .mop_run(me, mop.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .tick_times
+            .is_empty());
+
+        // From a page: copied in, the page stays.
+        let how = make(&s, me, "Stack swap").await;
+        let copy = s
+            .attach_mop(me, "CHG0146615", MopFrom::Page(how))
+            .await
+            .unwrap();
+        assert_eq!(copy.body, "About Stack swap");
+        assert_eq!(s.get_note(me, how).await.unwrap().kind, NoteKind::Page);
+        assert_eq!(s.mop_runs(me, None).await.unwrap().len(), 2);
+    });
+}

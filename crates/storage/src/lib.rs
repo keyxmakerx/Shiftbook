@@ -21,6 +21,7 @@
 pub mod backup;
 pub mod boards;
 pub mod canvas;
+pub mod change;
 pub mod db;
 pub mod error;
 pub mod extras;

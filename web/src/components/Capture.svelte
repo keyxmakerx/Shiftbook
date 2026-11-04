@@ -33,7 +33,7 @@
     shownViews,
     words,
   } from '../lib/store.svelte';
-  import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
+  import { pickMopFiles } from '../lib/mopbook.svelte';
   import { copyStandup } from '../lib/standup';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -144,7 +144,6 @@
       .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', desk: true, run: () => openBoard(`project:${p.id}`) })),
     ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', desk: true, run: () => openBoard(`series:${m.id}`) })),
     { label: 'New note', group: 'Do', run: () => openNote(null) },
-    { label: `Open the ${words().book}`, group: 'Do', words: 'mop notepad tabs checklist template', run: () => openMopBook() },
     { label: `Add ${words().mop} files`, group: 'Do', words: 'import drop copy in text notepad++ template', run: pickMopFiles },
     { label: 'Wrap up the day', group: 'Do', words: 'end of day wrap-up', run: wrapUp },
     { label: 'Back up now', group: 'Do', words: 'backup save', run: backupNow },

@@ -43,8 +43,9 @@ the README for what it does.
   earlier versions, wiki pages first in Find, and writing a space out as Markdown files.
   Template blanks are `{{name}}`. Sharing a space with a team waits for Phase 2.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
-  Find), and the **MOP notebook** (round 16: tabs, Numbered/Minimal/Checklist, templates with
-  `[[blanks]]`, dropping text MOP files in, Save as a text file). Still to come, in this order:
+  Find). Round 18 retired the **MOP notebook** window: MOPs now live on their change ticket,
+  made from wiki templates with `{{blanks}}`, with a status, Read/Edit/Run, tick times, a run
+  log and a change window in the bell; MOP files dropped in become wiki pages or templates. Still to come, in this order:
   the meeting canvas, then imports (paste, Word .docx MOPs, OneNote sections), and the
   **notes map**.
   The Desk has a Notes card (Jot, Today's Daily note, Meetings); a strip that stays open on every

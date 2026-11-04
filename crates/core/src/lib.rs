@@ -9,6 +9,7 @@ pub mod bell;
 pub mod boards;
 pub mod canvas;
 pub mod capture;
+pub mod change;
 pub mod dates;
 pub mod error;
 pub mod fields;

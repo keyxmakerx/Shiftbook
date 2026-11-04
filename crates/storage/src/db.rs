@@ -109,6 +109,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "wiki: spaces, places and earlier versions",
         include_str!("../migrations/0020_wiki.sql"),
     ),
+    (
+        21,
+        "MOPs on their change ticket",
+        include_str!("../migrations/0021_mop_runs.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -326,6 +331,7 @@ mod tests {
                     "kind_code_defaults",
                     "list_options",
                     "meeting_series",
+                    "mop_runs",
                     "next_up_items",
                     "note_versions",
                     "notes",

@@ -14,6 +14,7 @@
   import { toast } from '../lib/toast.svelte';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
+  import MopChip from './MopChip.svelte';
   import WikiLinks from './WikiLinks.svelte';
 
   let { card, onchanged, onclose }: { card: CanvasCard; onchanged: () => void; onclose: () => void } = $props();
@@ -164,6 +165,7 @@
           </button>
           <span class="num mono">{t.number}</span>
           {#if !t.done}<span class="tag">Still open</span>{/if}
+          <MopChip ticket={t.number} title={entry.description} offer />
           {#if onEntry(t)}
             <button
               type="button"

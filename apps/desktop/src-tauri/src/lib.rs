@@ -10,6 +10,7 @@ mod api;
 mod backoff;
 mod boards;
 mod canvas;
+mod change;
 mod home;
 mod meetings;
 mod notes;
@@ -838,6 +839,13 @@ pub fn run() {
             boards::board_move,
             pins::pins,
             projects::project_glances,
+            change::mop_templates,
+            change::attach_mop,
+            change::mop_runs,
+            change::mop_run,
+            change::mop_set_status,
+            change::mop_set_window,
+            change::mop_tick,
             wiki::wiki,
             wiki::wiki_page,
             wiki::wiki_page_by_title,

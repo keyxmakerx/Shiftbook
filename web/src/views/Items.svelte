@@ -7,6 +7,7 @@
   // every ticket ticked done. Tasks join when Tasks are built.
   import { onMount, untrack } from 'svelte';
   import Icon from '../components/Icon.svelte';
+  import MopChip from '../components/MopChip.svelte';
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
   import { bringUpSection, followWords } from '../lib/bringUp';
@@ -224,6 +225,7 @@
                 <b class:mono={r.kind === 'ticket'}>{r.name}</b>
                 {#if r.title}<small>{r.title}</small>{/if}
               </button>
+              {#if r.ticket}<MopChip ticket={r.name} title={r.title} offer={!r.done} />{/if}
             </td>
             <td>{r.kind === 'ticket' ? 'Ticket' : 'Chore'}</td>
             <td>

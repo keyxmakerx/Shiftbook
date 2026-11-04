@@ -58,6 +58,8 @@ import type { ProjectGlanceView as GenProjectGlance } from './generated/ProjectG
 import type { WikiView as GenWikiList } from './generated/WikiView';
 import type { WikiPageView as GenWikiPage } from './generated/WikiPageView';
 import type { NoteVersionView as GenNoteVersion } from './generated/NoteVersionView';
+import type { MopRunView as GenMopRun } from './generated/MopRunView';
+import type { MopTemplateView as GenMopTemplate } from './generated/MopTemplateView';
 import type { PinOutcome as GenPinOutcome } from './generated/PinOutcome';
 import type { Prefs as GenPrefs } from './generated/Prefs';
 import type { ProjectView as GenProject } from './generated/ProjectView';
@@ -156,6 +158,8 @@ export type Checks = [
   Assert<Same<Ui.WikiList, GenWikiList>>,
   Assert<Same<Ui.WikiPage, GenWikiPage>>,
   Assert<Same<Ui.NoteVersion, GenNoteVersion>>,
+  Assert<Same<Ui.MopRun, GenMopRun>>,
+  Assert<Same<Ui.MopTemplate, GenMopTemplate>>,
   Assert<Same<Ui.PinOutcome, GenPinOutcome>>,
   Assert<Same<Ui.Prefs, GenPrefs>>,
   Assert<Same<Ui.Project, GenProject>>,
