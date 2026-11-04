@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mop-runs"
+description = "Enables the mop_runs command without any pre-configured scope."
+commands.allow = ["mop_runs"]
+
+[[permission]]
+identifier = "deny-mop-runs"
+description = "Denies the mop_runs command without any pre-configured scope."
+commands.deny = ["mop_runs"]

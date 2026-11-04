@@ -214,8 +214,8 @@ fn templates_fill_their_blanks_into_a_new_mop() {
         let (s, me, other) = setup(&dir).await;
         let mut input = note(
             NoteKind::Mop,
-            "Swap at [[site]]",
-            "# Swap at [[Site]]\n1. Ticket [[ticket]]\n2. Tell [[site]]",
+            "Swap at {{site}}",
+            "# Swap at {{Site}}\n1. Ticket {{ticket}}\n2. Tell {{site}}",
         );
         input.tags = "mop".into();
         input.template = true;
@@ -230,7 +230,7 @@ fn templates_fill_their_blanks_into_a_new_mop() {
         assert_eq!(made.title, "Swap at North");
         assert_eq!(
             made.body,
-            "# Swap at North\n1. Ticket [[ticket]]\n2. Tell North"
+            "# Swap at North\n1. Ticket {{ticket}}\n2. Tell North"
         );
         assert_eq!(made.kind, NoteKind::Mop);
         assert_eq!(made.tags, ["mop"]);

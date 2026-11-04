@@ -70,7 +70,8 @@ export function focusWindow(key: string): void {
 }
 
 /** Open a window for a record, or bring its window back if it already has one. */
-export function openWindow(kind: CardKind, id: string): void {
+/** `size` overrides the usual window size for a new window (a MOP opens bigger, round 18). */
+export function openWindow(kind: CardKind, id: string, size?: { w: number; h: number }): void {
   const key = `${kind}:${id}`;
   const there = find(key);
   if (there) {
@@ -82,7 +83,7 @@ export function openWindow(kind: CardKind, id: string): void {
   }
   // Cascade new windows from the top left of the work area.
   const n = windows.list.filter((w) => w.mode === 'open').length;
-  const spot: WindowSpot = { kind, id, mode: phone.on ? 'full' : 'open', x: 80 + (n % 6) * 28, y: 40 + (n % 6) * 28, ...SIZE };
+  const spot: WindowSpot = { kind, id, mode: phone.on ? 'full' : 'open', x: 80 + (n % 6) * 28, y: 40 + (n % 6) * 28, ...(size ?? SIZE) };
   windows.list.push(spot);
   while (windows.list.length > MAX_WINDOWS) windows.list.shift();
   windows.front = key;

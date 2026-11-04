@@ -2,10 +2,10 @@
 // entry's notes, ticket numbers in it become its tickets (rules in crates/core/src/notes.rs,
 // jot_to_entry). It lands on today, or the day open on Day, and the jot moves to the archive.
 import { api } from './api';
-import type { Note } from './api';
+import type { Note, NoteKind } from './api';
 import { fmtMinutes } from './format';
 import type { MenuSection } from './menu.svelte';
-import { app, attempt, flashEntry, refresh, timeButtons } from './store.svelte';
+import { app, attempt, flashEntry, openWiki, refresh, timeButtons } from './store.svelte';
 import { toast } from './toast.svelte';
 
 /** Log `note` as an entry with `minutes`; `after` runs once it's done (and after Undo).
@@ -45,4 +45,54 @@ export function logNoteSection(note: Note, after?: () => void, spot?: { x: numbe
       act: () => void logNote(note, m, after, spot),
     })),
   };
+}
+
+const KINDS: { kind: NoteKind; label: string }[] = [
+  { kind: 'jot', label: 'Jot' },
+  { kind: 'daily', label: 'Daily' },
+  { kind: 'meeting', label: 'Meeting' },
+];
+
+async function setKind(note: Note, kind: NoteKind): Promise<Note | undefined> {
+  return attempt(() =>
+    api.updateNote(note.id, { kind, title: note.title, body: note.body, projectId: note.projectId, tags: note.tags.join(', ') }),
+  );
+}
+
+/** Change a note's kind, with Undo. */
+export async function changeKind(note: Note, kind: NoteKind, after?: () => void): Promise<void> {
+  if (note.kind === kind || !(await setKind(note, kind))) return;
+  await refresh();
+  after?.();
+  const name = KINDS.find((k) => k.kind === kind)?.label ?? kind;
+  toast(`“${note.title}” is a ${name} note now`, 'Undo', () => void setKind(note, note.kind).then(refresh).then(() => after?.()));
+}
+
+/** Make a note a wiki page and open it there (round 18), with Undo. */
+export async function moveToWiki(note: Note, after?: () => void): Promise<void> {
+  if (!(await setKind(note, 'page'))) return;
+  await refresh();
+  after?.();
+  openWiki(note.id);
+  toast(`“${note.title}” is a wiki page now. Use its ⋯ menu to put it in a space.`, 'Undo', () =>
+    void setKind(note, note.kind).then(refresh).then(() => after?.()),
+  );
+}
+
+/** "Change to ▸ Jot / Daily / Meeting" and "Move to the wiki…" for any note's menu (round 18).
+ *  Wiki pages and MOPs get neither: they live in the wiki. */
+export function noteKindSections(note: Note, after?: () => void): MenuSection[] {
+  if (note.kind === 'page' || note.kind === 'mop') return [];
+  return [
+    {
+      head: 'Change to',
+      choices: KINDS.map((k) => ({
+        label: k.label,
+        color: null,
+        checked: note.kind === k.kind,
+        act: () => void changeKind(note, k.kind, after),
+      })),
+    },
+    { items: [{ label: 'Move to the wiki…', icon: 'book', act: () => void moveToWiki(note, after) }] },
+  ];
 }

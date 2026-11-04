@@ -39,9 +39,13 @@ the README for what it does.
   (it is the Desk: piles, drawers and full-screen boards with the Archive too), plus boxes, the
   toolbox and folding from round 12; the meeting canvas and pictures in notes are next (see
   `docs/CANVAS.md`).
+- **Wiki (round 18):** spaces, pages under pages, `[[links]]` with Linked from and On tickets,
+  earlier versions, wiki pages first in Find, and writing a space out as Markdown files.
+  Template blanks are `{{name}}`. Sharing a space with a team waits for Phase 2.
 - **Notes:** the core is in (kinds, project and tags, search, archive, auto-archive, notes in
-  Find), and the **MOP notebook** (round 16: tabs, Numbered/Minimal/Checklist, templates with
-  `[[blanks]]`, dropping text MOP files in, Save as a text file). Still to come, in this order:
+  Find). Round 18 retired the **MOP notebook** window: MOPs now live on their change ticket,
+  made from wiki templates with `{{blanks}}`, with a status, Read/Edit/Run, tick times, a run
+  log and a change window in the bell; MOP files dropped in become wiki pages or templates. Still to come, in this order:
   the meeting canvas, then imports (paste, Word .docx MOPs, OneNote sections), and the
   **notes map**.
   The Desk has a Notes card (Jot, Today's Daily note, Meetings); a strip that stays open on every
@@ -61,7 +65,8 @@ the README for what it does.
   fields on tickets and projects can be defined (link fields already work on tickets) but values
   can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
   given a project rolls up under it); the Planner
-  has no keyboard shortcut yet (1 to 7 are Desk, Day, Timesheet, Notes, Repeating, Lists, Settings).
+  has no keyboard shortcut yet (round 18: 1 to 3 are the tabs Desk, Day and Timesheet, 4 opens
+  the Organise menu with Tickets, Projects, Repeating, Lists and Notes, and Ctrl , is Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)
 - **S1** `apps/server` with Axum reusing core/storage; Postgres migrations verified in CI.

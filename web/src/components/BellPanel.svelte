@@ -18,6 +18,7 @@
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
+  import { openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
 
   const away = $derived(bell.away);
   const now = $derived(away ? [] : bell.items.filter((i) => i.when === 'now'));
@@ -110,7 +111,7 @@
     if (card) await bringUp(card[0], card[1], title, app.bringUpDays[0] ?? addDays(app.today, 1));
   }
 
-  const KIND_WORD: Record<CardKind, string> = { entry: 'Work', tray: 'Ticket', note: 'Note', inbox: 'Jot' };
+  const KIND_WORD: Record<CardKind, string> = { entry: 'Work', tray: 'Ticket', note: 'Note', inbox: 'Scrap' };
 
   async function openSheet() {
     await selectDay(app.today);
@@ -150,6 +151,8 @@
       }
       case 'due':
         return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${relativeDay(i.about.nextDue, app.today)}`;
+      case 'change_window':
+        return `MOP · ${STATUS_WORD[i.about.status]}`;
       case 'still_open':
         return i.about.tickets.join(' · ');
     }
@@ -187,14 +190,14 @@
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} class:late={i.about.kind === 'due' && i.about.state === 'overdue'} style:--i={n}>
               <span class="ico" aria-hidden="true">
                 <Icon
-                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : 'clock'}
+                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : 'clock'}
                   size={16}
                 />
               </span>
               <span class="txt"><b>{i.title}</b><small>{detail(i)}</small></span>
               <span class="btns">
                 {#if i.about.kind === 'timesheet'}
-                  <button type="button" class="btn primary" onclick={() => void openSheet()}>Open the crib sheet</button>
+                  <button type="button" class="btn primary" onclick={() => void openSheet()}>Open the Timesheet</button>
                   <button type="button" class="btn" onclick={snoozeSheet}>Remind me at {clockText(snoozeHour(nowMinutes()))}</button>
                 {:else if i.about.kind === 'meeting_done'}
                   {@const { series, name, minutes } = i.about}
@@ -221,6 +224,12 @@
                     <button type="button" class="btn primary" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done</button>
                     <button type="button" class="btn" onclick={() => openDue(id, false)}>Open</button>
                   {/if}
+                {:else if i.about.kind === 'change_window'}
+                  {@const mop = i.about.mop}
+                  <button type="button" class="btn primary" onclick={() => {
+                    openMopWindow(mop);
+                    close();
+                  }}>Open the MOP</button>
                 {:else}
                   <button type="button" class="btn" onclick={showDay}>Show</button>
                 {/if}

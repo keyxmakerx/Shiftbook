@@ -5,21 +5,23 @@
   // The card is the record itself: changes show everywhere else too.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
-  import { bringUp, bringUpSection } from '../lib/bringUp';
+  import { bringUpSection } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
   import { fmtMinutes, relativeDay } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
-  import { app, attempt, focusLog, openNote, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
+  import { app, attempt, focusLog, openNote, openWiki, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { logNoteSection } from '../lib/noteActions';
+  import { logNoteSection, noteKindSections } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openFullWindow, openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
+  import MopChip from './MopChip.svelte';
+  import { openMopWindow } from '../lib/mops.svelte';
   import RenameBox from './RenameBox.svelte';
   import { renaming, startRename } from '../lib/rename.svelte';
   import { workTickets } from '../lib/workTickets';
@@ -214,7 +216,13 @@
     else if (card.entry) {
       closePanel();
       app.drawer = card.entry.id;
-    } else if (card.note) openNote(card.note.id);
+    } else if (card.note) {
+      // Wiki pages and templates open in the wiki, a MOP in its own window (round 18).
+      const n = card.note;
+      if (n.kind === 'page' || (n.kind === 'mop' && n.template)) openWiki(n.id);
+      else if (n.kind === 'mop') openMopWindow(n.id);
+      else openNote(n.id);
+    }
     else if (card.inbox) void logScrap();
     else if (card.tray) {
       // A ticket has no details screen: its notepad opens on a screen of its own.
@@ -250,9 +258,12 @@
           {
             head: note.title,
             items: [
-              { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
+              note.kind === 'page' || (note.kind === 'mop' && note.template)
+                ? { label: 'Open in the wiki', icon: 'book', side: true, act: () => openWiki(note.id) }
+                : note.kind === 'mop'
+                  ? { label: 'Open the MOP', icon: 'book', side: true, act: () => openMopWindow(note.id) }
+                  : { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
               { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
-              { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
               pinMenuItem('note', note.id),
               {
                 label: 'Archive',
@@ -273,6 +284,7 @@
           // A card the owner put somewhere passes its spot on in storage; one placed
           // automatically passes on where it shows now.
           ...(note.kind === 'jot' ? [logNoteSection(note, onchanged, card.placed ? undefined : { x: card.x, y: card.y })] : []),
+          ...noteKindSections(note, onchanged),
         ],
       };
     }
@@ -401,6 +413,7 @@
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
+    <MopChip ticket={t.item.ticket} />
     <span class="sub" class:muted={!t.item.note}>
       {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}
     </span>

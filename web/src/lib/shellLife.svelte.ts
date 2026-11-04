@@ -11,15 +11,15 @@ import { noticeReturn } from './resume';
 import { restoreTimer, timerActivity } from './timer.svelte';
 import { app, checkResume, loadAll, rollDay } from './store.svelte';
 import { loadWindows } from './windows.svelte';
-import { loadMopBook } from './mopbook.svelte';
+import { refreshMops } from './mops.svelte';
 
 /** Call from a component's `onMount`; returns the cleanup. */
 export function startShell(onProblem: (message: string) => void): () => void {
   loadAll()
     .then(() => {
       loadWindows();
-      loadMopBook();
-      return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins(), openAway()]);
+      void refreshMops();
+      return Promise.all([checkResume('unlocked').then(openAway), restoreTimer(), refreshBell(), refreshPins()]);
     })
     .catch((e: unknown) => onProblem(errorMessage(e)));
   const unguard = installCopyGuard();
@@ -36,8 +36,7 @@ export function startShell(onProblem: (message: string) => void): () => void {
   for (const name of events) window.addEventListener(name, onActivity, { passive: true });
   const timer = setInterval(async () => {
     if (app.ready && (await rollDay())) {
-      void checkResume('new_day');
-      void openAway();
+      void checkResume('new_day').then(openAway);
     }
     if (app.ready) void refreshBell();
     if (app.ready) void refreshPins();
@@ -55,6 +54,6 @@ export function followDay(): void {
   $effect(() => {
     void app.tray;
     void app.entries;
-    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins()]));
+    if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins(), refreshMops()]));
   });
 }

@@ -21,6 +21,8 @@
   import WindowLayer from '../components/WindowLayer.svelte';
   import Day from '../views/Day.svelte';
   import Lists from '../views/Lists.svelte';
+  import Projects from '../views/Projects.svelte';
+  import Wiki from '../views/Wiki.svelte';
   import Notes from '../views/Notes.svelte';
   import Items from '../views/Items.svelte';
   import Repeating from '../views/Repeating.svelte';
@@ -51,9 +53,11 @@
     day: { label: 'Day', icon: 'calendar' },
     notes: { label: 'Notes', icon: 'note' },
     timesheet: { label: 'Timesheet', icon: 'sheet' },
+    wiki: { label: 'Wiki', icon: 'book' },
     repeating: { label: 'Repeating', icon: 'repeat' },
     lists: { label: 'Lists', icon: 'list' },
-    items: { label: 'Items', icon: 'ticket' },
+    items: { label: 'Tickets', icon: 'ticket' },
+    projects: { label: 'Projects', icon: 'box' },
     settings: { label: 'Settings', icon: 'sliders' },
   };
 
@@ -159,6 +163,10 @@
           <Items />
         {:else if app.view === 'lists'}
           <Lists />
+        {:else if app.view === 'projects'}
+          <Projects />
+        {:else if app.view === 'wiki'}
+          <Wiki />
         {:else}
           <Settings />
         {/if}

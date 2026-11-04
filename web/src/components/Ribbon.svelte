@@ -6,18 +6,84 @@
   import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, guardedWords, guards, protection, protectNow } from '../lib/protection.svelte';
-  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView, shownViews } from '../lib/store.svelte';
+  import { bell } from '../lib/bell.svelte';
+  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView, shownTabs } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { VIEW_NAMES } from '../lib/keys';
+  import { ORGANISE, VIEW_NAMES, type View } from '../lib/keys';
+  import type { IconName } from '../lib/icons';
   import { hasWork } from '../lib/words';
   import Icon from './Icon.svelte';
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
 
   // Desk is the Canvas, where the day happens; Day is for starting and ending it (round 9).
-  // Repeating and Lists came in round 15; the Timesheet hides at home. The Planner joins this
-  // list once it's built.
-  const VIEW_LIST = $derived(shownViews().map((id, i) => ({ id, label: VIEW_NAMES[id], key: String(i + 1) })));
+  // Round 18: tabs are only where you work; the places you go to look after your things sit
+  // in the Organise menu after them, and Settings is the gear by Lock. The Timesheet hides at
+  // home. The Planner joins the tabs once it's built.
+  const VIEW_LIST = $derived(shownTabs().map((id, i) => ({ id, label: VIEW_NAMES[id], key: String(i + 1) })));
+  const organiseKey = $derived(String(VIEW_LIST.length + 1));
+  const inOrganise = $derived(ORGANISE.includes(app.view));
+
+  const ORGANISE_ROWS: Record<string, { icon: IconName; sub: string }> = {
+    items: { icon: 'ticket', sub: 'Open, followed up and done' },
+    projects: { icon: 'box', sub: 'Hours, tickets and the board for each' },
+    repeating: { icon: 'repeat', sub: 'Renewals, chores and regular events' },
+    lists: { icon: 'list', sub: 'Checklists you reset and use again' },
+    notes: { icon: 'note', sub: 'Daily notes, meetings and jots' },
+  };
+
+  /** A count beside each row: open tickets and things due, from the bell. */
+  function count(v: View): { n: number; warn: boolean } | null {
+    if (v === 'items') {
+      const n = bell.items.reduce((sum, i) => sum + (i.about.kind === 'still_open' ? i.about.tickets.length : 0), 0);
+      return n ? { n, warn: false } : null;
+    }
+    if (v === 'repeating') {
+      const n = bell.items.filter((i) => i.about.kind === 'due').length;
+      return n ? { n, warn: true } : null;
+    }
+    return null;
+  }
+
+  let organiseBtn: HTMLButtonElement | undefined = $state();
+  let menuEl: HTMLElement | undefined = $state();
+
+  function go(v: View) {
+    app.organiseOpen = false;
+    setView(v);
+  }
+
+  // Opening the menu (click, or the number key after the tabs) puts focus on its first row.
+  $effect(() => {
+    if (!app.organiseOpen) return;
+    queueMicrotask(() => menuEl?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+    const away = (e: PointerEvent) => {
+      if (!menuEl?.contains(e.target as Node) && !organiseBtn?.contains(e.target as Node)) app.organiseOpen = false;
+    };
+    window.addEventListener('pointerdown', away, true);
+    return () => window.removeEventListener('pointerdown', away, true);
+  });
+
+  function menuKeys(e: KeyboardEvent) {
+    const rows = [...(menuEl?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [])];
+    const at = rows.indexOf(document.activeElement as HTMLElement);
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      app.organiseOpen = false;
+      organiseBtn?.focus();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      rows[(at + step + rows.length) % rows.length]?.focus();
+    } else if (e.key.length === 1 && /[a-z]/i.test(e.key)) {
+      const hit = rows.find((r) => r.dataset.name?.toLowerCase().startsWith(e.key.toLowerCase()));
+      if (hit) {
+        e.preventDefault();
+        hit.click();
+      }
+    }
+  }
 
   let viewsEl: HTMLElement | undefined = $state();
   let pill = $state({ left: 0, width: 0 });
@@ -66,7 +132,7 @@
             ...(hasWork(app.prefs?.useMode)
               ? [
                   {
-                    label: 'What to enter for this week',
+                    label: 'Open the Timesheet for this week',
                     icon: 'sheet' as const,
                     top: true,
                     act: () => {
@@ -74,7 +140,7 @@
                     },
                   },
                   {
-                    label: 'Book as holiday (8 h)',
+                    label: 'Book a holiday (8 h)',
                     icon: 'sun' as const,
                     top: true,
                     act: () => void holiday(day.date),
@@ -154,6 +220,16 @@
     <button class="icon-btn" type="button" onclick={onLock} title="Lock now (Ctrl+L)">
       <Icon name="lock" size={15} /><span>Lock</span>
     </button>
+    <button
+      class="icon-btn gear"
+      type="button"
+      aria-pressed={app.view === 'settings'}
+      onclick={() => setView('settings')}
+      title="Settings (Ctrl+,)"
+      aria-label="Settings"
+    >
+      <Icon name="sliders" size={15} />
+    </button>
   </div>
   <nav class="views" aria-label="Views" bind:this={viewsEl}>
     <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px"></span>
@@ -162,6 +238,32 @@
         {v.label}
       </button>
     {/each}
+    <button
+      type="button"
+      class="organise"
+      bind:this={organiseBtn}
+      aria-pressed={inOrganise}
+      aria-haspopup="menu"
+      aria-expanded={app.organiseOpen}
+      title="Tickets, Projects, Repeating, Lists and Notes ({organiseKey})"
+      onclick={() => (app.organiseOpen = !app.organiseOpen)}
+    >
+      {inOrganise ? VIEW_NAMES[app.view] : 'Organise'} <span class="caret" aria-hidden="true">▾</span>
+    </button>
+    {#if app.organiseOpen}
+      <!-- svelte-ignore a11y_interactive_supports_focus -->
+      <div class="paper omenu" role="menu" aria-label="Organise" tabindex="-1" bind:this={menuEl} onkeydown={menuKeys}>
+        {#each ORGANISE as v, i (v)}
+          {@const c = count(v)}
+          {#if v === 'notes'}<hr />{/if}
+          <button type="button" role="menuitem" class:on={app.view === v} data-name={VIEW_NAMES[v]} onclick={() => go(v)} style:--k={i}>
+            <Icon name={ORGANISE_ROWS[v]!.icon} size={16} />
+            <span class="txt"><b>{VIEW_NAMES[v]}</b><small>{ORGANISE_ROWS[v]!.sub}</small></span>
+            {#if c}<span class="n" class:warn={c.warn}>{c.n}{c.warn ? ' due' : ' open'}</span>{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
   </nav>
   <div class="days" class:grow={!grown} aria-label="Last four weeks">
     {#each app.ribbon as week, w (week.weekStart)}
@@ -247,6 +349,92 @@
 
   .views button[aria-pressed='true'] {
     color: var(--ink);
+  }
+
+  .views .caret {
+    font-size: 10px;
+    margin-left: 2px;
+    color: var(--mut);
+  }
+
+  .omenu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 300px;
+    padding: 6px;
+    border-radius: 10px;
+    box-shadow: var(--lift);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: drop calc(0.2s * var(--m)) var(--spring);
+    transform-origin: top right;
+  }
+
+  @keyframes drop {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.97);
+    }
+  }
+
+  .omenu hr {
+    border: 0;
+    border-top: 1px solid var(--rule);
+    margin: 3px 6px;
+  }
+
+  .views .omenu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 9px;
+    border-radius: 7px;
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .views .omenu button:hover,
+  .views .omenu button:focus-visible,
+  .views .omenu button.on {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    outline: none;
+  }
+
+  .omenu .txt {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .omenu .txt b {
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+
+  .omenu .txt small {
+    color: var(--mut);
+    font-size: 12px;
+  }
+
+  .omenu .n {
+    white-space: nowrap;
+    font: 600 11.5px var(--ui);
+    color: var(--ink-2);
+  }
+
+  .omenu .n.warn {
+    color: #fff;
+    background: var(--warn);
+    border-radius: 9px;
+    padding: 0 7px;
+  }
+
+  .gear[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
   }
 
   .pill {

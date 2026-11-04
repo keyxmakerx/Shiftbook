@@ -112,7 +112,7 @@
     <h3>The Desk</h3>
     <p class="sub">
       Entry cards leave the Desk on their own after a while. Nothing is deleted: they stay on
-      Day, the Timesheet, Items and Find. Put a card away sooner from its menu, or with Tidy up.
+      Day, the Timesheet, Items and Find. Archive a card sooner from its menu, or with Clear old cards.
       Pinned cards always stay.
     </p>
     <label class="cz-row">

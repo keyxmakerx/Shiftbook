@@ -4,8 +4,8 @@
   // files themselves are never changed. Dragging files over the app shows where to drop.
   import { api } from '../lib/api';
   import { hasFiles, looksLikeText } from '../lib/mop';
-  import { mopImport, offerFiles, openMopBook } from '../lib/mopbook.svelte';
-  import { attempt, words } from '../lib/store.svelte';
+  import { mopImport, offerFiles } from '../lib/mopbook.svelte';
+  import { attempt, openWiki, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
   import { focusNow } from '../lib/focus';
@@ -40,10 +40,11 @@
     const done = await attempt(() => api.importMops(files));
     busy = false;
     if (!done) return;
-    for (const n of done.made) openMopBook(n.id);
+    const first = done.made[0];
+    if (first) openWiki(first.id);
     if (done.made.length) {
       const n = done.made.length;
-      toast(`${n} ${words().mop}${n === 1 ? '' : 's'} copied in and encrypted. Your files are unchanged.`);
+      toast(`${n} ${n === 1 ? 'file' : 'files'} copied into the wiki and encrypted. Your files are unchanged.`);
     }
     if (done.skipped.length) {
       skipped = done.skipped;
@@ -107,7 +108,7 @@
           <button type="button" class="btn primary" use:focusNow onclick={close}>OK</button>
         </div>
       {:else}
-        <p class="mut">Each file becomes an encrypted {words().mop} in Shiftbook. A template keeps its [[blanks]] to fill in each time. Your files stay where they are, unchanged.</p>
+        <p class="mut">Each file becomes an encrypted wiki page, or a template that keeps its {'{{blanks}}'} to fill in each time you attach it to a ticket. Your files stay where they are, unchanged.</p>
         <ul class="list">
           {#each rows as r, i (i)}
             <li>
@@ -116,7 +117,7 @@
                 <span class="name">{r.name}</span>
               </label>
               <div class="seg" role="group" aria-label="Bring {r.name} in as">
-                <button type="button" aria-pressed={r.as === 'mop'} disabled={!r.take} onclick={() => (r.as = 'mop')}>{words().mop}</button>
+                <button type="button" aria-pressed={r.as === 'mop'} disabled={!r.take} onclick={() => (r.as = 'mop')}>Wiki page</button>
                 <button type="button" aria-pressed={r.as === 'template'} disabled={!r.take} onclick={() => (r.as = 'template')}>Template</button>
               </div>
             </li>

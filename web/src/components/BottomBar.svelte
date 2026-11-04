@@ -7,11 +7,26 @@
   import { fmtHours, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { chipMenu, pins } from '../lib/pins.svelte';
-  import { app, ribbonDay, words } from '../lib/store.svelte';
+  import { app, ribbonDay } from '../lib/store.svelte';
   import { closeWindow, openWindow, setWindowMode, toggleFromBar, windows, winKey } from '../lib/windows.svelte';
   import type { PinItem, WindowSpot } from '../lib/api';
   import Icon from './Icon.svelte';
-  import { book, closeMopBook, setBookMode, toggleBookFromBar, tabInfo } from '../lib/mopbook.svelte';
+  import { openMopWindow } from '../lib/mops.svelte';
+
+  const changes = $derived(
+    bell.items.flatMap((i) =>
+      i.about.kind === 'change_window'
+        ? [
+            {
+              mop: i.about.mop,
+              ticket: i.about.ticket,
+              title: i.title,
+              at: `${String(Math.floor(i.about.at / 60)).padStart(2, '0')}:${String(i.about.at % 60).padStart(2, '0')}`,
+            },
+          ]
+        : [],
+    ),
+  );
 
   // Titles come from the windows once they have loaded; until then a short kind name.
   const KIND: Record<string, string> = { entry: 'Entry notepad', tray: 'Ticket notepad', note: 'Note', inbox: 'Scrap' };
@@ -66,35 +81,18 @@
         <span class="label">{windows.titles[key] ?? KIND[w.kind]}</span>
       </button>
     {/each}
-    {#if book.shown}
-      <button
-        type="button"
-        class="tb"
-        class:min={book.mode === 'min'}
-        class:front={book.mode !== 'min'}
-        title={book.mode === 'min' ? 'Show the notebook' : 'Minimise the notebook'}
-        onclick={toggleBookFromBar}
-        oncontextmenu={(e) => {
-          e.preventDefault();
-          openMenu(e.currentTarget as HTMLElement, {
-            sections: [
-              {
-                items: [
-                  { label: book.mode === 'min' ? 'Show it' : 'Minimise', icon: book.mode === 'min' ? 'open' : 'minus', act: toggleBookFromBar },
-                  { label: 'Roll up', icon: 'up', act: () => setBookMode('rolled') },
-                  { label: 'Full screen', icon: 'expand', act: () => setBookMode('full') },
-                  { label: 'Close', icon: 'x', danger: true, act: closeMopBook },
-                ],
-              },
-            ],
-          });
-        }}
-      >
-        <span class="ic book" aria-hidden="true"></span>
-        <span class="label">{book.active && tabInfo.titles[book.active] ? `${words().book} · ${tabInfo.titles[book.active]}` : words().book}</span>
-      </button>
-    {/if}
   </div>
+  <!-- Change windows coming up today (round 18), like pins with a chase day. -->
+  {#if changes.length}
+    <div class="pins" role="toolbar" aria-label="Change windows">
+      {#each changes as c (c.mop)}
+        <button type="button" class="pin due" title={c.title} onclick={() => openMopWindow(c.mop)}>
+          <Icon name="clock" size={12} />
+          <span class="label">{c.ticket} · {c.at}</span>
+        </button>
+      {/each}
+    </div>
+  {/if}
   {#if pins.list.length}
     <div class="pins" role="toolbar" aria-label="Pinned">
       {#each pins.list as p (p.kind + p.id)}
@@ -254,10 +252,6 @@
 
   .ic.tray {
     background: var(--ok);
-  }
-
-  .ic.book {
-    background: #8a4c7b;
   }
 
   .pins {

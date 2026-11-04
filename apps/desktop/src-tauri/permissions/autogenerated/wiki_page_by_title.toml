@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-wiki-page-by-title"
+description = "Enables the wiki_page_by_title command without any pre-configured scope."
+commands.allow = ["wiki_page_by_title"]
+
+[[permission]]
+identifier = "deny-wiki-page-by-title"
+description = "Denies the wiki_page_by_title command without any pre-configured scope."
+commands.deny = ["wiki_page_by_title"]

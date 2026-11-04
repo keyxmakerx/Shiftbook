@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ways around mockups</title>
+<!-- Round 18 mockups: the top bar today and with fewer tabs, and one name for each thing.
+     States (window.SB_START or the hash): #tabs, #names. Made for 1200 x 520. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --accent: #3d5bb0; --ok: #2e8a5a; --bad: #b03a2e; --warn: #9f5a06; --wiki: #6a4fb3;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.45 var(--ui); padding: 12px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .lab { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 12px 2px 6px; }
+  .lab.new { color: var(--accent); }
+  .ribbon { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.9); border-radius: 10px; padding: 7px 12px; box-shadow: var(--shadow); font-size: 12.5px; }
+  .ribbon b { font: 650 15px var(--display); }
+  .ribbon .alpha { font-size: 10px; color: var(--mut); }
+  .ribbon .cap { min-width: 230px; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; color: var(--mut); }
+  .ribbon .lock, .ribbon .gear { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 3px 9px; }
+  .ribbon .tabs { margin-left: auto; display: flex; gap: 2px; }
+  .ribbon .tabs span { padding: 4px 9px; border-radius: 7px; color: var(--mut); position: relative; }
+  .ribbon .tabs span.on { background: var(--ink); color: #fff; }
+  .ribbon .tabs span sup { font-size: 9px; color: var(--mut); margin-left: 2px; }
+  .ribbon .tabs span.gone { text-decoration: line-through; color: var(--bad); opacity: .75; }
+  .ribbon .tabs span.new { outline: 2px dashed var(--accent); outline-offset: -2px; color: var(--ink); }
+  .days { display: flex; gap: 2px; margin-left: 8px; }
+  .days i { width: 5px; height: 18px; border-radius: 2px; background: #c9d3dd; }
+  .days i.h { height: 18px; background: linear-gradient(to top, #3d8bb0 60%, #c9d3dd 60%); }
+  .notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+  .note { background: var(--paper); border-radius: 9px; box-shadow: var(--shadow); padding: 10px 12px; font-size: 13px; }
+  .note h4 { margin: 0 0 4px; font: 600 14px var(--display); }
+  .note p { margin: 0; color: var(--mut); }
+  .note .arrow { color: var(--accent); font-weight: 700; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--paper); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; font-size: 13px; }
+  th { text-align: left; font: 700 10px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--mut); background: #f4f1e9; padding: 7px 10px; }
+  td { padding: 7px 10px; border-top: 1px solid var(--rule); vertical-align: top; }
+  td.old s { color: var(--bad); text-decoration-thickness: 1px; }
+  td.old span { color: var(--mut); }
+  td.new { font-weight: 600; color: var(--ok); }
+  td small { color: var(--mut); display: block; font-weight: 400; }
+  .dd { position: relative; }
+  .ddbtn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 3px 10px; color: var(--ink); font-weight: 600; }
+  .ddbtn.open { background: var(--ink); color: #fff; }
+  .menu { position: absolute; right: 0; top: 34px; width: 290px; background: var(--paper); border-radius: 10px; box-shadow: 0 2px 4px rgba(29,33,38,.08), 0 22px 40px -18px rgba(29,33,38,.45); padding: 6px; z-index: 2; }
+  .menu .it { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 7px; font-size: 13.5px; }
+  .menu .it:hover, .menu .it.sel { background: color-mix(in srgb, var(--accent) 10%, #fff); }
+  .menu .it small { color: var(--mut); font-size: 12px; display: block; }
+  .menu .it .n { white-space: nowrap; margin-left: auto; font: 600 11.5px var(--ui); color: var(--mut); }
+  .menu .it .n.due { color: #fff; background: var(--warn); border-radius: 9px; padding: 0 7px; }
+  .menu .it kbd { font: 11px var(--ui); color: var(--mut); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; }
+  .menu hr { border: 0; border-top: 1px solid var(--rule); margin: 4px 6px; }
+  .menu .ic { width: 22px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="state" id="tabs">
+  <div class="lab">Today: 8 tabs</div>
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log or note something…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span>Timesheet<sup>3</sup></span><span>Notes<sup>4</sup></span><span>Repeating<sup>5</sup></span><span>Lists<sup>6</sup></span><span>Items<sup>7</sup></span><span>Settings<sup>8</sup></span></div>
+    <div class="days"><i class="h"></i><i class="h"></i><i></i><i class="h"></i><i class="h"></i><i></i><i></i></div>
+  </div>
+
+  <div class="lab new">Proposed: 6 tabs and a gear</div>
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log, note or find…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span class="new">Tickets<sup>3</sup></span><span class="new">Wiki<sup>4</sup></span><span>Timesheet<sup>5</sup></span><span>Repeating<sup>6</sup></span></div>
+    <span class="gear">⚙</span>
+    <div class="days"><i class="h"></i><i class="h"></i><i></i><i class="h"></i><i class="h"></i><i></i><i></i></div>
+  </div>
+
+  <div class="notes">
+    <div class="note"><h4>Items <span class="arrow">→</span> Tickets</h4><p>Same screen, the name you use. Its Done tab replaces the Done tickets board; the Desk's “Done today” pile stays and its See all opens it.</p></div>
+    <div class="note"><h4>Notes <span class="arrow">→</span> Wiki</h4><p>Pages and MOP templates live here. Daily notes, meetings and jots show as notebooks in its side list (the same boards as now).</p></div>
+    <div class="note"><h4>Lists <span class="arrow">→</span> inside Repeating</h4><p>A second tab on Repeating: “Repeating · Lists”. Both are things that come back. Or a List can become a wiki template (card above).</p></div>
+    <div class="note"><h4>Settings <span class="arrow">→</span> ⚙</h4><p>A gear by Lock, and Ctrl , as a key. Find's “Settings: …” lines still jump straight to a section.</p></div>
+    <div class="note"><h4>Keys</h4><p>1 to 6 follow the tabs. Find's “Go to” list now shows the real keys (it was showing old ones; fixed in this PR).</p></div>
+    <div class="note"><h4>Unchanged</h4><p>Capture box, Lock, the day bars, the bottom bar, the bell and right-click menus.</p></div>
+  </div>
+</div>
+
+<div class="state" id="group">
+  <div class="lab">Today: 8 tabs</div>
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log or note something…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span>Timesheet<sup>3</sup></span><span>Notes<sup>4</sup></span><span>Repeating<sup>5</sup></span><span>Lists<sup>6</sup></span><span>Items<sup>7</sup></span><span>Settings<sup>8</sup></span></div>
+  </div>
+  <div class="lab new">Proposed: 4 places you work, one menu for the rest, and a gear</div>
+  <div class="ribbon" style="margin-bottom:330px">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log, note or find…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span>Timesheet<sup>3</sup></span><span class="new">Wiki<sup>4</sup></span></div>
+    <span class="dd"><span class="ddbtn open">Organise ▾<sup style="color:#cfd6dd">5</sup></span>
+      <div class="menu">
+        <div class="it sel"><span class="ic">🎫</span><span>Tickets<small>open, done, and tasks</small></span><span class="n">3 open</span></div>
+        <div class="it"><span class="ic">📁</span><span>Projects<small>hours, tickets and the board for each</small></span><span class="n">5</span></div>
+        <div class="it"><span class="ic">🔁</span><span>Repeating<small>renewals, chores, regular events</small></span><span class="n due">2 due</span></div>
+        <div class="it"><span class="ic">☑</span><span>Lists<small>checklists you reset and use again</small></span><span class="n">4</span></div>
+        <hr>
+        <div class="it"><span class="ic">📝</span><span>Notes<small>Daily notes, meetings and jots</small></span><span class="n">22</span></div>
+      </div>
+    </span>
+    <span class="gear">⚙</span>
+  </div>
+</div>
+
+<div class="state" id="names">
+  <table>
+    <tr><th style="width:24%">Thing</th><th style="width:40%">Called today</th><th>One name</th></tr>
+    <tr><td>The list of today's tickets</td><td class="old"><span>Tickets tray, </span><s>References</s>, <s>Done tickets tray</s>, <s>the tray</s></td><td class="new">Tickets tray</td></tr>
+    <tr><td>A quick line kept for later</td><td class="old"><span>Scrap, Inbox scrap, </span><s>Jot</s> <span>(in the bell; Jot is also a note)</span></td><td class="new">Scrap<small>Jot stays the note kind only</small></td></tr>
+    <tr><td>Taking things off the Desk for good</td><td class="old"><s>Put away (off the Desk)</s>, <span>Archive, </span><s>Back on the Desk</s> / <span>Bring back</span></td><td class="new">Archive · Bring back<small>the drawer is already called Archive</small></td></tr>
+    <tr><td>Piles by project</td><td class="old"><span>Tidy into stacks, </span><s>Tidy the Desk</s> <span>(in Find)</span></td><td class="new">Tidy into stacks<small>Find fixed in this PR</small></td></tr>
+    <tr><td>Clearing old cards off</td><td class="old"><s>Tidy up…</s>, <s>Tidy the Desk</s> <span>(dialog title)</span></td><td class="new">Clear old cards…</td></tr>
+    <tr><td>Bringing something back on a day</td><td class="old"><span>Follow up, </span><s>Follow up tomorrow</s> <span>(twice in one menu), </span><s>Bring it up then</s>, <span>chase day</span></td><td class="new">Follow up · Tomorrow / Pick a day<small>one menu section; pins use the same day</small></td></tr>
+    <tr><td>The writing under an entry</td><td class="old"><span>Notepad, </span><s>Notes / next step</s></td><td class="new">Notepad</td></tr>
+    <tr><td>The timesheet</td><td class="old"><span>Timesheet, </span><s>crib sheet</s>, <s>What to enter</s></td><td class="new">Timesheet</td></tr>
+    <tr><td>Holiday</td><td class="old"><s>Book as holiday (8 h)</s>, <s>Book today as holiday (8 h)</s></td><td class="new">Book a holiday (8 h)</td></tr>
+  </table>
+</div>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'tabs');
+  (document.getElementById(pick) || document.getElementById('tabs')).classList.add('on');
+  try { parent.postMessage({ sbMockHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+</script>
+</body>
+</html>

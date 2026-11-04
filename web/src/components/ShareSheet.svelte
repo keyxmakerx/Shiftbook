@@ -73,7 +73,7 @@
       {#if tickets.length}
         <label class="choice">
           <input type="radio" name="share-where" value="tray" bind:group={where} />
-          <span><b>Put in today's Done tickets tray</b><small>15 min each, change it later</small></span>
+          <span><b>Put in today's Tickets tray</b><small>15 min each, change it later</small></span>
         </label>
       {/if}
       <label class="choice">

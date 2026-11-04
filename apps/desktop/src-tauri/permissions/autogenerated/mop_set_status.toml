@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mop-set-status"
+description = "Enables the mop_set_status command without any pre-configured scope."
+commands.allow = ["mop_set_status"]
+
+[[permission]]
+identifier = "deny-mop-set-status"
+description = "Denies the mop_set_status command without any pre-configured scope."
+commands.deny = ["mop_set_status"]

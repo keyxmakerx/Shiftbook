@@ -6,7 +6,7 @@
   //             show underneath with Copy. A project also shows its time and tickets.
   //   Board:    its own canvas. Cards keep their own spots here, apart from the Desk.
   //   List:     the boards inside it, then its cards, with a box to filter them. The
-  //             Archive's notes have Bring back; Done tickets lists every ticket ticked done.
+  //             Archive's notes have Bring back.
   // Esc or ✕ goes back to the Desk.
   import { onMount } from 'svelte';
   import { api } from '../lib/api';
@@ -19,6 +19,7 @@
   import { openWindow } from '../lib/windows.svelte';
   import CanvasCard from './CanvasCard.svelte';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
 
   const SAVE_AFTER_MS = 700;
   const PAD = 40;
@@ -216,7 +217,7 @@
   async function bringBackCard(c: Card) {
     const ref = { kind: c.kind, id: c.id };
     if (!(await attempt(() => api.canvasUnfile(ref, 40, 40).then(() => true)))) return;
-    toast('Back on the Desk, top left', 'Undo', () => {
+    toast('Brought back to the Desk, top left', 'Undo', () => {
       void attempt(() => api.canvasFile(ref, 'archive')).then(reload);
     });
     await reload();
@@ -385,13 +386,13 @@
             {/if}
             {#if data.cards.length}
               <div class="list-head">
-                <h2 class="lbl">{data.key === 'archive' ? 'Archived notes and put-away cards' : data.key === 'done' ? 'Ticked done, newest first' : 'On this board'}</h2>
+                <h2 class="lbl">{data.key === 'archive' ? 'Archived notes and cards' : 'On this board'}</h2>
                 {#if data.cards.length > 5}
                   <input
                     class="filter"
                     type="search"
                     bind:value={filter}
-                    placeholder={data.key === 'done' ? 'Filter by ticket or note' : 'Filter'}
+                    placeholder="Filter"
                     aria-label="Filter this list"
                   />
                 {/if}
@@ -411,7 +412,7 @@
                       </button>
                     {:else if data.key === 'archive' && (c.entry || c.tray)}
                       <button type="button" class="btn slim" onclick={() => void bringBackCard(c)}>
-                        <Icon name="undo" size={13} />Back on the Desk
+                        <Icon name="undo" size={13} />Bring back
                       </button>
                     {:else if c.note}
                       {@const n = c.note}
@@ -426,10 +427,8 @@
             {#if !data.children.length && !data.cards.length}
               <p class="empty">
                 {data.key === 'archive'
-                  ? 'Nothing is archived. Notes you archive, ones left alone for a while, and cards you put away wait here.'
-                  : data.key === 'done'
-                    ? 'No tickets ticked done in the last 90 days. Older ones turn up in Find.'
-                    : 'Nothing here yet.'}
+                  ? 'Nothing is archived. Notes you archive, ones left alone for a while, and cards you archive wait here.'
+                  : 'Nothing here yet.'}
               </p>
             {/if}
           </div>
@@ -463,6 +462,7 @@
                   disabled={data.key === 'daily' || data.key.startsWith('series:') || current?.kind === 'daily'}
                 />
                 <textarea class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
+                <WikiLinks text={body} />
                 <div class="foot">
                   <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>
                   {#if current}

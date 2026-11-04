@@ -10,15 +10,18 @@ mod api;
 mod backoff;
 mod boards;
 mod canvas;
+mod change;
 mod home;
 mod meetings;
 mod notes;
 mod phone;
 mod pins;
+mod projects;
 mod protect;
 mod session;
 #[cfg(test)]
 mod test_support;
+mod wiki;
 
 use serde::Serialize;
 use shiftbook_storage::backup::{BackupFile, BackupSummary, BACKUP_EXTENSION};
@@ -315,6 +318,66 @@ fn file_name_of(path: &std::path::Path) -> String {
     path.file_name()
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default()
+}
+
+/// Write a wiki space (or, with no id, the pages in no space) as Markdown files: one per page,
+/// pages under pages in folders, all in a new folder named after the space inside the folder
+/// the user picks (the UI warns first that the files are not encrypted). Returns the new
+/// folder's name, or `None` if the dialog was cancelled. Maps to `DataApi.exportWikiSpace()`.
+#[tauri::command]
+async fn export_wiki_space(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    state: State<'_, VaultSession>,
+    space_id: Option<String>,
+    name: String,
+) -> Result<Option<String>, CommandError> {
+    let (store, owner) = state.data().await?;
+    let space: Option<uuid::Uuid> = space_id
+        .as_deref()
+        .map(|s| s.parse().map_err(|_| CommandError::InvalidInput))
+        .transpose()?;
+    let files = wiki::space_files(&store, owner, space).await?;
+    #[cfg(mobile)]
+    {
+        let _ = (app, window, files, name);
+        Err(CommandError::InvalidInput)
+    }
+    #[cfg(desktop)]
+    {
+        let dialog = app
+            .dialog()
+            .file()
+            .set_parent(&window)
+            .set_title("Choose where to write the space as Markdown files");
+        let Some(tauri_plugin_dialog::FilePath::Path(root)) =
+            dialog_pick(move || dialog.blocking_pick_folder()).await?
+        else {
+            return Ok(None);
+        };
+        // A new folder each time, so nothing already there is overwritten.
+        let base = shiftbook_core::wiki::file_name(&name);
+        let mut folder = root.join(&base);
+        let mut n = 2;
+        while folder.exists() {
+            folder = root.join(format!("{base} ({n})"));
+            n += 1;
+        }
+        for (path, text) in files {
+            let file = folder.join(&path);
+            if let Some(dir) = file.parent() {
+                std::fs::create_dir_all(dir).map_err(|_| CommandError::StorageError)?;
+            }
+            let text = if cfg!(windows) {
+                text.replace('\n', "\r\n")
+            } else {
+                text
+            };
+            std::fs::write(&file, text).map_err(|_| CommandError::StorageError)?;
+        }
+        std::fs::create_dir_all(&folder).map_err(|_| CommandError::StorageError)?;
+        Ok(Some(file_name_of(&folder)))
+    }
 }
 
 /// Save a MOP as a plain text file where the user chooses (the UI warns first that the file
@@ -775,6 +838,22 @@ pub fn run() {
             boards::board,
             boards::board_move,
             pins::pins,
+            projects::project_glances,
+            change::mop_templates,
+            change::attach_mop,
+            change::mop_runs,
+            change::mop_run,
+            change::mop_set_status,
+            change::mop_set_window,
+            change::mop_tick,
+            wiki::wiki,
+            wiki::wiki_page,
+            wiki::wiki_page_by_title,
+            wiki::wiki_space_save,
+            wiki::wiki_space_delete,
+            wiki::wiki_place,
+            wiki::note_versions,
+            export_wiki_space,
             pins::pin,
             pins::unpin,
             pins::follow_ups,

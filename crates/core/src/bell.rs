@@ -86,6 +86,19 @@ pub enum BellAbout {
         /// Its warning window in days.
         warn: u32,
     },
+    /// A MOP's change window today (round 18, see `crate::change`).
+    ChangeWindow {
+        /// The MOP's note id.
+        mop: String,
+        /// The ticket it's on.
+        ticket: String,
+        /// The window's day, `YYYY-MM-DD`.
+        on: String,
+        /// Its start, minutes after local midnight.
+        at: u32,
+        /// Where the MOP stands.
+        status: crate::change::MopStatus,
+    },
     /// Tickets worked on but not finished.
     StillOpen {
         /// Their numbers, oldest first.
@@ -290,6 +303,7 @@ pub fn while_away(items: &[BellItem], last_open: Option<Date>, today: Date) -> V
             }
             BellAbout::FollowUp { on, .. } => new_day(on),
             BellAbout::Meeting { .. }
+            | BellAbout::ChangeWindow { .. }
             | BellAbout::StillOpen { .. }
             | BellAbout::MeetingDone { .. }
             | BellAbout::Timesheet { .. } => false,

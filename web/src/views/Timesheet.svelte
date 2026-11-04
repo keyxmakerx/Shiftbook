@@ -129,7 +129,7 @@
 
 <div class="ts">
   <div class="ts-top">
-    <h2>What to enter · week of {sheet ? dayMonth(sheet.weekStart) : ''}</h2>
+    <h2>Timesheet · week of {sheet ? dayMonth(sheet.weekStart) : ''}</h2>
     <span class="nav">
       <button class="btn" type="button" aria-label="Previous week" onclick={() => (anchor = addDays(anchor, -7))}>
         <Icon name="left" size={15} />

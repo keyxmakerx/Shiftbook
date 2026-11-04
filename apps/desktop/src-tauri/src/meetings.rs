@@ -284,6 +284,13 @@ pub async fn bell_for(
     if let Some(item) = timesheet_reminder(store, owner, today, now).await? {
         items.insert(0, item);
     }
+    // Change windows (round 18): the ones starting soon or running go first.
+    let windows = crate::change::window_items(store, owner, today, now).await?;
+    let (soon, later): (Vec<_>, Vec<_>) = windows
+        .into_iter()
+        .partition(|i| i.when == shiftbook_core::bell::BellWhen::Now);
+    items.splice(0..0, soon);
+    items.extend(later);
     let due = crate::home::due_things(store, owner, today).await?;
     Ok(with_due(items, &due, today))
 }

@@ -6,6 +6,11 @@ from round 15 on. Rounds 8 to 14 are on an earlier sheet in another account that
 reach; their approved decisions are in `docs/DECISIONS.md`. Rounds 1 to 7 are on
 https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T.
 
+Round 18 (`rounds/r18.json`) went on the rounds 8 to 14 sheet
+(https://claude.ai/artifact/FDWT4t9XNKtL2n22wvJcx1), because the session that wrote it couldn't
+reach the round 15 sheet. The owner chose to keep using that sheet from round 18 on. Another session's round 18 for the round 15 sheet,
+"Three quick calls", is `rounds/r18-quick.json`.
+
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.
 
@@ -14,7 +19,7 @@ rounds arrive live and the page never needs a reload or republish to show them.
 |---|---|---|
 | `cards/<id>` | Claude (owner-only rule) | One decision card. See `rounds/r01.json` for the shape. |
 | `meta/board` | Claude (owner-only rule) | Current round number, heading, intro. |
-| `decisions/<card id>` | The page | `{choice: approve\|change\|draft, note, answers, version, title, at, edited}` |
+| `decisions/<card id>` | The page | `{choice: approve\|change\|draft, note, answers, version, title, at, edited}`. `approve` is the yes button, `change` the no button. |
 | `notes/<id>` | The page, then Claude | `{text, at}` from the owner; Claude adds `seen`, `reply`, `replied_at`. |
 
 ## Adding a round
@@ -24,9 +29,19 @@ rounds arrive live and the page never needs a reload or republish to show them.
 3. Write each output file with an ArtifactData `batch` (`set` on `cards/<id>`, `meta/board`).
 4. Archive the previous round: `update` its cards with `{"archived": true}`.
 
-Checklist cards: a question with `"type": "many"` and unticked options is a try-it list; the page
-shows "3 of 8 ticked" under it. Round 17 (`rounds/r17-checklist.json`) is built this way: one card
-per new change, then one per part of the app.
+Keep cards simple (the owner's ask after round 17, which had 15 cards and about 85 tick boxes):
+- One card asks one thing, in `"ask"`. The page shows two big buttons, **Looks good** and
+  **Needs work** (or the card's own `"yes"` / `"no"` labels), and an optional note. A note is never
+  required. See `rounds/r18-quick.json`.
+- Say exactly where in the app to look: `"where"` is a list of numbered steps (which view, what to
+  click), shown in a "Where to look" box. More detail is welcome; vague cards are not.
+- Only put on the sheet what genuinely needs the owner's call. Merge related changes into one card,
+  keep the body to a few lines, and use no `questions`, picks or checklists in new cards. Anything
+  else goes in the thread or in `docs/DECISIONS.md`.
+- Tabs are **To do** (unanswered, current round), **Done** (answered and archived, searchable, each
+  card folded until tapped) and **Notes**. The page is built for a phone first.
+
+Older cards with `questions` (radio, checkbox or text) still render in Done.
 
 Changing a card: bump its `version`. A decision made on an older version shows as **Re-check**.
 If the owner is typing in that card, the page offers "Show the new version" instead of swapping it.

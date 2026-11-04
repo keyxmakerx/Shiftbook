@@ -12,7 +12,7 @@
   import { toIsoDate } from '../lib/dates';
   import { KIND_LABEL } from '../lib/notes';
   import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
-  import type { SettingsSection } from '../lib/keys';
+  import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
   import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
   import {
     app,
@@ -20,6 +20,7 @@
     flashEntry,
     focusLog,
     openNote,
+    openWiki,
     projectById,
     projectColor,
     refresh,
@@ -28,9 +29,11 @@
     ribbonWeekOf,
     selectDay,
     setView,
+    shownTabs,
+    shownViews,
     words,
   } from '../lib/store.svelte';
-  import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
+  import { pickMopFiles } from '../lib/mopbook.svelte';
   import { copyStandup } from '../lib/standup';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -50,7 +53,12 @@
     /** Extra words Find matches but doesn't show. */
     words?: string;
     run: () => void | Promise<void>;
+    /** Needs the Desk or a full-screen board, which the phone layout doesn't have. */
+    desk?: boolean;
   };
+  /** Wiki pages and MOP templates open in the wiki (round 18). */
+  const inWiki = (n: Note) => n.kind === 'page' || (n.kind === 'mop' && n.template);
+
   type Hit =
     | { kind: 'entry'; entry: Entry }
     | { kind: 'scrap'; item: InboxItem }
@@ -113,13 +121,14 @@
   }
 
   const commands = $derived.by((): Command[] => [
-    { label: 'Go to Desk', group: 'Go to', keys: '1', run: () => setView('desk') },
-    { label: 'Go to Day', group: 'Go to', keys: '2', run: () => setView('day') },
-    { label: 'Go to Timesheet', group: 'Go to', keys: '3', run: () => setView('timesheet') },
-    { label: 'Go to Notes', group: 'Go to', keys: '4', run: () => setView('notes') },
-    { label: 'Go to Settings', group: 'Go to', keys: '5', run: () => setView('settings') },
-    { label: 'Boards', group: 'Go to', words: 'full screen projects meetings', run: () => openBoard('desk') },
-    { label: 'Daily notes', group: 'Go to', words: 'board', run: () => openBoard('daily') },
+    // Every view, with the number key the tabs really have (home use has no Timesheet, so the
+    // keys move); the Organise menu's pages and Settings have none of their own.
+    ...shownViews().map((v): Command => {
+      const tab = shownTabs().indexOf(v);
+      return { label: `Go to ${VIEW_NAMES[v]}`, group: 'Go to', keys: tab >= 0 ? String(tab + 1) : v === 'settings' ? 'Ctrl ,' : undefined, run: () => setView(v) };
+    }),
+    { label: 'Boards', group: 'Go to', desk: true, words: 'full screen projects meetings', run: () => openBoard('desk') },
+    { label: 'Daily notes', group: 'Go to', desk: true, words: 'board', run: () => openBoard('daily') },
     {
       label: 'Done tickets',
       group: 'Go to',
@@ -129,23 +138,23 @@
         setView('items');
       },
     },
-    { label: 'Archive', group: 'Go to', words: 'board archived', run: () => openBoard('archive') },
+    { label: 'Archive', group: 'Go to', desk: true, words: 'board archived', run: () => openBoard('archive') },
     ...app.projects
       .filter((p) => !p.archived)
-      .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', run: () => openBoard(`project:${p.id}`) })),
-    ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', run: () => openBoard(`series:${m.id}`) })),
+      .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', desk: true, run: () => openBoard(`project:${p.id}`) })),
+    ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', desk: true, run: () => openBoard(`series:${m.id}`) })),
     { label: 'New note', group: 'Do', run: () => openNote(null) },
-    { label: `Open the ${words().book}`, group: 'Do', words: 'mop notepad tabs checklist template', run: () => openMopBook() },
     { label: `Add ${words().mop} files`, group: 'Do', words: 'import drop copy in text notepad++ template', run: pickMopFiles },
     { label: 'Wrap up the day', group: 'Do', words: 'end of day wrap-up', run: wrapUp },
     { label: 'Back up now', group: 'Do', words: 'backup save', run: backupNow },
     { label: 'Copy for stand-up', group: 'Do', words: 'yesterday standup clipboard', run: copyStandup },
-    { label: 'Fit everything', group: 'Do', words: 'desk zoom', run: () => onDesk('fit') },
-    { label: 'Tidy the Desk', group: 'Do', words: 'pile loose cards by project', run: () => onDesk('tidy') },
-    { label: 'Timeline', group: 'Do', words: 'desk lay out', run: () => onDesk('timeline') },
+    { label: 'Fit everything', group: 'Do', desk: true, words: 'desk zoom', run: () => onDesk('fit') },
+    { label: 'Tidy into stacks', group: 'Do', desk: true, words: 'tidy the desk pile loose cards by project', run: () => onDesk('tidy') },
+    { label: 'Timeline', group: 'Do', desk: true, words: 'desk lay out', run: () => onDesk('timeline') },
     {
       label: app.justToday ? 'Show every card again' : 'Just today on the Desk',
       group: 'Do',
+      desk: true,
       words: 'fade focus today',
       run: () => {
         setView('desk');
@@ -156,7 +165,7 @@
       ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
       : []),
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
-    { label: 'Book today as holiday (8 h)', group: 'Do', words: 'leave vacation', run: () => holiday() },
+    { label: 'Book a holiday (8 h)', group: 'Do', words: 'today leave vacation', run: () => holiday() },
     ...(guards().copy || guards().screens
       ? [
           {
@@ -175,6 +184,9 @@
       : []),
     ...SETTINGS.map((p): Command => ({ label: `Settings: ${p.label}`, group: 'Settings', words: p.words, run: () => settings(p.id) })),
   ]);
+
+  /** On a phone, commands for the Desk and boards are left out: they'd do nothing there. */
+  const usable = $derived(phone.on ? commands.filter((c) => !c.desk) : commands);
 
   /** Commands in their groups' order, keeping the ranking inside each group. */
   function grouped(list: Command[]): Command[] {
@@ -264,12 +276,12 @@
     }
     if (now.trim().toLowerCase() === 'help') {
       seen = null;
-      hits = grouped(commands).map((command): Hit => ({ kind: 'command', command }));
+      hits = grouped(usable).map((command): Hit => ({ kind: 'command', command }));
       sel = 0;
       return;
     }
     timer = setTimeout(async () => {
-      const list = commands;
+      const list = usable;
       const [c, found, day] = await Promise.all([
         api.parseCapture(now, app.today).catch(() => null),
         api
@@ -293,9 +305,11 @@
           : []),
         ...(found
           ? [
+              // Wiki pages come first (round 18): they're what you wrote down to find again.
+              ...found.notes.filter(inWiki).map((note): Hit => ({ kind: 'note', note })),
               ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
               ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
-              ...found.notes.map((note): Hit => ({ kind: 'note', note })),
+              ...found.notes.filter((n) => !inWiki(n)).map((note): Hit => ({ kind: 'note', note })),
               ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ]
           : []),
@@ -347,7 +361,8 @@
       await selectDay(hit.date);
       setView(hit.sheet ? 'timesheet' : 'day');
     } else if (hit.kind === 'note') {
-      openNote(hit.note.id);
+      if (inWiki(hit.note)) openWiki(hit.note.id);
+      else openNote(hit.note.id);
     } else if (hit.kind === 'ticket') {
       openWindow('tray', hit.ticket.id);
     } else if (hit.kind === 'entry') {
@@ -423,7 +438,9 @@
       : hit.kind === 'ticket'
         ? 'Tickets'
         : hit.kind === 'note'
-          ? 'Notes'
+          ? inWiki(hit.note)
+            ? 'Wiki'
+            : 'Notes'
           : hit.kind === 'scrap'
             ? 'Inbox'
             : hit.kind === 'day'

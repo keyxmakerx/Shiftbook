@@ -44,7 +44,7 @@
       asking = added;
       askedMany = added.length > 1;
     }
-    else toast('Those tickets are already in the tray.');
+    else toast('Those tickets are already in the Tickets tray.');
   }
 
   /** Answer "time on it so far?" for one ticket. */
@@ -113,7 +113,7 @@
 
 <article class="paper card">
   <h3>
-    <span class="title"><Icon name="tray" size={16} /> {words().tickets}</span>
+    <span class="title"><Icon name="tray" size={16} /> {words().tickets} tray</span>
     <span class="right">
       <button
         type="button"
@@ -198,7 +198,7 @@
             links={item.links}
             color={project ? projectColor(item.projectId) : 'var(--accent)'}
             onRemove={() => void removeTray(item)}
-            removeLabel="Take out of the tray"
+            removeLabel="Take out of the Tickets tray"
           />
           {#if oneLine(item.note)}
             <input
@@ -247,7 +247,7 @@
       {/each}
     </ul>
   {:else}
-    <p class="empty-note">Nothing in the tray yet for this day.</p>
+    <p class="empty-note">Nothing in the Tickets tray yet for this day.</p>
   {/if}
   {#if app.tray && app.tray.carried.length > 0}
     <div class="carried">
@@ -313,6 +313,7 @@
     display: inline-flex;
     gap: 7px;
     align-items: center;
+    white-space: nowrap;
   }
 
   .right {

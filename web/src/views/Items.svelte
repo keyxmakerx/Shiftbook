@@ -1,11 +1,13 @@
 <script lang="ts">
-  // Items (round 15, card r15-things): one place for every ticket and chore, open or done.
+  // Tickets (round 15 as Items, card r15-things; renamed in round 18): one place for every
+  // ticket and chore, open or done.
   // Tickets come from their items (one per ticket number, however many days and entries it's
   // on); chores are the repeating things. Open, Follow up and Done split them; the project and
   // kind chips and the find box narrow them. It takes over the Done tickets board: Done lists
   // every ticket ticked done. Tasks join when Tasks are built.
   import { onMount, untrack } from 'svelte';
   import Icon from '../components/Icon.svelte';
+  import MopChip from '../components/MopChip.svelte';
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
   import { bringUpSection, followWords } from '../lib/bringUp';
@@ -38,7 +40,6 @@
 
   let tickets = $state<ItemSummary[]>([]);
   let find = $state('');
-  let project = $state<'all' | 'none' | string>('all');
   let kind = $state<'all' | Kind>('all');
 
   async function load() {
@@ -109,7 +110,7 @@
     return rows.filter(
       (r) =>
         (kind === 'all' || r.kind === kind) &&
-        (project === 'all' || (project === 'none' ? !r.projectId : r.projectId === project)) &&
+        (app.itemsProject === 'all' || (app.itemsProject === 'none' ? !r.projectId : r.projectId === app.itemsProject)) &&
         (!q || `${r.name} ${r.title} ${r.home}`.toLowerCase().includes(q)),
     );
   });
@@ -169,9 +170,9 @@
   ];
 </script>
 
-<section class="paper items" aria-label="Items">
+<section class="paper items" aria-label="Tickets">
   <header>
-    <h1>Items</h1>
+    <h1>Tickets</h1>
     <div class="seg tabs" role="tablist" aria-label="Which items">
       {#each TABS as t (t.id)}
         <button type="button" role="tab" aria-selected={app.itemsTab === t.id} onclick={() => (app.itemsTab = t.id)}>
@@ -185,11 +186,11 @@
   </header>
 
   <div class="chips" role="group" aria-label="Filter">
-    <button type="button" class="chip" aria-pressed={project === 'all'} onclick={() => (project = 'all')}>All projects</button>
+    <button type="button" class="chip" aria-pressed={app.itemsProject === 'all'} onclick={() => (app.itemsProject = 'all')}>All projects</button>
     {#each projects as p (p.id)}
-      <button type="button" class="chip" style:--c={projectColor(p.id)} aria-pressed={project === p.id} onclick={() => (project = p.id)}>{p.name}</button>
+      <button type="button" class="chip" style:--c={projectColor(p.id)} aria-pressed={app.itemsProject === p.id} onclick={() => (app.itemsProject = p.id)}>{p.name}</button>
     {/each}
-    <button type="button" class="chip" aria-pressed={project === 'none'} onclick={() => (project = 'none')}>No project</button>
+    <button type="button" class="chip" aria-pressed={app.itemsProject === 'none'} onclick={() => (app.itemsProject = 'none')}>No project</button>
     <span class="gap"></span>
     <button type="button" class="chip" aria-pressed={kind === 'all'} onclick={() => (kind = 'all')}>Everything</button>
     <button type="button" class="chip" aria-pressed={kind === 'ticket'} onclick={() => (kind = 'ticket')}>Tickets</button>
@@ -224,6 +225,7 @@
                 <b class:mono={r.kind === 'ticket'}>{r.name}</b>
                 {#if r.title}<small>{r.title}</small>{/if}
               </button>
+              {#if r.ticket}<MopChip ticket={r.name} title={r.title} offer={!r.done} />{/if}
             </td>
             <td>{r.kind === 'ticket' ? 'Ticket' : 'Chore'}</td>
             <td>

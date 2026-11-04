@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MOP on a ticket mockups</title>
+<!-- Round 18 mockups: a MOP attached to a change ticket, made from a wiki template.
+     States (window.SB_START or the hash): #attach, #run, #card. Made for 1200 x 600. Made-up content only. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --bad: #b03a2e; --warn: #9f5a06; --wiki: #6a4fb3; --mop: #178f7c;
+    --proj: #3d8bb0;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.45 var(--ui); padding: 12px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; cursor: pointer; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.mop { background: var(--mop); color: #fff; border-color: var(--mop); }
+  .stage { position: relative; height: 570px; background: #dfe3e7; border-radius: 12px; overflow: hidden; }
+  .ghost { position: absolute; width: 190px; background: var(--paper); border-radius: 8px; box-shadow: var(--shadow); padding: 8px 10px; border-top: 3px solid var(--proj); font-size: 12px; opacity: .75; }
+  .ghost b { display: block; font-size: 13px; }
+
+  /* The ticket box (today's tickets hover box, with tabs) */
+  .box { position: absolute; background: var(--paper); border-radius: 12px; box-shadow: var(--lift); display: flex; flex-direction: column; overflow: hidden; }
+  .head { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--rule); }
+  .tick { width: 18px; height: 18px; border-radius: 50%; border: 2px dashed var(--warn); flex: none; }
+  .num { font: 700 14px var(--mono); }
+  .title { color: var(--mut); font-size: 13px; }
+  .head .x { margin-left: auto; color: var(--mut); cursor: pointer; padding: 0 4px; }
+  .tabs { display: flex; gap: 2px; padding: 6px 10px 0; background: #f4f1e9; border-bottom: 1px solid var(--rule); }
+  .tabs span { padding: 5px 12px; border-radius: 7px 7px 0 0; font-size: 12.5px; color: var(--mut); cursor: pointer; border: 1px solid transparent; border-bottom: 0; display: flex; gap: 6px; align-items: center; }
+  .tabs span.on { background: var(--paper); color: var(--ink); border-color: var(--rule); font-weight: 600; margin-bottom: -1px; }
+  .tabs span i { font-style: normal; font: 700 9.5px var(--ui); letter-spacing: .05em; text-transform: uppercase; border-radius: 4px; padding: 1px 5px; background: color-mix(in srgb, var(--accent) 14%, #fff); color: var(--accent); }
+  .pane { padding: 12px 14px; overflow: auto; flex: 1; }
+
+  .pick h4 { margin: 0 0 8px; font: 600 15px var(--display); }
+  .opt { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 8px; margin-bottom: 6px; background: #fff; cursor: pointer; }
+  .opt:hover, .opt.sel { border-color: var(--mop); background: color-mix(in srgb, var(--mop) 6%, #fff); }
+  .opt b { font-size: 13.5px; } .opt small { color: var(--mut); display: block; font-size: 12px; }
+  .opt .k { margin-left: auto; font: 700 9.5px var(--ui); color: var(--mop); border: 1px solid var(--mop); border-radius: 4px; padding: 0 4px; }
+  .or { color: var(--mut); font-size: 12px; margin: 10px 0 6px; }
+
+  .fill { position: absolute; background: var(--paper); border-radius: 12px; box-shadow: var(--lift); padding: 14px 16px; width: 360px; }
+  .fill h4 { margin: 0 0 2px; font: 600 16px var(--display); }
+  .fill p { margin: 0 0 10px; color: var(--mut); font-size: 12.5px; }
+  .fill label { display: block; font: 600 12px var(--ui); color: var(--mut); margin: 8px 0 3px; }
+  .fill input { width: 100%; border: 1px solid var(--rule); border-radius: 7px; padding: 6px 8px; font: 13.5px var(--ui); background: #fff; }
+  .fill input.auto { background: #f1f6f4; color: var(--mop); font-weight: 600; }
+  .fill .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+  /* MOP pane */
+  .steps { display: flex; align-items: center; gap: 0; margin-bottom: 10px; font-size: 12px; }
+  .steps span { padding: 4px 10px; border: 1px solid var(--rule); background: #fff; color: var(--mut); cursor: pointer; }
+  .steps span:first-child { border-radius: 8px 0 0 8px; } .steps span:last-child { border-radius: 0 8px 8px 0; }
+  .steps span + span { border-left: 0; }
+  .steps span.done { background: color-mix(in srgb, var(--mop) 10%, #fff); color: var(--mop); }
+  .steps span.on { background: var(--mop); color: #fff; font-weight: 700; }
+  .steps span.bad { color: var(--bad); }
+  .steps .when { margin-left: 12px; color: var(--ink); }
+  .modes { margin-left: auto; display: flex; gap: 2px; background: #eee9dd; border-radius: 8px; padding: 2px; }
+  .modes span { padding: 3px 9px; border-radius: 6px; font-size: 12px; color: var(--mut); cursor: pointer; }
+  .modes span.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: var(--shadow); }
+  .bar2 { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .from { font-size: 12px; color: var(--mut); }
+  .from a { color: var(--wiki); text-decoration: none; border-bottom: 1px dashed var(--wiki); }
+  .doc h3 { font: 600 15px var(--display); margin: 12px 0 4px; display: flex; gap: 8px; align-items: center; }
+  .line { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; font-size: 13.5px; }
+  .cb { width: 15px; height: 15px; border: 1.5px solid var(--mut); border-radius: 4px; flex: none; position: relative; top: 2px; cursor: pointer; }
+  .line.ticked .cb, h3.ticked .cb { background: var(--mop); border-color: var(--mop); }
+  .line.ticked .t, h3.ticked .t { text-decoration: line-through; color: var(--mut); }
+  .line .at { margin-left: auto; font: 11.5px var(--mono); color: var(--mop); }
+  .line.now { background: color-mix(in srgb, var(--warn) 9%, transparent); border-radius: 5px; }
+  .doc code { font: 12px var(--mono); background: #f1eee6; padding: 0 4px; border-radius: 4px; }
+  .foot { display: flex; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--rule); background: #faf7ef; align-items: center; font-size: 12px; color: var(--mut); }
+  .foot .r { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Desk card + bell */
+  .card { position: absolute; width: 230px; background: var(--paper); border-radius: 8px; box-shadow: var(--shadow); padding: 9px 11px; border-top: 3px solid var(--proj); }
+  .card .k { font: 700 10px var(--ui); letter-spacing: .08em; text-transform: uppercase; color: var(--mut); }
+  .card b { display: block; font: 700 14px var(--mono); margin: 2px 0; }
+  .card .chip { display: inline-flex; gap: 5px; align-items: center; margin-top: 6px; border-radius: 7px; padding: 2px 8px; font: 600 12px var(--ui); background: color-mix(in srgb, var(--mop) 12%, #fff); color: var(--mop); border: 1px solid color-mix(in srgb, var(--mop) 40%, transparent); }
+  .bell { position: absolute; right: 14px; bottom: 44px; width: 320px; background: var(--paper); border-radius: 12px; box-shadow: var(--lift); padding: 10px 12px; }
+  .bell h5 { margin: 0 0 6px; font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+  .bell .it { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-top: 1px solid var(--rule); font-size: 13px; }
+  .bell .it:first-of-type { border-top: 0; }
+  .bell .it small { color: var(--mut); display: block; font-size: 12px; }
+  .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 34px; background: rgba(255,255,255,.8); border-top: 1px solid var(--rule); display: flex; align-items: center; gap: 6px; padding: 0 10px; font-size: 12px; }
+  .bar .pin { border: 1px solid var(--rule); background: #fff; border-radius: 7px; padding: 2px 9px; }
+  .bar .pin.due { border-color: var(--warn); color: var(--warn); }
+  .bar .b { margin-left: auto; background: var(--warn); color: #fff; border-radius: 9px; padding: 0 7px; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- A: attach a MOP to a ticket -->
+<div class="state" id="attach">
+  <div class="stage">
+    <div class="ghost" style="left:30px;top:30px"><b>Core switch swap</b>Network refresh · 1.5 h</div>
+    <div class="ghost" style="left:30px;top:120px"><b>VPN drops at home</b>Support · 30 min</div>
+    <div class="box" style="left:250px;top:24px;width:440px;height:520px">
+      <div class="head"><span class="tick"></span><span class="num">CHG0146615</span><span class="title">Core switch swap, Site B</span><span class="x">✕</span></div>
+      <div class="tabs"><span>Notepad</span><span class="on">MOP</span></div>
+      <div class="pane pick">
+        <h4>Attach a MOP to CHG0146615</h4>
+        <div class="opt sel"><span>📋</span><span><b>Change (MOP)</b><small>Summary, risk, before, steps, check, back out, after</small></span><span class="k">TEMPLATE</span></div>
+        <div class="opt"><span>📋</span><span><b>Firmware upgrade</b><small>Stack firmware with a reload window</small></span><span class="k">TEMPLATE</span></div>
+        <div class="or">or</div>
+        <div class="opt"><span>📄</span><span><b>Use a wiki page as it is</b><small>e.g. “Replacing a stack member”, copied in so the page stays clean</small></span></div>
+        <div class="opt"><span>＋</span><span><b>Start a blank MOP</b><small>Save it as a template later if it's worth keeping</small></span></div>
+      </div>
+    </div>
+    <div class="fill" style="left:720px;top:60px">
+      <h4>Change (MOP)</h4>
+      <p>Each blank once; it's filled in everywhere it appears.</p>
+      <label>ticket</label><input class="auto" value="CHG0146615">
+      <label>title</label><input class="auto" value="Core switch swap">
+      <label>site</label><input value="Site B, comms room 2">
+      <label>window</label><input value="Tonight 22:00 to 23:30">
+      <label>impact</label><input placeholder="Who notices, and for how long">
+      <label>who to tell</label><input placeholder="Leave empty to fill in later">
+      <div class="row"><span class="btn">Cancel</span><span class="btn mop">Make the MOP</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- B: running it -->
+<div class="state" id="run">
+  <div class="stage">
+    <div class="box" style="left:150px;top:14px;width:760px;height:542px">
+      <div class="head"><span class="tick"></span><span class="num">CHG0146615</span><span class="title">Core switch swap, Site B</span><span class="x">⤢ ✕</span></div>
+      <div class="tabs"><span>Notepad</span><span class="on">MOP <i>Running</i></span></div>
+      <div class="pane">
+        <div class="bar2">
+          <div class="steps"><span class="done">Draft</span><span class="done">Ready</span><span class="on">Running</span><span>Done</span><span class="bad">Backed out</span><span class="when">⏰ Window tonight 22:00</span></div>
+          <div class="modes"><span>Read</span><span>Edit</span><span class="on">Run</span></div>
+        </div>
+        <div class="from">From the template <a>Change (MOP)</a> · links <a>Replacing a stack member</a></div>
+        <div class="doc">
+          <h3 class="ticked"><span class="cb"></span><span class="t">Before</span></h3>
+          <div class="line ticked"><span class="cb"></span><span class="t">1. Tell the service desk the window is starting.</span><span class="at">22:02</span></div>
+          <div class="line ticked"><span class="cb"></span><span class="t">2. Back up the config: <code>copy run start</code></span><span class="at">22:05</span></div>
+          <h3><span class="cb"></span><span class="t">Steps</span></h3>
+          <div class="line ticked"><span class="cb"></span><span class="t">3. Power member 2 off, stack cables stay in.</span><span class="at">22:11</span></div>
+          <div class="line now"><span class="cb"></span><span class="t">4. Swap the unit, same slot, same cables.</span></div>
+          <div class="line"><span class="cb"></span><span class="t">5. Power on, wait for it to join: <code>show switch</code></span></div>
+          <h3><span class="cb"></span><span class="t">Check it worked</span></h3>
+          <div class="line"><span class="cb"></span><span class="t">6. All ports up on member 2, no err-disabled.</span></div>
+          <h3><span class="cb"></span><span class="t">Back out</span></h3>
+          <div class="line"><span class="cb"></span><span class="t">7. Put the old unit back and reload member 2.</span></div>
+        </div>
+      </div>
+      <div class="foot">3 of 7 done · started 22:02
+        <span class="r"><span class="btn">Copy run log</span><span class="btn">Clear ticks</span><span class="btn">Pop out</span></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- C: on the Desk and in the bell -->
+<div class="state" id="card">
+  <div class="stage">
+    <div class="card" style="left:40px;top:40px"><div class="k">Ticket</div><b>CHG0146615</b>Core switch swap, Site B<br><span class="chip">📋 MOP · Ready · tonight 22:00</span></div>
+    <div class="card" style="left:300px;top:40px;border-top-color:#8a6a2e"><div class="k">Ticket</div><b>CHG0145990</b>Patch file servers<br><span class="chip" style="color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent);background:color-mix(in srgb,var(--ok) 10%,#fff)">📋 MOP · Done 28 Oct</span></div>
+    <div class="card" style="left:40px;top:170px;border-top-color:#9a4fb0"><div class="k">Entry · 1 h</div><b style="font:600 14px var(--ui)">VPN drops at home</b>INC0099001 · <span style="color:var(--wiki)">📄 VPN: common fixes</span></div>
+    <div class="bell">
+      <h5>Coming up</h5>
+      <div class="it">📋 <span><b>Change window in 40 min</b><small>CHG0146615 · Core switch swap · MOP is Ready</small></span></div>
+      <div class="it">📌 <span><b>PSUs for the switch</b><small>Chase today</small></span></div>
+    </div>
+    <div class="bar"><span class="pin due">📋 CHG0146615 · 22:00</span><span class="pin">PSUs for the switch</span><span class="b">2</span></div>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('#run .cb').forEach((b) => b.addEventListener('click', () => {
+    const l = b.parentElement; l.classList.toggle('ticked');
+  }));
+  const pick = (window.SB_START || location.hash.slice(1) || 'attach');
+  (document.getElementById(pick) || document.getElementById('attach')).classList.add('on');
+  try { parent.postMessage({ sbMockHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+</script>
+</body>
+</html>

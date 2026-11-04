@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-mop-set-window"
+description = "Enables the mop_set_window command without any pre-configured scope."
+commands.allow = ["mop_set_window"]
+
+[[permission]]
+identifier = "deny-mop-set-window"
+description = "Denies the mop_set_window command without any pre-configured scope."
+commands.deny = ["mop_set_window"]

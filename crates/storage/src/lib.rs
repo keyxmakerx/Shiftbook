@@ -21,6 +21,7 @@
 pub mod backup;
 pub mod boards;
 pub mod canvas;
+pub mod change;
 pub mod db;
 pub mod error;
 pub mod extras;
@@ -38,6 +39,7 @@ pub mod recurring;
 pub mod repo;
 pub mod sync;
 pub mod vault;
+pub mod wiki;
 pub mod wipe;
 pub mod work;
 
@@ -102,6 +104,8 @@ mod items_tests;
 mod notes_tests;
 #[cfg(test)]
 mod repo_tests;
+#[cfg(test)]
+mod wiki_tests;
 #[cfg(test)]
 mod work_tests;
 

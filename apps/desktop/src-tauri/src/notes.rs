@@ -307,7 +307,7 @@ pub async fn note_from_template(
     Ok(note_view(note, OffsetDateTime::now_utc(), after))
 }
 
-/// Maps to `DataApi.mopBlanks()`: the `[[blanks]]` in a template, in order.
+/// Maps to `DataApi.mopBlanks()`: the `{{blanks}}` in a template, in order.
 #[tauri::command]
 pub fn mop_blanks(text: String) -> Vec<String> {
     mop::blanks(&text)
@@ -373,8 +373,15 @@ pub async fn import_mops(s: State<'_, VaultSession>, files: Vec<MopFile>) -> Res
                 continue;
             }
         };
+        // Round 18: a template goes to the wiki's Templates (blanks written the old way,
+        // `[[name]]`, become `{{name}}`); anything else becomes a wiki page.
+        let (kind, body) = if file.template {
+            (NoteKind::Mop, mop::old_blanks_to_new(&body))
+        } else {
+            (NoteKind::Page, body)
+        };
         let input = NoteInput {
-            kind: NoteKind::Mop,
+            kind,
             title: mop::import_title(&file.name),
             body,
             project: None,

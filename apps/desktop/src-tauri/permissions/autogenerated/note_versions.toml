@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-note-versions"
+description = "Enables the note_versions command without any pre-configured scope."
+commands.allow = ["note_versions"]
+
+[[permission]]
+identifier = "deny-note-versions"
+description = "Denies the note_versions command without any pre-configured scope."
+commands.deny = ["note_versions"]

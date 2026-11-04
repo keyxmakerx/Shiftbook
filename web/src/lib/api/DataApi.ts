@@ -325,6 +325,7 @@ export interface BellItem {
     | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
+    | { kind: 'change_window'; mop: string; ticket: string; on: IsoDate; at: number; status: MopStatus }
     | { kind: 'still_open'; tickets: string[] };
 }
 
@@ -337,6 +338,103 @@ export interface PinItem {
   chaseOn: IsoDate | null;
   /** Its chase date has come: the chip is orange and the bell lists it. */
   due: boolean;
+}
+
+/** A page in the wiki's side list (round 18). */
+export interface WikiRow {
+  id: string;
+  title: string;
+  /** 0 for a page at the top of its space. */
+  depth: number;
+  /** A MOP template. */
+  template: boolean;
+}
+
+/** A wiki space and its pages, as a tree. */
+export interface WikiSpace {
+  id: string;
+  name: string;
+  color: string | null;
+  pages: WikiRow[];
+}
+
+/** The wiki's side list. */
+export interface WikiList {
+  spaces: WikiSpace[];
+  /** Pages in no space. */
+  loose: WikiRow[];
+  /** MOP templates, by title. */
+  templates: WikiRow[];
+}
+
+/** One wiki page, full. */
+export interface WikiPage {
+  note: Note;
+  spaceId: string | null;
+  spaceName: string | null;
+  /** The pages above it, the top one first. */
+  trail: { id: string; title: string }[];
+  /** The pages right under it. */
+  children: { id: string; title: string }[];
+  /** Notes that link to it with [[its title]]. */
+  linkedFrom: { id: string; title: string; kind: NoteKind }[];
+  /** Tickets whose notepad links to it. */
+  onTickets: { number: string; done: boolean }[];
+  /** How many earlier versions are kept. */
+  versions: number;
+}
+
+/** An earlier version of a wiki page. */
+export interface NoteVersion {
+  id: string;
+  title: string;
+  body: string;
+  /** When it was kept (UTC). */
+  at: string;
+}
+
+/** Where a MOP on a ticket stands (round 18). */
+export type MopStatus = 'draft' | 'ready' | 'running' | 'done' | 'backed_out';
+
+/** A MOP on its change ticket (round 18). */
+export interface MopRun {
+  mopId: string;
+  title: string;
+  ticket: string;
+  templateId: string | null;
+  status: MopStatus;
+  /** The change window's day. */
+  windowOn: IsoDate | null;
+  /** Its start, minutes after local midnight. */
+  windowAt: number | null;
+  /** When each ticked line was ticked (UTC). */
+  tickTimes: { key: string; at: string }[];
+  /** When it first went Running (UTC). */
+  startedAt: string | null;
+}
+
+/** A MOP template offered for a ticket. */
+export interface MopTemplate {
+  id: string;
+  title: string;
+  /** Its first line, to tell templates apart. */
+  hint: string;
+}
+
+/** One project on the Projects page (round 18). */
+export interface ProjectGlance {
+  projectId: string;
+  name: string;
+  color: string | null;
+  archived: boolean;
+  /** Hours this week, e.g. "4.5". */
+  hoursWeek: string;
+  /** Every hour logged against it. */
+  hoursAll: string;
+  /** The last day it was worked on. */
+  lastWorked: IsoDate | null;
+  /** Its tickets still open. */
+  openTickets: number;
 }
 
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
@@ -1189,6 +1287,8 @@ export interface DataApi {
   bell(today: IsoDate, now: number): Promise<BellItem[]>;
   /** The pinned chips for the bottom bar, ones due to chase first. Tauri: `pins`. */
   pins(today: IsoDate): Promise<PinItem[]>;
+  /** Every project at a glance for the Projects page (round 18). Tauri: `project_glances`. */
+  projectGlances(today: IsoDate): Promise<ProjectGlance[]>;
   /** Pin an entry, ticket or note, or change its chase date (null clears it). Tauri: `pin`. */
   pin(kind: CardKind, id: string, chaseOn: IsoDate | null): Promise<void>;
   /** Take a chip off the bottom bar. Tauri: `unpin`. */
@@ -1381,9 +1481,9 @@ export interface DataApi {
   setNoteTemplate(id: string, template: boolean): Promise<void>;
   /** Keep what's ticked off in Checklist mode; an empty list clears it for a fresh run. */
   setNoteTicks(id: string, ticks: string[]): Promise<Note>;
-  /** A new MOP from a template, its `[[blanks]]` filled (empty ones stay). Blank title uses the template's. */
+  /** A new MOP from a template, its `{{blanks}}` filled (empty ones stay). Blank title uses the template's. */
   noteFromTemplate(id: string, title: string, values: { name: string; value: string }[]): Promise<Note>;
-  /** The `[[blanks]]` in a template's text, in order. */
+  /** The `{{blanks}}` in a template's text, in order. */
   mopBlanks(text: string): Promise<string[]>;
   /** Each line of a MOP with its tick and whether it is crossed out. */
   mopChecklist(text: string, ticks: string[]): Promise<CheckLine[]>;
@@ -1391,6 +1491,40 @@ export interface DataApi {
   importMops(files: MopFile[]): Promise<MopImport>;
   /** Save a MOP as a plain (not encrypted) text file; the file name, or null if cancelled. */
   saveMopFile(id: string): Promise<string | null>;
+
+  // ----- MOPs on tickets (round 18) -----
+  /** Templates for a ticket, recently used and its project's first. Tauri: `mop_templates`. */
+  mopTemplates(ticket: string): Promise<MopTemplate[]>;
+  /** Make a MOP for a ticket from a template (with its blanks), a wiki page (copied) or blank. */
+  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string): Promise<Note>;
+  /** MOPs on tickets, newest first; only `ticket`'s when given. Tauri: `mop_runs`. */
+  mopRuns(ticket: string | null): Promise<MopRun[]>;
+  /** One MOP's run, or null for a note that isn't on a ticket. Tauri: `mop_run`. */
+  mopRun(id: string): Promise<MopRun | null>;
+  mopSetStatus(id: string, status: MopStatus): Promise<void>;
+  /** The change window's day and start (minutes after midnight), or nulls to clear it. */
+  mopSetWindow(id: string, on: IsoDate | null, at: number | null): Promise<void>;
+  /** Tick lines off, keeping when each was ticked. Tauri: `mop_tick`. */
+  mopTick(id: string, ticks: string[]): Promise<Note>;
+
+  // ----- the wiki (round 18) -----
+  /** The side list: spaces with their pages, pages in no space, and templates. Tauri: `wiki`. */
+  wiki(): Promise<WikiList>;
+  /** One page with its trail, the pages under it and what links to it. Tauri: `wiki_page`. */
+  wikiPage(id: string): Promise<WikiPage>;
+  /** The wiki page a [[link]] points at (ignoring case), or null. Tauri: `wiki_page_by_title`. */
+  wikiPageByTitle(title: string): Promise<string | null>;
+  /** Make a space (null id) or rename one; its id. Tauri: `wiki_space_save`. */
+  wikiSpaceSave(id: string | null, name: string, color: string | null): Promise<string>;
+  /** Remove a space; its pages stay, in no space. Tauri: `wiki_space_delete`. */
+  wikiSpaceDelete(id: string): Promise<void>;
+  /** Put a page in a space (null: none), under a page or at the top (null). Tauri: `wiki_place`. */
+  wikiPlace(id: string, spaceId: string | null, parentId: string | null, position: number | null): Promise<void>;
+  /** A page's earlier versions, newest first. Tauri: `note_versions`. */
+  noteVersions(id: string): Promise<NoteVersion[]>;
+  /** Write a space (null: pages in no space) as Markdown files in a new folder where the user
+   *  chooses; the folder's name, or null if cancelled. Not encrypted (warn first). */
+  exportWikiSpace(spaceId: string | null, name: string): Promise<string | null>;
 
   // ----- find -----
   /** Entries, Inbox scraps, notes and the given command names that match `query`. */

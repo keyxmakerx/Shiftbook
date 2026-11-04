@@ -70,7 +70,7 @@
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
   import { easeOut, scale as motion } from '../lib/motion';
-  import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
@@ -301,7 +301,15 @@
             head: `Done today · ${st.count}`,
             items: [
               fan,
-              { label: 'See all done tickets', icon: 'tray', side: true, act: () => openBoard('done', 'list') },
+              {
+                label: 'See all done tickets',
+                icon: 'tray',
+                side: true,
+                act: () => {
+                  app.itemsTab = 'done';
+                  setView('items');
+                },
+              },
             ],
           },
           ...fileSection((key) => void fileThese(pileMembers(st.id), key)),
@@ -378,7 +386,7 @@
     tidying = false;
     await load();
     const what = list.length === 1 ? `“${titleOf(list[0])}”` : `${list.length} cards`;
-    toast(`Put away ${what}. Hours and tickets are kept; find them in the Archive drawer.`, 'Undo', () =>
+    toast(`Archived ${what}. Hours and tickets are kept; find them in the Archive drawer.`, 'Undo', () =>
       void (async () => {
         for (const w of was) await attempt(() => api.canvasUnfile(w.ref, w.x, w.y));
         await load();
@@ -390,7 +398,7 @@
   function putAwaySection(card: Card): MenuSpec['sections'] {
     if (!canPutAway(card)) return [];
     const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c)) && canPutAway(c)) : [card];
-    const label = list.length > 1 ? `Put ${list.length} away (off the Desk)` : 'Put away (off the Desk)';
+    const label = list.length > 1 ? `Archive ${list.length} cards` : 'Archive';
     return [{ items: [{ label, icon: 'archive', top: true, act: () => void putAway(list) }] }];
   }
 
@@ -1181,7 +1189,7 @@
       await applyTray(day);
       await load();
       if (added.length) pasted = { sx: Math.min(spot.sx, board.clientWidth - 320), sy: Math.min(spot.sy, board.clientHeight - 150), ids: added };
-      else toast(tickets.length === 1 ? `${tickets[0]} is already in the tray.` : 'Those tickets are already in the tray.');
+      else toast(tickets.length === 1 ? `${tickets[0]} is already in the Tickets tray.` : 'Those tickets are already in the Tickets tray.');
       return;
     }
     const at = toCanvas(view, spot.sx, spot.sy);
@@ -1530,8 +1538,8 @@
         <button type="button" class="wide" title="Pile loose cards by project" onclick={() => void tidy()}>
           <Icon name="box" size={14} />Tidy into stacks
         </button>
-        <button type="button" class="wide" aria-expanded={tidying} title="Put older cards away, off the Desk" onclick={openTidy}>
-          <Icon name="archive" size={14} />Tidy up…
+        <button type="button" class="wide" aria-expanded={tidying} title="Archive older cards, off the Desk" onclick={openTidy}>
+          <Icon name="archive" size={14} />Clear old cards…
         </button>
       {/if}
     </div>
@@ -1539,7 +1547,7 @@
       <div
         class="paper tidyup"
         role="dialog"
-        aria-label="Tidy the Desk"
+        aria-label="Clear old cards"
         tabindex="-1"
         onkeydown={(e) => {
           if (e.key === 'Escape') {
@@ -1548,8 +1556,8 @@
           }
         }}
       >
-        <h3>Tidy the Desk</h3>
-        <p class="sub">Put entry cards and done tickets away. Their hours and tickets are kept, in the Archive drawer.</p>
+        <h3>Clear old cards</h3>
+        <p class="sub">Archive entry cards and done tickets, off the Desk. Their hours and tickets are kept, in the Archive drawer.</p>
         <label class="opt" class:on={tidyChoice === 'today'}>
           <input type="radio" name="tidy" value="today" bind:group={tidyChoice} />
           <span>Everything from before today<small>{beforeToday.length} {beforeToday.length === 1 ? 'card' : 'cards'}</small></span>
@@ -1566,7 +1574,7 @@
         <div class="row">
           <button type="button" class="btn" onclick={() => (tidying = false)}>Cancel</button>
           <button type="button" class="btn primary" disabled={!tidyList.length} onclick={() => void putAway(tidyList)}>
-            {tidyList.length ? `Put ${tidyList.length} away` : 'Nothing to put away'}
+            {tidyList.length ? `Archive ${tidyList.length}` : 'Nothing to archive'}
           </button>
         </div>
       </div>

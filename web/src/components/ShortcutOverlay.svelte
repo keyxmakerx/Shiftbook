@@ -1,9 +1,9 @@
 <script lang="ts">
   // Hold Ctrl (⌘ on a Mac) on its own for a moment to see every shortcut; let go to hide it.
   import { HOLD_MS, shortcutList, startsHold } from '../lib/keys';
-  import { shownViews } from '../lib/store.svelte';
+  import { shownTabs } from '../lib/store.svelte';
 
-  const list = $derived(shortcutList(shownViews()));
+  const list = $derived(shortcutList(shownTabs()));
 
   let shown = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;

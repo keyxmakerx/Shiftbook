@@ -54,6 +54,12 @@ import type { PastTimeView as GenPastTime } from './generated/PastTimeView';
 import type { PausedTimer as GenPausedTimer } from './generated/PausedTimer';
 import type { Launch as GenPhoneLaunch } from './generated/Launch';
 import type { PinView as GenPinItem } from './generated/PinView';
+import type { ProjectGlanceView as GenProjectGlance } from './generated/ProjectGlanceView';
+import type { WikiView as GenWikiList } from './generated/WikiView';
+import type { WikiPageView as GenWikiPage } from './generated/WikiPageView';
+import type { NoteVersionView as GenNoteVersion } from './generated/NoteVersionView';
+import type { MopRunView as GenMopRun } from './generated/MopRunView';
+import type { MopTemplateView as GenMopTemplate } from './generated/MopTemplateView';
 import type { PinOutcome as GenPinOutcome } from './generated/PinOutcome';
 import type { Prefs as GenPrefs } from './generated/Prefs';
 import type { ProjectView as GenProject } from './generated/ProjectView';
@@ -148,6 +154,12 @@ export type Checks = [
   Assert<Same<Ui.PausedTimer, GenPausedTimer>>,
   Assert<Same<Ui.PhoneLaunch, GenPhoneLaunch>>,
   Assert<Same<Ui.PinItem, GenPinItem>>,
+  Assert<Same<Ui.ProjectGlance, GenProjectGlance>>,
+  Assert<Same<Ui.WikiList, GenWikiList>>,
+  Assert<Same<Ui.WikiPage, GenWikiPage>>,
+  Assert<Same<Ui.NoteVersion, GenNoteVersion>>,
+  Assert<Same<Ui.MopRun, GenMopRun>>,
+  Assert<Same<Ui.MopTemplate, GenMopTemplate>>,
   Assert<Same<Ui.PinOutcome, GenPinOutcome>>,
   Assert<Same<Ui.Prefs, GenPrefs>>,
   Assert<Same<Ui.Project, GenProject>>,

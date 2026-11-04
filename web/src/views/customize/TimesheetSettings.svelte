@@ -188,7 +188,7 @@
     </div>
     <p class="example"><span class="lbl">Example</span> {example}</p>
     <div class="cz-row">
-      <span class="cz-grow">Group the crib sheet</span>
+      <span class="cz-grow">Group the Timesheet</span>
       <div class="seg" role="group" aria-label="Default grouping">
         <button type="button" aria-pressed={app.prefs.groupBy === 'code'} onclick={() => pref('timesheet.group_by', 'code')}>By timesheet code</button>
         <button type="button" aria-pressed={app.prefs.groupBy === 'project'} onclick={() => pref('timesheet.group_by', 'project')}>By project</button>
@@ -207,7 +207,7 @@
         {/each}
       </select>
     </div>
-    <p class="sub">Changes the weeks in the ribbon, the crib sheet and words like “next week”.</p>
+    <p class="sub">Changes the weeks in the ribbon, the Timesheet and words like “next week”.</p>
   </article>
 {/if}
 

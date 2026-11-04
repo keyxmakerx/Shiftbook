@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-wiki-space-save"
+description = "Enables the wiki_space_save command without any pre-configured scope."
+commands.allow = ["wiki_space_save"]
+
+[[permission]]
+identifier = "deny-wiki-space-save"
+description = "Denies the wiki_space_save command without any pre-configured scope."
+commands.deny = ["wiki_space_save"]

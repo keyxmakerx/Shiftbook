@@ -17,7 +17,7 @@ import type {
   TrayDay,
 } from './api';
 import { toIso } from './format';
-import { viewsFor, type SettingsSection, type View } from './keys';
+import { tabsFor, viewsFor, type SettingsSection, type View } from './keys';
 import { errorMessage } from './messages';
 import { useMopWord } from './notes';
 import { setMotion } from './motion';
@@ -32,6 +32,8 @@ export const app = $state({
   view: 'desk' as View,
   /** Which part of the Items view shows (round 15). */
   itemsTab: 'open' as 'open' | 'follow' | 'done',
+  /** The Tickets page's project filter: 'all', 'none' or a project id (set by the Projects page). */
+  itemsProject: 'all' as string,
   /** The view we came from, for the direction of the slide. */
   previousView: 'desk' as View,
   prefs: null as Prefs | null,
@@ -45,6 +47,10 @@ export const app = $state({
   /** Entry open in the details drawer. */
   drawer: null as string | null,
   captureOpen: false,
+  /** The Organise menu in the ribbon (round 18). */
+  organiseOpen: false,
+  /** The wiki page to show (round 18), bumped by `openWiki`. */
+  wikiOpen: { id: null as string | null, edit: false, serial: 0 },
   /** Bumped to ask Log work to take focus, with optional text to put in it, and the Desk spot
    * of the card it came from (an Inbox scrap), so the entry it makes shows there. */
   logFocus: { serial: 0, text: '', spot: null as { x: number; y: number } | null },
@@ -213,9 +219,20 @@ export function openNote(id: string | null): void {
   setView('notes');
 }
 
-/** The tabs that show, in order (no Timesheet at home). */
+/** Open a page in the wiki (round 18); `edit` opens it ready to type. */
+export function openWiki(id: string | null, edit = false): void {
+  app.wikiOpen = { id, edit, serial: app.wikiOpen.serial + 1 };
+  setView('wiki');
+}
+
+/** Every view in this mode (tabs, the Organise menu, Settings). */
 export function shownViews(): readonly View[] {
   return viewsFor(hasWork(app.prefs?.useMode));
+}
+
+/** The tabs in this mode (round 18: where you work). */
+export function shownTabs(): readonly View[] {
+  return tabsFor(hasWork(app.prefs?.useMode));
 }
 
 /** The words for what Shiftbook is for (round 15). */

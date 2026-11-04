@@ -9,6 +9,7 @@ pub mod bell;
 pub mod boards;
 pub mod canvas;
 pub mod capture;
+pub mod change;
 pub mod dates;
 pub mod error;
 pub mod fields;
@@ -48,6 +49,7 @@ pub mod tray;
 pub mod ts_constants;
 pub mod validate;
 pub mod week;
+pub mod wiki;
 pub mod windows;
 pub mod wipe;
 

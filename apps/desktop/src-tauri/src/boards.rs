@@ -106,7 +106,6 @@ impl Boards {
             Board::Projects => "Projects".into(),
             Board::Meetings => "Meetings".into(),
             Board::Daily => "Daily notes".into(),
-            Board::Done => "Done tickets".into(),
             Board::Archive => "Archive".into(),
             Board::Project(id) => self
                 .projects
@@ -162,7 +161,6 @@ impl Boards {
                 let mut out = vec![inner(Board::Projects), inner(Board::Meetings)];
                 out.push(inner(Board::Daily));
                 out.extend(self.folders.iter().map(|(f, _)| inner(Board::Folder(*f))));
-                out.push(inner(Board::Done));
                 out.push(inner(Board::Archive));
                 out
             }
@@ -183,11 +181,7 @@ impl Boards {
                 .filter(|p| p.archived)
                 .map(|p| inner(Board::Project(*p.id.as_uuid())))
                 .collect(),
-            Board::Project(_)
-            | Board::Series(_)
-            | Board::Daily
-            | Board::Folder(_)
-            | Board::Done => Vec::new(),
+            Board::Project(_) | Board::Series(_) | Board::Daily | Board::Folder(_) => Vec::new(),
         }
     }
 }

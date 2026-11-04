@@ -1,5 +1,5 @@
 <script lang="ts">
-  // The unlocked app: the ribbon, one working view (Desk, Day, Timesheet, Notes or Settings) that
+  // The unlocked app: the ribbon, one working view (a tab, a page from the Organise menu, or Settings) that
   // slides in from the direction you move, the windows floating over it and the bottom bar
   // with the bell, and the overlays (capture, drawer, paper menu, toast). Also the keyboard
   // shortcuts and the copy guard.
@@ -8,7 +8,7 @@
   import { nextTextSize, shortcutFor, VIEWS, type View } from '../lib/keys';
   import { closeMenu, menuOpen } from '../lib/menu.svelte';
   import { scale } from '../lib/motion';
-  import { app, focusLog, savePref, setView, shownViews } from '../lib/store.svelte';
+  import { app, focusLog, savePref, setView, shownTabs, shownViews } from '../lib/store.svelte';
   import { followDay, startShell } from '../lib/shellLife.svelte';
   import { redoLast, toast, undoLatest } from '../lib/toast.svelte';
   import BellPanel from '../components/BellPanel.svelte';
@@ -31,6 +31,8 @@
   import Items from '../views/Items.svelte';
   import Repeating from '../views/Repeating.svelte';
   import Lists from '../views/Lists.svelte';
+  import Projects from '../views/Projects.svelte';
+  import Wiki from '../views/Wiki.svelte';
 
   let { onLock }: { onLock: () => void } = $props();
   let problem = $state('');
@@ -71,7 +73,7 @@
       altKey: event.altKey,
       shiftKey: event.shiftKey,
       typing,
-    }, shownViews());
+    }, shownTabs());
     if (!s) return;
     switch (s.kind) {
       case 'capture':
@@ -92,7 +94,8 @@
         if (!redoLast()) toast('Nothing to redo.');
         break;
       case 'escape':
-        if (menuOpen()) closeMenu();
+        if (app.organiseOpen) app.organiseOpen = false;
+        else if (menuOpen()) closeMenu();
         else if (app.captureOpen) app.captureOpen = false;
         else if (app.drawer) app.drawer = null;
         break;
@@ -108,7 +111,14 @@
         break;
       case 'view':
         if (menuOpen() || app.captureOpen) return;
+        event.preventDefault();
+        app.organiseOpen = false;
         setView(s.view);
+        break;
+      case 'organise':
+        if (menuOpen() || app.captureOpen) return;
+        event.preventDefault();
+        app.organiseOpen = !app.organiseOpen;
         break;
       case 'zoom': {
         event.preventDefault();
@@ -150,6 +160,10 @@
             <Items />
           {:else if app.view === 'lists'}
             <Lists />
+          {:else if app.view === 'projects'}
+            <Projects />
+          {:else if app.view === 'wiki'}
+            <Wiki />
           {:else}
             <Settings />
           {/if}

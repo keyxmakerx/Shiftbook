@@ -3,7 +3,8 @@
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { CarriedItem, TrayDay, TrayItem } from './api';
-import { bringUp, bringUpSection } from './bringUp';
+import { bringUpSection } from './bringUp';
+import { attachMop, mopFor, openMop } from './mops.svelte';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { pinMenuItem } from './pins.svelte';
@@ -103,8 +104,11 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     item.done
       ? { label: 'Not done yet (keep it open)', icon: 'clock', side: true, act: () => void setTrayDone(item, false) }
       : { label: 'Done', icon: 'check', side: true, act: () => void setTrayDone(item, true) },
-    { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('tray', item.id, item.ticket) },
     pinMenuItem('tray', item.id),
+    // Its MOP (round 18): open it, or attach one from a template.
+    mopFor(item.ticket)
+      ? { label: 'Open its MOP', icon: 'book', side: true, act: () => openMop(item.ticket) }
+      : { label: 'Attach a MOP…', icon: 'book', act: () => attachMop(item.ticket) },
   ];
   if (notepad) main.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: notepad });
   main.push({ label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('tray', item.id) });
@@ -136,7 +140,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
       { head: `${item.ticket} · ${fmtMinutes(item.minutes)}`, items: main },
       bringUpSection('tray', item.id, item.ticket),
       { head: 'Count its time under', choices },
-      { items: [{ label: 'Take out of the tray', icon: 'trash', danger: true, top: true, act: () => void removeTray(item) }] },
+      { items: [{ label: 'Take out of the Tickets tray', icon: 'trash', danger: true, top: true, act: () => void removeTray(item) }] },
     ],
   };
 }
