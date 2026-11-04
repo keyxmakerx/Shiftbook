@@ -13,7 +13,7 @@
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
   import { app, attempt, focusLog, openNote, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { logNoteSection } from '../lib/noteActions';
+  import { logNoteSection, noteKindSections } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openFullWindow, openWindow } from '../lib/windows.svelte';
@@ -272,6 +272,7 @@
           // A card the owner put somewhere passes its spot on in storage; one placed
           // automatically passes on where it shows now.
           ...(note.kind === 'jot' ? [logNoteSection(note, onchanged, card.placed ? undefined : { x: card.x, y: card.y })] : []),
+          ...noteKindSections(note, onchanged),
         ],
       };
     }

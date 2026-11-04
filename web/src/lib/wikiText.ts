@@ -93,3 +93,15 @@ export function blocks(body: string): Block[] {
   while (out.length && out[out.length - 1]!.kind === 'gap') out.pop();
   return out;
 }
+
+/** The pages `text` links to with [[Title]], each once (ignoring case), for link chips under a
+ *  notepad. Which notes link to a page is worked out in crates/core/src/wiki.rs. */
+export function wikiLinks(text: string | null | undefined): string[] {
+  const out: string[] = [];
+  for (const line of (text ?? '').split('\n')) {
+    for (const p of parts(line)) {
+      if (p.kind === 'link' && !out.some((t) => t.toLowerCase() === p.title.toLowerCase())) out.push(p.title);
+    }
+  }
+  return out;
+}

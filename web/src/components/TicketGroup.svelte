@@ -14,6 +14,7 @@
   import { toast } from '../lib/toast.svelte';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
 
   let { card, onchanged, onclose }: { card: CanvasCard; onchanged: () => void; onclose: () => void } = $props();
 
@@ -185,6 +186,7 @@
             oninput={typed}
             onblur={() => void flush()}
           ></textarea>
+          <WikiLinks text={draft} />
         {:else}
           <button type="button" class="note" class:muted={!t.note} onclick={() => openNote(t)} title="Open its notepad">
             {t.note?.split('\n')[0] ?? 'Click for its notepad'}

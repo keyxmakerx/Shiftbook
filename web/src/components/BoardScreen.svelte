@@ -19,6 +19,7 @@
   import { openWindow } from '../lib/windows.svelte';
   import CanvasCard from './CanvasCard.svelte';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
 
   const SAVE_AFTER_MS = 700;
   const PAD = 40;
@@ -461,6 +462,7 @@
                   disabled={data.key === 'daily' || data.key.startsWith('series:') || current?.kind === 'daily'}
                 />
                 <textarea class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
+                <WikiLinks text={body} />
                 <div class="foot">
                   <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>
                   {#if current}

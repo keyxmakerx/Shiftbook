@@ -17,6 +17,7 @@
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
   import TicketChip from './TicketChip.svelte';
 
   let {
@@ -201,6 +202,7 @@
       void save();
     }}
   ></textarea>
+  <WikiLinks text={draft} />
 
   {#if entry && !entry.isTray}
     <div class="row">

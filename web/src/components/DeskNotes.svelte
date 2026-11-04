@@ -17,7 +17,7 @@
   import type { MeetingSeries, Note } from '../lib/api';
   import { dayMonth, weekdayShort } from '../lib/format';
   import { openMenu, paperMenu } from '../lib/menu.svelte';
-  import { logNoteSection } from '../lib/noteActions';
+  import { logNoteSection, noteKindSections } from '../lib/noteActions';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
@@ -176,6 +176,7 @@
           sections: [
             { head: n.title, items: [{ label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(n.id) }] },
             logNoteSection(n, () => void loadJots()),
+            ...noteKindSections(n, () => void loadJots()),
           ],
         })}
       >

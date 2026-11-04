@@ -13,6 +13,7 @@
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
   import TicketChip from './TicketChip.svelte';
   import CodeSelect from './CodeSelect.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
@@ -375,6 +376,7 @@
           bind:value={notes}
           onblur={() => notes !== (entry.notes ?? '') && save({ notes: notes || null })}
         ></textarea>
+        <WikiLinks text={notes} />
       </div>
 
       {#each fields as f, i (f.id)}

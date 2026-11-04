@@ -17,6 +17,7 @@
   import { toast } from '../lib/toast.svelte';
   import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
   import Icon from '../components/Icon.svelte';
+  import WikiLinks from '../components/WikiLinks.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -352,6 +353,7 @@
         bind:value={draft.body}
         oninput={edited}
       ></textarea>
+      <WikiLinks text={draft.body} />
       <div class="foot">
         <span class="saved" aria-live="polite">
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'waiting' ? '…' : ''}

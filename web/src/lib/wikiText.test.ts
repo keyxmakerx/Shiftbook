@@ -27,3 +27,11 @@ describe('wiki text', () => {
     expect(blocks('```\nraw')).toEqual([{ kind: 'code', text: 'raw' }]);
   });
 });
+
+describe('wiki links in a notepad', () => {
+  it('lists each linked page once', async () => {
+    const { wikiLinks } = await import('./wikiText');
+    expect(wikiLinks('Fixed, see [[VPN fixes]]\nand [[vpn FIXES]] or [[Printers]]')).toEqual(['VPN fixes', 'Printers']);
+    expect(wikiLinks(null)).toEqual([]);
+  });
+});

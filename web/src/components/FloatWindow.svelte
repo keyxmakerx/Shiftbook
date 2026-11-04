@@ -8,8 +8,11 @@
   import { app, attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
   import { closeWindow, focusWindow, moveWindow, resizeWindow, setWindowMode, windows, winKey } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
+  import WikiLinks from './WikiLinks.svelte';
   import { phone } from '../lib/phone.svelte';
   import { dragButton } from '../lib/rightDrag';
+  import { paperMenu } from '../lib/menu.svelte';
+  import { noteKindSections } from '../lib/noteActions';
 
   let { win }: { win: WindowSpot } = $props();
 
@@ -214,6 +217,11 @@
     class="bar"
     onpointerdown={(e) => drag(e, false)}
     ondblclick={() => !phone.on && setWindowMode(key, win.mode === 'full' ? 'open' : 'full')}
+    use:paperMenu={() => {
+      // A note's window: right-click the title bar to change its kind or move it to the wiki.
+      const sections = win.kind === 'note' && note ? noteKindSections(note) : [];
+      return sections.length ? { sections } : null;
+    }}
   >
     <span class="ic" aria-hidden="true"></span>
     <span class="ttl">{title || '…'}</span>
@@ -259,6 +267,7 @@
           void save();
         }}
       ></textarea>
+      <div class="wl"><WikiLinks {text} /></div>
       <footer>
         {#if clash !== null}
           <span class="clash" role="alert">
@@ -279,6 +288,10 @@
 </section>
 
 <style>
+  .wl {
+    padding: 0 10px;
+  }
+
   .win {
     position: absolute;
     display: flex;
