@@ -1,8 +1,8 @@
 {
  "meta": {
   "round": 18,
-  "heading": "Round 18: a wiki, MOPs on tickets, and fewer ways round",
-  "intro": "A look over Shiftbook as it is now. The card that popped up by itself is gone (first card). Then a wiki for what you know, MOPs that live on their change ticket, and trimming the tabs, names and doubled-up features. Pick on each card; each choice stands alone."
+  "heading": "Round 18: built, ready to try",
+  "intro": "Everything from round 18 is built in PR #61: the wiki, MOPs on their ticket, the Organise menu, one name each and the cuts. The first card is a try-it checklist for once it's in a release. Your answers on the other cards are kept in the Archive tab."
  },
  "cards": {
   "r18-check": {
@@ -574,6 +574,132 @@
    ],
    "pick": "Notes stay; all three; Notes into the menu.",
    "note_hint": "What you'd change"
+  },
+  "r18-built": {
+   "area": "Built · not merged yet (#61)",
+   "round": 18,
+   "order": 5,
+   "version": 1,
+   "title": "Built: round 18, ready to try",
+   "body": [
+    "Everything you approved this round is in PR #61. Once it's merged and in a release, try each line and tick it. Press **Approve** when it all works, or write what's off and press **Needs changes**.",
+    "**First unlock after updating:** your MOP templates' `[[blanks]]` become `{{blanks}}`, and your other MOPs move into the wiki as pages in a **MOPs** space. Nothing is deleted.",
+    "**How to make a template:** in the wiki, **+** next to Templates (or drop a .txt file in and pick Template). Type `{{name}}` wherever something changes each time; `{{ticket}}` and `{{title}}` fill themselves."
+   ],
+   "questions": [
+    {
+     "id": "tabs",
+     "type": "many",
+     "legend": "Top bar",
+     "options": [
+      {
+       "value": "Tabs are Desk, Day, Timesheet, Wiki (keys 1 to 4)"
+      },
+      {
+       "value": "Organise ▾ (or key 5) opens Tickets, Projects, Repeating, Lists, Notes"
+      },
+      {
+       "value": "The gear (or Ctrl ,) opens Settings"
+      },
+      {
+       "value": "Projects shows each project's week, total and open tickets"
+      }
+     ]
+    },
+    {
+     "id": "wiki",
+     "type": "many",
+     "legend": "Wiki",
+     "options": [
+      {
+       "value": "Make a space and a page; type and it saves"
+      },
+      {
+       "value": "[[Another page]] in a page is a link; clicking a new one makes it"
+      },
+      {
+       "value": "Linked from and On tickets fill in"
+      },
+      {
+       "value": "⋯ › Move to… puts a page under another one"
+      },
+      {
+       "value": "Earlier versions: Bring this back"
+      },
+      {
+       "value": "Find (Ctrl Space) shows wiki pages first"
+      },
+      {
+       "value": "A space's ⋯ › Write out as Markdown files"
+      }
+     ]
+    },
+    {
+     "id": "notes",
+     "type": "many",
+     "legend": "Notes",
+     "options": [
+      {
+       "value": "Right-click a jot: Change to ▸ Meeting, and Undo"
+      },
+      {
+       "value": "Move to the wiki… makes it a page"
+      },
+      {
+       "value": "[[Page]] in a ticket's notepad shows a chip that opens it"
+      }
+     ]
+    },
+    {
+     "id": "mop",
+     "type": "many",
+     "legend": "MOPs",
+     "options": [
+      {
+       "value": "+ MOP on a ticket opens the template picker"
+      },
+      {
+       "value": "Blanks are asked once; the MOP opens in a window"
+      },
+      {
+       "value": "Set the change window; it shows in the bell and on the bottom bar"
+      },
+      {
+       "value": "Run: ticks keep their time; the first tick makes it Running"
+      },
+      {
+       "value": "Copy run log pastes the steps with times"
+      },
+      {
+       "value": "The ticket's card shows MOP · Ready"
+      },
+      {
+       "value": "Use on a ticket… from a template page in the wiki"
+      }
+     ]
+    },
+    {
+     "id": "names",
+     "type": "many",
+     "legend": "Names and cuts",
+     "options": [
+      {
+       "value": "Tickets tray, Scrap, Archive, Clear old cards… read right"
+      },
+      {
+       "value": "Done today pile › See all opens Tickets › Done"
+      },
+      {
+       "value": "After unlocking, only one welcome shows"
+      },
+      {
+       "value": "New meeting note on the Desk asks which meeting"
+      }
+     ]
+    }
+   ],
+   "pick": "Tick each line once you've tried it, then Approve, or write what went wrong and press Needs changes.",
+   "note_hint": "What didn't work, or what felt wrong"
   }
  }
 }

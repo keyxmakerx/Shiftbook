@@ -8,8 +8,7 @@ https://claude.ai/artifact/AZ8PuPVzRcToWrxj33Ku8T.
 
 Round 18 (`rounds/r18.json`) went on the rounds 8 to 14 sheet
 (https://claude.ai/artifact/FDWT4t9XNKtL2n22wvJcx1), because the session that wrote it couldn't
-reach the round 15 sheet. Its last card asks the owner which sheet to keep using; until then,
-load `r18.json` onto the other sheet with `build_round.py` if that's the one in use.
+reach the round 15 sheet. The owner chose to keep using that sheet from round 18 on.
 
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.
