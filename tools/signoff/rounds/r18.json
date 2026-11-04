@@ -2,7 +2,7 @@
  "meta": {
   "round": 18,
   "heading": "Round 18: built, ready to try",
-  "intro": "Everything from round 18 is built in PR #61: the wiki, MOPs on their ticket, the Organise menu, one name each and the cuts. The first card is a try-it checklist for once it's in a release. Your answers on the other cards are kept in the Archive tab."
+  "intro": "Three cards, one question each. Press one of the two buttons; a note is optional. Your earlier round 18 answers are in Done."
  },
  "cards": {
   "r18-check": {
@@ -575,131 +575,66 @@
    "pick": "Notes stay; all three; Notes into the menu.",
    "note_hint": "What you'd change"
   },
-  "r18-built": {
-   "area": "Built · not merged yet (#61)",
+  "r18-try-bar": {
    "round": 18,
-   "order": 5,
    "version": 1,
-   "title": "Built: round 18, ready to try",
-   "body": [
-    "Everything you approved this round is in PR #61. Once it's merged and in a release, try each line and tick it. Press **Approve** when it all works, or write what's off and press **Needs changes**.",
-    "**First unlock after updating:** your MOP templates' `[[blanks]]` become `{{blanks}}`, and your other MOPs move into the wiki as pages in a **MOPs** space. Nothing is deleted.",
-    "**How to make a template:** in the wiki, **+** next to Templates (or drop a .txt file in and pick Template). Type `{{name}}` wherever something changes each time; `{{ticket}}` and `{{title}}` fill themselves."
+   "area": "Built · PR #61",
+   "order": 1,
+   "title": "Tabs, the Organise menu, names and the cuts",
+   "bullets": [
+    "Tabs are Desk, Day, Timesheet and Wiki; Tickets, Projects, Repeating, Lists and Notes are in **Organise ▾**; Settings is the gear.",
+    "Projects is a new page. The names and cuts you picked are in."
    ],
-   "questions": [
-    {
-     "id": "tabs",
-     "type": "many",
-     "legend": "Top bar",
-     "options": [
-      {
-       "value": "Tabs are Desk, Day, Timesheet, Wiki (keys 1 to 4)"
-      },
-      {
-       "value": "Organise ▾ (or key 5) opens Tickets, Projects, Repeating, Lists, Notes"
-      },
-      {
-       "value": "The gear (or Ctrl ,) opens Settings"
-      },
-      {
-       "value": "Projects shows each project's week, total and open tickets"
-      }
-     ]
-    },
-    {
-     "id": "wiki",
-     "type": "many",
-     "legend": "Wiki",
-     "options": [
-      {
-       "value": "Make a space and a page; type and it saves"
-      },
-      {
-       "value": "[[Another page]] in a page is a link; clicking a new one makes it"
-      },
-      {
-       "value": "Linked from and On tickets fill in"
-      },
-      {
-       "value": "⋯ › Move to… puts a page under another one"
-      },
-      {
-       "value": "Earlier versions: Bring this back"
-      },
-      {
-       "value": "Find (Ctrl Space) shows wiki pages first"
-      },
-      {
-       "value": "A space's ⋯ › Write out as Markdown files"
-      }
-     ]
-    },
-    {
-     "id": "notes",
-     "type": "many",
-     "legend": "Notes",
-     "options": [
-      {
-       "value": "Right-click a jot: Change to ▸ Meeting, and Undo"
-      },
-      {
-       "value": "Move to the wiki… makes it a page"
-      },
-      {
-       "value": "[[Page]] in a ticket's notepad shows a chip that opens it"
-      }
-     ]
-    },
-    {
-     "id": "mop",
-     "type": "many",
-     "legend": "MOPs",
-     "options": [
-      {
-       "value": "+ MOP on a ticket opens the template picker"
-      },
-      {
-       "value": "Blanks are asked once; the MOP opens in a window"
-      },
-      {
-       "value": "Set the change window; it shows in the bell and on the bottom bar"
-      },
-      {
-       "value": "Run: ticks keep their time; the first tick makes it Running"
-      },
-      {
-       "value": "Copy run log pastes the steps with times"
-      },
-      {
-       "value": "The ticket's card shows MOP · Ready"
-      },
-      {
-       "value": "Use on a ticket… from a template page in the wiki"
-      }
-     ]
-    },
-    {
-     "id": "names",
-     "type": "many",
-     "legend": "Names and cuts",
-     "options": [
-      {
-       "value": "Tickets tray, Scrap, Archive, Clear old cards… read right"
-      },
-      {
-       "value": "Done today pile › See all opens Tickets › Done"
-      },
-      {
-       "value": "After unlocking, only one welcome shows"
-      },
-      {
-       "value": "New meeting note on the Desk asks which meeting"
-      }
-     ]
-    }
+   "ask": "Does getting around feel simpler?",
+   "note_hint": "Anything you looked for and couldn't find",
+   "where": [
+    "Update to the new release and unlock. Press **5** (or click **Organise ▾**): pick **Projects**, then **Tickets**.",
+    "Click the **gear** by Lock (or Ctrl ,): Settings opens.",
+    "On the Desk, right-click a ticket card: there's one **Follow up** section, and **Archive** (not Put away).",
+    "On the Desk's **Done today** pile, right-click › **See all done tickets**: it opens Tickets › Done.",
+    "Lock and unlock: only **Where was I?** shows (with a line for anything that came due)."
+   ]
+  },
+  "r18-try-wiki": {
+   "round": 18,
+   "version": 1,
+   "area": "Built · PR #61",
+   "order": 2,
+   "title": "The wiki, beside your notes",
+   "bullets": [
+    "Spaces, pages under pages, `[[links]]`, earlier versions, Find shows pages first.",
+    "On the first unlock your old MOPs move into a **MOPs** space; templates' blanks become `{{name}}`."
    ],
-   "pick": "Tick each line once you've tried it, then Approve, or write what went wrong and press Needs changes.",
-   "note_hint": "What didn't work, or what felt wrong"
+   "ask": "Is the wiki somewhere you'd keep your how-tos?",
+   "note_hint": "What's missing or awkward",
+   "where": [
+    "Press **4** for the Wiki. Click **New space**, call it Network.",
+    "Click **+** next to Network, give the page a title and a few lines, then **Done**.",
+    "Edit another page and type `[[` plus that title: in Read it's a link you can click.",
+    "Open the first page: **Linked from** on the right lists the second one.",
+    "Press Ctrl Space and type a word from the page: it's at the top of Find.",
+    "Right-click a jot on the Desk › **Move to the wiki…**."
+   ]
+  },
+  "r18-try-mop": {
+   "round": 18,
+   "version": 1,
+   "area": "Built · PR #61",
+   "order": 3,
+   "title": "MOPs on their change ticket",
+   "bullets": [
+    "Pick a template, fill the blanks once, and the MOP opens in its own window with a status, Read / Edit / Run and Copy run log.",
+    "Make a template with **+** next to Templates in the wiki; `{{name}}` for each blank."
+   ],
+   "ask": "Would you run your next change this way?",
+   "note_hint": "What your change process needs that isn't there",
+   "where": [
+    "In the Wiki, **+** next to **Templates**: write a few steps with `{{site}}` in them, then **Done**.",
+    "Paste a change ticket into the Tickets tray, right-click it › **Attach a MOP…**, pick the template, fill **site**, **Make the MOP**.",
+    "In the MOP window click **Ready**, then **Today 22:00** and set a time an hour from now: it shows in the bell and on the bottom bar.",
+    "Switch to **Run** and tick two lines: each keeps its time and the status goes to Running.",
+    "Click **Copy run log** and paste it into a note to check it."
+   ]
   }
  }
 }
