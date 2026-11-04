@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wiki mockups</title>
+<!-- Round 18 mockups: a wiki inside Shiftbook. States (window.SB_START or the hash): #page, #tpl, #find.
+     Made for 1200 x 620. Made-up content only. -->
+<style>
+  :root {
+    --desk: #e9ecef; --paper: #fffdf8; --ink: #1d2126; --mut: #5f6872;
+    --rule: rgba(29, 33, 38, 0.1);
+    --shadow: 0 1px 1px rgba(29, 33, 38, 0.06), 0 10px 24px -14px rgba(29, 33, 38, 0.35);
+    --lift: 0 2px 4px rgba(29, 33, 38, 0.08), 0 22px 40px -18px rgba(29, 33, 38, 0.45);
+    --accent: #3d5bb0; --ok: #2e8a5a; --warn: #9f5a06; --wiki: #6a4fb3; --mop: #178f7c;
+    --ui: 'Segoe UI', system-ui, -apple-system, Ubuntu, sans-serif;
+    --mono: Consolas, 'Cascadia Mono', 'DejaVu Sans Mono', monospace;
+    --display: Georgia, 'Times New Roman', serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--desk); color: var(--ink); font: 14px/1.45 var(--ui); padding: 12px; }
+  .state { display: none; }
+  .state.on { display: block; }
+  .btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; font: 600 12.5px var(--ui); color: var(--ink); white-space: nowrap; cursor: pointer; }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.mop { background: var(--mop); color: #fff; border-color: var(--mop); }
+
+  .ribbon { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.8); border-radius: 10px 10px 0 0; padding: 7px 12px; border-bottom: 1px solid var(--rule); font-size: 12.5px; }
+  .ribbon b { font: 650 15px var(--display); }
+  .ribbon .cap { flex: 1; max-width: 300px; border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 4px 10px; color: var(--mut); }
+  .ribbon .tabs { margin-left: auto; display: flex; gap: 2px; }
+  .ribbon .tabs span { padding: 4px 10px; border-radius: 7px; color: var(--mut); }
+  .ribbon .tabs span.on { background: var(--ink); color: #fff; }
+  .ribbon .tabs span.new { outline: 2px dashed color-mix(in srgb, var(--wiki) 60%, transparent); outline-offset: -2px; }
+
+  .wiki { display: grid; grid-template-columns: 230px 1fr 250px; height: 560px; background: var(--paper); border-radius: 0 0 10px 10px; box-shadow: var(--shadow); overflow: hidden; }
+  .side { border-right: 1px solid var(--rule); padding: 10px; overflow: auto; background: #faf7ef; }
+  .search { width: 100%; border: 1px solid var(--rule); border-radius: 8px; padding: 6px 9px; font: 13px var(--ui); background: #fff; }
+  .side h4 { margin: 14px 2px 4px; font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); display: flex; justify-content: space-between; }
+  .side h4 i { font-style: normal; color: var(--accent); cursor: pointer; letter-spacing: 0; text-transform: none; font-weight: 600; }
+  .tree { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .tree li { padding: 3px 6px; border-radius: 6px; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+  .tree li:hover { background: rgba(0,0,0,.05); }
+  .tree li.on { background: color-mix(in srgb, var(--wiki) 14%, #fff); font-weight: 600; }
+  .tree li .sp { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .tree li.d1 { padding-left: 22px; } .tree li.d2 { padding-left: 38px; }
+  .tree li small { margin-left: auto; color: var(--mut); font-size: 11px; }
+  .tree li .tpl { font: 700 9px var(--ui); color: var(--mop); border: 1px solid var(--mop); border-radius: 4px; padding: 0 3px; margin-left: auto; }
+
+  .main { padding: 14px 22px; overflow: auto; }
+  .crumbs { font-size: 12px; color: var(--mut); display: flex; gap: 6px; align-items: center; }
+  .crumbs a { color: var(--mut); text-decoration: none; }
+  .crumbs .tools { margin-left: auto; display: flex; gap: 6px; }
+  h1 { font: 600 26px/1.2 var(--display); margin: 10px 0 2px; }
+  .meta { font-size: 12px; color: var(--mut); margin-bottom: 12px; }
+  .body h2 { font: 600 17px var(--display); margin: 16px 0 6px; }
+  .body p, .body li { font-size: 14px; }
+  .body ol { padding-left: 22px; margin: 4px 0; }
+  .body a.link { color: var(--wiki); text-decoration: none; border-bottom: 1px dashed var(--wiki); }
+  .body code { font: 12.5px var(--mono); background: #f1eee6; padding: 1px 5px; border-radius: 4px; }
+  .body pre { font: 12.5px var(--mono); background: #f1eee6; padding: 8px 10px; border-radius: 6px; margin: 6px 0; }
+  .blank { background: #fff1c2; border: 1px dashed var(--warn); border-radius: 4px; padding: 0 4px; font: 600 12.5px var(--mono); color: var(--warn); }
+  .badge { font: 700 10px var(--ui); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: var(--mop); border-radius: 5px; padding: 2px 6px; vertical-align: middle; margin-left: 8px; }
+
+  .right { border-left: 1px solid var(--rule); padding: 12px; overflow: auto; font-size: 13px; }
+  .right h5 { margin: 0 0 6px; font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+  .right .box { background: #fff; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
+  .right .row { display: flex; gap: 6px; align-items: center; padding: 3px 0; }
+  .right .row .num { font: 700 12px var(--mono); }
+  .right .row .st { margin-left: auto; font: 700 10px var(--ui); text-transform: uppercase; letter-spacing: .05em; }
+  .st.done { color: var(--ok); } .st.ready { color: var(--accent); } .st.draft { color: var(--mut); }
+  .right a { color: var(--wiki); text-decoration: none; }
+  .right .who { color: var(--mut); font-size: 12px; }
+  .lock { display: inline-flex; gap: 5px; align-items: center; font-size: 12px; color: var(--mut); }
+
+  /* Find overlay */
+  .find { position: absolute; left: 50%; top: 70px; transform: translateX(-50%); width: 560px; background: var(--paper); border-radius: 12px; box-shadow: var(--lift); padding: 10px; }
+  .find input { width: 100%; border: 0; font: 17px var(--ui); padding: 6px 8px; background: transparent; outline: none; }
+  .find .grp { font: 700 10px var(--ui); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 8px 8px 2px; }
+  .find .hit { padding: 6px 8px; border-radius: 7px; display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; }
+  .find .hit.sel { background: color-mix(in srgb, var(--wiki) 12%, #fff); }
+  .find .hit small { color: var(--mut); font-size: 12px; }
+  .find mark { background: #ffe58a; padding: 0 1px; }
+  .dim { position: relative; }
+  .dim::after { content: ''; position: absolute; inset: 0; background: rgba(29,33,38,.25); border-radius: 10px; }
+</style>
+</head>
+<body>
+
+<!-- A: a page -->
+<div class="state" id="page">
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="cap">Log, note or find…  Ctrl Space</span>
+    <div class="tabs"><span>Desk</span><span>Day</span><span>Tickets</span><span class="on new">Wiki</span><span>Timesheet</span><span>Repeating</span></div>
+  </div>
+  <div class="wiki">
+    <div class="side">
+      <input class="search" placeholder="Search the wiki…">
+      <h4>Network <i>+ Page</i></h4>
+      <ul class="tree">
+        <li><span class="sp" style="background:#3d8bb0"></span>Switches</li>
+        <li class="d1 on">Replacing a stack member</li>
+        <li class="d1">Port security basics</li>
+        <li><span class="sp" style="background:#3d8bb0"></span>VPN: common fixes <small>3</small></li>
+        <li><span class="sp" style="background:#3d8bb0"></span>Printer queues</li>
+      </ul>
+      <h4>Servers <i>+ Page</i></h4>
+      <ul class="tree">
+        <li><span class="sp" style="background:#8a6a2e"></span>Patching night checklist</li>
+        <li><span class="sp" style="background:#8a6a2e"></span>Certificates: where they live</li>
+      </ul>
+      <h4>Templates <i>+ Template</i></h4>
+      <ul class="tree">
+        <li>Change (MOP) <span class="tpl">MOP</span></li>
+        <li>Firmware upgrade <span class="tpl">MOP</span></li>
+        <li>New starter setup <span class="tpl">LIST</span></li>
+      </ul>
+      <h4>Notebooks</h4>
+      <ul class="tree">
+        <li>Daily notes <small>14</small></li>
+        <li>Meetings <small>22</small></li>
+        <li>Jots <small>6</small></li>
+      </ul>
+      <h4>+ New space</h4>
+    </div>
+    <div class="main">
+      <div class="crumbs"><a>Network</a>›<a>Switches</a>›<span>Replacing a stack member</span>
+        <span class="tools"><span class="btn">✎ Edit</span><span class="btn">⋯</span></span></div>
+      <h1>Replacing a stack member</h1>
+      <div class="meta">Edited 2 Nov · 4 earlier versions · in <b>Network</b></div>
+      <div class="body">
+        <p>How to swap a failed member out of a switch stack without taking the rest down. For the change itself, start a MOP from <a class="link">Change (MOP)</a> on the ticket.</p>
+        <h2>Before you go</h2>
+        <ol>
+          <li>Check the stack's firmware: the new unit must match (<a class="link">Firmware upgrade</a> if not).</li>
+          <li>Save the running config: <code>copy run start</code></li>
+          <li>Note which member number failed: <code>show switch</code></li>
+        </ol>
+        <h2>On site</h2>
+        <ol>
+          <li>Power the failed member off, keep the stack cables in.</li>
+          <li>Swap the unit, same slot, same cables.</li>
+          <li>Power on and wait for it to join:</li>
+        </ol>
+        <pre>show switch
+show switch stack-ports summary</pre>
+        <p>If it comes up as a new member number, see <a class="link">Port security basics</a> before moving ports.</p>
+      </div>
+    </div>
+    <div class="right">
+      <h5>Linked from</h5>
+      <div class="box">
+        <div class="row"><a>Change (MOP)</a></div>
+        <div class="row"><a>Patching night checklist</a></div>
+      </div>
+      <h5>On tickets</h5>
+      <div class="box">
+        <div class="row"><span class="num">CHG0146615</span><span class="st ready">MOP ready</span></div>
+        <div class="row"><span class="num">INC0099001</span><span class="st done">Done</span></div>
+        <div class="who">Tickets link a page from their notepad or MOP with <code>[[</code>.</div>
+      </div>
+      <h5>Who can see it</h5>
+      <div class="box">
+        <span class="lock">🔒 Only you, in your locked file</span>
+        <div class="who" style="margin-top:4px">Sharing a space with a team comes with the hosted version (Phase 2). Until then: Export the space as Markdown files.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- B: a template page -->
+<div class="state" id="tpl">
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="cap">Log, note or find…  Ctrl Space</span>
+    <div class="tabs"><span>Desk</span><span>Day</span><span>Tickets</span><span class="on">Wiki</span><span>Timesheet</span><span>Repeating</span></div>
+  </div>
+  <div class="wiki">
+    <div class="side">
+      <input class="search" placeholder="Search the wiki…">
+      <h4>Network</h4>
+      <ul class="tree"><li><span class="sp" style="background:#3d8bb0"></span>Switches</li><li><span class="sp" style="background:#3d8bb0"></span>VPN: common fixes</li></ul>
+      <h4>Templates <i>+ Template</i></h4>
+      <ul class="tree">
+        <li class="on">Change (MOP) <span class="tpl">MOP</span></li>
+        <li>Firmware upgrade <span class="tpl">MOP</span></li>
+        <li>New starter setup <span class="tpl">LIST</span></li>
+      </ul>
+    </div>
+    <div class="main">
+      <div class="crumbs"><a>Templates</a>›<span>Change (MOP)</span>
+        <span class="tools"><span class="btn">✎ Edit</span><span class="btn mop">Use on a ticket…</span></span></div>
+      <h1>Change (MOP) <span class="badge">Template</span></h1>
+      <div class="meta">The blanks are asked once and filled in everywhere. The ticket, its title and today's date fill themselves.</div>
+      <div class="body">
+        <h2>Summary</h2>
+        <p><span class="blank">{{ticket}}</span> · <span class="blank">{{title}}</span> at <span class="blank">{{site}}</span>. Window: <span class="blank">{{window}}</span>.</p>
+        <h2>Risk and impact</h2>
+        <p>Who notices, and for how long: <span class="blank">{{impact}}</span></p>
+        <h2>Before</h2>
+        <ol><li>Tell <span class="blank">{{who to tell}}</span> the window is starting.</li><li>Back up the config.</li></ol>
+        <h2>Steps</h2>
+        <ol><li>…</li></ol>
+        <h2>Check it worked</h2>
+        <ol><li>…</li></ol>
+        <h2>Back out</h2>
+        <ol><li>…</li></ol>
+        <h2>After</h2>
+        <ol><li>Update <span class="blank">{{ticket}}</span> with the run log.</li></ol>
+      </div>
+    </div>
+    <div class="right">
+      <h5>Used on</h5>
+      <div class="box">
+        <div class="row"><span class="num">CHG0146615</span><span class="st ready">Ready</span></div>
+        <div class="row"><span class="num">CHG0145990</span><span class="st done">Done 28 Oct</span></div>
+        <div class="row"><span class="num">CHG0145002</span><span class="st done">Backed out</span></div>
+      </div>
+      <h5>Kind</h5>
+      <div class="box">MOP template: runs as a checklist with a status. A <b>List</b> template is a plain checklist (e.g. a new starter's setup).</div>
+    </div>
+  </div>
+</div>
+
+<!-- C: Find reaches the wiki -->
+<div class="state" id="find">
+  <div class="dim">
+    <div class="ribbon">
+      <b>Shiftbook</b><span class="cap">Log, note or find…  Ctrl Space</span>
+      <div class="tabs"><span class="on">Desk</span><span>Day</span><span>Tickets</span><span>Wiki</span><span>Timesheet</span><span>Repeating</span></div>
+    </div>
+    <div class="wiki" style="grid-template-columns:1fr"><div></div></div>
+  </div>
+  <div class="find">
+    <input value="vpn drops">
+    <div class="grp">Wiki</div>
+    <div class="hit sel">📄 <span><mark>VPN</mark>: common fixes</span><small>Network · “…client <mark>drops</mark> every 10 minutes: check the MTU…”</small></div>
+    <div class="hit">📄 <span>Remote access for new starters</span><small>Network · mentions <mark>VPN</mark></small></div>
+    <div class="grp">Tickets</div>
+    <div class="hit"><b style="font-family:var(--mono)">INC0099001</b><small>notepad: “<mark>VPN drops</mark> at home, MTU fixed it”</small></div>
+    <div class="grp">Log</div>
+    <div class="hit">Log “<mark>vpn drops</mark>” as work today</div>
+  </div>
+</div>
+
+<script>
+  const pick = (window.SB_START || location.hash.slice(1) || 'page');
+  (document.getElementById(pick) || document.getElementById('page')).classList.add('on');
+  try { parent.postMessage({ sbMockHeight: document.documentElement.scrollHeight }, '*'); } catch (e) {}
+</script>
+</body>
+</html>

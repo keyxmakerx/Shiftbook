@@ -1,0 +1,471 @@
+{
+ "meta": {
+  "round": 18,
+  "heading": "Round 18: a wiki, MOPs on tickets, and fewer ways round",
+  "intro": "A look over Shiftbook as it is now. The card that popped up by itself is gone (first card). Then a wiki for what you know, MOPs that live on their change ticket, and trimming the tabs, names and doubled-up features. Pick on each card; each choice stands alone."
+ },
+ "cards": {
+  "r18-check": {
+   "area": "Review",
+   "round": 18,
+   "order": 10,
+   "version": 1,
+   "title": "What I checked: the card that popped up, and two Find fixes",
+   "body": [
+    "**The card that appeared by itself is gone.** It had two causes, both fixed and both still in the app after everything that merged since: adding time to older work made a **third box** (now the same work is one card, with its days inside), and adding a ticket could leave an **empty card** (fixed, with a test so it can't come back). All the app's tests pass on the latest main.",
+    "**Cards still appear on their own in three ways, on purpose:** pasting on the Desk (a ticket number makes a ticket card, other text makes a jot); adding time or *Log again today* on an older day makes today's entry, which joins the same card unless its name or project differs; and the side panels (Where was I?, Due soon, Wrap-up), which are panels, not cards.",
+    "**Fixed in this PR, from the audit below:** Find's *Go to* list showed the wrong number keys (it said 5 for Settings; it's 8) and had no Repeating, Lists or Items. It now lists every tab with its real key. Find's *Tidy the Desk* made piles while the Desk's *Tidy up…* puts cards away; it's now called **Tidy into stacks**, like the Desk's button. On a phone, Find no longer offers Desk and board commands that did nothing there."
+   ],
+   "questions": [
+    {
+     "id": "seen",
+     "legend": "Have you seen a card appear by itself since the last update?",
+     "options": [
+      {
+       "value": "No, it's gone",
+       "rec": true
+      },
+      {
+       "value": "Yes (say when below)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything else that pops up when it shouldn't?",
+     "placeholder": "e.g. after pasting, after unlock…"
+    }
+   ],
+   "pick": "No, it's gone.",
+   "note_hint": "What you did just before it appeared"
+  },
+  "r18-wiki": {
+   "area": "Wiki",
+   "round": 18,
+   "order": 20,
+   "version": 1,
+   "title": "A wiki for what you know, instead of MOPs in a notebook",
+   "body": [
+    "**What it is:** pages you write once and find again, in **spaces** (Network, Servers, your own). Pages can sit under pages. Type `[[` to link another page; each page lists what links to it (**Linked from**) and the tickets that mention it (**On tickets**). Find (Ctrl Space) searches pages first.",
+    "**Templates live here too**, in a Templates space: a **MOP** template (runs as a checklist with a status, next card) or a **List** template (a plain checklist, like a new starter's setup). Blanks become `{{site}}` instead of `[[site]]`, because `[[` now makes a link; your templates are changed over for you.",
+    "**Other teams, honestly:** a space is the thing that gets shared, so it's built to be shared later. But Shiftbook on your computer never goes online, so sharing a space with a team needs the hosted version (Phase 2). Until then, **Export a space** writes it as Markdown files anyone can open, with the usual warning that they aren't locked. If team access soon is the main goal, a wiki your company already runs gets there faster, and this one becomes where you write it up first and keep your own.",
+    "Your Pages (the note kind) move into the wiki as they are. Nothing else about notes changes on this card."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r18-wiki.html",
+     "start": "page",
+     "caption": "A page in the Network space: links, Linked from, the tickets that use it, and who can see it.",
+     "height": 600
+    },
+    {
+     "html_file": "mocks/r18-wiki.html",
+     "start": "tpl",
+     "caption": "A MOP template with its {{blanks}}, and the tickets it's been used on.",
+     "height": 600
+    },
+    {
+     "html_file": "mocks/r18-wiki.html",
+     "start": "find",
+     "caption": "Find reaches the wiki: pages first, then tickets whose notepads mention it.",
+     "height": 360
+    }
+   ],
+   "questions": [
+    {
+     "id": "ok",
+     "legend": "A wiki inside Shiftbook",
+     "options": [
+      {
+       "value": "Yes, like this",
+       "rec": true
+      },
+      {
+       "value": "Yes, but simpler: pages and links, no spaces"
+      },
+      {
+       "value": "No: I'll use a team wiki, keep Shiftbook to tickets and MOPs"
+      }
+     ]
+    },
+    {
+     "id": "where",
+     "legend": "Where it goes",
+     "options": [
+      {
+       "value": "The Notes tab becomes Wiki; Daily notes, Meetings and Jots show as notebooks in its side list",
+       "rec": true
+      },
+      {
+       "value": "Its own tab; Notes stays as it is"
+      }
+     ]
+    },
+    {
+     "id": "share",
+     "type": "many",
+     "legend": "Until the hosted version, how should others read it?",
+     "options": [
+      {
+       "value": "Export a space as Markdown files",
+       "rec": true
+      },
+      {
+       "value": "Save a page as a PDF"
+      },
+      {
+       "value": "Nothing yet, it's for me for now"
+      }
+     ]
+    },
+    {
+     "id": "extras",
+     "type": "many",
+     "legend": "Also wanted",
+     "options": [
+      {
+       "value": "Earlier versions of each page, to go back to",
+       "rec": true
+      },
+      {
+       "value": "Pictures in pages (the planned picture step)",
+       "rec": true
+      },
+      {
+       "value": "A wiki page for each project, linked from its board"
+      },
+      {
+       "value": "Bring in Word or OneNote pages (later step)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to add?",
+     "placeholder": "e.g. the spaces you'd start with"
+    }
+   ],
+   "pick": "Yes, like this; the Notes tab becomes Wiki; export as Markdown.",
+   "note_hint": "What you'd change"
+  },
+  "r18-mop": {
+   "area": "MOPs",
+   "round": 18,
+   "order": 30,
+   "version": 1,
+   "title": "MOPs on their ticket: made from a template, run as a checklist",
+   "body": [
+    "**A MOP belongs to its change ticket.** Open a ticket (its card, the tickets box on an entry, or the Tickets tab) and it has two tabs: **Notepad** (as now) and **MOP**. Pick a template, answer its blanks once (the ticket number and title fill themselves) and the MOP is attached.",
+    "**It has a status:** Draft, Ready, Running, Done or Backed out, shown on the ticket's card. Three modes: **Read**, **Edit** and **Run**. Run is the checklist from the MOP notebook: ticking a heading crosses out everything under it, and each tick keeps its time, so **Copy run log** gives you the steps with times for the change record.",
+    "**The change window** (from the `{{window}}` blank, or set by hand) shows on the bottom bar and in the bell before it starts, like pins with a chase day.",
+    "**Finding old MOPs:** search the ticket number, or open the template: it lists every ticket it was used on and how each one ended.",
+    "**The MOP notebook window** (tabs, Numbered, Minimal, Checklist) would retire: its Run checklist and line numbers move into the MOP tab, and the MOP tab can pop out or fill the screen. Dropping MOP files in still works; each file becomes a wiki page or template."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r18-mop.html",
+     "start": "attach",
+     "caption": "Attaching a MOP to CHG0146615: pick a template, fill the blanks once.",
+     "height": 600
+    },
+    {
+     "html_file": "mocks/r18-mop.html",
+     "start": "run",
+     "caption": "Running it: the status at the top, ticked steps keep their times, Copy run log at the bottom. Click the boxes.",
+     "height": 600
+    },
+    {
+     "html_file": "mocks/r18-mop.html",
+     "start": "card",
+     "caption": "On the Desk and in the bell: the MOP's status on its ticket card, and the change window coming up.",
+     "height": 600
+    }
+   ],
+   "questions": [
+    {
+     "id": "ok",
+     "legend": "A MOP lives on its ticket",
+     "options": [
+      {
+       "value": "Yes, like this",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "status",
+     "legend": "Its status steps",
+     "options": [
+      {
+       "value": "Draft, Ready, Running, Done, Backed out",
+       "rec": true
+      },
+      {
+       "value": "Fewer: Draft, Done"
+      },
+      {
+       "value": "Different ones (say below)"
+      }
+     ]
+    },
+    {
+     "id": "extras",
+     "type": "many",
+     "legend": "Which of these?",
+     "options": [
+      {
+       "value": "Times on ticked steps, and Copy run log",
+       "rec": true
+      },
+      {
+       "value": "The change window in the bell and on the bottom bar",
+       "rec": true
+      },
+      {
+       "value": "Copy the whole MOP as plain text for the change record",
+       "rec": true
+      },
+      {
+       "value": "More than one MOP on a ticket"
+      }
+     ]
+    },
+    {
+     "id": "book",
+     "legend": "The MOP notebook window",
+     "options": [
+      {
+       "value": "Retire it; Run and line numbers move into the MOP tab",
+       "rec": true
+      },
+      {
+       "value": "Keep it too, for MOPs that aren't on a ticket"
+      }
+     ]
+    },
+    {
+     "id": "move",
+     "legend": "The MOPs already in Shiftbook",
+     "options": [
+      {
+       "value": "Templates go to the wiki's Templates; the rest become wiki pages in a MOPs space",
+       "rec": true
+      },
+      {
+       "value": "Ask me about each one"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything your change process needs that's missing?",
+     "placeholder": "e.g. a peer-review tick, a CAB date"
+    }
+   ],
+   "pick": "Yes; all five steps; times, window and copy; retire the notebook; move them over.",
+   "note_hint": "What you'd change"
+  },
+  "r18-tabs": {
+   "area": "Ways around",
+   "round": 18,
+   "order": 40,
+   "version": 1,
+   "title": "Fewer tabs: 8 down to 6 and a gear",
+   "body": [
+    "I went through every button, menu, key and Find command. The biggest source of *where do I go for this?* is the tabs: eight of them, and some overlap. **Lists** has only its tab and key as ways in; **Items** is really your tickets; **Settings** is something you visit, not a place you work.",
+    "Pick the changes you want. Each one stands on its own."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r18-ways.html",
+     "start": "tabs",
+     "caption": "The top bar today, and with these changes.",
+     "height": 380
+    }
+   ],
+   "questions": [
+    {
+     "id": "which",
+     "type": "many",
+     "legend": "Which of these?",
+     "options": [
+      {
+       "value": "Items becomes Tickets (its Done tab replaces the Done tickets board)",
+       "rec": true
+      },
+      {
+       "value": "Notes becomes Wiki (if you pick that on the wiki card)",
+       "rec": true
+      },
+      {
+       "value": "Lists moves inside Repeating, as a second tab",
+       "rec": true
+      },
+      {
+       "value": "Settings becomes a gear by Lock (and Ctrl ,)",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything else in the top bar you'd change?",
+     "placeholder": "e.g. the day bars"
+    }
+   ],
+   "pick": "All four.",
+   "note_hint": "What you'd change"
+  },
+  "r18-names": {
+   "area": "Ways around",
+   "round": 18,
+   "order": 50,
+   "version": 1,
+   "title": "One name for each thing",
+   "body": [
+    "The same thing goes by different names in different places, and two different things share a name (*Tidy the Desk* meant both piling cards up and clearing them away; *Jot* is both a note and, in the bell, an Inbox scrap). Tick the ones to change; the right-hand column is the name everywhere."
+   ],
+   "figures": [
+    {
+     "html_file": "mocks/r18-ways.html",
+     "start": "names",
+     "caption": "What each thing is called today, and the one name it would have.",
+     "height": 440
+    }
+   ],
+   "questions": [
+    {
+     "id": "which",
+     "type": "many",
+     "legend": "Change these",
+     "options": [
+      {
+       "value": "Tickets tray, everywhere",
+       "rec": true
+      },
+      {
+       "value": "Scrap for Inbox lines (Jot stays a note)",
+       "rec": true
+      },
+      {
+       "value": "Archive and Bring back, for notes and Desk cards alike",
+       "rec": true
+      },
+      {
+       "value": "Clear old cards… for the dialog that takes old cards off",
+       "rec": true
+      },
+      {
+       "value": "One Follow up section in menus (Tomorrow or Pick a day)",
+       "rec": true
+      },
+      {
+       "value": "Notepad, not Notes / next step",
+       "rec": true
+      },
+      {
+       "value": "Timesheet, not crib sheet",
+       "rec": true
+      },
+      {
+       "value": "Book a holiday (8 h)",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "A name you'd pick differently?",
+     "placeholder": "e.g. call the tray Today's tickets"
+    }
+   ],
+   "pick": "All of them.",
+   "note_hint": "Names you'd change"
+  },
+  "r18-dupes": {
+   "area": "Ways around",
+   "round": 18,
+   "order": 60,
+   "version": 1,
+   "title": "Doubled-up features to cut back",
+   "body": [
+    "Things that grew up separately and now do nearly the same job:",
+    "**Done tickets** live in four places (the tray, the Desk's Done today pile, a Done tickets board, and Items › Done). **Meeting notes** can be made three ways, and only one of them files the note under its meeting series. **Today's daily note** has three editors. **After unlocking**, *Where was I?* and *While you were away* both open at once. Some menus list **Follow up tomorrow** and then a Follow up section with Tomorrow in it.",
+    "Pick what to cut. Nothing you've written is lost: these are ways in, not data."
+   ],
+   "questions": [
+    {
+     "id": "which",
+     "type": "many",
+     "legend": "Cut these",
+     "options": [
+      {
+       "value": "The Done tickets board (Tickets › Done has them; the Done today pile stays)",
+       "rec": true
+      },
+      {
+       "value": "Meeting notes always made on their meeting's board, so they join the series",
+       "rec": true
+      },
+      {
+       "value": "One welcome after unlocking: While you were away folds into Where was I?",
+       "rec": true
+      },
+      {
+       "value": "Follow up tomorrow leaves menus that already have Follow up › Tomorrow",
+       "rec": true
+      },
+      {
+       "value": "The Due soon card on the Desk (the bell has the same list)"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything you use twice and wish was one?",
+     "placeholder": "e.g. the Day tab and the Desk"
+    }
+   ],
+   "pick": "The first four; keep Due soon.",
+   "note_hint": "What you'd keep"
+  },
+  "r18-sheet": {
+   "area": "This sheet",
+   "round": 18,
+   "order": 70,
+   "version": 1,
+   "title": "Tidying the sign-off sheets",
+   "body": [
+    "There are two sheets. Rounds 15 to 17 went on a newer one that this session can't open (it belongs to another account), so round 18 is here, on the one we used for rounds 8 to 14. The round file is also in the repo (`tools/signoff/rounds/r18.json`), so it can be loaded onto the other sheet.",
+    "**Archived here:** the round 13 and 14 *Built* cards. Those steps shipped long ago.",
+    "**Out of date on the round 17 sheet:** *Add a ticket card to an entry*, *Logged jots and scraps keep their spot* and *Ticking a ticket on an entry closes it in the Tickets panel* still say **not merged yet**, but all three are merged. The MOP notebook lines in *The last batch* and *Notes, windows and the bell* change if the MOP and wiki cards here are approved."
+   ],
+   "questions": [
+    {
+     "id": "which",
+     "legend": "Which sheet from now on?",
+     "options": [
+      {
+       "value": "This one",
+       "rec": true
+      },
+      {
+       "value": "The round 15 to 17 one (I'll share it with this account, or have that session copy round 18 over)"
+      }
+     ]
+    }
+   ],
+   "pick": "This one.",
+   "note_hint": "Anything about the sheet itself"
+  }
+ }
+}

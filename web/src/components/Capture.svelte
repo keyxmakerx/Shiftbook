@@ -12,7 +12,7 @@
   import { toIsoDate } from '../lib/dates';
   import { KIND_LABEL } from '../lib/notes';
   import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
-  import type { SettingsSection } from '../lib/keys';
+  import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
   import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
   import {
     app,
@@ -28,6 +28,7 @@
     ribbonWeekOf,
     selectDay,
     setView,
+    shownViews,
     words,
   } from '../lib/store.svelte';
   import { openMopBook, pickMopFiles } from '../lib/mopbook.svelte';
@@ -50,6 +51,8 @@
     /** Extra words Find matches but doesn't show. */
     words?: string;
     run: () => void | Promise<void>;
+    /** Needs the Desk or a full-screen board, which the phone layout doesn't have. */
+    desk?: boolean;
   };
   type Hit =
     | { kind: 'entry'; entry: Entry }
@@ -113,13 +116,10 @@
   }
 
   const commands = $derived.by((): Command[] => [
-    { label: 'Go to Desk', group: 'Go to', keys: '1', run: () => setView('desk') },
-    { label: 'Go to Day', group: 'Go to', keys: '2', run: () => setView('day') },
-    { label: 'Go to Timesheet', group: 'Go to', keys: '3', run: () => setView('timesheet') },
-    { label: 'Go to Notes', group: 'Go to', keys: '4', run: () => setView('notes') },
-    { label: 'Go to Settings', group: 'Go to', keys: '5', run: () => setView('settings') },
-    { label: 'Boards', group: 'Go to', words: 'full screen projects meetings', run: () => openBoard('desk') },
-    { label: 'Daily notes', group: 'Go to', words: 'board', run: () => openBoard('daily') },
+    // Every tab, with the number key it really has (home use has no Timesheet, so the keys move).
+    ...shownViews().map((v, i): Command => ({ label: `Go to ${VIEW_NAMES[v]}`, group: 'Go to', keys: String(i + 1), run: () => setView(v) })),
+    { label: 'Boards', group: 'Go to', desk: true, words: 'full screen projects meetings', run: () => openBoard('desk') },
+    { label: 'Daily notes', group: 'Go to', desk: true, words: 'board', run: () => openBoard('daily') },
     {
       label: 'Done tickets',
       group: 'Go to',
@@ -129,23 +129,24 @@
         setView('items');
       },
     },
-    { label: 'Archive', group: 'Go to', words: 'board archived', run: () => openBoard('archive') },
+    { label: 'Archive', group: 'Go to', desk: true, words: 'board archived', run: () => openBoard('archive') },
     ...app.projects
       .filter((p) => !p.archived)
-      .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', run: () => openBoard(`project:${p.id}`) })),
-    ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', run: () => openBoard(`series:${m.id}`) })),
+      .map((p): Command => ({ label: `Project board: ${p.name}`, group: 'Go to', desk: true, run: () => openBoard(`project:${p.id}`) })),
+    ...series.map((m): Command => ({ label: `Meeting board: ${m.name}`, group: 'Go to', desk: true, run: () => openBoard(`series:${m.id}`) })),
     { label: 'New note', group: 'Do', run: () => openNote(null) },
     { label: `Open the ${words().book}`, group: 'Do', words: 'mop notepad tabs checklist template', run: () => openMopBook() },
     { label: `Add ${words().mop} files`, group: 'Do', words: 'import drop copy in text notepad++ template', run: pickMopFiles },
     { label: 'Wrap up the day', group: 'Do', words: 'end of day wrap-up', run: wrapUp },
     { label: 'Back up now', group: 'Do', words: 'backup save', run: backupNow },
     { label: 'Copy for stand-up', group: 'Do', words: 'yesterday standup clipboard', run: copyStandup },
-    { label: 'Fit everything', group: 'Do', words: 'desk zoom', run: () => onDesk('fit') },
-    { label: 'Tidy the Desk', group: 'Do', words: 'pile loose cards by project', run: () => onDesk('tidy') },
-    { label: 'Timeline', group: 'Do', words: 'desk lay out', run: () => onDesk('timeline') },
+    { label: 'Fit everything', group: 'Do', desk: true, words: 'desk zoom', run: () => onDesk('fit') },
+    { label: 'Tidy into stacks', group: 'Do', desk: true, words: 'tidy the desk pile loose cards by project', run: () => onDesk('tidy') },
+    { label: 'Timeline', group: 'Do', desk: true, words: 'desk lay out', run: () => onDesk('timeline') },
     {
       label: app.justToday ? 'Show every card again' : 'Just today on the Desk',
       group: 'Do',
+      desk: true,
       words: 'fade focus today',
       run: () => {
         setView('desk');
@@ -175,6 +176,9 @@
       : []),
     ...SETTINGS.map((p): Command => ({ label: `Settings: ${p.label}`, group: 'Settings', words: p.words, run: () => settings(p.id) })),
   ]);
+
+  /** On a phone, commands for the Desk and boards are left out: they'd do nothing there. */
+  const usable = $derived(phone.on ? commands.filter((c) => !c.desk) : commands);
 
   /** Commands in their groups' order, keeping the ranking inside each group. */
   function grouped(list: Command[]): Command[] {
@@ -264,12 +268,12 @@
     }
     if (now.trim().toLowerCase() === 'help') {
       seen = null;
-      hits = grouped(commands).map((command): Hit => ({ kind: 'command', command }));
+      hits = grouped(usable).map((command): Hit => ({ kind: 'command', command }));
       sel = 0;
       return;
     }
     timer = setTimeout(async () => {
-      const list = commands;
+      const list = usable;
       const [c, found, day] = await Promise.all([
         api.parseCapture(now, app.today).catch(() => null),
         api
