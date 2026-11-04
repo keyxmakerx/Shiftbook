@@ -11,6 +11,7 @@
   import { dayMonth, weekdayShort } from '../lib/format';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
+  import { toast } from '../lib/toast.svelte';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
 
@@ -77,6 +78,33 @@
     if (await attempt(() => api.addEntryTickets(entry.id, text).then(() => true))) onchanged();
   }
 
+  /** Take a ticket off this work: off every day's entry on the card, with Undo. A Tickets-tray
+   *  ticket folded in stays in the tray (it isn't attached to an entry). */
+  async function takeOff(w: WorkTicket) {
+    const on = w.sources.flatMap((s) => {
+      if (s.kind !== 'entry') return [];
+      const d = days.find((e) => e.tickets.some((t) => t.id === s.id));
+      return d && !d.isTray ? [{ ticket: s.id, entry: d.id }] : [];
+    });
+    if (!on.length) return;
+    if (open === w.number) open = null;
+    const ok = await attempt(async () => {
+      for (const o of on) await api.removeTicket(o.ticket);
+      return true;
+    });
+    await refresh();
+    onchanged();
+    if (!ok) return;
+    toast(`Took ${w.number} off ${entry.description || 'the entry'}`, 'Undo', () => {
+      void attempt(() => Promise.all(on.map((o) => api.addEntryTickets(o.entry, w.number))))
+        .then(refresh)
+        .then(onchanged);
+    });
+  }
+
+  /** True when the ticket is on one of the card's entries (not only in the Tickets tray). */
+  const onEntry = (w: WorkTicket) => w.sources.some((s) => s.kind === 'entry') && !entry.isTray;
+
   async function close() {
     await flush();
     onclose();
@@ -135,6 +163,16 @@
           </button>
           <span class="num mono">{t.number}</span>
           {#if !t.done}<span class="tag">Still open</span>{/if}
+          {#if onEntry(t)}
+            <button
+              type="button"
+              class="off"
+              class:pushed={t.done}
+              title="Take {t.number} off this entry"
+              aria-label="Take {t.number} off this entry"
+              onclick={() => void takeOff(t)}
+            ><Icon name="x" size={12} /></button>
+          {/if}
         </span>
         {#if open === t.number}
           <textarea
@@ -307,6 +345,30 @@
   .num {
     font-weight: 700;
     font-size: 12.5px;
+  }
+
+  .off {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    flex: none;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--mut);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+
+  .off.pushed {
+    margin-left: auto;
+  }
+
+  .off:hover,
+  .off:focus-visible {
+    background: color-mix(in srgb, var(--bad) 14%, transparent);
+    color: var(--bad);
   }
 
   .tick {

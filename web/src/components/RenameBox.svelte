@@ -4,7 +4,7 @@
   import type { Entry } from '../lib/api';
   import { renameEntry, renaming, stopRename } from '../lib/rename.svelte';
 
-  let { entry }: { entry: Entry } = $props();
+  let { entry, also = [] }: { entry: Entry; also?: readonly Entry[] } = $props();
 
   // svelte-ignore state_referenced_locally
   let text = $state(entry.description);
@@ -21,7 +21,7 @@
     if (done) return;
     done = true;
     stopRename();
-    if (save) void renameEntry(entry, text);
+    if (save) void renameEntry(entry, text, also);
   }
 </script>
 
