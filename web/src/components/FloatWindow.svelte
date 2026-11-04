@@ -4,7 +4,7 @@
   // bottom bar, ⤢ fills the screen, ✕ closes it. What's typed saves as you go.
   import { onMount, untrack } from 'svelte';
   import { api } from '../lib/api';
-  import type { Note, WindowSpot } from '../lib/api';
+  import type { Note, NoteKind, WindowSpot } from '../lib/api';
   import { app, attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
   import { closeWindow, focusWindow, moveWindow, resizeWindow, setWindowMode, windows, winKey } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
@@ -13,7 +13,7 @@
   import { phone } from '../lib/phone.svelte';
   import { dragButton } from '../lib/rightDrag';
   import { paperMenu } from '../lib/menu.svelte';
-  import { noteKindSections } from '../lib/noteActions';
+  import { changeKind, noteKindSections } from '../lib/noteActions';
 
   let { win }: { win: WindowSpot } = $props();
 
@@ -32,6 +32,22 @@
   let isGone = $state(false);
   /** A MOP on a ticket (round 18): the window shows its status, Read / Edit / Run and run log. */
   let isMop = $state(false);
+  /** A note's kind, for the Kind picker in the footer (round 18: change it without leaving). */
+  let noteKind = $state<NoteKind | null>(null);
+  const KIND_CHOICES: { kind: NoteKind; label: string }[] = [
+    { kind: 'jot', label: 'Jot' },
+    { kind: 'daily', label: 'Daily' },
+    { kind: 'meeting', label: 'Meeting' },
+    { kind: 'page', label: 'Wiki page' },
+  ];
+
+  async function pickKind(kind: NoteKind) {
+    if (!note || kind === note.kind) return;
+    // Save the typing first, so the change keeps it.
+    if (timer) clearTimeout(timer);
+    await save();
+    await changeKind(note, kind, () => void load());
+  }
   let status = $state<'' | 'saving' | 'saved'>('');
   /** The newer text written somewhere else while this window had unsaved typing. */
   let clash = $state<string | null>(null);
@@ -62,7 +78,11 @@
   async function load() {
     const now = await current();
     if (now === null) return;
-    text = saved = now;
+    // Stored notepads lose trailing blank lines, so the text coming back from this window's own
+    // save can be one Enter short of what's in the box. Only replace the box when the text
+    // really differs, or a fresh new line vanishes and the cursor jumps back a line.
+    if (now.trimEnd() !== text.trimEnd()) text = now;
+    saved = text;
   }
 
   /** The text as stored now (and the title and colour), or null when it's gone. */
@@ -86,8 +106,9 @@
       if (!n) return gone(true);
       note = n;
       isMop = n.kind === 'mop' && !n.template;
+      noteKind = n.kind;
       title = n.title;
-      sub = isMop ? 'MOP' : `${n.kind[0]!.toUpperCase()}${n.kind.slice(1)} note`;
+      sub = isMop ? 'MOP' : n.kind === 'page' ? 'Wiki page' : `${n.kind[0]!.toUpperCase()}${n.kind.slice(1)} note`;
       color = n.projectId ? projectColor(n.projectId) : 'var(--warn)';
       return n.body;
     }
@@ -110,7 +131,8 @@
     const stored = await current();
     if (stored === null) return;
     let body = text;
-    if (stored !== saved && stored !== text) {
+    // Trailing blank lines don't count: storing drops them (see load).
+    if (stored.trimEnd() !== saved.trimEnd() && stored.trimEnd() !== text.trimEnd()) {
       if (!closing) {
         clash = stored;
         status = '';
@@ -291,6 +313,14 @@
         {:else}
           <span aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : 'Saves as you type'}</span>
         {/if}
+        {#if win.kind === 'note' && noteKind && noteKind !== 'mop'}
+          <label class="kind">
+            Kind
+            <select value={noteKind} onchange={(e) => void pickKind(e.currentTarget.value as NoteKind)} aria-label="What kind of note this is">
+              {#each KIND_CHOICES as k (k.kind)}<option value={k.kind}>{k.label}</option>{/each}
+            </select>
+          </label>
+        {/if}
         {#if win.mode !== 'full'}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <span class="grip" title="Drag to resize" onpointerdown={(e) => drag(e, true)}></span>
@@ -301,6 +331,26 @@
 </section>
 
 <style>
+  .kind {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: auto;
+  }
+
+  .kind + .grip {
+    margin-left: 0;
+  }
+
+  .kind select {
+    font: inherit;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1px 4px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+
   .mopbody {
     flex: 1;
     min-height: 0;

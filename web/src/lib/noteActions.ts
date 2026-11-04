@@ -64,8 +64,8 @@ export async function changeKind(note: Note, kind: NoteKind, after?: () => void)
   if (note.kind === kind || !(await setKind(note, kind))) return;
   await refresh();
   after?.();
-  const name = KINDS.find((k) => k.kind === kind)?.label ?? kind;
-  toast(`“${note.title}” is a ${name} note now`, 'Undo', () => void setKind(note, note.kind).then(refresh).then(() => after?.()));
+  const name = kind === 'page' ? 'wiki page' : `${KINDS.find((k) => k.kind === kind)?.label ?? kind} note`;
+  toast(`“${note.title}” is a ${name} now`, 'Undo', () => void setKind(note, note.kind).then(refresh).then(() => after?.()));
 }
 
 /** Make a note a wiki page and open it there (round 18), with Undo. */
