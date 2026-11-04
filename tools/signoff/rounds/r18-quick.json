@@ -1,0 +1,67 @@
+{
+ "meta": {
+  "round": 18,
+  "heading": "Three quick calls",
+  "intro": "Each card asks one thing. Press one of the two buttons. A note is optional."
+ },
+ "cards": {
+  "r18-updates": {
+   "area": "Behind the scenes",
+   "round": 18,
+   "order": 1,
+   "version": 2,
+   "title": "Seven routine tool updates are waiting",
+   "body": [
+    "Seven small version bumps to the tools Shiftbook is built with. They change nothing you see, and each one has to pass all the checks before it goes in."
+   ],
+   "ask": "Merge them once their checks pass?",
+   "yes": "Yes, merge",
+   "no": "Not yet",
+   "note_hint": "Anything about the updates",
+   "where": [
+    "Nothing to look at in the app. These are on GitHub as pull requests #49 to #55 (Tauri, Vite, Tokio, uuid and a GitHub step)."
+   ]
+  },
+  "r18-desk": {
+   "area": "Desk · changed 31 October",
+   "round": 18,
+   "order": 2,
+   "version": 2,
+   "title": "The Desk opens on your cards, with calmer lines",
+   "bullets": [
+    "It opens on the middle of your cards, not the paper's corner.",
+    "Double-click opens an older entry or a ticket's notepad.",
+    "Lines stay faint until you point at a card, and follow it while you drag."
+   ],
+   "ask": "Has the Desk felt right since then?",
+   "note_hint": "What felt wrong, if anything",
+   "where": [
+    "Open Shiftbook and unlock it. Go to the **Desk** (press 1).",
+    "Check that it opens showing your cards, not an empty corner of the paper.",
+    "Double-click an entry from an earlier day: its details should open. Double-click a ticket card: its notepad should open full screen.",
+    "Move the mouse over a card: its link lines should light up, and the rest stay faint. Drag the card: the lines should follow it.",
+    "Right-click any card: the menu titles should each fit on one line."
+   ]
+  },
+  "r18-recent": {
+   "area": "Changed 26 to 27 October",
+   "round": 18,
+   "order": 3,
+   "version": 2,
+   "title": "Rename, put away, line up and the MOP notebook",
+   "body": [
+    "Six things that went in on 26 and 27 October. If you've been using them and nothing's gone wrong, that's a Looks good."
+   ],
+   "ask": "Working fine in everyday use?",
+   "note_hint": "Which one isn't working, and what happened",
+   "where": [
+    "**Rename:** on the Desk, right-click an entry → Rename, and type the new name where it sits.",
+    "**Put away:** right-click an entry → Put away (off the Desk). It goes into the **Archive** drawer on the Desk, and you can take it back out.",
+    "**Line up:** Shift + drag a card and red guide lines help you line it up. To tidy several at once, pick the **Select** tool in the Desk's toolbar, drag around a few cards, then press In a row, In a column or Tidy grid.",
+    "**MOP notebook:** press Ctrl+Space and pick **Open the MOP notebook**. Try its tabs, the Numbered / Minimal / Checklist styles and a template. Dragging a MOP .txt file onto Shiftbook copies it in.",
+    "**Timesheet codes:** click an entry to open its slide-out and pick a **Timesheet code**, then check it shows on the **Timesheet** view.",
+    "**Copy switches:** Settings → Security → **Copy and screenshot protection**."
+   ]
+  }
+ }
+}
