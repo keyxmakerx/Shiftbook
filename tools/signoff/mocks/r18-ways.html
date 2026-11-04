@@ -49,6 +49,18 @@
   td.old span { color: var(--mut); }
   td.new { font-weight: 600; color: var(--ok); }
   td small { color: var(--mut); display: block; font-weight: 400; }
+  .dd { position: relative; }
+  .ddbtn { border: 1px solid var(--rule); background: #fff; border-radius: 8px; padding: 3px 10px; color: var(--ink); font-weight: 600; }
+  .ddbtn.open { background: var(--ink); color: #fff; }
+  .menu { position: absolute; right: 0; top: 34px; width: 290px; background: var(--paper); border-radius: 10px; box-shadow: 0 2px 4px rgba(29,33,38,.08), 0 22px 40px -18px rgba(29,33,38,.45); padding: 6px; z-index: 2; }
+  .menu .it { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 7px; font-size: 13.5px; }
+  .menu .it:hover, .menu .it.sel { background: color-mix(in srgb, var(--accent) 10%, #fff); }
+  .menu .it small { color: var(--mut); font-size: 12px; display: block; }
+  .menu .it .n { white-space: nowrap; margin-left: auto; font: 600 11.5px var(--ui); color: var(--mut); }
+  .menu .it .n.due { color: #fff; background: var(--warn); border-radius: 9px; padding: 0 7px; }
+  .menu .it kbd { font: 11px var(--ui); color: var(--mut); border: 1px solid var(--rule); border-radius: 4px; padding: 0 4px; }
+  .menu hr { border: 0; border-top: 1px solid var(--rule); margin: 4px 6px; }
+  .menu .ic { width: 22px; text-align: center; }
 </style>
 </head>
 <body>
@@ -76,6 +88,30 @@
     <div class="note"><h4>Settings <span class="arrow">→</span> ⚙</h4><p>A gear by Lock, and Ctrl , as a key. Find's “Settings: …” lines still jump straight to a section.</p></div>
     <div class="note"><h4>Keys</h4><p>1 to 6 follow the tabs. Find's “Go to” list now shows the real keys (it was showing old ones; fixed in this PR).</p></div>
     <div class="note"><h4>Unchanged</h4><p>Capture box, Lock, the day bars, the bottom bar, the bell and right-click menus.</p></div>
+  </div>
+</div>
+
+<div class="state" id="group">
+  <div class="lab">Today: 8 tabs</div>
+  <div class="ribbon">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log or note something…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span>Timesheet<sup>3</sup></span><span>Notes<sup>4</sup></span><span>Repeating<sup>5</sup></span><span>Lists<sup>6</sup></span><span>Items<sup>7</sup></span><span>Settings<sup>8</sup></span></div>
+  </div>
+  <div class="lab new">Proposed: 4 places you work, one menu for the rest, and a gear</div>
+  <div class="ribbon" style="margin-bottom:330px">
+    <b>Shiftbook</b><span class="alpha">alpha</span><span class="cap">Log, note or find…  Ctrl Space</span><span class="lock">Lock</span>
+    <div class="tabs"><span class="on">Desk<sup>1</sup></span><span>Day<sup>2</sup></span><span>Timesheet<sup>3</sup></span><span class="new">Wiki<sup>4</sup></span></div>
+    <span class="dd"><span class="ddbtn open">Organise ▾<sup style="color:#cfd6dd">5</sup></span>
+      <div class="menu">
+        <div class="it sel"><span class="ic">🎫</span><span>Tickets<small>open, done, and tasks</small></span><span class="n">3 open</span></div>
+        <div class="it"><span class="ic">📁</span><span>Projects<small>hours, tickets and the board for each</small></span><span class="n">5</span></div>
+        <div class="it"><span class="ic">🔁</span><span>Repeating<small>renewals, chores, regular events</small></span><span class="n due">2 due</span></div>
+        <div class="it"><span class="ic">☑</span><span>Lists<small>checklists you reset and use again</small></span><span class="n">4</span></div>
+        <hr>
+        <div class="it"><span class="ic">📝</span><span>Notes<small>Daily notes, meetings and jots</small></span><span class="n">22</span></div>
+      </div>
+    </span>
+    <span class="gear">⚙</span>
   </div>
 </div>
 

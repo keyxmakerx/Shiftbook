@@ -275,52 +275,92 @@
    "area": "Ways around",
    "round": 18,
    "order": 40,
-   "version": 1,
-   "title": "Fewer tabs: 8 down to 6 and a gear",
+   "version": 2,
+   "title": "Tabs for where you work, one menu for the rest",
    "body": [
-    "I went through every button, menu, key and Find command. The biggest source of *where do I go for this?* is the tabs: eight of them, and some overlap. **Lists** has only its tab and key as ways in; **Items** is really your tickets; **Settings** is something you visit, not a place you work.",
-    "Pick the changes you want. Each one stands on its own."
+    "**Your idea, version 2.** Repeating, Lists and Items each have a tab, but so could Projects, and you're right that they're all the same sort of thing: places you go to look after your stuff, not where you work all day. So they go in one **Organise ▾** menu next to the tabs, each with its count (open tickets, things due).",
+    "**Tabs stay for where you work:** Desk, Day, Timesheet and Wiki. **Settings** becomes a gear. **Projects** gets a page of its own in the menu (today they're only in Settings and as boards): each project's hours, open tickets and a way into its board.",
+    "Keys: 1 to 4 for the tabs, 5 opens the menu, then the arrow keys or the first letter. Find's *Go to* lines still jump straight to any of them."
    ],
    "figures": [
     {
      "html_file": "mocks/r18-ways.html",
-     "start": "tabs",
-     "caption": "The top bar today, and with these changes.",
-     "height": 380
+     "start": "group",
+     "caption": "The top bar today, and with four tabs and the Organise menu open.",
+     "height": 520
     }
    ],
    "questions": [
     {
-     "id": "which",
-     "type": "many",
-     "legend": "Which of these?",
+     "id": "shape",
+     "legend": "The top bar",
      "options": [
       {
-       "value": "Items becomes Tickets (its Done tab replaces the Done tickets board)",
+       "value": "Four tabs, Organise ▾ for the rest, and a gear",
        "rec": true
       },
       {
-       "value": "Notes becomes Wiki (if you pick that on the wiki card)",
+       "value": "Keep a tab each, just add Projects"
+      },
+      {
+       "value": "Something else (say below)"
+      }
+     ]
+    },
+    {
+     "id": "inmenu",
+     "type": "many",
+     "legend": "In the menu",
+     "options": [
+      {
+       "value": "Tickets (now Items)",
        "rec": true
       },
       {
-       "value": "Lists moves inside Repeating, as a second tab",
+       "value": "Projects, as a new page",
        "rec": true
       },
       {
-       "value": "Settings becomes a gear by Lock (and Ctrl ,)",
+       "value": "Repeating",
        "rec": true
+      },
+      {
+       "value": "Lists",
+       "rec": true
+      },
+      {
+       "value": "Notes (see the notes card)",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "name",
+     "legend": "What the menu is called",
+     "options": [
+      {
+       "value": "Organise",
+       "rec": true
+      },
+      {
+       "value": "More"
+      },
+      {
+       "value": "My stuff"
+      },
+      {
+       "value": "Another name (say below)"
       }
      ]
     },
     {
      "id": "more",
      "type": "text",
-     "legend": "Anything else in the top bar you'd change?",
-     "placeholder": "e.g. the day bars"
+     "legend": "Anything to add?",
+     "placeholder": "e.g. remember the last one I opened"
     }
    ],
-   "pick": "All four.",
+   "pick": "Four tabs, Organise menu with all five, a gear.",
    "note_hint": "What you'd change"
   },
   "r18-names": {
@@ -466,6 +506,74 @@
    ],
    "pick": "This one.",
    "note_hint": "Anything about the sheet itself"
+  },
+  "r18-notes": {
+   "area": "Wiki",
+   "round": 18,
+   "order": 25,
+   "version": 1,
+   "title": "Notes stay; the wiki sits beside them",
+   "body": [
+    "**You're right, notes don't become the wiki.** They do different jobs. **Notes** are written in the flow of the day: Daily notes, Jots and Meeting notes, dated, and they tidy themselves into the archive. The **wiki** is what you keep: how-tos, reference and MOP templates. The **Page** kind is the only one that moves; a page is already \"reference that never moves on its own\", which is a wiki page.",
+    "**The kind box:** you can only change a note's kind in the Notes tab today. Proposal: right-click any note (on the Desk, in a window, on a board) for **Change to ▸ Jot / Daily / Meeting**, plus **Move to the wiki…**, for a jot that grew into something worth keeping.",
+    "**Links both ways:** `[[` works in notes and ticket notepads too, so a meeting note can point at a how-to. The wiki page lists the notes and tickets that point at it.",
+    "**Where Notes goes:** you said you don't use the Notes tab much, so it moves into the Organise menu. The Desk, the bell and the boards stay the everyday ways in."
+   ],
+   "questions": [
+    {
+     "id": "ok",
+     "legend": "Notes and the wiki",
+     "options": [
+      {
+       "value": "Notes stay, wiki beside them, only Pages move",
+       "rec": true
+      },
+      {
+       "value": "Change something (say below)"
+      }
+     ]
+    },
+    {
+     "id": "which",
+     "type": "many",
+     "legend": "Which of these?",
+     "options": [
+      {
+       "value": "Change to ▸ Jot / Daily / Meeting from any note's right-click menu",
+       "rec": true
+      },
+      {
+       "value": "Move to the wiki… from any note",
+       "rec": true
+      },
+      {
+       "value": "[[ links from notes and ticket notepads to wiki pages",
+       "rec": true
+      }
+     ]
+    },
+    {
+     "id": "tab",
+     "legend": "Where the Notes tab goes",
+     "options": [
+      {
+       "value": "Into the Organise menu",
+       "rec": true
+      },
+      {
+       "value": "Keep its own tab"
+      }
+     ]
+    },
+    {
+     "id": "more",
+     "type": "text",
+     "legend": "Anything to add?",
+     "placeholder": "e.g. where you usually write notes"
+    }
+   ],
+   "pick": "Notes stay; all three; Notes into the menu.",
+   "note_hint": "What you'd change"
   }
  }
 }
