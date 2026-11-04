@@ -28,6 +28,7 @@
     ribbonWeekOf,
     selectDay,
     setView,
+    shownTabs,
     shownViews,
     words,
   } from '../lib/store.svelte';
@@ -116,8 +117,12 @@
   }
 
   const commands = $derived.by((): Command[] => [
-    // Every tab, with the number key it really has (home use has no Timesheet, so the keys move).
-    ...shownViews().map((v, i): Command => ({ label: `Go to ${VIEW_NAMES[v]}`, group: 'Go to', keys: String(i + 1), run: () => setView(v) })),
+    // Every view, with the number key the tabs really have (home use has no Timesheet, so the
+    // keys move); the Organise menu's pages and Settings have none of their own.
+    ...shownViews().map((v): Command => {
+      const tab = shownTabs().indexOf(v);
+      return { label: `Go to ${VIEW_NAMES[v]}`, group: 'Go to', keys: tab >= 0 ? String(tab + 1) : v === 'settings' ? 'Ctrl ,' : undefined, run: () => setView(v) };
+    }),
     { label: 'Boards', group: 'Go to', desk: true, words: 'full screen projects meetings', run: () => openBoard('desk') },
     { label: 'Daily notes', group: 'Go to', desk: true, words: 'board', run: () => openBoard('daily') },
     {

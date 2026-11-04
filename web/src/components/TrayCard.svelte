@@ -313,6 +313,7 @@
     display: inline-flex;
     gap: 7px;
     align-items: center;
+    white-space: nowrap;
   }
 
   .right {

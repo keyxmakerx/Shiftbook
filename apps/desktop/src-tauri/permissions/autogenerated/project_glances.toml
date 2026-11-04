@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-glances"
+description = "Enables the project_glances command without any pre-configured scope."
+commands.allow = ["project_glances"]
+
+[[permission]]
+identifier = "deny-project-glances"
+description = "Denies the project_glances command without any pre-configured scope."
+commands.deny = ["project_glances"]

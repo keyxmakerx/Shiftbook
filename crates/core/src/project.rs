@@ -61,6 +61,45 @@ pub fn minutes_logged(project: ProjectId, entries: &[TimeEntry]) -> Minutes {
         .sum()
 }
 
+/// One project at a glance, for the Projects page (round 18).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProjectGlance {
+    /// Minutes logged this week (from `week_start` up to and including today).
+    pub minutes_week: Minutes,
+    /// Every minute logged against it.
+    pub minutes_all: Minutes,
+    /// The last day it was worked on, today at the latest.
+    pub last_worked: Option<Date>,
+}
+
+/// A project's week, total and last day worked, from its live entries. Days after `today`
+/// (time booked ahead) count in the total but not as worked.
+pub fn glance(
+    project: ProjectId,
+    entries: &[TimeEntry],
+    week_start: Date,
+    today: Date,
+) -> ProjectGlance {
+    let mine = entries
+        .iter()
+        .filter(|e| e.is_live() && e.target == EntryTarget::Project(project));
+    let mut out = ProjectGlance {
+        minutes_week: Minutes(0),
+        minutes_all: Minutes(0),
+        last_worked: None,
+    };
+    for e in mine {
+        out.minutes_all = out.minutes_all + e.minutes;
+        if e.date >= week_start && e.date <= today {
+            out.minutes_week = out.minutes_week + e.minutes;
+        }
+        if e.date <= today && !e.minutes.is_zero() && out.last_worked.is_none_or(|d| e.date > d) {
+            out.last_worked = Some(e.date);
+        }
+    }
+    out
+}
+
 /// The estimate, treating 0 as "no estimate".
 fn budget(estimate: Option<Minutes>) -> Option<Minutes> {
     estimate.filter(|m| !m.is_zero())
@@ -396,5 +435,32 @@ mod tests {
         assert_eq!(ProjectAlert::Overdue.label(), "Overdue");
         assert_eq!(ProjectAlert::OverBudget.label(), "Over budget");
         assert_eq!(ProjectAlert::Blocked.label(), "Blocked");
+    }
+
+    #[test]
+    fn a_glance_counts_this_week_and_everything() {
+        let p = ProjectId::new();
+        let on = |date: Date, minutes: u32| TimeEntry {
+            date,
+            ..entry(EntryTarget::Project(p), minutes)
+        };
+        let mut gone = on(TODAY, 600);
+        gone.deleted_at = Some(datetime!(2026-10-15 10:00 UTC));
+        let entries = [
+            on(date!(2026 - 10 - 12), 60),
+            on(TODAY, 30),
+            on(date!(2026 - 10 - 1), 90),
+            on(date!(2026 - 10 - 20), 45),
+            gone,
+            entry(EntryTarget::Project(ProjectId::new()), 120),
+            entry(EntryTarget::None, 15),
+        ];
+        let g = glance(p, &entries, date!(2026 - 10 - 12), TODAY);
+        assert_eq!(g.minutes_week, Minutes(90));
+        assert_eq!(g.minutes_all, Minutes(225));
+        assert_eq!(g.last_worked, Some(TODAY));
+        let none = glance(ProjectId::new(), &[], date!(2026 - 10 - 12), TODAY);
+        assert_eq!(none.minutes_all, Minutes(0));
+        assert_eq!(none.last_worked, None);
     }
 }

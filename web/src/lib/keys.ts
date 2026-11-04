@@ -1,20 +1,32 @@
 // Keyboard shortcuts, decided in one pure function so they can be tested.
 //
-// N focuses Log work, Ctrl+Space or / opens capture (Find), 1–8 switch views (1–7 at home,
-// where the Timesheet is hidden), Ctrl+L locks, Ctrl+Z undoes and Ctrl+Shift+Z redoes,
+// N focuses Log work, Ctrl+Space or / opens capture (Find), the number keys switch tabs and
+// the next one up opens the Organise menu (round 18; one fewer at home, where the Timesheet
+// is hidden), Ctrl+, opens Settings, Ctrl+L locks, Ctrl+Z undoes and Ctrl+Shift+Z redoes,
 // Ctrl +/−/0 change the text size, Esc closes the top-most menu, capture or drawer. Plain letter and number keys are ignored while
 // typing in a text box.
 
 import { TEXT_SIZES } from './api/generated/constants';
 
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
-export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'items' | 'settings';
-export const VIEWS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'repeating', 'lists', 'items', 'settings'];
+export type View = 'desk' | 'day' | 'timesheet' | 'notes' | 'repeating' | 'lists' | 'items' | 'projects' | 'settings';
 
-/** The views shown, in tab order: without the Timesheet at home (round 15). */
-export function viewsFor(work: boolean): readonly View[] {
-  return work ? VIEWS : VIEWS.filter((v) => v !== 'timesheet');
+/** Tabs are where you work (round 18). */
+export const TABS: readonly View[] = ['desk', 'day', 'timesheet'];
+/** The Organise menu: places you go to look after your things. */
+export const ORGANISE: readonly View[] = ['items', 'projects', 'repeating', 'lists', 'notes'];
+
+/** The tabs shown: without the Timesheet at home (round 15). */
+export function tabsFor(work: boolean): readonly View[] {
+  return work ? TABS : TABS.filter((v) => v !== 'timesheet');
 }
+
+/** Every view there is in this mode: the tabs, the Organise menu, then Settings. */
+export function viewsFor(work: boolean): readonly View[] {
+  return [...tabsFor(work), ...ORGANISE, 'settings'];
+}
+
+export const VIEWS: readonly View[] = viewsFor(true);
 
 /** Tab names. */
 export const VIEW_NAMES: Record<View, string> = {
@@ -24,7 +36,8 @@ export const VIEW_NAMES: Record<View, string> = {
   notes: 'Notes',
   repeating: 'Repeating',
   lists: 'Lists',
-  items: 'Items',
+  items: 'Tickets',
+  projects: 'Projects',
   settings: 'Settings',
 };
 export type SettingsSection =
@@ -45,6 +58,7 @@ export type Shortcut =
   | { kind: 'lock' }
   | { kind: 'focus-log' }
   | { kind: 'view'; view: View }
+  | { kind: 'organise' }
   | { kind: 'escape' }
   | { kind: 'zoom'; step: -1 | 0 | 1 }
   | { kind: 'menu-key' }
@@ -63,8 +77,9 @@ export interface KeyInfo {
   typing: boolean;
 }
 
-export function shortcutFor(e: KeyInfo, views: readonly View[] = VIEWS): Shortcut | null {
+export function shortcutFor(e: KeyInfo, tabs: readonly View[] = TABS): Shortcut | null {
   const mod = e.ctrlKey || e.metaKey;
+  if (mod && !e.altKey && e.key === ',') return { kind: 'view', view: 'settings' };
   if (mod && !e.altKey && (e.code === 'Space' || e.key === ' ')) return { kind: 'capture' };
   if (mod && !e.altKey && e.key.toLowerCase() === 'l') return { kind: 'lock' };
   if (mod && !e.altKey && (e.key === '=' || e.key === '+')) return { kind: 'zoom', step: 1 };
@@ -80,18 +95,21 @@ export function shortcutFor(e: KeyInfo, views: readonly View[] = VIEWS): Shortcu
   if (e.key === '/') return { kind: 'capture' };
   if (e.key === 't' || e.key === 'T') return { kind: 'just-today' };
   const n = Number(e.key);
-  if (Number.isInteger(n) && n >= 1 && n <= views.length) {
-    const view = views[n - 1];
+  if (Number.isInteger(n) && n >= 1 && n <= tabs.length) {
+    const view = tabs[n - 1];
     if (view) return { kind: 'view', view };
   }
+  if (n === tabs.length + 1) return { kind: 'organise' };
   return null;
 }
 
 /** Every shortcut, as shown on the hold-Ctrl overlay. Keep in step with `shortcutFor`. */
-export function shortcutList(views: readonly View[] = VIEWS): readonly { keys: string; what: string }[] {
+export function shortcutList(tabs: readonly View[] = TABS): readonly { keys: string; what: string }[] {
   return [
     ...SHORTCUT_LIST.slice(0, 3),
-    { keys: views.map((_, i) => String(i + 1)).join('  '), what: views.map((v) => VIEW_NAMES[v]).join(', ') },
+    { keys: tabs.map((_, i) => String(i + 1)).join('  '), what: tabs.map((v) => VIEW_NAMES[v]).join(', ') },
+    { keys: String(tabs.length + 1), what: `Organise: ${ORGANISE.map((v) => VIEW_NAMES[v]).join(', ')}` },
+    { keys: 'Ctrl ,', what: 'Settings' },
     ...SHORTCUT_LIST.slice(4),
   ];
 }
@@ -100,7 +118,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Ctrl Space  or  /', what: 'Log, note or find anything (type "help" for everything)' },
   { keys: 'N', what: 'Jump to Log work' },
   { keys: 'Enter', what: 'In Log work: log it, or go to the time buttons' },
-  { keys: '1  2  3  4  5  6  7', what: 'Desk, Day, Timesheet, Notes, Repeating, Lists, Settings' },
+  { keys: '1  2  3', what: 'Desk, Day, Timesheet' },
   { keys: '↑  ↓', what: 'Move between entries' },
   { keys: 'Enter', what: 'Open the entry you are on' },
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },

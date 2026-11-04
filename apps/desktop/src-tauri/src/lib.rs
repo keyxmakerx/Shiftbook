@@ -15,6 +15,7 @@ mod meetings;
 mod notes;
 mod phone;
 mod pins;
+mod projects;
 mod protect;
 mod session;
 #[cfg(test)]
@@ -775,6 +776,7 @@ pub fn run() {
             boards::board,
             boards::board_move,
             pins::pins,
+            projects::project_glances,
             pins::pin,
             pins::unpin,
             pins::follow_ups,

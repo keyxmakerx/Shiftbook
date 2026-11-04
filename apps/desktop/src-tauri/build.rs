@@ -104,6 +104,7 @@ fn main() {
             "board",
             "board_move",
             "pins",
+            "project_glances",
             "pin",
             "unpin",
             "follow_ups",

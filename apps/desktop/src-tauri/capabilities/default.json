@@ -107,6 +107,7 @@
     "allow-board",
     "allow-board-move",
     "allow-pins",
+    "allow-project-glances",
     "allow-pin",
     "allow-unpin",
     "allow-follow-ups",

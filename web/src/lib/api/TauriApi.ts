@@ -42,6 +42,7 @@ import type {
   BoardData,
   DeskData,
   PinItem,
+  ProjectGlance,
   PinOutcome,
   CardKind,
   CanvasCard,
@@ -294,6 +295,9 @@ export class TauriApi implements DataApi {
   }
   pins(today: IsoDate): Promise<PinItem[]> {
     return call('pins', { today });
+  }
+  projectGlances(today: IsoDate): Promise<ProjectGlance[]> {
+    return call('project_glances', { today });
   }
   pin(kind: CardKind, id: string, chaseOn: IsoDate | null): Promise<void> {
     return call('pin', { kind, id, chaseOn });

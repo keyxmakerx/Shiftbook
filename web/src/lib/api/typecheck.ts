@@ -54,6 +54,7 @@ import type { PastTimeView as GenPastTime } from './generated/PastTimeView';
 import type { PausedTimer as GenPausedTimer } from './generated/PausedTimer';
 import type { Launch as GenPhoneLaunch } from './generated/Launch';
 import type { PinView as GenPinItem } from './generated/PinView';
+import type { ProjectGlanceView as GenProjectGlance } from './generated/ProjectGlanceView';
 import type { PinOutcome as GenPinOutcome } from './generated/PinOutcome';
 import type { Prefs as GenPrefs } from './generated/Prefs';
 import type { ProjectView as GenProject } from './generated/ProjectView';
@@ -148,6 +149,7 @@ export type Checks = [
   Assert<Same<Ui.PausedTimer, GenPausedTimer>>,
   Assert<Same<Ui.PhoneLaunch, GenPhoneLaunch>>,
   Assert<Same<Ui.PinItem, GenPinItem>>,
+  Assert<Same<Ui.ProjectGlance, GenProjectGlance>>,
   Assert<Same<Ui.PinOutcome, GenPinOutcome>>,
   Assert<Same<Ui.Prefs, GenPrefs>>,
   Assert<Same<Ui.Project, GenProject>>,

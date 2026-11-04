@@ -339,6 +339,22 @@ export interface PinItem {
   due: boolean;
 }
 
+/** One project on the Projects page (round 18). */
+export interface ProjectGlance {
+  projectId: string;
+  name: string;
+  color: string | null;
+  archived: boolean;
+  /** Hours this week, e.g. "4.5". */
+  hoursWeek: string;
+  /** Every hour logged against it. */
+  hoursAll: string;
+  /** The last day it was worked on. */
+  lastWorked: IsoDate | null;
+  /** Its tickets still open. */
+  openTickets: number;
+}
+
 /** A timer paused by locking: the entry and what it had counted (never a start or end time). */
 export interface PausedTimer {
   entryId: string;
@@ -1189,6 +1205,8 @@ export interface DataApi {
   bell(today: IsoDate, now: number): Promise<BellItem[]>;
   /** The pinned chips for the bottom bar, ones due to chase first. Tauri: `pins`. */
   pins(today: IsoDate): Promise<PinItem[]>;
+  /** Every project at a glance for the Projects page (round 18). Tauri: `project_glances`. */
+  projectGlances(today: IsoDate): Promise<ProjectGlance[]>;
   /** Pin an entry, ticket or note, or change its chase date (null clears it). Tauri: `pin`. */
   pin(kind: CardKind, id: string, chaseOn: IsoDate | null): Promise<void>;
   /** Take a chip off the bottom bar. Tauri: `unpin`. */

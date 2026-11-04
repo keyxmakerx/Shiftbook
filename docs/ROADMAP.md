@@ -61,7 +61,8 @@ the README for what it does.
   fields on tickets and projects can be defined (link fields already work on tickets) but values
   can only be filled in on entries; the tray's plain roll-up entry starts with no project (a ticket
   given a project rolls up under it); the Planner
-  has no keyboard shortcut yet (1 to 7 are Desk, Day, Timesheet, Notes, Repeating, Lists, Settings).
+  has no keyboard shortcut yet (round 18: 1 to 3 are the tabs Desk, Day and Timesheet, 4 opens
+  the Organise menu with Tickets, Projects, Repeating, Lists and Notes, and Ctrl , is Settings).
 
 ## Phase 2 — Hosted (only if adopted by the team)
 - **S1** `apps/server` with Axum reusing core/storage; Postgres migrations verified in CI.
