@@ -41,7 +41,7 @@
     <p class="hint">{valid ? longDay(day) : 'Pick a day after today.'} A day off moves to your next work day.</p>
     <div class="row">
       <button type="button" class="btn" onclick={() => answerDay(null)}>Cancel</button>
-      <button type="button" class="btn primary" disabled={!valid} onclick={ok}>Bring it up then</button>
+      <button type="button" class="btn primary" disabled={!valid} onclick={ok}>Follow up then</button>
     </div>
   </div>
 {/if}

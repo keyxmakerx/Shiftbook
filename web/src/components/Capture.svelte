@@ -157,7 +157,7 @@
       ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
       : []),
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
-    { label: 'Book today as holiday (8 h)', group: 'Do', words: 'leave vacation', run: () => holiday() },
+    { label: 'Book a holiday (8 h)', group: 'Do', words: 'today leave vacation', run: () => holiday() },
     ...(guards().copy || guards().screens
       ? [
           {

@@ -66,7 +66,7 @@
             ...(hasWork(app.prefs?.useMode)
               ? [
                   {
-                    label: 'What to enter for this week',
+                    label: 'Open the Timesheet for this week',
                     icon: 'sheet' as const,
                     top: true,
                     act: () => {
@@ -74,7 +74,7 @@
                     },
                   },
                   {
-                    label: 'Book as holiday (8 h)',
+                    label: 'Book a holiday (8 h)',
                     icon: 'sun' as const,
                     top: true,
                     act: () => void holiday(day.date),

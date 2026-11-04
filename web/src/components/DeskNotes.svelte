@@ -14,9 +14,9 @@
   // Notes like any other note.
   import { onDestroy, untrack } from 'svelte';
   import { api } from '../lib/api';
-  import type { Note } from '../lib/api';
+  import type { MeetingSeries, Note } from '../lib/api';
   import { dayMonth, weekdayShort } from '../lib/format';
-  import { paperMenu } from '../lib/menu.svelte';
+  import { openMenu, paperMenu } from '../lib/menu.svelte';
   import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, openNote } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -100,10 +100,36 @@
     if (list) meetings = list.notes.slice(0, 5);
   }
 
-  async function newMeeting() {
+  // A new meeting note joins its series (round 18): pick the meeting, and the note is made the
+  // way its board makes it, so it lands on that board. A one-off meeting has no series.
+  let series = $state<MeetingSeries[]>([]);
+
+  async function oneOff() {
     const title = `Meeting ${weekdayShort(app.today)} ${dayMonth(app.today)}`;
     const note = await attempt(() => api.createNote({ kind: 'meeting', title, body: '', projectId: null, tags: '' }));
     if (note) openNote(note.id);
+  }
+
+  async function forSeries(id: string) {
+    const note = await attempt(() => api.meetingNote(id, app.today));
+    if (note) openNote(note.id);
+  }
+
+  async function newMeeting(e: MouseEvent) {
+    const anchor = e.currentTarget as HTMLElement;
+    series = (await attempt(() => api.meetingSeries())) ?? series;
+    if (!series.length) return oneOff();
+    openMenu(anchor, {
+      sections: [
+        {
+          head: 'Which meeting?',
+          items: [
+            ...series.map((m) => ({ label: m.name, icon: 'note' as const, act: () => void forSeries(m.id) })),
+            { label: 'A one-off meeting', icon: 'plus' as const, act: () => void oneOff() },
+          ],
+        },
+      ],
+    });
   }
 
   $effect(() => {

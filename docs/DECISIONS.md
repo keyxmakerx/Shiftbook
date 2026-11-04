@@ -2,6 +2,37 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 18 — 4 Nov 2026 (a wiki, MOPs on tickets, fewer ways round)
+Cards in `tools/signoff/rounds/r18.json` (mockups `mocks/r18-*.html`), on the rounds 8 to 14
+sheet, which the owner chose to keep using. All approved:
+- **The card that popped up by itself** is gone (both causes stay fixed, with a test).
+- **Wiki** beside Notes, not instead of them: pages in spaces, pages under pages, `[[` links,
+  Linked from, On tickets, Find searches pages first. Earlier versions of each page, and
+  pictures when the picture step comes. Export a space as Markdown files (with the usual
+  warning). Sharing a space with a team waits for Phase 2. Template blanks become `{{name}}`,
+  since `[[` makes a link. Only the Page note kind moves into the wiki.
+- **Notes stay** (Daily, Jots, Meetings) and move into the Organise menu. Any note's
+  right-click menu gets **Change to ▸ Jot / Daily / Meeting** and **Move to the wiki…**; `[[`
+  links work in notes and ticket notepads too.
+- **MOPs live on their change ticket**, made from a wiki template (blanks asked once; the
+  ticket and title fill themselves). Status Draft, Ready, Running, Done, Backed out. Read, Edit
+  and Run; ticks keep their times; Copy run log and Copy as plain text; the change window shows
+  in the bell and on the bottom bar. The MOP notebook window retires (Run and line numbers move
+  into the MOP tab). Existing templates go to the wiki's Templates space, other MOPs become wiki
+  pages in a MOPs space. The owner asked how a long list of templates stays easy to pick from and
+  how templates are made: the picker searches and puts recently used and the project's own
+  templates first; templates are made with + Template in the Templates space or Save as
+  template on any page or MOP.
+- **Top bar:** four tabs where you work (Desk, Day, Timesheet, Wiki), an **Organise ▾** menu
+  with Tickets (was Items), Projects (a new page), Repeating, Lists and Notes, and Settings as a
+  gear. Keys 1 to 4 for the tabs, 5 for the menu.
+- **One name each:** Tickets tray; Scrap (Jot is only a note kind); Archive and Bring back for
+  notes and Desk cards; Clear old cards…; one Follow up section (Tomorrow or Pick a day);
+  Notepad; Timesheet; Book a holiday (8 h).
+- **Cut:** the Done tickets board (Tickets › Done; the Done today pile stays), meeting notes
+  made anywhere but their meeting's board, the second welcome after unlocking (While you were
+  away folds into Where was I?), and Follow up tomorrow where a Follow up section has it.
+
 ## Asked in chat — 2 Nov 2026 (tickets onto entries, cards keep their spot)
 No mockup needed:
 - **Add to an entry:** a ticket card on the Desk (from the Tickets tray) has **Add to an entry**

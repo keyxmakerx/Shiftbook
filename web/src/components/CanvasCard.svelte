@@ -5,7 +5,7 @@
   // The card is the record itself: changes show everywhere else too.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
-  import { bringUp, bringUpSection } from '../lib/bringUp';
+  import { bringUpSection } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
   import { fmtMinutes, relativeDay } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
@@ -252,7 +252,6 @@
             items: [
               { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
               { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
-              { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('note', note.id, note.title) },
               pinMenuItem('note', note.id),
               {
                 label: 'Archive',

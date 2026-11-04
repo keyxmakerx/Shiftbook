@@ -45,15 +45,17 @@ export async function refreshBell(): Promise<void> {
 }
 
 /**
- * "While you were away" (round 15): after unlock, or when the day changes, open the panel on
- * what came due since Shiftbook was last open, if anything did. Quiet on failure.
+ * "While you were away" (round 15): after unlock, or when the day changes, keep what came due
+ * since Shiftbook was last open, if anything did. One welcome at a time (round 18): when
+ * "Where was I?" is showing, it carries a line for these instead of the bell opening too.
+ * Call it after `checkResume`. Quiet on failure.
  */
 export async function openAway(): Promise<void> {
   try {
     const away = await api.whileAway(app.today, nowMinutes());
     if (away.items.length === 0) return;
     bell.away = away;
-    bell.open = true;
+    if (!app.resume) bell.open = true;
   } catch {
     // Nothing to show; the bell still has everything.
   }

@@ -19,7 +19,7 @@ export function startShell(onProblem: (message: string) => void): () => void {
     .then(() => {
       loadWindows();
       loadMopBook();
-      return Promise.all([checkResume('unlocked'), restoreTimer(), refreshBell(), refreshPins(), openAway()]);
+      return Promise.all([checkResume('unlocked').then(openAway), restoreTimer(), refreshBell(), refreshPins()]);
     })
     .catch((e: unknown) => onProblem(errorMessage(e)));
   const unguard = installCopyGuard();
@@ -36,8 +36,7 @@ export function startShell(onProblem: (message: string) => void): () => void {
   for (const name of events) window.addEventListener(name, onActivity, { passive: true });
   const timer = setInterval(async () => {
     if (app.ready && (await rollDay())) {
-      void checkResume('new_day');
-      void openAway();
+      void checkResume('new_day').then(openAway);
     }
     if (app.ready) void refreshBell();
     if (app.ready) void refreshPins();

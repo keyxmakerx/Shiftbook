@@ -367,7 +367,7 @@
       </div>
 
       <div class="field rise" style:--i={6}>
-        <label class="lbl" for="dr-notes">Notes / next step</label>
+        <label class="lbl" for="dr-notes">Notepad</label>
         <textarea
           id="dr-notes"
           class="text-in"

@@ -3,7 +3,7 @@
 // its tickets and bring it up tomorrow, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { Entry } from './api';
-import { bringUp, bringUpSection } from './bringUp';
+import { bringUpSection } from './bringUp';
 import { sameWork } from './sameWork';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
@@ -174,7 +174,6 @@ export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
     { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
     { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
     { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },
-    { label: 'Follow up tomorrow', icon: 'sun', side: true, act: () => void bringUp('entry', entry.id, entry.description) },
     pinMenuItem('entry', entry.id),
   ];
   if (!entry.isTray) {

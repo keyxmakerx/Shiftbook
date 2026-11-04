@@ -110,7 +110,7 @@
     if (card) await bringUp(card[0], card[1], title, app.bringUpDays[0] ?? addDays(app.today, 1));
   }
 
-  const KIND_WORD: Record<CardKind, string> = { entry: 'Work', tray: 'Ticket', note: 'Note', inbox: 'Jot' };
+  const KIND_WORD: Record<CardKind, string> = { entry: 'Work', tray: 'Ticket', note: 'Note', inbox: 'Scrap' };
 
   async function openSheet() {
     await selectDay(app.today);
@@ -194,7 +194,7 @@
               <span class="txt"><b>{i.title}</b><small>{detail(i)}</small></span>
               <span class="btns">
                 {#if i.about.kind === 'timesheet'}
-                  <button type="button" class="btn primary" onclick={() => void openSheet()}>Open the crib sheet</button>
+                  <button type="button" class="btn primary" onclick={() => void openSheet()}>Open the Timesheet</button>
                   <button type="button" class="btn" onclick={snoozeSheet}>Remind me at {clockText(snoozeHour(nowMinutes()))}</button>
                 {:else if i.about.kind === 'meeting_done'}
                   {@const { series, name, minutes } = i.about}

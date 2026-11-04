@@ -4,6 +4,7 @@
   // rest as a checklist); otherwise the last entry with its tickets and notepad. When it shows and what it holds is
   // decided by the app (crates/core/src/resume.rs).
   import { api } from '../lib/api';
+  import { bell } from '../lib/bell.svelte';
   import { cardLead, cardTitle, carryOnText, lastLogged } from '../lib/resume';
   import { copyStandup } from '../lib/standup';
   import { app, attempt, focusLog, projectById, projectColor } from '../lib/store.svelte';
@@ -15,6 +16,8 @@
   const project = $derived(projectById(entry?.projectId));
   const color = $derived(projectColor(entry?.projectId ?? null));
   const rest = $derived(card?.list.slice(1) ?? []);
+  // While you were away rides along here instead of opening the bell too (round 18).
+  const awayCount = $derived(bell.away?.items.length ?? 0);
 
   function carryOn() {
     if (!card) return;
@@ -72,6 +75,12 @@
       </ul>
     {/if}
 
+    {#if awayCount}
+      <button type="button" class="away" onclick={() => (bell.open = true)}>
+        While you were away: {awayCount} {awayCount === 1 ? 'thing' : 'things'} came due. See them
+      </button>
+    {/if}
+
     <div class="acts">
       <button class="btn primary" type="button" onclick={carryOn}>Carry on</button>
       <button class="btn" type="button" onclick={somethingElse}>Something else</button>
@@ -84,6 +93,18 @@
 {/if}
 
 <style>
+  .away {
+    align-self: flex-start;
+    border: 0;
+    background: none;
+    padding: 0;
+    font: 600 12.5px var(--ui);
+    color: var(--warn);
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .resume {
     display: flex;
     flex-direction: column;

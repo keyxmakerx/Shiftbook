@@ -2,7 +2,8 @@
 //! three views of the same things: Notebook (its notes), Board (its own canvas) and List.
 //! Shiftbook makes **Projects** (a board per project), **Meetings** (a board per meeting
 //! series) and **Daily notes**; each folder in the cabinet is a board too, and the
-//! **Done tickets** board and the **Archive** sit at the bottom of the tree.
+//! **Archive** sits at the bottom of the tree. (Round 18 took the Done tickets board out: the
+//! Tickets page's Done tab lists them.)
 
 use uuid::Uuid;
 
@@ -29,8 +30,6 @@ pub enum Board {
     Daily,
     /// A folder from the cabinet: what's filed in it.
     Folder(Uuid),
-    /// Tickets ticked done, newest first (they leave the Desk at the end of their day).
-    Done,
     /// Archived things, with Bring back.
     Archive,
 }
@@ -46,7 +45,6 @@ impl Board {
             Board::Series(id) => format!("series:{id}"),
             Board::Daily => "daily".into(),
             Board::Folder(id) => format!("folder:{id}"),
-            Board::Done => "done".into(),
             Board::Archive => "archive".into(),
         }
     }
@@ -59,7 +57,6 @@ impl Board {
             "projects" => return Some(Board::Projects),
             "meetings" => return Some(Board::Meetings),
             "daily" => return Some(Board::Daily),
-            "done" => return Some(Board::Done),
             "archive" => return Some(Board::Archive),
             _ => {}
         }
@@ -83,7 +80,6 @@ impl Board {
             | Board::Meetings
             | Board::Daily
             | Board::Folder(_)
-            | Board::Done
             | Board::Archive => Some(Board::Desk),
         }
     }
@@ -163,9 +159,6 @@ pub fn boards_for(facts: Facts<'_>, series: &[(Uuid, &str)]) -> Vec<Board> {
     if let Some(p) = facts.project {
         out.push(Board::Project(p));
     }
-    if facts.kind == CardKind::Tray && facts.done {
-        out.push(Board::Done);
-    }
     if facts.kind == CardKind::Note {
         if facts.note_kind == Some(NoteKind::Daily) {
             out.push(Board::Daily);
@@ -201,7 +194,6 @@ mod tests {
             Board::Series(id),
             Board::Daily,
             Board::Folder(id),
-            Board::Done,
             Board::Archive,
         ] {
             assert_eq!(Board::parse(&b.key()), Some(b));
@@ -274,7 +266,9 @@ mod tests {
             drawer: None,
             ..ticket
         };
-        assert_eq!(boards_for(finished, &series), [Board::Done]);
+        // Done tickets have no board of their own any more (round 18).
+        assert!(boards_for(finished, &series).is_empty());
+        assert_eq!(Board::parse("done"), None);
         let scrap = Facts {
             kind: CardKind::Inbox,
             drawer: Some(Drawer::Project(p)),
