@@ -64,7 +64,7 @@ export async function changeKind(note: Note, kind: NoteKind, after?: () => void)
   if (note.kind === kind || !(await setKind(note, kind))) return;
   await refresh();
   after?.();
-  const name = kind === 'page' ? 'wiki page' : `${KINDS.find((k) => k.kind === kind)?.label ?? kind} note`;
+  const name = kind === 'page' ? 'wiki page' : kind === 'mop' ? 'MOP' : `${KINDS.find((k) => k.kind === kind)?.label ?? kind} note`;
   toast(`“${note.title}” is a ${name} now`, 'Undo', () => void setKind(note, note.kind).then(refresh).then(() => after?.()));
 }
 

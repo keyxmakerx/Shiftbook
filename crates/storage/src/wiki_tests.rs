@@ -308,3 +308,43 @@ fn a_mop_on_its_ticket() {
         assert_eq!(s.mop_runs(me, None).await.unwrap().len(), 2);
     });
 }
+
+#[test]
+fn a_mop_written_before_its_ticket() {
+    let dir = TestDir::new("mop-link");
+    block_on(async {
+        let (s, me) = setup(&dir).await;
+        let mop = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Mop,
+                    ..page("Firewall swap")
+                },
+            )
+            .await
+            .unwrap();
+        assert!(s.mop_run(me, mop.id).await.unwrap().is_none());
+        // The ticket doesn't exist yet: it's made.
+        s.link_mop(me, mop.id, " chg0099 ").await.unwrap();
+        let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
+        assert_eq!(run.ticket, "CHG0099");
+        // Already on a ticket: refused.
+        assert!(s.link_mop(me, mop.id, "CHG0100").await.is_err());
+        // Not a MOP, or two tickets at once: refused.
+        let jot = make(&s, me, "Jot").await;
+        assert!(s.link_mop(me, jot, "CHG0100").await.is_err());
+        let other = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Mop,
+                    ..page("Other")
+                },
+            )
+            .await
+            .unwrap();
+        assert!(s.link_mop(me, other.id, "CHG1 CHG2").await.is_err());
+        assert!(s.link_mop(me, other.id, "  ").await.is_err());
+    });
+}

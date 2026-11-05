@@ -39,6 +39,7 @@
     { kind: 'daily', label: 'Daily' },
     { kind: 'meeting', label: 'Meeting' },
     { kind: 'page', label: 'Wiki page' },
+    { kind: 'mop', label: 'MOP' },
   ];
 
   async function pickKind(kind: NoteKind) {

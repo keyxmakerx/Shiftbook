@@ -109,6 +109,7 @@ fn main() {
             "attach_mop",
             "mop_runs",
             "mop_run",
+            "mop_link",
             "mop_set_status",
             "mop_set_window",
             "mop_tick",

@@ -10,6 +10,7 @@ use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
 use shiftbook_core::model::Note;
 use shiftbook_core::mop::{clean_values, fill_blanks, filled_title};
 use shiftbook_core::notes::{join_tags, NoteKind};
+use shiftbook_core::tray::new_tray_tickets;
 use shiftbook_core::CoreError;
 use sqlx::sqlite::SqliteRow;
 use sqlx::Row;
@@ -17,6 +18,7 @@ use time::{Date, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::error::StorageError;
+use crate::items::item_for_number;
 use crate::notes::NoteInput;
 use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, Result};
 use crate::work::opt_uuid;
@@ -185,6 +187,47 @@ impl SqliteStore {
         .execute(&self.pool)
         .await?;
         Ok(note)
+    }
+
+    /// Put a MOP written on its own (in Notes, before its ticket existed) on `ticket`. The
+    /// ticket is made if it isn't there yet. A MOP already on a ticket: refused.
+    pub async fn link_mop(&self, owner: OwnerId, mop: NoteId, ticket: &str) -> Result<()> {
+        let note = self.get_note(owner, mop).await?;
+        if note.kind != NoteKind::Mop || note.template {
+            return Err(CoreError::NotAChoice { value: note.title }.into());
+        }
+        if self.mop_run(owner, mop).await?.is_some() {
+            return Err(CoreError::NotAChoice {
+                value: "already on a ticket".into(),
+            }
+            .into());
+        }
+        let number = match new_tray_tickets::<&str>(&[], ticket)?.as_slice() {
+            [one] => one.clone(),
+            _ => {
+                return Err(CoreError::NotAChoice {
+                    value: ticket.chars().take(30).collect(),
+                }
+                .into())
+            }
+        };
+        let mut tx = self.write_tx().await?;
+        let item = item_for_number(&mut tx, owner, &number).await?;
+        let now = now_text();
+        sqlx::query(
+            "INSERT INTO mop_runs (id, owner_id, item_id, template_id, status, window_on, \
+             window_at, tick_times, started_at, created_at, updated_at, deleted_at) \
+             VALUES ($1, $2, $3, NULL, 'draft', NULL, NULL, '', NULL, $4, $4, NULL) \
+             ON CONFLICT (id) DO UPDATE SET item_id = $3, deleted_at = NULL, updated_at = $4",
+        )
+        .bind(mop.to_string())
+        .bind(owner.to_string())
+        .bind(item.id.to_string())
+        .bind(&now)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     /// MOPs on tickets, newest first; with `ticket`, only that ticket's (ignoring case).

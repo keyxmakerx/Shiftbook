@@ -177,6 +177,13 @@ pub async fn mop_run(s: State<'_, VaultSession>, id: String) -> Res<Option<MopRu
     Ok(store.mop_run(owner, id_arg(&id)?).await?.map(run_view))
 }
 
+/// Maps to `DataApi.mopLink()`: put a MOP written on its own on `ticket` (made if new).
+#[tauri::command]
+pub async fn mop_link(s: State<'_, VaultSession>, id: String, ticket: String) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.link_mop(owner, id_arg(&id)?, &ticket).await?)
+}
+
 /// Maps to `DataApi.mopSetStatus()`.
 #[tauri::command]
 pub async fn mop_set_status(s: State<'_, VaultSession>, id: String, status: String) -> Res<()> {

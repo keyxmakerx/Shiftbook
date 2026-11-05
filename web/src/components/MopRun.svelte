@@ -35,6 +35,8 @@
   let numbers = $state(true);
   let timer: ReturnType<typeof setTimeout> | null = null;
   let windowEdit = $state<{ on: string; at: string } | null>(null);
+  /** The ticket number typed for a MOP that isn't on a ticket yet. */
+  let ticketIn = $state('');
 
   const lines = $derived(text.split('\n'));
   const tickable = $derived(checks.filter((c) => c.key).length);
@@ -48,7 +50,7 @@
     run = r ?? null;
     text = n.body;
     ontitle?.(n.title);
-    mode = run?.status === 'running' ? 'run' : run?.status === 'draft' && !n.body.trim() ? 'edit' : mode;
+    mode = !run || (run.status === 'draft' && !n.body.trim()) ? 'edit' : run.status === 'running' ? 'run' : mode;
   }
 
   $effect(() => {
@@ -180,6 +182,17 @@
     if (await copyText(text)) toast('MOP copied as plain text');
   }
 
+  /** A MOP written before its ticket existed: put it on the ticket (made if new). */
+  async function link() {
+    const t = ticketIn.trim();
+    if (!t) return;
+    await flush();
+    if (!(await attempt(() => api.mopLink(id, t).then(() => true)))) return;
+    ticketIn = '';
+    await changed();
+    toast(`MOP is on ${run?.ticket ?? t} now`);
+  }
+
   async function follow(title: string) {
     const page = await attempt(() => api.wikiPageByTitle(title));
     if (page) openWiki(page);
@@ -187,9 +200,10 @@
   }
 </script>
 
-{#if note && run}
+{#if note}
   <div class="mop">
     <div class="top">
+      {#if run}
       <div class="steps" role="group" aria-label="Where this MOP stands">
         {#each STEPS as s, i (s.status)}
           <button
@@ -227,9 +241,22 @@
           <Icon name="clock" size={13} />{windowText(run)}
         </button>
       {/if}
+      {:else}
+        <form
+          class="link"
+          onsubmit={(e) => {
+            e.preventDefault();
+            void link();
+          }}
+        >
+          <span>Not on a ticket yet.</span>
+          <input class="text-in" bind:value={ticketIn} placeholder="Ticket number, e.g. CHG0012345" aria-label="Ticket number" />
+          <button type="submit" class="btn primary slim" disabled={!ticketIn.trim()}>Put it on the ticket</button>
+        </form>
+      {/if}
       <span class="grow"></span>
       <div class="modes" role="tablist" aria-label="How to show it">
-        {#each [['read', 'Read'], ['edit', 'Edit'], ['run', 'Run']] as [m, label] (m)}
+        {#each run ? [['read', 'Read'], ['edit', 'Edit'], ['run', 'Run']] : [['read', 'Read'], ['edit', 'Edit']] as [m, label] (m)}
           <button
             type="button"
             role="tab"
@@ -243,7 +270,9 @@
       </div>
     </div>
 
-    {#if run.templateId}
+    {#if !run}
+      <p class="from">Write it now; it can go on its ticket once the ticket exists.</p>
+    {:else if run.templateId}
       <p class="from">
         For <b>{run.ticket}</b> · from a <button type="button" class="linkish" onclick={() => openWiki(run!.templateId)}>wiki template</button>
       </p>
@@ -286,7 +315,7 @@
 
     <footer>
       <span class="count">
-        {#if mode === 'run' || ticked}{ticked} of {tickable} ticked{/if}{#if run.startedAt}{' · started '}{clock(run.startedAt)}{/if}
+        {#if mode === 'run' || ticked}{ticked} of {tickable} ticked{/if}{#if run?.startedAt}{' · started '}{clock(run.startedAt)}{/if}
       </span>
       <span class="grow"></span>
       {#if mode === 'run'}
@@ -294,11 +323,9 @@
         <button type="button" class="btn slim" onclick={() => void clearTicks()}>Clear ticks</button>
       {/if}
       <button type="button" class="btn slim" onclick={() => void copyPlain()}><Icon name="copy" size={13} /> Copy as text</button>
-      <button type="button" class="btn slim primary" onclick={() => void copyLog()}><Icon name="copy" size={13} /> Copy run log</button>
+      {#if run}<button type="button" class="btn slim primary" onclick={() => void copyLog()}><Icon name="copy" size={13} /> Copy run log</button>{/if}
     </footer>
   </div>
-{:else if note}
-  <p class="none">This MOP isn't on a ticket.</p>
 {/if}
 
 <style>
@@ -309,6 +336,18 @@
     height: 100%;
     min-height: 0;
     padding: 8px 10px;
+  }
+
+  .link {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+
+  .link .text-in {
+    min-width: 14em;
   }
 
   .top {
@@ -529,10 +568,5 @@
     display: flex;
     gap: 4px;
     align-items: center;
-  }
-
-  .none {
-    padding: 10px;
-    color: var(--mut);
   }
 </style>

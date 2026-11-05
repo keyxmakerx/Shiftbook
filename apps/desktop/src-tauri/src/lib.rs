@@ -843,6 +843,7 @@ pub fn run() {
             change::attach_mop,
             change::mop_runs,
             change::mop_run,
+            change::mop_link,
             change::mop_set_status,
             change::mop_set_window,
             change::mop_tick,
