@@ -169,13 +169,56 @@ export function cardUnder(spots: { x: number; y: number }[], x: number, y: numbe
   return -1;
 }
 
-/** Where the cards of a fanned-out pile show: in a row to the right of the pile, wrapping
- *  after `perRow`. */
-export function fanSpots(x: number, y: number, count: number, perRow = 4): { x: number; y: number }[] {
-  return Array.from({ length: count }, (_, i) => ({
-    x: x + (CARD_W + 16) * ((i % perRow) + 1),
-    y: y + (CARD_H + 16) * Math.floor(i / perRow),
-  }));
+/** The space between the cards of a fanned-out pile (tighter than lined-up cards). */
+export const FAN_GAP = 12;
+/** How far the fanned-out pile's backing sheet reaches past its cards; the top leaves room
+ *  for the pile's name and buttons. */
+export const FAN_PAD = { side: 16, top: 52, bottom: 16 };
+
+/** How many cards a fanned-out pile puts in a row: a short row for a few, up to four. */
+export function fanPerRow(count: number): number {
+  return count <= 3 ? Math.max(1, count) : count <= 6 ? 3 : 4;
+}
+
+/** Where the cards of a fanned-out pile show: in rows to the right of the pile, wrapping
+ *  after `perRow`. Given each card's real `heights`, a row is only as tall as its tallest
+ *  card, so short ticket cards sit close instead of a full card's height apart. */
+export function fanSpots(
+  x: number,
+  y: number,
+  count: number,
+  perRow = fanPerRow(count),
+  heights: readonly (number | undefined)[] = [],
+): { x: number; y: number }[] {
+  const spots: { x: number; y: number }[] = [];
+  let top = y;
+  for (let row = 0; row * perRow < count; row++) {
+    let tallest = 0;
+    for (let i = row * perRow; i < Math.min(count, (row + 1) * perRow); i++) {
+      spots.push({ x: x + (CARD_W + FAN_GAP) * ((i % perRow) + 1), y: top });
+      tallest = Math.max(tallest, heights[i] || CARD_H);
+    }
+    top += tallest + FAN_GAP;
+  }
+  return spots;
+}
+
+/** The sheet behind a fanned-out pile: around the pile (`pileH` tall) and its spots. */
+export function fanSheet(
+  x: number,
+  y: number,
+  pileH: number,
+  spots: readonly { x: number; y: number }[],
+  heights: readonly (number | undefined)[] = [],
+): { x: number; y: number; w: number; h: number } {
+  const right = Math.max(x + CARD_W, ...spots.map((s) => s.x + CARD_W));
+  const bottom = Math.max(y + pileH, ...spots.map((s, i) => s.y + (heights[i] || CARD_H)));
+  return {
+    x: x - FAN_PAD.side,
+    y: y - FAN_PAD.top,
+    w: right - x + FAN_PAD.side * 2,
+    h: bottom - y + FAN_PAD.top + FAN_PAD.bottom,
+  };
 }
 
 // ----- lining up (round 15) -----

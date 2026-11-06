@@ -47,6 +47,8 @@
     onpick,
     onopen,
     onheight,
+    z,
+    enter,
   }: {
     card: CanvasCard;
     zoom: number;
@@ -83,6 +85,10 @@
     onopen?: () => void;
     /** Its height as laid out (canvas units), so the Desk's lines meet its edge. */
     onheight?: (h: number) => void;
+    /** Stacked at this height instead of its own (a fanned-out pile's cards sit above the Desk). */
+    z?: number;
+    /** It comes out of a pile: slides in from this far away (canvas units), the `i`th card. */
+    enter?: { dx: number; dy: number; i: number };
   } = $props();
 
   let el: HTMLElement | undefined = $state();
@@ -336,7 +342,11 @@
   style:--c={color}
   style:left="{x + (drag?.dx ?? 0)}px"
   style:top="{y + (drag?.dy ?? 0)}px"
-  style:z-index={drag ? 99999 : open ? 99998 : card.z}
+  style:z-index={drag ? 99999 : open ? 99998 : (z ?? card.z)}
+  class:fan-in={!!enter}
+  style:--fx={enter ? `${enter.dx}px` : null}
+  style:--fy={enter ? `${enter.dy}px` : null}
+  style:--fi={enter?.i ?? null}
   role="button"
   tabindex="0"
   aria-expanded={hasPanel ? open : undefined}
@@ -476,6 +486,19 @@
 
   .card:hover {
     box-shadow: var(--lift);
+  }
+
+  /* Out of a pile being fanned: each card slides from the pile to its spot, one after another. */
+  .card.fan-in {
+    animation: fan-in calc(0.32s * var(--m)) var(--ease) backwards;
+    animation-delay: calc(min(var(--fi, 0), 12) * 22ms * var(--m));
+  }
+
+  @keyframes fan-in {
+    from {
+      opacity: 0;
+      transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.9);
+    }
   }
 
   .card:focus-visible {
@@ -664,6 +687,10 @@
     .card.lifted {
       transition: none;
       transform: none;
+    }
+
+    .card.fan-in {
+      animation: none;
     }
   }
 </style>

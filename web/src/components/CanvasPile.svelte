@@ -2,7 +2,7 @@
   // A pile of cards on the Desk (round 8): drop a card on a card to make one. It shows its top
   // card with the rest as sheets behind and a count. Click it to fan the cards out (drag one
   // away to take it off); drag the pile to move it, or onto a drawer to file it all.
-  // Double-click the name to rename it. Right-click for its paper menu. The Done today pile
+  // Double-click the name (along its bottom, round 19) to rename it. Right-click for its paper menu. The Done today pile
   // (round 14) gathers the tickets ticked done today; it moves and fans out but keeps its name.
   import type { CanvasCard, CanvasStack } from '../lib/api';
   import { focusNow } from '../lib/focus';
@@ -131,38 +131,40 @@
   <div class="face paper">
     <span class="kind">{face.kind}</span>
     <span class="title">{face.title}</span>
+    <!-- The pile's name sits in the face's empty lower part (round 19), with the count beside it. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <span
+      class="foot"
+      title={pile.done ? undefined : 'Double-click to rename'}
+      ondblclick={(e) => {
+        e.stopPropagation();
+        if (!pile.done) renaming = true;
+      }}
+    >
+      {#if renaming}
+        <input
+          class="rename"
+          bind:value={draft}
+          use:focusNow
+          maxlength="60"
+          placeholder="Name this pile"
+          aria-label="Pile name"
+          onpointerdown={(e) => e.stopPropagation()}
+          onblur={() => finish(true)}
+          onkeydown={(e) => {
+            if (e.key === 'Enter') finish(true);
+            else if (e.key === 'Escape') {
+              e.stopPropagation();
+              finish(false);
+            }
+          }}
+        />
+      {:else}
+        <span class="nm" class:unnamed={!pile.done && !pile.name}>{pile.done ? 'Done today' : (pile.name ?? 'Pile')}</span>
+        <span class="count" aria-hidden="true">{pile.count}</span>
+      {/if}
+    </span>
   </div>
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <span
-    class="tab"
-    ondblclick={(e) => {
-      e.stopPropagation();
-      renaming = true;
-    }}
-  >
-    {#if renaming}
-      <input
-        class="rename"
-        bind:value={draft}
-        use:focusNow
-        maxlength="60"
-        placeholder="Name this pile"
-        aria-label="Pile name"
-        onpointerdown={(e) => e.stopPropagation()}
-        onblur={() => finish(true)}
-        onkeydown={(e) => {
-          if (e.key === 'Enter') finish(true);
-          else if (e.key === 'Escape') {
-            e.stopPropagation();
-            finish(false);
-          }
-        }}
-      />
-    {:else}
-      {#if pile.name}<span class="nm">{pile.name}</span>{/if}
-      <span class="count">{pile.count}</span>
-    {/if}
-  </span>
 </div>
 
 <style>
@@ -256,57 +258,58 @@
     line-height: 1.3;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
-  }
-
-  .tab {
-    position: absolute;
-    right: -8px;
-    top: -10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 4px 2px 8px;
-    border-radius: 9px;
-    background: var(--ink);
-    color: var(--paper);
-    font: 700 11px var(--ui);
-    box-shadow: var(--shadow);
-    max-width: 200px;
   }
 
   .pile.done .face {
     border-top-color: var(--ok);
   }
 
-  .pile.done .tab {
-    background: var(--ok);
-  }
-
-  .tab:not(:has(.nm)) {
-    padding-left: 4px;
+  .foot {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 24px;
+    padding-top: 5px;
+    border-top: 1px dashed color-mix(in srgb, var(--ink) 18%, transparent);
   }
 
   .nm {
+    flex: 1;
+    min-width: 0;
+    font: 700 13px var(--ui);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
+  .nm.unnamed {
+    color: var(--mut);
+    font-weight: 600;
+  }
+
   .count {
-    min-width: 18px;
+    min-width: 22px;
     text-align: center;
-    border-radius: 8px;
-    padding: 0 5px;
-    background: color-mix(in srgb, var(--paper) 22%, transparent);
+    border-radius: 9px;
+    padding: 1px 7px;
+    font: 700 11.5px var(--ui);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .pile.done .count {
+    background: var(--ok);
   }
 
   .rename {
-    font: 600 11.5px var(--ui);
-    width: 150px;
-    border: 0;
+    flex: 1;
+    min-width: 0;
+    font: 600 12.5px var(--ui);
+    border: 1px solid var(--rule);
     border-radius: 5px;
     padding: 1px 5px;
     color: var(--ink);
