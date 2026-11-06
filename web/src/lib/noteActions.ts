@@ -80,7 +80,7 @@ export async function moveToWiki(note: Note, after?: () => void): Promise<void> 
 }
 
 /** "Change to ▸ Jot / Daily / Meeting" and "Move to the wiki…" for any note's menu (round 18).
- *  Wiki pages and MOPs get neither: they live in the wiki. */
+ *  Wiki pages and MOPs get neither: pages live in the wiki, and a MOP belongs to its ticket. */
 export function noteKindSections(note: Note, after?: () => void): MenuSection[] {
   if (note.kind === 'page' || note.kind === 'mop') return [];
   return [
@@ -95,4 +95,19 @@ export function noteKindSections(note: Note, after?: () => void): MenuSection[] 
     },
     { items: [{ label: 'Move to the wiki…', icon: 'book', act: () => void moveToWiki(note, after) }] },
   ];
+}
+
+/** "Save as template" on a wiki page or a MOP (round 18): a copy goes to the wiki's
+ *  Templates, opened ready to edit so the parts that change each time can become {{blanks}}.
+ *  The page or MOP itself stays as it is. */
+export async function saveAsTemplate(note: Note): Promise<void> {
+  const made = await attempt(() =>
+    api.createNote({ kind: 'mop', title: `${note.title} (template)`, body: note.body, projectId: note.projectId, tags: note.tags.join(', '), template: true }),
+  );
+  if (!made) return;
+  await refresh();
+  openWiki(made.id, true);
+  toast('Saved as a template. Turn what changes each time into {{blanks}}, like {{site}}.', 'Undo', () =>
+    void attempt(() => api.setNoteDeleted(made.id, true)).then(refresh),
+  );
 }

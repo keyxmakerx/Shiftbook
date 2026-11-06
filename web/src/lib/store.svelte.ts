@@ -34,6 +34,8 @@ export const app = $state({
   itemsTab: 'open' as 'open' | 'follow' | 'done',
   /** The Tickets page's project filter: 'all', 'none' or a project id (set by the Projects page). */
   itemsProject: 'all' as string,
+  /** What's typed in the Tickets page's find box (set by "Go to the ticket"). */
+  itemsFind: '',
   /** The view we came from, for the direction of the slide. */
   previousView: 'desk' as View,
   prefs: null as Prefs | null,

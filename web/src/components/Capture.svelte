@@ -7,7 +7,7 @@
   // it too, every action the app has is a command here (grouped Go to / Do / Settings), a
   // day such as "last friday" or "12 oct" offers that day, and "help" lists everything.
   import { api } from '../lib/api';
-  import type { Capture, Entry, InboxItem, MeetingSeries, Note, TrayItem } from '../lib/api';
+  import type { Capture, Entry, InboxItem, MeetingSeries, MopRun, Note, TrayItem } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
   import { toIsoDate } from '../lib/dates';
   import { KIND_LABEL } from '../lib/notes';
@@ -34,6 +34,7 @@
     words,
   } from '../lib/store.svelte';
   import { pickMopFiles } from '../lib/mopbook.svelte';
+  import { mops, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -56,6 +57,12 @@
     /** Needs the Desk or a full-screen board, which the phone layout doesn't have. */
     desk?: boolean;
   };
+  /** MOPs whose ticket number has what's typed in it (3 or more characters). */
+  function mopsFor(typed: string): MopRun[] {
+    const q = typed.trim().toLowerCase();
+    if (q.length < 3 || /\s/.test(q)) return [];
+    return mops.list.filter((r) => r.ticket.toLowerCase().includes(q)).slice(0, 5);
+  }
   /** Wiki pages and MOP templates open in the wiki (round 18). */
   const inWiki = (n: Note) => n.kind === 'page' || (n.kind === 'mop' && n.template);
 
@@ -64,6 +71,7 @@
     | { kind: 'scrap'; item: InboxItem }
     | { kind: 'note'; note: Note }
     | { kind: 'ticket'; ticket: TrayItem }
+    | { kind: 'mop'; run: MopRun }
     | { kind: 'day'; date: string; sheet: boolean }
     | { kind: 'change'; change: Change; after: number }
     | { kind: 'command'; command: Command };
@@ -309,6 +317,8 @@
               ...found.notes.filter(inWiki).map((note): Hit => ({ kind: 'note', note })),
               ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
               ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
+              // MOPs by their ticket number, so a ticket that's only on a MOP is found too.
+              ...mopsFor(now).map((run): Hit => ({ kind: 'mop', run })),
               ...found.notes.filter((n) => !inWiki(n)).map((note): Hit => ({ kind: 'note', note })),
               ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ]
@@ -365,6 +375,8 @@
       else openNote(hit.note.id);
     } else if (hit.kind === 'ticket') {
       openWindow('tray', hit.ticket.id);
+    } else if (hit.kind === 'mop') {
+      openMopWindow(hit.run.mopId);
     } else if (hit.kind === 'entry') {
       setView('day');
       await selectDay(hit.entry.date);
@@ -435,7 +447,7 @@
   function group(hit: Hit): string {
     return hit.kind === 'entry'
       ? 'Entries'
-      : hit.kind === 'ticket'
+      : hit.kind === 'ticket' || hit.kind === 'mop'
         ? 'Tickets'
         : hit.kind === 'note'
           ? inWiki(hit.note)
@@ -544,6 +556,9 @@
             <span class="what"><b class="mono">{t.ticket}</b>
               <small>{relativeDay(t.date, app.today)} · {t.done ? 'done' : 'still open'}{t.note ? ' · ' + t.note.split('\n')[0] : ''}</small></span>
             <span class="mono amt">{fmtMinutes(t.minutes)}</span>
+          {:else if hit.kind === 'mop'}
+            <i class="dot" style:--c="var(--ok)"></i>
+            <span class="what"><b class="mono">{hit.run.ticket}</b><small>{words().mop} · {STATUS_WORD[hit.run.status]} · {hit.run.title}</small></span>
           {:else if hit.kind === 'note'}
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
             <span class="what"><b>{hit.note.title}</b>
