@@ -6,6 +6,7 @@
   // tickets whose notepad mentions it. Rules (links, the tree, versions) are in
   // crates/core/src/wiki.rs.
   import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import type { Note, NoteVersion, WikiList, WikiPage, WikiRow } from '../lib/api';
@@ -478,7 +479,7 @@
         <p class="meta">
           Saves as you type. Type <code>[[</code> and a page's title to link it{isTemplate ? ', and {{name}} for a blank to fill in each time' : ''}.
         </p>
-        <textarea class="body-in" bind:value={body} oninput={typed} onblur={() => void flush()} use:focusNow aria-label="Page text" spellcheck="true"></textarea>
+        <textarea use:tabIndent class="body-in" bind:value={body} oninput={typed} onblur={() => void flush()} use:focusNow aria-label="Page text" spellcheck="true"></textarea>
       {:else}
         <h1>
           {page.note.title}

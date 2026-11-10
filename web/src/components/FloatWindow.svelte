@@ -3,6 +3,7 @@
   // move it, the corner to resize it. ▴ rolls it up to the title bar, – tucks it into the
   // bottom bar, ⤢ fills the screen, ✕ closes it. What's typed saves as you go.
   import { onMount, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import { api } from '../lib/api';
   import type { Note, NoteKind, WindowSpot } from '../lib/api';
   import { app, attempt, projectById, projectColor, putEntry } from '../lib/store.svelte';
@@ -293,6 +294,7 @@
       {/if}
     {:else}
       <textarea
+        use:tabIndent
         class="body"
         bind:value={text}
         placeholder={win.kind === 'note' ? 'Write here…' : 'Notes…'}

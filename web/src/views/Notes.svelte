@@ -8,6 +8,7 @@
   // and the open note beside it. Notes save as you type. Archive moves a note out of the
   // way; search still finds it. Auto-archive (Settings → Notes) warns on the note first.
   import { onDestroy } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import { api } from '../lib/api';
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
@@ -347,6 +348,7 @@
         </label>
       </div>
       <textarea
+        use:tabIndent
         bind:this={bodyEl}
         class="body"
         placeholder="Write anything…"

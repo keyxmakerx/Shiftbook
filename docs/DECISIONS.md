@@ -2,6 +2,14 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 10 Nov 2026 (tabs in notepads, the Organise menu on top)
+No mockup needed:
+- **Tab indents in notepads** (notepad windows, Notes, MOPs, wiki pages, board notes): Tab puts
+  in a tab, or indents every selected line; Shift+Tab takes one off. Escape and then Tab moves
+  on to the next control as before. Read and Run show tabbed lines indented the same way (a tab
+  or two spaces is one step), instead of flattening them.
+- **The Organise menu opens over notepad windows**, the bell and the bottom bar.
+
 ## Round 18 — 4 Nov 2026 (a wiki, MOPs on tickets, fewer ways round)
 Cards in `tools/signoff/rounds/r18.json` (mockups `mocks/r18-*.html`), on the rounds 8 to 14
 sheet, which the owner chose to keep using. All approved:

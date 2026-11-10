@@ -115,6 +115,11 @@ select {
   color: inherit;
 }
 
+/* A tab in a notepad is four characters wide everywhere (the read view uses the same). */
+textarea {
+  tab-size: 4;
+}
+
 button {
   -webkit-tap-highlight-color: transparent;
 }
