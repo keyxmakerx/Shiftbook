@@ -29,6 +29,7 @@ sheet, which the owner chose to keep using. All approved:
   ticket offers **Use a template on it**. In the picker, the number keys 1-9 pick, Enter in the
   search takes the top match, and a template with nothing left to type (only the ticket and
   title) makes the MOP in one click with no second step.
+  MOP templates no longer get a card on the Desk; they live in the wiki's Templates space.
 - **Top bar:** four tabs where you work (Desk, Day, Timesheet, Wiki), an **Organise ▾** menu
   with Tickets (was Items), Projects (a new page), Repeating, Lists and Notes, and Settings as a
   gear. Keys 1 to 4 for the tabs, 5 for the menu.

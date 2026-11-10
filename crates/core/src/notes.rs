@@ -252,6 +252,12 @@ pub fn is_daily_note_for(kind: NoteKind, title: &str, date: time::Date) -> bool 
     kind == NoteKind::Daily && title == daily_note_title(date)
 }
 
+/// True when a note gets a card on the Desk. MOP templates don't: they're forms kept in the
+/// wiki's Templates space and pulled onto a ticket, not work in progress (owner ask).
+pub fn shows_on_desk(kind: NoteKind, template: bool) -> bool {
+    !(kind == NoteKind::Mop && template)
+}
+
 /// What logging a jot as an entry makes (round 14).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JotEntry {
@@ -302,6 +308,15 @@ pub fn jot_to_entry(title: &str, body: &str) -> JotEntry {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn templates_stay_off_the_desk() {
+        use super::{shows_on_desk, NoteKind};
+        assert!(!shows_on_desk(NoteKind::Mop, true));
+        assert!(shows_on_desk(NoteKind::Mop, false));
+        assert!(shows_on_desk(NoteKind::Jot, false));
+        assert!(shows_on_desk(NoteKind::Page, false));
+    }
+
     #[test]
     fn jots_become_entries() {
         use super::jot_to_entry;
