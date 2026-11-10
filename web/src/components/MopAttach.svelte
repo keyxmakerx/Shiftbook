@@ -3,6 +3,8 @@
   // and the ticket's project's come first, and a search box narrows a long list), answer its
   // {{blanks}} once (the ticket and title fill themselves), and the MOP opens in a window.
   // Or copy a wiki page in as it is, or start blank.
+  // Quicker (owner ask): a template with nothing left to type makes the MOP in one click, the
+  // number keys 1-9 pick from the list, and Enter in the search box takes the top match.
   import { api } from '../lib/api';
   import type { MopTemplate, WikiRow } from '../lib/api';
   import { focusNow } from '../lib/focus';
@@ -45,12 +47,31 @@
     const note = await attempt(() => api.getNote(t.id));
     if (!note) return;
     const names = (await attempt(() => api.mopBlanks(`${note.title}\n${note.body}`))) ?? [];
-    blanks = names.map((name) => {
+    const filled = names.map((name) => {
       const n = name.toLowerCase();
       const value = n === 'ticket' ? a.ticket : n === 'title' ? a.title : '';
       return { name, value, auto: value !== '' };
     });
+    // Nothing left to type: no need for a second step.
+    if (filled.every((b) => b.auto)) {
+      await makeMop(a.ticket, { templateId: t.id, values: filled.map((b) => [b.name, b.value]) });
+      return;
+    }
+    blanks = filled;
     picked = t;
+  }
+
+  /** 1-9 pick the template with that number, unless typing in a box. */
+  function numberKey(e: KeyboardEvent) {
+    if (picked || e.ctrlKey || e.metaKey || e.altKey) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('input, select, textarea')) return;
+    const n = Number(e.key);
+    if (!Number.isInteger(n) || n < 1 || n > 9) return;
+    const t = shown[n - 1];
+    if (!t) return;
+    e.preventDefault();
+    void pick(t);
   }
 
   function close() {
@@ -70,7 +91,7 @@
         if (e.key === 'Escape') {
           e.stopPropagation();
           close();
-        }
+        } else numberKey(e);
       }}
     >
       <header>
@@ -106,15 +127,36 @@
         </form>
       {:else}
         {#if templates.length > 5}
-          <input class="text-in" type="search" bind:value={find} placeholder="Find a template…" aria-label="Find a template" use:focusNow />
+          <input
+            class="text-in"
+            type="search"
+            bind:value={find}
+            placeholder="Find a template… (Enter takes the top one)"
+            aria-label="Find a template"
+            use:focusNow
+            onkeydown={(e) => {
+              if (e.key === 'Enter' && shown[0]) {
+                e.preventDefault();
+                void pick(shown[0]);
+              }
+            }}
+          />
         {/if}
         <div class="list">
-          {#each shown as t (t.id)}
+          {#each shown as t, i (t.id)}
+            {#if i === 0 && templates.length <= 5}
+              <button type="button" class="opt" onclick={() => void pick(t)} use:focusNow>
+                <span class="num" aria-hidden="true">{i + 1}</span>
+                <span class="txt"><b>{t.title}</b>{#if t.hint}<small>{t.hint}</small>{/if}</span>
+                <span class="tag">Template</span>
+              </button>
+            {:else}
             <button type="button" class="opt" onclick={() => void pick(t)}>
-              <Icon name="book" size={16} />
+              {#if i < 9}<span class="num" aria-hidden="true">{i + 1}</span>{:else}<Icon name="book" size={16} />{/if}
               <span class="txt"><b>{t.title}</b>{#if t.hint}<small>{t.hint}</small>{/if}</span>
               <span class="tag">Template</span>
             </button>
+            {/if}
           {:else}
             <p class="sub">
               {templates.length ? 'No template matches.' : 'No MOP templates yet. Make one in the wiki under Templates, with {{blanks}} for what changes each time.'}
@@ -229,6 +271,18 @@
   .opt:focus-visible {
     border-color: var(--ok);
     background: color-mix(in srgb, var(--ok) 6%, var(--paper));
+  }
+
+  .num {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border-radius: 5px;
+    border: 1px solid var(--rule);
+    display: grid;
+    place-items: center;
+    font: 600 11px var(--ui);
+    color: var(--ink-2);
   }
 
   .txt {

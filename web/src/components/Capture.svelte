@@ -34,6 +34,7 @@
     words,
   } from '../lib/store.svelte';
   import { pickMopFiles } from '../lib/mopbook.svelte';
+  import { mopFor, openMop, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -64,6 +65,7 @@
     | { kind: 'scrap'; item: InboxItem }
     | { kind: 'note'; note: Note }
     | { kind: 'ticket'; ticket: TrayItem }
+    | { kind: 'mop'; ticket: string }
     | { kind: 'day'; date: string; sheet: boolean }
     | { kind: 'change'; change: Change; after: number }
     | { kind: 'command'; command: Command };
@@ -309,6 +311,8 @@
               ...found.notes.filter(inWiki).map((note): Hit => ({ kind: 'note', note })),
               ...found.entries.map((entry): Hit => ({ kind: 'entry', entry })),
               ...found.tickets.map((ticket): Hit => ({ kind: 'ticket', ticket })),
+              // A template straight onto a found ticket, or its MOP when it has one.
+              ...mopHits(found.tickets),
               ...found.notes.filter((n) => !inWiki(n)).map((note): Hit => ({ kind: 'note', note })),
               ...found.inbox.map((item): Hit => ({ kind: 'scrap', item })),
             ]
@@ -321,6 +325,22 @@
 
   function close() {
     app.captureOpen = false;
+  }
+
+  /** Most "use a template" rows a search adds, one per ticket. */
+  const MAX_MOP_HITS = 3;
+
+  function mopHits(tickets: readonly TrayItem[]): Hit[] {
+    const seenTickets = new Set<string>();
+    const out: Hit[] = [];
+    for (const t of tickets) {
+      const key = t.ticket.toLowerCase();
+      if (seenTickets.has(key)) continue;
+      seenTickets.add(key);
+      out.push({ kind: 'mop', ticket: t.ticket });
+      if (out.length >= MAX_MOP_HITS) break;
+    }
+    return out;
   }
 
   async function holiday() {
@@ -365,6 +385,8 @@
       else openNote(hit.note.id);
     } else if (hit.kind === 'ticket') {
       openWindow('tray', hit.ticket.id);
+    } else if (hit.kind === 'mop') {
+      openMop(hit.ticket);
     } else if (hit.kind === 'entry') {
       setView('day');
       await selectDay(hit.entry.date);
@@ -435,7 +457,7 @@
   function group(hit: Hit): string {
     return hit.kind === 'entry'
       ? 'Entries'
-      : hit.kind === 'ticket'
+      : hit.kind === 'ticket' || hit.kind === 'mop'
         ? 'Tickets'
         : hit.kind === 'note'
           ? inWiki(hit.note)
@@ -544,6 +566,14 @@
             <span class="what"><b class="mono">{t.ticket}</b>
               <small>{relativeDay(t.date, app.today)} · {t.done ? 'done' : 'still open'}{t.note ? ' · ' + t.note.split('\n')[0] : ''}</small></span>
             <span class="mono amt">{fmtMinutes(t.minutes)}</span>
+          {:else if hit.kind === 'mop'}
+            {@const run = mopFor(hit.ticket)}
+            <i class="dot cmd" aria-hidden="true">›</i>
+            {#if run}
+              <span class="what"><b>Open the MOP for <span class="mono">{hit.ticket}</span></b><small>{STATUS_WORD[run.status]} · {run.title}</small></span>
+            {:else}
+              <span class="what"><b>Use a template on <span class="mono">{hit.ticket}</span></b><small>Pick a MOP template; the ticket fills itself in</small></span>
+            {/if}
           {:else if hit.kind === 'note'}
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
             <span class="what"><b>{hit.note.title}</b>

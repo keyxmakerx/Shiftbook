@@ -18,6 +18,8 @@
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
+  import MopChip from './MopChip.svelte';
+  import { mopFor, openMop, STATUS_WORD } from '../lib/mops.svelte';
   import TicketChip from './TicketChip.svelte';
 
   let {
@@ -221,6 +223,7 @@
             {#if t.done}<Icon name="check" size={10} />{/if}
           </button>
           <TicketChip number={t.number} links={t.links} color={projectColor(entry.projectId)} onRemove={entry.isTray ? null : () => void detach(t.id, t.number)} showRemove />
+          <MopChip ticket={t.number} title={entry.description} offer={!t.done} />
         </span>
       {/each}
       <input
@@ -262,6 +265,12 @@
       <button type="button" class="act" class:ok={tray.done} class:open={!tray.done} onclick={() => void setTrayDone(tray, !tray.done)}>
         <Icon name={tray.done ? 'check' : 'clock'} size={15} />
         {tray.done ? 'Done' : 'Still open'}
+      </button>
+      <!-- Its MOP in one click: open it, or pull a template for it (owner ask). -->
+      {@const run = mopFor(tray.ticket)}
+      <button type="button" class="act" title={run ? `Open the MOP for ${tray.ticket}` : `Pick a MOP template for ${tray.ticket}`} onclick={() => openMop(tray.ticket)}>
+        <Icon name="book" size={15} />
+        {run ? `MOP · ${STATUS_WORD[run.status]}` : 'Use a template'}
       </button>
     {/if}
     <button
