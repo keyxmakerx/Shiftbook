@@ -105,6 +105,22 @@ Node and npm run only on the developer's machine and in CI, to compile `web/` in
 The shipped app has no Node runtime. `npm audit` still runs in CI because the compiled bundle
 contains code from those packages.
 
+## Known advisories (checked 10 Nov 2026)
+`cargo audit` fails CI on any vulnerability not listed in `.cargo/audit.toml`; each entry there
+says why it is accepted and when to drop it. Warnings (unmaintained, unsound, yanked) are shown
+but do not fail CI.
+- **RUSTSEC-2026-0459** (SQLite before 3.54.0, crafted `-wal` file returns stale memory):
+  accepted for now. sqlx 0.9.0, the newest release, caps libsqlite3-sys below 0.38, and even
+  libsqlite3-sys 0.39's SQLCipher build still bundles SQLite 3.53.4. Shiftbook's database is
+  always encrypted, never uses WAL (journal mode DELETE), and lives in the user's own app-data
+  folder, so the files cannot be crafted without the key. Drop the ignore once sqlx accepts a
+  libsqlite3-sys whose SQLCipher bundles SQLite 3.54 or newer.
+- **glib 0.18 (RUSTSEC-2024-0429, unsound) and proc-macro-error (RUSTSEC-2024-0370,
+  unmaintained):** come from Tauri's GTK 3 stack on Linux, with no fix until Tauri moves on.
+  The unsound `VariantStrIter` is not used by Shiftbook.
+- **deepmerge via `@sveltejs/vite-plugin-svelte` (GHSA-gcqx-w48m-w2h4, low):** build-time only,
+  never shipped, no fixed version yet. CI's `npm audit` fails only on high or critical.
+
 ## M1 security checklist (research, Oct 2026)
 Gathered before building the vault; sources are the projects' own advisories and docs. Items marked
 *unverified* were not confirmed against a primary source and get a test instead.
