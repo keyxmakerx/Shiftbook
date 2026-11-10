@@ -24,7 +24,14 @@ names the round it came from. Nothing here is optional unless it says so.
 - Double-click empty paper to start a jot right there.
 - Pan by dragging empty paper or with Shift + scroll; zoom with the scroll wheel (round 14;
   it was Ctrl + scroll before), a pinch, the zoom buttons or
-  "Fit everything" (round 4 pick).
+  "Fit everything" (round 4 pick; **Fit** since the daily-use review, 10 Nov, which zooms out
+  no further than 80% so the cards stay readable). The Desk opens at 100% on today's cards
+  (from today, still open, followed up for today or pinned): in the middle when they fit,
+  otherwise from their top left corner.
+- The bottom bar holds zoom, Fit and one **View** menu (daily-use review): Timeline, Show all
+  link lines, Boards, Tidy into stacks and Clear old cards…. Right-click menus have about a
+  dozen rows: times, days, projects, colours and drawers open in place under one row each, the
+  rarer things are under More, and there is no ring of round icons beside the sheet.
 - Today's hours stay in view (the top bar), so the Canvas never hides the day's total.
 - Find flies to a card and lifts it.
 - Undo for every move that changes data (project, filing, archive, delete).
@@ -34,8 +41,11 @@ names the round it came from. Nothing here is optional unless it says so.
   gives it that project; dragging it out takes the project away (with Undo).
 - **Links** (round 2, round 4): lines drawn automatically between cards that share a ticket, a
   project or distinctive words; any link can be removed, and the owner can draw their own.
-- **Timeline** (round 4): one button lays everything out along a date line; "Back to my layout"
-  puts every card exactly where it was. Switching never disturbs the owner's arrangement.
+  Since the daily-use review a card's lines show while you point at it; View → Show all link
+  lines shows every line.
+- **Timeline** (round 4): one choice (View → Timeline) lays everything out along a date line;
+  "Back to my layout" puts every card exactly where it was. Switching never disturbs the owner's
+  arrangement.
 
 ## Keeping it tidy (round 8)
 - **Stacks:** drop a card on a card to make a pile with a count; click to fan it out; drag a
@@ -70,16 +80,20 @@ names the round it came from. Nothing here is optional unless it says so.
    Which records show: entries and Done tickets from the last 7 days (Settings → Look → The
    Desk: 1, 3, 7 or 14 days, round 15), plus older ones the owner moved while they're pinned
    or were moved within those days (or always, if "Cards I moved leave after the same time
-   too" is off); every live note and Inbox scrap. The day's "Tickets" roll-up entry is not a card (its
-   tickets are). Cards nobody moved are placed newest first in rows from the top left, around
-   the moved ones.
+   too" is off); every live note and Inbox scrap, except wiki pages, templates and a MOP on a
+   ticket (daily-use review, 10 Nov: those live in the wiki, and a ticket's MOP is the chip on
+   its card; `shows_on_desk` in `crates/core/src/notes.rs`). The day's "Tickets" roll-up entry is
+   not a card (its tickets are). Cards nobody moved are placed in rows from the top left, around
+   the moved ones, in the order they first showed (the same work keeps its oldest), so a new
+   card takes the next free spot instead of moving the rest along (daily-use review; it was
+   newest first).
 2. **C2 Meaning (built):** project areas (right-click empty paper → Project area here; drag
    the name to move the area with its cards, the corner to resize; drop a card in to give it the
    project, drag it out of its own project's area to take the project away, both with Undo);
    links (automatic for a shared ticket, also one written in a note, and for an uncommon word
    only two cards use, at most two word links per card; dashed for words, solid for tickets;
-   click a line to remove it; "Link to another card" on any card draws one; the Links button
-   hides them all); the timeline (a column per day, oldest left, wrapping after 5 cards; Back
+   click a line to remove it; "Link to another card" on any card draws one; lines show for the
+   card you point at, and View → Show all link lines shows them all); the timeline (a column per day, oldest left, wrapping after 5 cards; Back
    to my layout restores the view; cards can't be dragged while it shows).
    **Boxes and the toolbox (built, round 12):** a toolbox down the left of the Desk (fold it
    away with its arrow) with Move (drag paper to pan), Select (drag around cards; dragging one
@@ -102,10 +116,11 @@ names the round it came from. Nothing here is optional unless it says so.
 3. **C3 Tidy (built):** **piles**: drop a card on a card (or on a pile) and they pile up
    with a count; click the pile to fan its cards out beside it, drag one away to take it off
    (a pile left with one card comes apart); drag the pile to move it; double-click its count
-   to name it; right-click for Fan out, Rename, Take the pile apart and File in. **Tidy into
-   stacks** (bottom bar) piles loose cards by project, two or more per project, with Undo.
-   **Drawers**: the cabinet under the toolbox: the **Archive** first (round 15: **Put away**
-   on an entry or done-ticket card, or **Tidy up…** on the bottom bar for everything from
+   to name it; right-click for Fan out, Rename, Take the pile apart and File in a drawer.
+   **Tidy into stacks** (View menu) piles loose cards by project, two or more per project, with
+   Undo.
+   **Drawers**: the cabinet under the toolbox: the **Archive** first (round 15: **Archive**
+   on an entry or done-ticket card, or **Clear old cards…** in the View menu for everything from
    before today, older than this week, or the cards picked; nothing is lost, and the Archive
    board has Back on the Desk), then one drawer per project plus folders you make (+ Folder). It stays folded until you drag a card or a pile, then slides out; drop on a
    drawer to file it off the Desk (a project's drawer also gives the cards that project), with
@@ -124,7 +139,7 @@ names the round it came from. Nothing here is optional unless it says so.
    loose. Drag the pile to move it (its spot is the `desk.done_pile` preference); click to fan
    it out; right-click for See all done tickets and File in. Done tickets from before today
    leave the Desk; still-open ones stay.
-4. **C4 Boards (built, round 12):** **Boards** (Desk bottom bar), Open full screen on a
+4. **C4 Boards (built, round 12):** **Boards** (View menu on the Desk's bottom bar), Open full screen on a
    project's box, or ⤢ on a drawer opens a board full screen. The tree on the left shows every
    board: Projects (one per project), Meetings (one per meeting series, holding the notes
    titled "<series> · <day>"), Daily notes, each folder, and the Archive. The trail on top
