@@ -148,7 +148,7 @@
     { label: 'Wrap up the day', group: 'Do', words: 'end of day wrap-up', run: wrapUp },
     { label: 'Back up now', group: 'Do', words: 'backup save', run: backupNow },
     { label: 'Copy for stand-up', group: 'Do', words: 'yesterday standup clipboard', run: copyStandup },
-    { label: 'Fit everything', group: 'Do', desk: true, words: 'desk zoom', run: () => onDesk('fit') },
+    { label: 'Fit the Desk', group: 'Do', desk: true, words: 'fit everything zoom', run: () => onDesk('fit') },
     { label: 'Tidy into stacks', group: 'Do', desk: true, words: 'tidy the desk pile loose cards by project', run: () => onDesk('tidy') },
     { label: 'Timeline', group: 'Do', desk: true, words: 'desk lay out', run: () => onDesk('timeline') },
     {

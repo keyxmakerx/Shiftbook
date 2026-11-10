@@ -8,7 +8,7 @@ import type { CardKind } from './api';
 import { refreshBell } from './bell.svelte';
 import { askDay } from './dayPrompt.svelte';
 import { addDays, dayMonth, daysBetween, longDay, weekdayLong, weekdayShort } from './format';
-import type { MenuSection } from './menu.svelte';
+import type { MenuItem, MenuSection } from './menu.svelte';
 import { refreshPins } from './pins.svelte';
 import { app, attempt } from './store.svelte';
 import { toast } from './toast.svelte';
@@ -90,4 +90,19 @@ export function bringUpSection(kind: CardKind, id: string, title: string): MenuS
   choices.push({ label: 'Pick a day…', color: null, checked: false, act: () => void pickDay(kind, id, title) });
   if (current) choices.push({ label: 'No follow-up', color: null, checked: false, act: () => void clearFollowUp(kind, id, title) });
   return { head: 'Follow up', choices };
+}
+
+/**
+ * "Follow up" as one row of a card's menu that opens its days in place, with the day it has
+ * now in grey (the daily-use review, 10 Nov: about a dozen rows to a menu).
+ */
+export function followUpItem(kind: CardKind, id: string, title: string): MenuItem {
+  const current = app.followUps[`${kind}:${id}`] ?? null;
+  const { choices } = bringUpSection(kind, id, title);
+  return {
+    label: 'Follow up',
+    icon: 'calendar',
+    ...(current ? { value: dayChoiceLabel(current, app.today) } : {}),
+    sub: [{ choices }],
+  };
 }

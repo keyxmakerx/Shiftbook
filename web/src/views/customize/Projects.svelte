@@ -45,12 +45,11 @@
         {
           head: p.name,
           items: [
-            { label: 'Rename', icon: 'edit', side: true, act: () => inputs[p.id]?.select() },
-            { label: 'Log time on it', icon: 'log', side: true, act: () => focusLog(`#${p.name.split(/\s+/)[0] ?? ''} `) },
+            { label: 'Rename', icon: 'edit', act: () => inputs[p.id]?.select() },
+            { label: 'Log time on it', icon: 'log', act: () => focusLog(`#${p.name.split(/\s+/)[0] ?? ''} `) },
             {
               label: p.archived ? 'Bring back' : 'Archive',
               icon: 'archive',
-              top: true,
               act: () => void archive(p, !p.archived),
             },
           ],

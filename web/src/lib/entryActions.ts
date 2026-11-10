@@ -3,7 +3,7 @@
 // its tickets and bring it up tomorrow, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { Entry } from './api';
-import { bringUpSection } from './bringUp';
+import { followUpItem } from './bringUp';
 import { sameWork } from './sameWork';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { openNotepad } from './panel.svelte';
@@ -165,50 +165,62 @@ async function copyTickets(entry: Entry) {
   toast((await copyText(text)) ? 'Copied' : "Couldn't copy here.");
 }
 
-/** The entry's paper menu. `also` is the same work its Desk card folds in (see `sameWork`). */
+/**
+ * The entry's paper menu. `also` is the same work its Desk card folds in (see `sameWork`).
+ * About a dozen rows (the daily-use review, 10 Nov): the days, projects and colours open in
+ * place under their own row, and the rarer things are under More.
+ */
 export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
   const project = projectById(entry.projectId);
   const timing = timer.running && timer.target?.entryId === entry.id;
-  const main: MenuItem[] = [
-    { label: 'Rename', icon: 'edit', side: true, hint: 'F2', act: () => startRename(entry.id) },
-    { label: 'Open details', icon: 'open', side: true, hint: 'Enter', act: () => (app.drawer = entry.id) },
-    { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: () => openNotepad(`entry:${entry.id}`) },
-    { label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('entry', entry.id) },
-    pinMenuItem('entry', entry.id),
+  const items: MenuItem[] = [
+    { label: 'Rename', icon: 'edit', hint: 'F2', act: () => startRename(entry.id) },
+    { label: 'Open details', icon: 'open', hint: 'Enter', act: () => (app.drawer = entry.id) },
+    { label: entry.notes ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', act: () => openNotepad(`entry:${entry.id}`) },
   ];
+  if (timing) items.push({ label: 'Stop the timer', icon: 'clock', act: () => void stopTimer() });
   if (!entry.isTray) {
-    main.push(
-      { label: 'Add 15 minutes', icon: 'clock', side: true, act: () => void addEntryTime(entry, 15) },
-      { label: 'Add 1 hour', icon: 'hour', side: true, act: () => void addEntryTime(entry, 60) },
-    );
+    items.push({
+      label: 'Add time',
+      icon: 'clock',
+      sub: [
+        {
+          items: [
+            { label: 'Add 15 minutes', icon: 'clock', act: () => void addEntryTime(entry, 15) },
+            { label: 'Add 1 hour', icon: 'hour', act: () => void addEntryTime(entry, 60) },
+            { label: 'Log again today (30 min)', icon: 'log', act: () => void logAgainToday(entry) },
+          ],
+        },
+      ],
+    });
   }
-  if (canTime(entry)) {
-    main.push(
-      timing
-        ? { label: 'Stop the timer', icon: 'clock', top: true, act: () => void stopTimer() }
-        : { label: 'Start the timer', icon: 'clock', top: true, act: () => void startTimer(entry) },
-    );
-  }
-  main.push(
-    { label: 'Copy tickets', icon: 'copy', top: true, act: () => void copyTickets(entry) },
-    { label: 'Log again today (30 min)', icon: 'log', top: true, act: () => void logAgainToday(entry) },
-  );
+  items.push(followUpItem('entry', entry.id, entry.description));
   const choices = [
     ...app.projects
       .filter((p) => !p.archived)
       .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveEntryTo(entry, p.id, also) })),
     { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveEntryTo(entry, null, also) },
   ];
-  const sections: MenuSpec['sections'] = [
-    { head: entry.description || 'Untitled', items: main },
-    bringUpSection('entry', entry.id, entry.description),
-    { head: 'Project', choices },
-  ];
-  if (project) {
-    sections.push({ head: `Colour for ${project.name}`, swatches: { current: project.color, pick: (c) => void setColor(entry, c) } });
-  }
-  sections.push({
-    items: [{ label: entry.isTray ? 'Delete (empties the tray)' : 'Delete', icon: 'trash', danger: true, top: true, act: () => void removeEntry(entry) }],
+  items.push({
+    label: 'Project',
+    icon: 'folder',
+    value: project?.name ?? 'None',
+    sub: [
+      { choices },
+      ...(project ? [{ head: `Colour for ${project.name}`, swatches: { current: project.color, pick: (c: string) => void setColor(entry, c) } }] : []),
+    ],
   });
-  return { sections };
+  const more: MenuItem[] = [
+    { label: 'Pop out the notepad', icon: 'expand', act: () => openWindow('entry', entry.id) },
+    pinMenuItem('entry', entry.id),
+  ];
+  if (canTime(entry) && !timing) more.push({ label: 'Start the timer', icon: 'clock', act: () => void startTimer(entry) });
+  more.push({ label: 'Copy tickets', icon: 'copy', act: () => void copyTickets(entry) });
+  items.push({ label: 'More', icon: 'more', sub: [{ items: more }] });
+  return {
+    sections: [
+      { head: entry.description || 'Untitled', items },
+      { items: [{ label: entry.isTray ? 'Delete (empties the tray)' : 'Delete', icon: 'trash', danger: true, act: () => void removeEntry(entry) }] },
+    ],
+  };
 }

@@ -47,20 +47,44 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
   };
 }
 
+/** Fit zooms out no further than this, so the writing on the cards stays readable (the
+ *  daily-use review, 10 Nov). */
+export const FIT_MIN_ZOOM = 0.8;
 
-/** Zoomed out no further than this when the Desk opens, so cards stay readable. */
-export const OPENING_MIN_ZOOM = 0.6;
-
-/** The view the Desk opens with: everything in the middle when it fits at a readable zoom,
- *  otherwise the middle of everything at that zoom. With nothing on the Desk, the start view. */
-export function openingView(cards: { x: number; y: number }[], width: number, height: number): CanvasView {
-  if (cards.length === 0 || width <= 0 || height <= 0) return START;
-  const fitted = fitAll(cards, width, height);
-  if (fitted.zoom >= OPENING_MIN_ZOOM) return fitted;
-  const zoom = OPENING_MIN_ZOOM;
+/** The middle of `cards` in the middle of the board, at `zoom`. */
+function centred(cards: Spot[], width: number, height: number, zoom: number): CanvasView {
   const cx = (Math.min(...cards.map((c) => c.x)) + Math.max(...cards.map((c) => c.x + CARD_W))) / 2;
   const cy = (Math.min(...cards.map((c) => c.y)) + Math.max(...cards.map((c) => c.y + CARD_H))) / 2;
   return { zoom, x: width / 2 - cx * zoom, y: height / 2 - cy * zoom };
+}
+
+/** Fit: every card in view, zoomed out no further than `FIT_MIN_ZOOM`; when they don't fit at
+ *  that zoom, the middle of them at it. */
+export function fitReadable(cards: Spot[], width: number, height: number): CanvasView {
+  const fitted = fitAll(cards, width, height);
+  if (cards.length === 0 || width <= 0 || height <= 0 || fitted.zoom >= FIT_MIN_ZOOM) return fitted;
+  return centred(cards, width, height, FIT_MIN_ZOOM);
+}
+
+/** Where the first card sits in the start view: the start view's offset plus core's `ORIGIN`
+ *  (40, 40), so it clears the toolbox. */
+const FIRST_CARD = { x: START.x + 40, y: START.y + 40 };
+
+/**
+ * The view the Desk opens with (the daily-use review, 10 Nov): 100% on today's cards
+ * (`today`: from today, still open, followed up for today or pinned). When they fit they sit
+ * in the middle; when they don't, the view starts at their top left corner where the start
+ * view puts the first card, so the first of them can be read. With nothing for today it does
+ * the same with every card (`all`); with nothing on the Desk, the start view.
+ */
+export function openingView(today: Spot[], all: Spot[], width: number, height: number): CanvasView {
+  const cards = today.length ? today : all;
+  if (cards.length === 0 || width <= 0 || height <= 0) return START;
+  const fitted = fitAll(cards, width, height);
+  if (fitted.zoom >= 1) return fitted;
+  const left = Math.min(...cards.map((c) => c.x));
+  const top = Math.min(...cards.map((c) => c.y));
+  return { zoom: 1, x: FIRST_CARD.x - left, y: FIRST_CARD.y - top };
 }
 
 import type { BoxStatus, CanvasArea, CanvasLabel } from './api';

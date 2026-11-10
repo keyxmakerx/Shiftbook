@@ -174,7 +174,7 @@
         onclick={() => openNote(n.id)}
         use:paperMenu={() => ({
           sections: [
-            { head: n.title, items: [{ label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(n.id) }] },
+            { head: n.title, items: [{ label: 'Open in Notes', icon: 'open', act: () => openNote(n.id) }] },
             logNoteSection(n, () => void loadJots()),
             ...noteKindSections(n, () => void loadJots()),
           ],
