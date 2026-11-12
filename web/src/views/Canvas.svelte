@@ -1607,9 +1607,11 @@
             <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
           {/if}
         </div>
+        <!-- Log work comes first: it must be on screen when the app opens (1100 by 760), and
+             Due soon and Where was I? above it pushed it below the fold. -->
+        <LogWork />
         <DueSoonCard />
         <WhereWasI />
-        <LogWork />
         <TrayCard />
         <WrapUp />
       </div>

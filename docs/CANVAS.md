@@ -65,7 +65,7 @@ names the round it came from. Nothing here is optional unless it says so.
 ## Build order
 1. **C1 Foundation (built):** the layout store; Desk shows entries, tray tickets, notes and
    scraps as cards; drag, pan and zoom, Fit everything; double-click to open or to jot; paper
-   menus; a side panel with today's hours, "Where was I?", Log work, Done tickets and the
+   menus; a side panel with today's hours, Log work, "Where was I?", Done tickets and the
    wrap-up; the tab rename (Desk, Day, Timesheet, Notes, Settings on keys 1 to 5).
    Which records show: entries and Done tickets from the last 7 days (Settings → Look → The
    Desk: 1, 3, 7 or 14 days, round 15), plus older ones the owner moved while they're pinned

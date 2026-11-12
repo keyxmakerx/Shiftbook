@@ -2,6 +2,17 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 12 Nov 2026 (review fixes)
+No mockup needed:
+- **A MOP put on a new ticket keeps a place on the Desk:** the 6 Nov promise below didn't
+  hold (the Tickets list couldn't see a ticket on no day, so nothing was added). Putting the
+  MOP on the ticket and putting the ticket on today's Tickets tray now happen in one step in
+  storage (`link_mop`), so the ticket has a card and "Go to the ticket" finds it. Like any
+  tray ticket it starts with 15 minutes.
+- **Log work first in the Desk's side panel:** today's hours, Log work, Due soon, Where was
+  I?, the Tickets tray, the wrap-up. Due soon and Where was I? used to sit above it and push
+  it off the bottom of the window at the size the app opens at.
+
 ## Asked in chat — 6 Nov 2026 (notes, MOPs and wiki audit)
 No mockup needed:
 - **Notes is a tab** beside the Wiki (Desk, Day, Timesheet, Notes, Wiki), out of the Organise
