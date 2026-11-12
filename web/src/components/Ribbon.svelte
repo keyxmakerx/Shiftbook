@@ -198,7 +198,7 @@
   }
 </script>
 
-<header class="ribbon">
+<header class="ribbon" class:lifted={app.organiseOpen}>
   <div class="brand"><b>Shiftbook</b><span class="lbl">alpha</span></div>
   <div class="acts">
     <button class="cap-btn" type="button" onclick={onCapture} title="Log, note or find (Ctrl+Space)">
@@ -311,6 +311,13 @@
     gap: 6px 16px;
     align-items: center;
     padding: 8px 12px;
+  }
+
+  /* The Organise menu hangs below the ribbon, over the stage. Notepad windows (40), the bell
+     (43 and 44) and the bottom bar (45) sit above the ribbon's own 10, so while the menu is open
+     the ribbon rises over them; modal sheets and toasts (60 and up) still go on top. */
+  .ribbon.lifted {
+    z-index: 50;
   }
 
   .brand {

@@ -6,6 +6,8 @@
   // Copy run log puts the steps with their times on the clipboard for the change record. The
   // rules are in crates/core/src/change.rs and crates/core/src/mop.rs.
   import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
+  import { indentDepth } from '../lib/wikiText';
   import { api } from '../lib/api';
   import type { CheckLine, MopRun, MopStatus, Note } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
@@ -307,14 +309,19 @@
     <div class="body">
       {#if mode === 'edit'}
         <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} aria-label="MOP title" placeholder="Title" />
-        <textarea bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
+        <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
       {:else if mode === 'read'}
         <WikiText body={text} onlink={(t) => void follow(t)} />
       {:else}
         <ol class="run" aria-label="Steps to tick off">
           {#each lines as line, i (i)}
             {@const c = checks[i]}
-            <li class:x={c?.crossed} class:blank={!line.trim()} class:head={/^\s*#/.test(line)}>
+            <li
+              class:x={c?.crossed}
+              class:blank={!line.trim()}
+              class:head={/^\s*#/.test(line)}
+              style:padding-left={line.trim() ? `${4 + Math.min(8, indentDepth(line)) * 18}px` : undefined}
+            >
               {#if numbers}<span class="no">{i + 1}</span>{/if}
               {#if c?.key}
                 <button
@@ -329,7 +336,7 @@
               {:else}
                 <span class="cb none"></span>
               {/if}
-              <span class="t">{line.replace(/^\s*#+\s*/, '')}</span>
+              <span class="t">{line.trimStart().replace(/^#+\s*/, '')}</span>
               {#if c?.ticked}<span class="at">{clock(at(c.key))}</span>{/if}
             </li>
           {/each}
@@ -588,6 +595,7 @@
   .t {
     flex: 1;
     white-space: pre-wrap;
+    tab-size: 4;
   }
 
   .at {

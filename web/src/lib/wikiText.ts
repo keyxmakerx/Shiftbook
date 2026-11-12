@@ -12,7 +12,7 @@ export type Part =
 export type Block =
   | { kind: 'heading'; level: 1 | 2 | 3; parts: Part[] }
   | { kind: 'item'; marker: string; depth: number; parts: Part[] }
-  | { kind: 'para'; parts: Part[] }
+  | { kind: 'para'; depth: number; parts: Part[] }
   | { kind: 'code'; text: string }
   | { kind: 'gap' };
 
@@ -54,6 +54,11 @@ export function parts(line: string): Part[] {
   return out;
 }
 
+/** How many steps in a line is indented: a tab or two spaces each (leading ones only). */
+export function indentDepth(line: string): number {
+  return Math.floor(/^[ \t]*/.exec(line)![0].replace(/\t/g, '  ').length / 2);
+}
+
 /** A page's text as blocks to show. */
 export function blocks(body: string): Block[] {
   const out: Block[] = [];
@@ -82,12 +87,13 @@ export function blocks(body: string): Block[] {
     }
     const item = /^(\s*)(\d+(?:\.\d+)*[.)]|[-*•])\s+(.*)$/.exec(line);
     if (item) {
-      const depth = Math.min(4, Math.floor(item[1]!.replace(/\t/g, '  ').length / 2));
+      const depth = Math.min(4, indentDepth(item[1]!));
       const marker = /^[-*•]$/.test(item[2]!) ? '•' : item[2]!;
       out.push({ kind: 'item', marker, depth, parts: parts(item[3]!) });
       continue;
     }
-    out.push({ kind: 'para', parts: parts(line) });
+    // A plain line keeps its indent, so sections tabbed in a MOP or note read the same way.
+    out.push({ kind: 'para', depth: Math.min(8, indentDepth(line)), parts: parts(line.trimStart()) });
   }
   if (code) out.push({ kind: 'code', text: code.join('\n') });
   while (out.length && out[out.length - 1]!.kind === 'gap') out.pop();

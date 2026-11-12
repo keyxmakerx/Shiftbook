@@ -13,6 +13,14 @@ No mockup needed:
   I?, the Tickets tray, the wrap-up. Due soon and Where was I? used to sit above it and push
   it off the bottom of the window at the size the app opens at.
 
+## Asked in chat — 10 Nov 2026 (tabs in notepads, the Organise menu on top)
+No mockup needed:
+- **Tab indents in notepads** (notepad windows, Notes, MOPs, wiki pages, board notes): Tab puts
+  in a tab, or indents every selected line; Shift+Tab takes one off. Escape and then Tab moves
+  on to the next control as before. Read and Run show tabbed lines indented the same way (a tab
+  or two spaces is one step), instead of flattening them.
+- **The Organise menu opens over notepad windows**, the bell and the bottom bar.
+
 ## Asked in chat — 6 Nov 2026 (notes, MOPs and wiki audit)
 No mockup needed:
 - **Notes is a tab** beside the Wiki (Desk, Day, Timesheet, Notes, Wiki), out of the Organise

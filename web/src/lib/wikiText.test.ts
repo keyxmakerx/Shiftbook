@@ -23,6 +23,16 @@ describe('wiki text', () => {
     expect(b[5]).toEqual({ kind: 'code', text: 'show switch' });
   });
 
+  it('keeps the indent of tabbed lines', () => {
+    const b = blocks('Prep\n\tBack up config\n\t\tshow run\n    two steps in');
+    expect(b).toEqual([
+      { kind: 'para', depth: 0, parts: [{ kind: 'text', text: 'Prep' }] },
+      { kind: 'para', depth: 1, parts: [{ kind: 'text', text: 'Back up config' }] },
+      { kind: 'para', depth: 2, parts: [{ kind: 'text', text: 'show run' }] },
+      { kind: 'para', depth: 2, parts: [{ kind: 'text', text: 'two steps in' }] },
+    ]);
+  });
+
   it('keeps an unclosed code block', () => {
     expect(blocks('```\nraw')).toEqual([{ kind: 'code', text: 'raw' }]);
   });

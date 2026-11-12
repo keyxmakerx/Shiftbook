@@ -28,7 +28,7 @@
     {:else if b.kind === 'code'}
       <pre>{b.text}</pre>
     {:else if b.kind === 'para'}
-      <p>{@render line(b.parts)}</p>
+      <p class="para" style:padding-left={b.depth ? `${b.depth * 18}px` : undefined}>{@render line(b.parts)}</p>
     {:else}
       <div class="gap"></div>
     {/if}
@@ -69,6 +69,12 @@
 
   .item {
     position: relative;
+  }
+
+  /* Tabs and runs of spaces inside a line stay as typed (columns in a MOP line up). */
+  .para {
+    white-space: pre-wrap;
+    tab-size: 4;
   }
 
   .mk {

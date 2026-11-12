@@ -11,6 +11,7 @@
   // searching, marked "In the wiki", and open there. A MOP shows the ticket it's on, and opens
   // here with Read, Edit and Run (the same as its window) and a way to the ticket.
   import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import { api } from '../lib/api';
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
@@ -387,6 +388,7 @@
         </label>
       </div>
       <textarea
+        use:tabIndent
         bind:this={bodyEl}
         class="body"
         placeholder="Write anything…"
