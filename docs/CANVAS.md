@@ -102,7 +102,7 @@ names the round it came from. Nothing here is optional unless it says so.
 3. **C3 Tidy (built):** **piles**: drop a card on a card (or on a pile) and they pile up
    with a count; click the pile to fan its cards out beside it, drag one away to take it off
    (a pile left with one card comes apart); drag the pile to move it; double-click its count
-   to name it; right-click for Fan out, Rename, Take the pile apart and File in. **Tidy into
+   to name it; right-click for Fan out, Rename, Take the pile apart and File in. A fanned pile (round 19) dims the rest of the Desk and lays its cards on a sheet with the pile's name, **Tick all tickets done** and **Put back** (Esc or a click on the Desk also puts it back); the cards slide out of the pile and sit close together. The pile's name and count sit along the bottom of its face. Several selected tickets can be ticked done from the selection bar too. **Tidy into
    stacks** (bottom bar) piles loose cards by project, two or more per project, with Undo.
    **Drawers**: the cabinet under the toolbox: the **Archive** first (round 15: **Put away**
    on an entry or done-ticket card, or **Tidy up…** on the bottom bar for everything from

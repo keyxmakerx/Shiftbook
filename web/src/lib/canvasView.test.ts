@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanSpots, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanPerRow, fanSheet, fanSpots, FAN_GAP, FAN_PAD, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -123,8 +123,25 @@ describe('piles', () => {
 
   it('fans a pile out in rows to its right', () => {
     const f = fanSpots(0, 0, 5, 4);
-    expect(f[0]).toEqual({ x: CARD_W + 16, y: 0 });
-    expect(f[4]).toEqual({ x: CARD_W + 16, y: CARD_H + 16 });
+    expect(f[0]).toEqual({ x: CARD_W + FAN_GAP, y: 0 });
+    expect(f[4]).toEqual({ x: CARD_W + FAN_GAP, y: CARD_H + FAN_GAP });
+  });
+
+  it('keeps a fanned row only as tall as its tallest card', () => {
+    const f = fanSpots(0, 0, 4, 2, [60, 70, 50, 50]);
+    expect(f[2]).toEqual({ x: CARD_W + FAN_GAP, y: 70 + FAN_GAP });
+    expect(fanPerRow(2)).toBe(2);
+    expect(fanPerRow(5)).toBe(3);
+    expect(fanPerRow(12)).toBe(4);
+  });
+
+  it('puts a sheet behind a fanned pile with room for its name on top', () => {
+    const spots = fanSpots(100, 100, 2, 2, [60, 60]);
+    const sheet = fanSheet(100, 100, 96, spots, [60, 60]);
+    expect(sheet.x).toBe(100 - FAN_PAD.side);
+    expect(sheet.y).toBe(100 - FAN_PAD.top);
+    expect(sheet.w).toBe(3 * CARD_W + 2 * FAN_GAP + 2 * FAN_PAD.side);
+    expect(sheet.h).toBe(96 + FAN_PAD.top + FAN_PAD.bottom);
   });
 
   it('pulls a card held with Shift into line with nearby cards', () => {
