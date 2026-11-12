@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanPerRow, fanSheet, fanSpots, FAN_GAP, FAN_PAD, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, OPENING_MIN_ZOOM, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
+import { areaAt, boxAround, cardUnder, fanPerRow, fanSheet, fanSpots, FAN_GAP, FAN_PAD, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, FIT_MIN_ZOOM, fitReadable, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -51,18 +51,34 @@ describe('canvas view', () => {
     expect(linkCurve(a, { x: 100, y: 10, w: 220, h: 60 })).toBeNull();
   });
 
-  it('opens on the middle of everything on the Desk', () => {
-    expect(openingView([], 800, 600)).toEqual(START);
-    // Far from the start, and fits at 100%: centred.
-    const far = openingView([{ x: 3000, y: 2000 }], 800, 600);
-    expect(far.zoom).toBe(1);
-    expect(3000 + far.x).toBeCloseTo((800 - CARD_W) / 2);
-    expect(2000 + far.y).toBeCloseTo((600 - CARD_H) / 2);
-    // Too spread out to fit at a readable zoom: the middle of it, at that zoom.
-    const spread = openingView([{ x: 0, y: 0 }, { x: 6000, y: 0 }], 800, 600);
-    expect(spread.zoom).toBe(OPENING_MIN_ZOOM);
-    const middle = (6000 + CARD_W) / 2;
-    expect(middle * spread.zoom + spread.x).toBeCloseTo(400);
+  it('fits the cards but stops at 80% so they stay readable', () => {
+    expect(fitReadable([], 800, 600)).toEqual(HOME);
+    // Fits somewhere between 80% and 100%: the same as fitting everything.
+    const near = [{ x: 0, y: 0 }, { x: 630, y: 0 }];
+    expect(fitReadable(near, 800, 600)).toEqual(fitAll(near, 800, 600));
+    expect(fitReadable(near, 800, 600).zoom).toBeGreaterThan(FIT_MIN_ZOOM);
+    // Too spread out: the middle of them, at 80%.
+    const spread = fitReadable([{ x: 0, y: 0 }, { x: 6000, y: 0 }], 800, 600);
+    expect(spread.zoom).toBe(FIT_MIN_ZOOM);
+    expect(((6000 + CARD_W) / 2) * spread.zoom + spread.x).toBeCloseTo(400);
+  });
+
+  it('opens at 100% on today’s cards', () => {
+    expect(openingView([], [], 800, 600)).toEqual(START);
+    // Today's cards fit: in the middle at 100%, wherever the older ones are.
+    const today = [{ x: 3000, y: 2000 }];
+    const fits = openingView(today, [{ x: 0, y: 0 }, ...today], 800, 600);
+    expect(fits.zoom).toBe(1);
+    expect(3000 + fits.x).toBeCloseTo((800 - CARD_W) / 2);
+    expect(2000 + fits.y).toBeCloseTo((600 - CARD_H) / 2);
+    // Too many to fit: still 100%, starting at their top left corner, where the start view
+    // puts the first card.
+    const many = openingView([{ x: 500, y: 300 }, { x: 6000, y: 900 }], [], 800, 600);
+    expect(many.zoom).toBe(1);
+    expect(500 + many.x).toBe(START.x + 40);
+    expect(300 + many.y).toBe(START.y + 40);
+    // Nothing for today: the same with every card (here starting at the corner, as the start view).
+    expect(openingView([], [{ x: 40, y: 40 }, { x: 6000, y: 40 }], 800, 600)).toEqual(START);
   });
 
   it('finds the area holding a card by its centre, top area first', () => {

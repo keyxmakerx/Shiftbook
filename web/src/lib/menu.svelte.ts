@@ -1,18 +1,20 @@
 // The paper context menu (owner's ask): right-click an object and a paper sheet pulls out
-// from underneath it while the object lifts slightly. Icon rails run along the object's
-// side and top; the sheet holds the full labelled options. Click elsewhere or Esc folds it
-// back. `PaperMenu.svelte` draws it; components attach it with `use:paperMenu`.
+// from underneath it while the object lifts slightly, with the labelled options. Since the
+// daily-use review (10 Nov) there are no icon rails beside it, and a row can hold its own
+// choices (`sub`) that open in place, so a menu stays at about a dozen rows. Click elsewhere
+// or Esc folds it back. `PaperMenu.svelte` draws it; components attach it with `use:paperMenu`.
 
 import type { IconName } from './icons';
 
 export interface MenuItem {
   label: string;
   icon: IconName;
-  act: () => void;
-  /** Also show as an icon button on the side rail. */
-  side?: boolean;
-  /** Also show as an icon button on the top rail. */
-  top?: boolean;
+  /** What choosing it does (a row with `sub` opens its choices instead). */
+  act?: () => void;
+  /** Its own choices, shown in place under it when it's opened (days, projects, colours). */
+  sub?: MenuSection[];
+  /** What a row with `sub` is set to now, in grey after its label (a project, a day). */
+  value?: string;
   danger?: boolean;
   /** A dot of this colour before the label (projects). */
   dot?: string | null;

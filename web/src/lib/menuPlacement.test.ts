@@ -1,101 +1,90 @@
 import { describe, expect, it } from 'vitest';
-import { GAP, MARGIN, placeMenu, TUCK, type Box } from './menuPlacement';
+import { growMenu, MARGIN, placeMenu, TUCK, type Box } from './menuPlacement';
 
 const VIEW = { width: 1200, height: 800 };
 const SHEET = { width: 252, height: 300 };
-const SIDE = { width: 36, height: 120 };
-const TOP = { width: 120, height: 36 };
 
 function box(left: number, top: number, width: number, height: number): Box {
   return { left, top, width, height };
 }
 
-function overlap(a: Box, b: Box): boolean {
-  return a.left < b.left + b.width && b.left < a.left + a.width && a.top < b.top + b.height && b.top < a.top + a.height;
-}
-
 describe('paper menu placement', () => {
-  it('puts the rail on the right, the top rail above and the sheet below the object', () => {
+  it('pulls the sheet out below the object, lined up with its right edge', () => {
     const row = box(100, 200, 600, 44);
-    const p = placeMenu(row, VIEW, SHEET, SIDE, TOP);
-    expect(p.side).toBe('right');
-    expect(p.sideX).toBe(700 + GAP);
-    expect(p.sideY).toBe(200);
-    expect(p.topWhere).toBe('above');
-    expect(p.topY).toBe(200 - GAP - TOP.height);
-    expect(p.topX).toBe(100);
+    const p = placeMenu(row, VIEW, SHEET);
     expect(p.sheetFrom).toBe('below');
     expect(p.sheetY).toBe(244 - TUCK);
-    // Lined up with the object's right edge, next to the rail.
     expect(p.sheetX + SHEET.width).toBe(700);
+    expect(p.sheetHeight).toBe(SHEET.height);
   });
 
-  it('uses the left side when there is no room on the right', () => {
-    const chip = box(1120, 300, 70, 20);
-    const p = placeMenu(chip, VIEW, SHEET, SIDE, TOP);
-    expect(p.side).toBe('left');
-    expect(p.sideX).toBe(1120 - GAP - SIDE.width);
-    // The sheet can't line up under the chip without covering the rail, so it sits beside it.
-    expect(p.sheetX).toBe(p.sideX - GAP - SHEET.width);
-  });
-
-  it('never lets the rail cover the sheet', () => {
-    for (const left of [8, 40, 300, 900, 1100]) {
-      for (const top of [10, 100, 400, 700]) {
-        const anchor = box(left, top, 80, 20);
-        const p = placeMenu(anchor, VIEW, SHEET, SIDE, TOP);
-        const rail = box(p.sideX, p.sideY, SIDE.width, SIDE.height);
-        const sheet = box(p.sheetX, p.sheetY, SHEET.width, SHEET.height);
-        expect(overlap(rail, sheet), `${left},${top}`).toBe(false);
-      }
-    }
+  it('keeps a sheet under a small object near the left edge inside the window', () => {
+    const chip = box(8, 300, 80, 20);
+    const p = placeMenu(chip, VIEW, SHEET);
+    expect(p.sheetX).toBe(MARGIN);
   });
 
   it('pulls the sheet out upward near the bottom of the window', () => {
     const row = box(100, 700, 600, 44);
-    const p = placeMenu(row, VIEW, SHEET, SIDE, TOP);
+    const p = placeMenu(row, VIEW, SHEET);
     expect(p.sheetFrom).toBe('above');
     expect(p.sheetY + SHEET.height).toBe(700 + TUCK);
-    // The top rail moves below the object so it doesn't collide with the sheet.
-    expect(p.topWhere).toBe('below');
-    expect(p.topY).toBe(Math.min(744 + GAP, VIEW.height - MARGIN - TOP.height));
-  });
-
-  it('moves the top rail under the sheet when there is no room above', () => {
-    const day = box(400, 20, 24, 50);
-    const p = placeMenu(day, VIEW, SHEET, SIDE, TOP);
-    expect(p.sheetFrom).toBe('below');
-    expect(p.topWhere).toBe('below');
-    expect(p.topY).toBe(p.sheetY + SHEET.height + GAP);
   });
 
   it('shortens a sheet that does not fit so it still starts at the object', () => {
     const tall = { width: 252, height: 640 };
     const row = box(100, 520, 600, 44);
-    const p = placeMenu(row, VIEW, tall, SIDE, TOP);
+    const p = placeMenu(row, VIEW, tall);
     expect(p.sheetFrom).toBe('above');
     expect(p.sheetHeight).toBe(520 + TUCK - MARGIN);
     expect(p.sheetY).toBe(MARGIN);
     // Enough room below: it still comes out below, shorter.
-    const high = placeMenu(box(100, 300, 600, 44), VIEW, tall, SIDE, TOP);
+    const high = placeMenu(box(100, 300, 600, 44), VIEW, tall);
     expect(high.sheetFrom).toBe('below');
     expect(high.sheetY).toBe(344 - TUCK);
     expect(high.sheetHeight).toBe(VIEW.height - MARGIN - (344 - TUCK));
-    const short = placeMenu(box(100, 200, 600, 44), VIEW, SHEET, SIDE, TOP);
-    expect(short.sheetHeight).toBe(SHEET.height);
   });
 
-  it('keeps everything inside the window', () => {
-    const p = placeMenu(box(0, 0, 1200, 800), VIEW, SHEET, SIDE, TOP);
-    for (const [x, w] of [
-      [p.sideX, SIDE.width],
-      [p.topX, TOP.width],
-      [p.sheetX, SHEET.width],
-    ] as const) {
-      expect(x).toBeGreaterThanOrEqual(MARGIN);
-      expect(x + w).toBeLessThanOrEqual(VIEW.width - MARGIN);
+  it('grows down when a row opens its choices, then up, keeping the rows in place', () => {
+    // Below with room to spare: it grows down and its top stays.
+    const first = placeMenu(box(100, 200, 600, 44), VIEW, SHEET);
+    const grown = growMenu(first, VIEW, 420);
+    expect(grown.sheetY).toBe(first.sheetY);
+    expect(grown.sheetHeight).toBe(420);
+    expect(grown.sheetFrom).toBe('below');
+    // Closed again: back where it came out.
+    expect(growMenu(first, VIEW, SHEET.height)).toEqual(first);
+    // Out of room below: it moves up as far as it needs to, over the object.
+    const low = placeMenu(box(100, 420, 600, 44), VIEW, SHEET);
+    const up = growMenu(low, VIEW, 500);
+    expect(up.sheetHeight).toBe(500);
+    expect(up.sheetY + up.sheetHeight).toBe(VIEW.height - MARGIN);
+    // Came out above, cramped at the top: it grows down over the object instead of scrolling.
+    const above = placeMenu(box(100, 160, 600, 600), VIEW, { width: 252, height: 160 });
+    expect(above.sheetFrom).toBe('above');
+    const colours = growMenu(above, VIEW, 240);
+    expect(colours.sheetY).toBe(above.sheetY);
+    expect(colours.sheetHeight).toBe(240);
+    // One that came out shortened (scrolling) goes back to that when the row closes.
+    const cramped = placeMenu(box(100, 380, 600, 44), VIEW, { width: 252, height: 395 });
+    expect(cramped.sheetHeight).toBeLessThan(395);
+    expect(growMenu(cramped, VIEW, 395, 395)).toEqual(cramped);
+    expect(growMenu(cramped, VIEW, 480, 395).sheetHeight).toBe(480);
+    // Taller than the window: it fills it and scrolls.
+    const tall = growMenu(first, VIEW, 2000);
+    expect(tall.sheetY).toBe(MARGIN);
+    expect(tall.sheetHeight).toBe(VIEW.height - 2 * MARGIN);
+  });
+
+  it('keeps the sheet inside the window', () => {
+    for (const left of [0, 40, 600, 1100, 1190]) {
+      for (const top of [0, 100, 400, 790]) {
+        const p = placeMenu(box(left, top, 10, 10), VIEW, SHEET);
+        expect(p.sheetX).toBeGreaterThanOrEqual(MARGIN);
+        expect(p.sheetX + SHEET.width).toBeLessThanOrEqual(VIEW.width - MARGIN);
+        expect(p.sheetY).toBeGreaterThanOrEqual(MARGIN);
+        expect(p.sheetY + p.sheetHeight).toBeLessThanOrEqual(VIEW.height - MARGIN);
+      }
     }
-    expect(p.sheetY).toBeGreaterThanOrEqual(MARGIN);
-    expect(p.sheetY + p.sheetHeight).toBeLessThanOrEqual(VIEW.height - MARGIN);
   });
 });

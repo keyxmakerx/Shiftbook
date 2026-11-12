@@ -49,8 +49,8 @@ export async function unpin(kind: CardKind, id: string, undoable = true): Promis
 /** "Pin to the bottom bar" or "Unpin", for a record's right-click menu. */
 export function pinMenuItem(kind: CardKind, id: string): MenuItem {
   return find(kind, id)
-    ? { label: 'Unpin from the bottom bar', icon: 'pin', side: true, act: () => void unpin(kind, id) }
-    : { label: 'Pin to the bottom bar', icon: 'pin', side: true, act: () => void pin(kind, id) };
+    ? { label: 'Unpin from the bottom bar', icon: 'pin', act: () => void unpin(kind, id) }
+    : { label: 'Pin to the bottom bar', icon: 'pin', act: () => void pin(kind, id) };
 }
 
 /** A chip's own menu. */
@@ -60,8 +60,8 @@ export function chipMenu(p: PinItem): MenuSpec {
       {
         head: p.title,
         items: [
-          { label: 'Open', icon: 'open', side: true, act: () => openWindow(p.kind, p.id) },
-          { label: 'Unpin', icon: 'x', side: true, act: () => void unpin(p.kind, p.id) },
+          { label: 'Open', icon: 'open', act: () => openWindow(p.kind, p.id) },
+          { label: 'Unpin', icon: 'x', act: () => void unpin(p.kind, p.id) },
         ],
       },
       bringUpSection(p.kind, p.id, p.title),

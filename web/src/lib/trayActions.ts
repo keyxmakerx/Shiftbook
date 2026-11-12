@@ -3,7 +3,7 @@
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { CarriedItem, TrayDay, TrayItem } from './api';
-import { bringUpSection } from './bringUp';
+import { followUpItem } from './bringUp';
 import { attachMop, mopFor, openMop } from './mops.svelte';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
@@ -98,30 +98,36 @@ async function copy(text: string, what: string) {
   toast((await copyText(text)) ? `Copied ${what}` : "Couldn't copy here.");
 }
 
-/** A tray ticket's paper menu. `notepad` opens its notepad where it is shown. */
+/**
+ * A tray ticket's paper menu. `notepad` opens its notepad where it is shown. About a dozen
+ * rows (the daily-use review, 10 Nov): time, days and projects open in place under their own
+ * row; copying, pinning and attaching a MOP are under More.
+ */
 export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
-  const main: MenuItem[] = [
+  const items: MenuItem[] = [
     item.done
-      ? { label: 'Not done yet (keep it open)', icon: 'clock', side: true, act: () => void setTrayDone(item, false) }
-      : { label: 'Done', icon: 'check', side: true, act: () => void setTrayDone(item, true) },
-    pinMenuItem('tray', item.id),
-    // Its MOP (round 18): open it, or attach one from a template.
-    mopFor(item.ticket)
-      ? { label: 'Open its MOP', icon: 'book', side: true, act: () => openMop(item.ticket) }
-      : { label: 'Attach a MOP…', icon: 'book', act: () => attachMop(item.ticket) },
+      ? { label: 'Not done yet (keep it open)', icon: 'clock', act: () => void setTrayDone(item, false) }
+      : { label: 'Done', icon: 'check', act: () => void setTrayDone(item, true) },
   ];
-  if (notepad) main.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', side: true, act: notepad });
-  main.push({ label: 'Open the notepad in a window', icon: 'expand', act: () => openWindow('tray', item.id) });
-  main.push(
-    { label: 'Add 5 minutes', icon: 'plus', act: () => void stepTray(item, 5) },
-    { label: 'Take away 5 minutes', icon: 'minus', act: () => void stepTray(item, -5) },
-    { label: 'Copy ticket number', icon: 'copy', top: true, act: () => void copy(item.ticket, item.ticket) },
-    ...item.links.map((l) => ({
-      label: `Copy ${l.fieldName} link`,
-      icon: 'link' as const,
-      top: true,
-      act: () => void copy(l.url, 'the link'),
-    })),
+  if (notepad) items.push({ label: item.note ? 'Open the notepad' : 'Write in the notepad', icon: 'edit', act: notepad });
+  // Its MOP (round 18) when it has one; attaching one from a template is under More.
+  const hasMop = !!mopFor(item.ticket);
+  if (hasMop) items.push({ label: 'Open its MOP', icon: 'book', act: () => openMop(item.ticket) });
+  items.push(
+    {
+      label: 'Time',
+      icon: 'clock',
+      value: fmtMinutes(item.minutes),
+      sub: [
+        {
+          items: [
+            { label: 'Add 5 minutes', icon: 'plus', act: () => void stepTray(item, 5) },
+            { label: 'Take away 5 minutes', icon: 'minus', act: () => void stepTray(item, -5) },
+          ],
+        },
+      ],
+    },
+    followUpItem('tray', item.id, item.ticket),
   );
   const choices = [
     ...app.projects
@@ -135,12 +141,24 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     },
     ...repeatingChoices(item.recurringId, (id) => void setTrayRepeating(item, id)),
   ];
+  const under = choices.find((c) => c.checked)?.label;
+  items.push({ label: 'Counts under', icon: 'folder', ...(under ? { value: under } : {}), sub: [{ choices }] });
+  const more: MenuItem[] = [
+    pinMenuItem('tray', item.id),
+    { label: 'Pop out the notepad', icon: 'expand', act: () => openWindow('tray', item.id) },
+    { label: 'Copy ticket number', icon: 'copy', act: () => void copy(item.ticket, item.ticket) },
+    ...item.links.map((l) => ({
+      label: `Copy ${l.fieldName} link`,
+      icon: 'link' as const,
+      act: () => void copy(l.url, 'the link'),
+    })),
+  ];
+  if (!hasMop) more.push({ label: 'Attach a MOP…', icon: 'book', act: () => attachMop(item.ticket) });
+  items.push({ label: 'More', icon: 'more', sub: [{ items: more }] });
   return {
     sections: [
-      { head: `${item.ticket} · ${fmtMinutes(item.minutes)}`, items: main },
-      bringUpSection('tray', item.id, item.ticket),
-      { head: 'Count its time under', choices },
-      { items: [{ label: 'Take out of the Tickets tray', icon: 'trash', danger: true, top: true, act: () => void removeTray(item) }] },
+      { head: `${item.ticket} · ${fmtMinutes(item.minutes)}`, items },
+      { items: [{ label: 'Take out of the Tickets tray', icon: 'trash', danger: true, act: () => void removeTray(item) }] },
     ],
   };
 }
@@ -156,18 +174,16 @@ export function carriedMenu(item: CarriedItem, notepad?: () => void): MenuSpec {
       {
         head: item.entryTitle ? `${item.ticket} · on ${item.entryTitle}` : item.ticket,
         items: [
-          { label: 'Done', icon: 'check', side: true, act: () => void setCarriedDone(item, true) },
+          { label: 'Done', icon: 'check', act: () => void setCarriedDone(item, true) },
           {
             label: app.selected === app.today ? 'Worked on it today' : 'Worked on it this day',
             icon: 'plus',
-            side: true,
             act: () => void carryCarried(item),
           },
-          { label: 'Copy ticket number', icon: 'copy', top: true, act: () => void copy(item.ticket, item.ticket) },
+          { label: 'Copy ticket number', icon: 'copy', act: () => void copy(item.ticket, item.ticket) },
           ...item.links.map((l) => ({
             label: `Copy ${l.fieldName} link`,
             icon: 'link' as const,
-            top: true,
             act: () => void copy(l.url, 'the link'),
           })),
         ],

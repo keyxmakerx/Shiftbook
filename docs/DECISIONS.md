@@ -13,6 +13,31 @@ No mockup needed:
   I?, the Tickets tray, the wrap-up. Due soon and Where was I? used to sit above it and push
   it off the bottom of the window at the size the app opens at.
 
+## Daily-use review — 10 Nov 2026 (shorter menus, quieter Desk)
+The owner asked for a review of the whole app as someone using it every day, mindful that too
+many buttons and circles get confusing. Of the review's 17 fixes the owner picked **Shorter
+menus, quieter Desk** (fixes 7, 8, 9 and 17) to build first:
+- **One card per thing:** wiki pages and templates no longer get a Desk card (they live in the
+  wiki), and a MOP on a ticket shows only as the chip on that ticket's card. Jots, Daily and
+  meeting notes, and a MOP not on a ticket yet, still do. Drawers and boards still show what's
+  filed in them.
+- **Right-click menus of about a dozen rows:** no ring of round icons beside any paper menu.
+  Times, days, projects, colours, note kinds (**Kind ▾**, was Change to) and drawers fold into
+  one row each that opens in place (▾, with what it's set to now in grey); the rarer things go
+  under **More** (Move to the wiki… among them). One Archive
+  per card: when a card has its own Archive row, File in a drawer doesn't offer the Archive too.
+- **Desk tools bar:** zoom, the %, **Fit** and one **View** menu (Timeline, Show all link lines,
+  Boards, Tidy into stacks, Clear old cards…). While the timeline shows, Back to my layout
+  stays on the bar.
+- **Link lines start hidden:** a card's lines show while you point at it; View → Show all link
+  lines brings the rest back (faint, as in the 30 Oct look C).
+- **Readable zoom:** the Desk opens at 100% on today's cards (from today, still open, followed
+  up for today or pinned), replacing the 30 Oct "middle of everything, down to 60%"; Fit zooms
+  out no further than 80%.
+- **New cards don't shove the rest:** cards nobody moved take their spots in the order they
+  first showed, so a new card goes into the next free spot. Newest first moved every loose card
+  along one place each time something new came in.
+
 ## Asked in chat — 10 Nov 2026 (tabs in notepads, the Organise menu on top)
 No mockup needed:
 - **Tab indents in notepads** (notepad windows, Notes, MOPs, wiki pages, board notes): Tab puts
@@ -102,7 +127,7 @@ No mockup needed:
 Cards `r16-desk-fixes`, `r16-desk-lines` and `r16-desk-ideas` (`tools/signoff/rounds/r16-desk.json`,
 mockups `mocks/r16-desk.html`), approved:
 - **Opening:** when Shiftbook starts, the Desk opens on the middle of the cards and boxes (zooming
-  out no further than 60%), not where it was left.
+  out no further than 60%), not where it was left. (Changed 10 Nov: 100% on today's cards.)
 - **Double-click:** an entry (any day) opens its details; a ticket opens its notepad full screen.
 - **Lines:** cards sharing a ticket link one to the next, oldest first; one word link per card
   (word links stay on). Lines run edge to edge at each card's real height and follow drags.

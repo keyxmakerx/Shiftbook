@@ -1,21 +1,26 @@
 <script lang="ts">
-  // The paper context menu. The object lifts (a copy of it is drawn above everything), a
-  // paper sheet pulls out from under its edge with the full options, and icon rails run
-  // along its side and top. Click anywhere else or press Esc to fold it back under.
+  // The paper context menu. The object lifts (a copy of it is drawn above everything) and a
+  // paper sheet pulls out from under its edge with the options. A row with a ▾ opens in place
+  // to show its own choices (days, projects, colours), so the sheet stays short (the daily-use
+  // review, 10 Nov: no ring of round icons, about a dozen rows). Click anywhere else or press
+  // Esc to fold it back under.
   import { tick } from 'svelte';
-  import { menuState, registerCloser, type MenuItem } from '../lib/menu.svelte';
-  import { placeMenu, type Placement } from '../lib/menuPlacement';
+  import { menuState, registerCloser, type MenuItem, type MenuSection } from '../lib/menu.svelte';
+  import { growMenu, placeMenu, TUCK, type Placement } from '../lib/menuPlacement';
   import { scale } from '../lib/motion';
   import { SWATCHES } from '../lib/palette';
   import Icon from './Icon.svelte';
 
   let layer: HTMLDivElement | undefined = $state();
   let sheetEl: HTMLDivElement | undefined = $state();
-  let sideEl: HTMLDivElement | undefined = $state();
-  let topEl: HTMLDivElement | undefined = $state();
   let ghostEl: HTMLDivElement | undefined = $state();
+  /** The row whose own choices are open ("<section>:<label>"), if any. */
+  let openSub = $state<string | null>(null);
 
   let pos = $state<Placement | null>(null);
+  /** Where the sheet came out, before any row opened in place, and the height it asked for. */
+  let first: Placement | null = null;
+  let asked = 0;
   let rect = $state({ left: 0, top: 0, width: 0, height: 0 });
   let phase = $state<'idle' | 'measure' | 'open' | 'closing'>('idle');
   let ghostRadius = $state('8px');
@@ -25,9 +30,11 @@
   let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
   const spec = $derived(menuState.spec);
-  const items = $derived(spec ? spec.sections.flatMap((s) => s.items ?? []) : []);
-  const sideItems = $derived(items.filter((i) => i.side));
-  const topItems = $derived(items.filter((i) => i.top));
+  /** The sheet grew over the object (a row opened with no room left): it goes on top of the
+   *  lifted copy instead of under it, so none of its rows hide behind the object. */
+  const over = $derived(
+    !!pos && pos !== first && pos.sheetY < rect.top + rect.height - TUCK && pos.sheetY + pos.sheetHeight > rect.top + TUCK,
+  );
 
   function teardown(returnFocus: boolean) {
     if (closeTimer !== null) clearTimeout(closeTimer);
@@ -37,7 +44,7 @@
     was?.classList.remove('menu-source');
     source = null;
     phase = 'idle';
-    pos = null;
+    pos = first = null;
     menuState.spec = null;
     menuState.anchor = null;
     if (returnFocus && was?.isConnected) was.focus({ preventScroll: true });
@@ -75,6 +82,26 @@
     'overflow-wrap',
   ];
 
+  /** The object's own box as drawn, copied too: a toolbar button takes its layout, padding and
+   *  border from rules about the toolbar, which its copy no longer sits in. */
+  const OWN_BOX = [
+    'display',
+    'flex-direction',
+    'flex-wrap',
+    'grid-auto-flow',
+    'align-items',
+    'justify-content',
+    'justify-items',
+    'row-gap',
+    'column-gap',
+    'padding-top',
+    'padding-right',
+    'padding-bottom',
+    'padding-left',
+    'background-color',
+    ...['top', 'right', 'bottom', 'left'].flatMap((side) => ['width', 'style', 'color'].map((part) => `border-${side}-${part}`)),
+  ];
+
   /** An element's own laid-out size from its computed style (exact), else the rounded one. */
   function ownSize(computed: string, rounded: number): number {
     const px = computed.endsWith('px') ? parseFloat(computed) : NaN;
@@ -99,7 +126,8 @@
         : '8px';
     ghostColor = cs.getPropertyValue('--c').trim();
     phase = 'measure';
-    pos = null;
+    pos = first = null;
+    openSub = null;
     await tick();
     // The lifted copy of the object.
     if (ghostEl) {
@@ -114,9 +142,10 @@
       for (const side of ['left', 'top', 'right', 'bottom', 'z-index', 'transform']) copy.style.removeProperty(side);
       copy.style.margin = '0';
       // The copy no longer sits inside the object's parents, so it takes the text settings it
-      // had from them along. Without these a row could pick up another font size or wrapping
-      // and break a line the object itself doesn't.
-      for (const prop of INHERITED) copy.style.setProperty(prop, cs.getPropertyValue(prop));
+      // had from them along, and its own box as drawn. Without these a row could pick up
+      // another font size or wrapping and break a line the object itself doesn't, and a
+      // toolbar button would lose its layout.
+      for (const prop of [...INHERITED, ...OWN_BOX]) copy.style.setProperty(prop, cs.getPropertyValue(prop));
       // On a zoomed Desk the object is drawn scaled, so its box on screen differs from its own
       // size. Lay the copy out at its own size and scale it to the box, so it looks the same
       // instead of squashing (or stretching) its contents. The size is the exact one, not
@@ -133,13 +162,12 @@
       ghostEl.replaceChildren(copy);
     }
     anchor.classList.add('menu-source');
-    if (!sheetEl || !sideEl || !topEl) return;
-    pos = placeMenu(
+    if (!sheetEl) return;
+    asked = sheetEl.offsetHeight;
+    pos = first = placeMenu(
       rect,
       { width: window.innerWidth, height: window.innerHeight },
-      { width: sheetEl.offsetWidth, height: sheetEl.offsetHeight },
-      { width: sideEl.offsetWidth, height: sideEl.offsetHeight },
-      { width: topEl.offsetWidth, height: topEl.offsetHeight },
+      { width: sheetEl.offsetWidth, height: asked },
     );
     phase = 'open';
     await tick();
@@ -154,7 +182,18 @@
 
   function run(item: MenuItem) {
     close(false);
-    item.act();
+    item.act?.();
+  }
+
+  /** Open a row's own choices in place (or fold them again): the sheet grows to show them,
+   *  keeping its rows where they are as far as the window allows. */
+  async function toggleSub(key: string) {
+    openSub = openSub === key ? null : key;
+    await tick();
+    if (!sheetEl || !first) return;
+    pos = growMenu(first, { width: window.innerWidth, height: window.innerHeight }, sheetEl.scrollHeight, asked);
+    await tick();
+    sheetEl.querySelector('.sub')?.scrollIntoView({ block: 'nearest' });
   }
 
   function focusables(): HTMLElement[] {
@@ -182,13 +221,6 @@
       event.preventDefault();
       const step = event.key === 'ArrowDown' ? 1 : -1;
       inSheet[(i + step + inSheet.length) % inSheet.length]?.focus();
-    } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-      const rails = [...(topEl?.querySelectorAll<HTMLElement>('button') ?? [])];
-      const i = rails.indexOf(document.activeElement as HTMLElement);
-      if (i < 0) return;
-      event.preventDefault();
-      const step = event.key === 'ArrowRight' ? 1 : -1;
-      rails[(i + step + rails.length) % rails.length]?.focus();
     }
   }
 
@@ -239,6 +271,7 @@
       <div
         class="clip"
         class:from-above={pos.sheetFrom === 'above'}
+        class:over
         style:left="{pos.sheetX}px"
         style:top="{pos.sheetY}px"
       >
@@ -265,65 +298,46 @@
       aria-hidden="true"
     ></div>
 
-    <div
-      class="rail side"
-      class:left={pos?.side === 'left'}
-      bind:this={sideEl}
-      style:left={pos ? `${pos.sideX}px` : '-999px'}
-      style:top={pos ? `${pos.sideY}px` : '0px'}
-      role="toolbar"
-      aria-orientation="vertical"
-      aria-label="Quick actions"
-    >
-      {#each sideItems as item, i (item.label)}
-        <button
-          type="button"
-          class="rbtn"
-          class:danger={item.danger}
-          style:--i={i}
-          aria-label={item.label}
-          data-tip={item.label}
-          onclick={() => run(item)}
-        >
-          <Icon name={item.icon} size={17} />
-        </button>
-      {/each}
-    </div>
-
-    <div
-      class="rail top"
-      class:below={pos?.topWhere === 'below'}
-      bind:this={topEl}
-      style:left={pos ? `${pos.topX}px` : '-999px'}
-      style:top={pos ? `${pos.topY}px` : '0px'}
-      role="toolbar"
-      aria-label="More quick actions"
-    >
-      {#each topItems as item, i (item.label)}
-        <button
-          type="button"
-          class="rbtn"
-          class:danger={item.danger}
-          style:--i={i}
-          aria-label={item.label}
-          data-tip={item.label}
-          onclick={() => run(item)}
-        >
-          <Icon name={item.icon} size={17} />
-        </button>
-      {/each}
-    </div>
   </div>
 {/if}
 
 {#snippet sheetBody()}
   {#each spec?.sections ?? [] as section, si (si)}
     {#if si > 0}<div class="sep" role="separator"></div>{/if}
-    {#if section.head}<div class="lbl head">{section.head}</div>{/if}
-    {#each section.items ?? [] as item (item.label)}
+    {@render sectionBody(section, `${si}`)}
+  {/each}
+{/snippet}
+
+{#snippet sectionBody(section: MenuSection, at: string)}
+  {#if section.head}<div class="lbl head">{section.head}</div>{/if}
+  {#each section.items ?? [] as item (item.label)}
+    {#if item.sub}
+      {@const key = `${at}:${item.label}`}
       <button
         type="button"
         role="menuitem"
+        class="item"
+        aria-haspopup="true"
+        aria-expanded={openSub === key}
+        onclick={() => void toggleSub(key)}
+      >
+        <Icon name={item.icon} size={15} />
+        <span class="label">{item.label}</span>
+        {#if item.value}<span class="value">{item.value}</span>{/if}
+        <Icon name={openSub === key ? 'up' : 'down'} size={13} />
+      </button>
+      {#if openSub === key}
+        <div class="sub" role="group" aria-label={item.label}>
+          {#each item.sub as part, pi (pi)}
+            {@render sectionBody(part, `${key}/${pi}`)}
+          {/each}
+        </div>
+      {/if}
+    {:else}
+      <button
+        type="button"
+        role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'}
+        aria-checked={item.checked}
         class="item"
         class:danger={item.danger}
         onclick={() => run(item)}
@@ -337,44 +351,44 @@
         {#if item.checked}<Icon name="check" size={14} />{/if}
         {#if item.hint}<span class="kbd">{item.hint}</span>{/if}
       </button>
-    {/each}
-    {#if section.choices}
-      <div class="choices" role="group" aria-label={section.head ?? 'Choices'}>
-        {#each section.choices as choice (choice.label)}
-          <button
-            type="button"
-            class="choice"
-            style:--c={choice.color ?? 'var(--none)'}
-            aria-pressed={choice.checked}
-            onclick={() => {
-              close(false);
-              choice.act();
-            }}
-          >
-            {choice.label}
-          </button>
-        {/each}
-      </div>
-    {/if}
-    {#if section.swatches}
-      {@const sw = section.swatches}
-      <div class="swatches" role="group" aria-label="Colours">
-        {#each SWATCHES as color (color)}
-          <button
-            type="button"
-            class="sw"
-            style:--c={color}
-            aria-label="Colour {color}"
-            aria-pressed={sw.current?.toLowerCase() === color}
-            onclick={() => {
-              close(false);
-              sw.pick(color);
-            }}
-          ></button>
-        {/each}
-      </div>
     {/if}
   {/each}
+  {#if section.choices}
+    <div class="choices" role="group" aria-label={section.head ?? 'Choices'}>
+      {#each section.choices as choice (choice.label)}
+        <button
+          type="button"
+          class="choice"
+          style:--c={choice.color ?? 'var(--none)'}
+          aria-pressed={choice.checked}
+          onclick={() => {
+            close(false);
+            choice.act();
+          }}
+        >
+          {choice.label}
+        </button>
+      {/each}
+    </div>
+  {/if}
+  {#if section.swatches}
+    {@const sw = section.swatches}
+    <div class="swatches" role="group" aria-label="Colours">
+      {#each SWATCHES as color (color)}
+        <button
+          type="button"
+          class="sw"
+          style:--c={color}
+          aria-label="Colour {color}"
+          aria-pressed={sw.current?.toLowerCase() === color}
+          onclick={() => {
+            close(false);
+            sw.pick(color);
+          }}
+        ></button>
+      {/each}
+    </div>
+  {/if}
 {/snippet}
 
 <style>
@@ -390,8 +404,7 @@
     pointer-events: auto;
   }
 
-  .measuring .clip,
-  .measuring .rail {
+  .measuring .clip {
     visibility: hidden;
   }
 
@@ -414,6 +427,10 @@
   .clip.from-above {
     padding: 22px 14px 0;
     margin-top: -22px;
+  }
+
+  .clip.over {
+    z-index: 3;
   }
 
   .clip.probe {
@@ -510,129 +527,6 @@
     pointer-events: none;
   }
 
-  .rail {
-    position: fixed;
-    z-index: 3;
-    display: flex;
-    gap: 6px;
-  }
-
-  .rail.side {
-    flex-direction: column;
-  }
-
-  .rail:empty {
-    display: none;
-  }
-
-  .rbtn {
-    position: relative;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid var(--rule);
-    background-color: var(--paper);
-    background-image: var(--grain);
-    color: var(--ink);
-    box-shadow: var(--shadow);
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    animation: pop calc(0.38s * var(--m)) var(--bounce) both;
-    animation-delay: calc((0.1s + var(--i) * 0.04s) * var(--m));
-    transition:
-      background-color 0.2s,
-      transform 0.15s var(--bounce);
-  }
-
-  .side .rbtn {
-    --from: translateX(-14px);
-  }
-
-  .side.left .rbtn {
-    --from: translateX(14px);
-  }
-
-  .top .rbtn {
-    --from: translateY(14px);
-  }
-
-  .top.below .rbtn {
-    --from: translateY(-14px);
-  }
-
-  .rbtn:hover,
-  .rbtn:focus-visible {
-    background-color: var(--ink);
-    color: var(--paper);
-  }
-
-  .rbtn.danger:hover,
-  .rbtn.danger:focus-visible {
-    background-color: var(--bad);
-    color: #fff;
-  }
-
-  .closing .rbtn {
-    animation: unpop calc(0.16s * var(--m)) var(--ease) forwards;
-  }
-
-  @keyframes pop {
-    from {
-      opacity: 0;
-      transform: var(--from) scale(0.5);
-    }
-  }
-
-  @keyframes unpop {
-    to {
-      opacity: 0;
-      transform: var(--from) scale(0.6);
-    }
-  }
-
-  /* Tooltips for the icon buttons. */
-  .rbtn::after {
-    content: attr(data-tip);
-    position: absolute;
-    white-space: nowrap;
-    font: 600 12px var(--ui);
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: var(--ink);
-    color: var(--paper);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.15s;
-  }
-
-  .side .rbtn::after {
-    left: calc(100% + 8px);
-    top: 50%;
-    transform: translateY(-50%);
-  }
-
-  .side.left .rbtn::after {
-    left: auto;
-    right: calc(100% + 8px);
-  }
-
-  .top .rbtn::after {
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-  }
-
-  .top.below .rbtn::after {
-    bottom: auto;
-    top: calc(100% + 8px);
-  }
-
-  .rbtn:hover::after,
-  .rbtn:focus-visible::after {
-    opacity: 1;
-  }
-
   .head {
     padding: 7px 10px 4px;
     overflow: hidden;
@@ -678,6 +572,39 @@
 
   .item.danger {
     color: var(--bad);
+  }
+
+  /* What a row with its own choices is set to now (a project, a day). */
+  .item .value {
+    max-width: 96px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .item[aria-expanded='true'] {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+
+  /* A row's own choices, opened in place under it. */
+  .sub {
+    margin: 0 0 4px 18px;
+    padding-left: 6px;
+    border-left: 2px solid var(--rule);
+  }
+
+  .sub .head {
+    padding-left: 4px;
+  }
+
+  /* An opened row is narrower than the sheet: its colours go in two rows of five. */
+  .sub .swatches {
+    grid-template-columns: repeat(5, max-content);
+    justify-content: start;
+    gap: 6px 8px;
+    padding: 4px 4px 8px;
   }
 
   .swatches {

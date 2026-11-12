@@ -30,21 +30,20 @@
 
   function menu(): MenuSpec {
     const items: MenuItem[] = [
-      { label: 'Copy ticket number', icon: 'copy', side: true, act: () => void copy(number, number) },
+      { label: 'Copy ticket number', icon: 'copy', act: () => void copy(number, number) },
       ...links.map((l) => ({
         label: `Copy ${l.fieldName} link`,
         icon: 'link' as const,
-        side: true,
         act: () => void copy(l.url, `the ${l.fieldName} link`),
       })),
-      { label: 'Log more time on it', icon: 'clock', top: true, act: () => focusLog(number) },
+      { label: 'Log more time on it', icon: 'clock', act: () => focusLog(number) },
     ];
     const sections = [{ head: number, items }];
     if (onRemove) {
       const remove = onRemove;
       sections.push({
         head: '',
-        items: [{ label: removeLabel, icon: 'trash', danger: true, top: true, act: remove }],
+        items: [{ label: removeLabel, icon: 'trash', danger: true, act: remove }],
       });
     }
     return { sections };

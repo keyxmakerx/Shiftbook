@@ -120,11 +120,10 @@
         {
           head: `${longDay(day.date)} · ${day.hours} h`,
           items: [
-            { label: 'Open this day', icon: 'desk', side: true, act: () => openDay(day.date) },
+            { label: 'Open this day', icon: 'desk', act: () => openDay(day.date) },
             {
               label: 'Log something for this day',
               icon: 'log',
-              side: true,
               act: () => {
                 void selectDay(day.date).then(onCapture);
               },
@@ -134,7 +133,6 @@
                   {
                     label: 'Open the Timesheet for this week',
                     icon: 'sheet' as const,
-                    top: true,
                     act: () => {
                       void selectDay(day.date).then(() => setView('timesheet'));
                     },
@@ -142,7 +140,6 @@
                   {
                     label: 'Book a holiday (8 h)',
                     icon: 'sun' as const,
-                    top: true,
                     act: () => void holiday(day.date),
                   },
                 ]
