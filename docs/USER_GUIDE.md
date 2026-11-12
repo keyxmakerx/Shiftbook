@@ -14,7 +14,7 @@ works the way it does is in `DECISIONS.md`.
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
   open, more time and More. Double-click a card to open it; double-click empty paper to jot.
   Right-click anything for its paper menu with everything. The side panel has today's hours,
-  Where was I?, Log work, the Tickets tray and the wrap-up. **Project areas**
+  Log work, Due soon, Where was I?, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
   that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
   Desk out by day and Back to my layout puts it back. The **toolbox** on the left has Move,

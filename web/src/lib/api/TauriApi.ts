@@ -596,8 +596,8 @@ export class TauriApi implements DataApi {
   mopRun(id: string): Promise<MopRun | null> {
     return call('mop_run', { id });
   }
-  mopLink(id: string, ticket: string): Promise<void> {
-    return call('mop_link', { id, ticket });
+  mopLink(id: string, ticket: string, today: IsoDate): Promise<boolean> {
+    return call('mop_link', { id, ticket, today });
   }
   mopSetStatus(id: string, status: MopStatus): Promise<void> {
     return call('mop_set_status', { id, status });

@@ -18,10 +18,10 @@ use time::{Date, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::error::StorageError;
-use crate::items::item_for_number;
+use crate::items::{item_for_number, newest_day};
 use crate::notes::NoteInput;
 use crate::repo::{now_text, parse_opt_ts, parse_ts, parse_uuid, Result};
-use crate::work::opt_uuid;
+use crate::work::{insert_tray_row, opt_uuid, sync_tray};
 use crate::SqliteStore;
 
 /// Latest start of a change window, minutes after midnight.
@@ -190,8 +190,15 @@ impl SqliteStore {
     }
 
     /// Put a MOP written on its own (in Notes, before its ticket existed) on `ticket`. The
-    /// ticket is made if it isn't there yet. A MOP already on a ticket: refused.
-    pub async fn link_mop(&self, owner: OwnerId, mop: NoteId, ticket: &str) -> Result<()> {
+    /// ticket is made if it isn't there yet. A MOP already on a ticket: refused. A ticket on
+    /// no day goes on `today`'s Tickets tray in the same transaction, and the answer is true.
+    pub async fn link_mop(
+        &self,
+        owner: OwnerId,
+        mop: NoteId,
+        ticket: &str,
+        today: Date,
+    ) -> Result<bool> {
         let note = self.get_note(owner, mop).await?;
         if note.kind != NoteKind::Mop || note.template {
             return Err(CoreError::NotAChoice { value: note.title }.into());
@@ -226,8 +233,16 @@ impl SqliteStore {
         .bind(&now)
         .execute(&mut *tx)
         .await?;
+        // A ticket on no day (made just now, or taken off every day) has no card anywhere,
+        // so the MOP would have nowhere to show: it goes on today's Tickets tray in the
+        // same step.
+        let added = newest_day(&mut tx, owner, item.id).await?.is_none();
+        if added {
+            insert_tray_row(&mut tx, owner, today, &number).await?;
+            sync_tray(&mut tx, owner, today).await?;
+        }
         tx.commit().await?;
-        Ok(())
+        Ok(added)
     }
 
     /// MOPs on tickets, newest first; with `ticket`, only that ticket's (ignoring case).

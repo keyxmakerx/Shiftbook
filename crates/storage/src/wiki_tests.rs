@@ -1,6 +1,7 @@
 //! Tests for the wiki's spaces, places, earlier versions and the move-in, against a real
 //! encrypted database.
 
+use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{NoteId, OwnerId};
 use shiftbook_core::notes::NoteKind;
 use shiftbook_core::wiki::MAX_VERSIONS;
@@ -326,14 +327,25 @@ fn a_mop_written_before_its_ticket() {
             .unwrap();
         assert!(s.mop_run(me, mop.id).await.unwrap().is_none());
         // The ticket doesn't exist yet: it's made.
-        s.link_mop(me, mop.id, " chg0099 ").await.unwrap();
+        let today = parse_date("2026-11-12").unwrap();
+        assert!(s.link_mop(me, mop.id, " chg0099 ", today).await.unwrap());
         let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
         assert_eq!(run.ticket, "CHG0099");
+        // A ticket made just now is on no day, so it went on today's Tickets tray: it has a
+        // card to show the MOP on, and the Tickets page can find it.
+        let tray = s.tray_day(me, today).await.unwrap();
+        assert_eq!(tray.items.len(), 1);
+        assert_eq!(tray.items[0].ticket_number, "CHG0099");
+        let listed = s
+            .item_summaries(me, Some(&["chg0099".to_string()]))
+            .await
+            .unwrap();
+        assert_eq!(listed.len(), 1);
         // Already on a ticket: refused.
-        assert!(s.link_mop(me, mop.id, "CHG0100").await.is_err());
+        assert!(s.link_mop(me, mop.id, "CHG0100", today).await.is_err());
         // Not a MOP, or two tickets at once: refused.
         let jot = make(&s, me, "Jot").await;
-        assert!(s.link_mop(me, jot, "CHG0100").await.is_err());
+        assert!(s.link_mop(me, jot, "CHG0100", today).await.is_err());
         let other = s
             .create_note(
                 me,
@@ -344,7 +356,11 @@ fn a_mop_written_before_its_ticket() {
             )
             .await
             .unwrap();
-        assert!(s.link_mop(me, other.id, "CHG1 CHG2").await.is_err());
-        assert!(s.link_mop(me, other.id, "  ").await.is_err());
+        assert!(s.link_mop(me, other.id, "CHG1 CHG2", today).await.is_err());
+        assert!(s.link_mop(me, other.id, "  ", today).await.is_err());
+        // A ticket already on a day stays where it is: nothing is added to today.
+        let later = parse_date("2026-11-13").unwrap();
+        assert!(!s.link_mop(me, other.id, "CHG0099", later).await.unwrap());
+        assert!(s.tray_day(me, later).await.unwrap().items.is_empty());
     });
 }
