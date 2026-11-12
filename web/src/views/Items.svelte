@@ -8,6 +8,8 @@
   import { onMount, untrack } from 'svelte';
   import Icon from '../components/Icon.svelte';
   import MopChip from '../components/MopChip.svelte';
+  import { mopFor, openMopWindow } from '../lib/mops.svelte';
+  import { addToToday } from '../lib/ticketFind';
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
   import { bringUpSection, followWords } from '../lib/bringUp';
@@ -39,7 +41,6 @@
   };
 
   let tickets = $state<ItemSummary[]>([]);
-  let find = $state('');
   let kind = $state<'all' | Kind>('all');
 
   async function load() {
@@ -106,7 +107,7 @@
   });
 
   const filtered = $derived.by(() => {
-    const q = find.trim().toLowerCase();
+    const q = app.itemsFind.trim().toLowerCase();
     return rows.filter(
       (r) =>
         (kind === 'all' || r.kind === kind) &&
@@ -142,7 +143,11 @@
   function openRow(r: Row) {
     if (r.chore) return openRepeating(r.chore.id);
     const card = cardOf(r);
-    if (card) openWindow(card[0], card[1]);
+    if (card) return openWindow(card[0], card[1]);
+    // A ticket on no day yet (made for a MOP): open its MOP, and offer today's tray.
+    const run = mopFor(r.name);
+    if (run) openMopWindow(run.mopId);
+    toast(`${r.name} isn't on any day yet.`, 'Add to today', () => void addToToday(r.name));
   }
 
   function followMenu(anchor: HTMLElement, r: Row) {
@@ -182,7 +187,7 @@
       {/each}
     </div>
     <span class="grow"></span>
-    <input class="text-in find" type="search" bind:value={find} placeholder="Find a ticket or chore…" aria-label="Find an item" />
+    <input class="text-in find" type="search" bind:value={app.itemsFind} placeholder="Find a ticket or chore…" aria-label="Find an item" />
   </header>
 
   <div class="chips" role="group" aria-label="Filter">

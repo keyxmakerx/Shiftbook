@@ -5,15 +5,15 @@
   // The card is the record itself: changes show everywhere else too.
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
-  import { bringUpSection } from '../lib/bringUp';
+  import { followUpItem } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
   import { fmtMinutes, relativeDay } from '../lib/format';
-  import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
   import { app, attempt, focusLog, openNote, openWiki, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { logNoteSection, noteKindSections } from '../lib/noteActions';
+  import { logNoteItem, moveToWikiItem, noteKindItem } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
   import { openFullWindow, openWindow } from '../lib/windows.svelte';
@@ -47,6 +47,8 @@
     onpick,
     onopen,
     onheight,
+    z,
+    enter,
   }: {
     card: CanvasCard;
     zoom: number;
@@ -67,8 +69,8 @@
     faded?: boolean;
     /** Something is being dragged onto it (it would make a pile). */
     dropping?: boolean;
-    /** More menu sections from the Desk (filing, piles). */
-    extra?: () => MenuSpec['sections'];
+    /** More menu rows from the Desk (filing in a drawer, archiving). */
+    extra?: () => MenuItem[];
     /** Being dragged this far (canvas units), with the pointer's screen point. */
     ondrag?: (dx: number, dy: number, at: { cx: number; cy: number }) => void;
     /** Where a drag to (x, y) lands, given whether Shift is held to line it up (round 15). */
@@ -83,6 +85,10 @@
     onopen?: () => void;
     /** Its height as laid out (canvas units), so the Desk's lines meet its edge. */
     onheight?: (h: number) => void;
+    /** Stacked at this height instead of its own (a fanned-out pile's cards sit above the Desk). */
+    z?: number;
+    /** It comes out of a pile: slides in from this far away (canvas units), the `i`th card. */
+    enter?: { dx: number; dy: number; i: number };
   } = $props();
 
   let el: HTMLElement | undefined = $state();
@@ -232,59 +238,68 @@
   }
 
   // ----- menus -----
-  /** The card's own menu, plus the Desk's options for it. */
+  /** The card's own menu, with the Desk's rows for it (link, file, archive) above its last
+   *  row (Delete, Archive or Remove). */
   function menu(): MenuSpec | null {
     const own = cardMenu();
     if (!own) return null;
-    if (onlink || onattach) {
-      own.sections.splice(1, 0, {
-        items: [
-          ...(onattach ? [{ label: 'Add to an entry', icon: 'ticket' as const, top: true, act: () => onattach?.() }] : []),
-          ...(onlink ? [{ label: 'Link to another card', icon: 'link' as const, top: true, act: () => onlink?.() }] : []),
-        ],
-      });
-    }
-    if (extra) own.sections.splice(Math.max(1, own.sections.length - 1), 0, ...extra());
+    const desk: MenuItem[] = [
+      ...(onattach ? [{ label: 'Add to an entry', icon: 'ticket' as const, act: () => onattach?.() }] : []),
+      ...(onlink ? [{ label: 'Link to another card', icon: 'link' as const, act: () => onlink?.() }] : []),
+      ...(extra?.() ?? []),
+    ];
+    if (desk.length) own.sections.splice(Math.max(1, own.sections.length - 1), 0, { items: desk });
     return own;
+  }
+
+  function archiveNote(note: NonNullable<CanvasCard['note']>) {
+    void attempt(() => api.setNoteArchived(note.id, true).then(() => true)).then((ok) => {
+      if (!ok) return;
+      onchanged();
+      toast(`Archived “${note.title}”`, 'Undo', () => {
+        void attempt(() => api.setNoteArchived(note.id, false)).then(onchanged);
+      }, () => void attempt(() => api.setNoteArchived(note.id, true)).then(onchanged));
+    });
   }
 
   function cardMenu(): MenuSpec | null {
     if (card.entry) return entryMenu(card.entry, card.work);
     if (card.tray) return trayMenu(card.tray.item, () => openNotepad(key));
     if (card.note) {
+      // About a dozen rows (the daily-use review, 10 Nov): times, days and kinds open in place,
+      // the rarer things are under More.
       const note = card.note;
-      return {
-        sections: [
+      const items: MenuItem[] = [
+        note.kind === 'page' || (note.kind === 'mop' && note.template)
+          ? { label: 'Open in the wiki', icon: 'book', act: () => openWiki(note.id) }
+          : note.kind === 'mop'
+            ? { label: 'Open the MOP', icon: 'book', act: () => openMopWindow(note.id) }
+            : { label: 'Open in Notes', icon: 'open', act: () => openNote(note.id) },
+      ];
+      // A card the owner put somewhere passes its spot on in storage; one placed
+      // automatically passes on where it shows now.
+      if (note.kind === 'jot') items.push(logNoteItem(note, onchanged, card.placed ? undefined : { x: card.x, y: card.y }));
+      items.push(followUpItem('note', note.id, note.title));
+      const kind = noteKindItem(note, onchanged);
+      if (kind) items.push(kind);
+      const wiki = moveToWikiItem(note, onchanged);
+      items.push({
+        label: 'More',
+        icon: 'more',
+        sub: [
           {
-            head: note.title,
             items: [
-              note.kind === 'page' || (note.kind === 'mop' && note.template)
-                ? { label: 'Open in the wiki', icon: 'book', side: true, act: () => openWiki(note.id) }
-                : note.kind === 'mop'
-                  ? { label: 'Open the MOP', icon: 'book', side: true, act: () => openMopWindow(note.id) }
-                  : { label: 'Open in Notes', icon: 'open', side: true, act: () => openNote(note.id) },
-              { label: 'Open in a window', icon: 'expand', side: true, act: () => openWindow('note', note.id) },
+              { label: 'Open in a window', icon: 'expand', act: () => openWindow('note', note.id) },
               pinMenuItem('note', note.id),
-              {
-                label: 'Archive',
-                icon: 'archive',
-                side: true,
-                act: () =>
-                  void attempt(() => api.setNoteArchived(note.id, true).then(() => true)).then((ok) => {
-                    if (!ok) return;
-                    onchanged();
-                    toast(`Archived “${note.title}”`, 'Undo', () => {
-                      void attempt(() => api.setNoteArchived(note.id, false)).then(onchanged);
-                    }, () => void attempt(() => api.setNoteArchived(note.id, true)).then(onchanged));
-                  }),
-              },
+              ...(wiki ? [wiki] : []),
             ],
           },
-          bringUpSection('note', note.id, note.title),
-          // A card the owner put somewhere passes its spot on in storage; one placed
-          // automatically passes on where it shows now.
-          ...(note.kind === 'jot' ? [logNoteSection(note, onchanged, card.placed ? undefined : { x: card.x, y: card.y })] : []),
-          ...noteKindSections(note, onchanged),
+        ],
+      });
+      return {
+        sections: [
+          { head: note.title, items },
+          { items: [{ label: 'Archive', icon: 'archive', act: () => archiveNote(note) }] },
         ],
       };
     }
@@ -292,15 +307,13 @@
       const scrap = card.inbox;
       return {
         sections: [
+          { head: 'Inbox scrap', items: [{ label: 'Log it', icon: 'log', act: () => void logScrap() }] },
           {
-            head: 'Inbox scrap',
             items: [
-              { label: 'Log it', icon: 'log', side: true, act: () => void logScrap() },
               {
                 label: 'Remove',
                 icon: 'trash',
                 danger: true,
-                top: true,
                 act: () =>
                   void attempt(() => api.setInboxDeleted(scrap.id, true).then(() => true)).then((ok) => {
                     if (!ok) return;
@@ -336,7 +349,11 @@
   style:--c={color}
   style:left="{x + (drag?.dx ?? 0)}px"
   style:top="{y + (drag?.dy ?? 0)}px"
-  style:z-index={drag ? 99999 : open ? 99998 : card.z}
+  style:z-index={drag ? 99999 : open ? 99998 : (z ?? card.z)}
+  class:fan-in={!!enter}
+  style:--fx={enter ? `${enter.dx}px` : null}
+  style:--fy={enter ? `${enter.dy}px` : null}
+  style:--fi={enter?.i ?? null}
   role="button"
   tabindex="0"
   aria-expanded={hasPanel ? open : undefined}
@@ -413,7 +430,7 @@
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
-    <MopChip ticket={t.item.ticket} />
+    <MopChip ticket={t.item.ticket} offer={!t.item.done} />
     <span class="sub" class:muted={!t.item.note}>
       {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}
     </span>
@@ -476,6 +493,19 @@
 
   .card:hover {
     box-shadow: var(--lift);
+  }
+
+  /* Out of a pile being fanned: each card slides from the pile to its spot, one after another. */
+  .card.fan-in {
+    animation: fan-in calc(0.32s * var(--m)) var(--ease) backwards;
+    animation-delay: calc(min(var(--fi, 0), 12) * 22ms * var(--m));
+  }
+
+  @keyframes fan-in {
+    from {
+      opacity: 0;
+      transform: translate(var(--fx, 0), var(--fy, 0)) scale(0.9);
+    }
   }
 
   .card:focus-visible {
@@ -664,6 +694,10 @@
     .card.lifted {
       transition: none;
       transform: none;
+    }
+
+    .card.fan-in {
+      animation: none;
     }
   }
 </style>

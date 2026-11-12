@@ -15,6 +15,7 @@ use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, InboxItem, Note, TrayItem};
+use shiftbook_core::notes::shows_on_desk;
 use shiftbook_storage::canvas::{pair, CanvasSpot, CardRef};
 use shiftbook_storage::work::EntryRecord;
 use shiftbook_storage::{SqliteStore, StorageError};
@@ -186,8 +187,12 @@ pub struct DeskView {
 pub struct Pending {
     pub kind: CardKind,
     pub id: Uuid,
-    /// For newest-first auto-placing and the timeline order within a day.
+    /// The timeline's order within a day.
     pub created: OffsetDateTime,
+    /// When this card first showed: `created`, or for the same work folded into one card the
+    /// oldest of it. Cards nobody moved take spots in this order, so a new one goes after the
+    /// rest instead of pushing them along.
+    pub first: OffsetDateTime,
     /// Its day on the timeline.
     pub date: Date,
     /// What it says, for links.
@@ -254,6 +259,7 @@ pub fn entry_card(rec: EntryRecord, fields: &[CustomField]) -> Pending {
         kind: CardKind::Entry,
         id,
         created,
+        first: created,
         date,
         link,
         open: false,
@@ -282,6 +288,7 @@ pub fn tray_card(item: TrayItem, fields: &[CustomField]) -> Pending {
         kind: CardKind::Tray,
         id,
         created,
+        first: created,
         date,
         link,
         open,
@@ -307,6 +314,7 @@ pub fn note_card(note: Note, now: OffsetDateTime, after: u32) -> Pending {
         kind: CardKind::Note,
         id,
         created,
+        first: created,
         date: created.date(),
         link,
         open: false,
@@ -331,6 +339,7 @@ pub fn inbox_card(scrap: InboxItem) -> Pending {
         kind: CardKind::Inbox,
         id,
         created,
+        first: created,
         date: created.date(),
         link,
         open: false,
@@ -473,6 +482,7 @@ pub fn fold_same_work(
                 continue;
             };
             minutes = minutes.saturating_add(older.minutes);
+            head.first = head.first.min(older.first);
             if head.spot_of.is_none()
                 && !spots.contains_key(&(CardKind::Entry, head.id))
                 && spots.contains_key(&(CardKind::Entry, older.id))
@@ -518,6 +528,12 @@ pub fn fold_same_work(
     cards
 }
 
+/// The order cards nobody moved take spots in: the one that showed first goes first, so a new
+/// card lands after the rest (near today's) and nothing already on the Desk moves.
+pub fn sort_for_placing(loose: &mut [Pending]) {
+    loose.sort_by(|a, b| a.first.cmp(&b.first).then(a.id.cmp(&b.id)));
+}
+
 pub fn card_ref(kind: CardKind, id: Uuid) -> CardRefView {
     CardRefView {
         kind,
@@ -557,8 +573,19 @@ pub async fn desk(
     for item in store.tray_between(owner, from, today).await? {
         all.push(tray_card(item, &fields));
     }
+    // A MOP on a ticket shows as the chip on that ticket's card; wiki pages and templates
+    // live in the wiki (see `shows_on_desk`).
+    let on_tickets: HashSet<Uuid> = store
+        .mop_runs(owner, None)
+        .await?
+        .into_iter()
+        .map(|r| r.mop)
+        .collect();
     for note in store.list_notes(owner, false).await? {
-        all.push(note_card(note, now, after));
+        let on_ticket = on_tickets.contains(note.id.as_uuid());
+        if shows_on_desk(note.kind, note.template, on_ticket) {
+            all.push(note_card(note, now, after));
+        }
     }
     for scrap in store.list_inbox(owner).await? {
         all.push(inbox_card(scrap));
@@ -666,7 +693,8 @@ pub async fn desk(
             .and_then(|st| piles.get(&st))
     };
 
-    // Moved cards keep their spots; the rest are placed newest first around them.
+    // Moved cards keep their spots; the rest are placed around them in the order they first
+    // showed, so a new card takes the next free spot instead of pushing the others along.
     let mut placed = Vec::new();
     let mut loose = Vec::new();
     for mut p in all {
@@ -685,7 +713,7 @@ pub async fn desk(
             loose.push(p);
         }
     }
-    loose.sort_by(|a, b| b.created.cmp(&a.created).then(b.id.cmp(&a.id)));
+    sort_for_placing(&mut loose);
     let mut taken: Vec<(i32, i32)> = placed.iter().map(|p| (p.card.x, p.card.y)).collect();
     // The Done today pile sits where the owner left it, or takes the first free spot.
     let pile_needs_spot = !done_today.is_empty() && prefs.done_pile.is_none();
@@ -907,6 +935,43 @@ mod tests {
             },
             &[],
         )
+    }
+
+    #[test]
+    fn a_new_card_goes_after_the_rest() {
+        let mut older = tray("INC0000001");
+        older.created = datetime!(2026-10-22 09:00 UTC);
+        older.first = older.created;
+        let mut newer = tray("INC0000002");
+        newer.created = datetime!(2026-10-22 15:00 UTC);
+        newer.first = newer.created;
+        let (older_id, newer_id) = (older.id, newer.id);
+        let mut loose = vec![newer, older];
+        sort_for_placing(&mut loose);
+        assert_eq!(
+            loose[0].id, older_id,
+            "the card that showed first keeps the first spot"
+        );
+        assert_eq!(loose[1].id, newer_id);
+    }
+
+    #[test]
+    fn the_same_work_keeps_its_place_when_logged_again() {
+        // Stand-up yesterday and again today fold into one card, placed by when it first showed.
+        let mut yesterday = tray("x");
+        yesterday.kind = CardKind::Entry;
+        yesterday.title = "Stand-up".into();
+        yesterday.date = date!(2026 - 10 - 21);
+        yesterday.created = datetime!(2026-10-21 09:15 UTC);
+        yesterday.first = yesterday.created;
+        let mut today = tray("x");
+        today.kind = CardKind::Entry;
+        today.title = "Stand-up".into();
+        today.created = datetime!(2026-10-22 09:15 UTC);
+        today.first = today.created;
+        let out = fold_same_work(vec![today, yesterday], &HashMap::new());
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].first, datetime!(2026-10-21 09:15 UTC));
     }
 
     #[test]

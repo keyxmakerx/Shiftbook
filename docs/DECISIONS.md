@@ -2,6 +2,66 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 12 Nov 2026 (review fixes)
+No mockup needed:
+- **A MOP put on a new ticket keeps a place on the Desk:** the 6 Nov promise below didn't
+  hold (the Tickets list couldn't see a ticket on no day, so nothing was added). Putting the
+  MOP on the ticket and putting the ticket on today's Tickets tray now happen in one step in
+  storage (`link_mop`), so the ticket has a card and "Go to the ticket" finds it. Like any
+  tray ticket it starts with 15 minutes.
+- **Log work first in the Desk's side panel:** today's hours, Log work, Due soon, Where was
+  I?, the Tickets tray, the wrap-up. Due soon and Where was I? used to sit above it and push
+  it off the bottom of the window at the size the app opens at.
+
+## Daily-use review — 10 Nov 2026 (shorter menus, quieter Desk)
+The owner asked for a review of the whole app as someone using it every day, mindful that too
+many buttons and circles get confusing. Of the review's 17 fixes the owner picked **Shorter
+menus, quieter Desk** (fixes 7, 8, 9 and 17) to build first:
+- **One card per thing:** wiki pages and templates no longer get a Desk card (they live in the
+  wiki), and a MOP on a ticket shows only as the chip on that ticket's card. Jots, Daily and
+  meeting notes, and a MOP not on a ticket yet, still do. Drawers and boards still show what's
+  filed in them.
+- **Right-click menus of about a dozen rows:** no ring of round icons beside any paper menu.
+  Times, days, projects, colours, note kinds (**Kind ▾**, was Change to) and drawers fold into
+  one row each that opens in place (▾, with what it's set to now in grey); the rarer things go
+  under **More** (Move to the wiki… among them). One Archive
+  per card: when a card has its own Archive row, File in a drawer doesn't offer the Archive too.
+- **Desk tools bar:** zoom, the %, **Fit** and one **View** menu (Timeline, Show all link lines,
+  Boards, Tidy into stacks, Clear old cards…). While the timeline shows, Back to my layout
+  stays on the bar.
+- **Link lines start hidden:** a card's lines show while you point at it; View → Show all link
+  lines brings the rest back (faint, as in the 30 Oct look C).
+- **Readable zoom:** the Desk opens at 100% on today's cards (from today, still open, followed
+  up for today or pinned), replacing the 30 Oct "middle of everything, down to 60%"; Fit zooms
+  out no further than 80%.
+- **New cards don't shove the rest:** cards nobody moved take their spots in the order they
+  first showed, so a new card goes into the next free spot. Newest first moved every loose card
+  along one place each time something new came in.
+
+## Asked in chat — 10 Nov 2026 (tabs in notepads, the Organise menu on top)
+No mockup needed:
+- **Tab indents in notepads** (notepad windows, Notes, MOPs, wiki pages, board notes): Tab puts
+  in a tab, or indents every selected line; Shift+Tab takes one off. Escape and then Tab moves
+  on to the next control as before. Read and Run show tabbed lines indented the same way (a tab
+  or two spaces is one step), instead of flattening them.
+- **The Organise menu opens over notepad windows**, the bell and the bottom bar.
+
+## Asked in chat — 6 Nov 2026 (notes, MOPs and wiki audit)
+No mockup needed:
+- **Notes is a tab** beside the Wiki (Desk, Day, Timesheet, Notes, Wiki), out of the Organise
+  menu, which keeps Tickets, Projects, Repeating and Lists. Keys 1 to 5 for the tabs, 6 for the
+  menu (one fewer at home).
+- **Finding a MOP's ticket again:** the ticket number on a MOP, on a wiki page's On tickets and
+  on a MOP in Notes is a link that shows that ticket on the Tickets page. A MOP put on a ticket
+  that wasn't on any day yet puts the ticket on today's Tickets tray, so it's on the Desk. Find
+  finds MOPs by their ticket number. A ticket on no day, clicked on the Tickets page, opens its
+  MOP and offers Add to today.
+- **Notes keeps notes:** wiki pages and templates show in Notes only when searching, marked In
+  the wiki, and open in the wiki. A MOP in Notes shows its ticket and status and opens with Read,
+  Edit and Run; its title can be changed in Edit.
+- **Save as template** (promised in round 18) is on MOPs and on wiki pages' ⋯ menu: a copy goes
+  to Templates, open to edit; the MOP or page stays as it is.
+
 ## Round 18 — 4 Nov 2026 (a wiki, MOPs on tickets, fewer ways round)
 Cards in `tools/signoff/rounds/r18.json` (mockups `mocks/r18-*.html`), on the rounds 8 to 14
 sheet, which the owner chose to keep using. All approved:
@@ -23,6 +83,13 @@ sheet, which the owner chose to keep using. All approved:
   how templates are made: the picker searches and puts recently used and the project's own
   templates first; templates are made with + Template in the Templates space or Save as
   template on any page or MOP.
+- **Pulling a template onto a ticket is quicker** (owner ask: "an easier way of pulling a
+  template for a ticket"). Every open ticket shows **+ MOP** (Desk cards and an entry's
+  slide-out too), the ticket slide-out has a **Use a template** button, and Ctrl+Space finding a
+  ticket offers **Use a template on it**. In the picker, the number keys 1-9 pick, Enter in the
+  search takes the top match, and a template with nothing left to type (only the ticket and
+  title) makes the MOP in one click with no second step.
+  MOP templates no longer get a card on the Desk; they live in the wiki's Templates space.
 - **Top bar:** four tabs where you work (Desk, Day, Timesheet, Wiki), an **Organise ▾** menu
   with Tickets (was Items), Projects (a new page), Repeating, Lists and Notes, and Settings as a
   gear. Keys 1 to 4 for the tabs, 5 for the menu.
@@ -60,7 +127,7 @@ No mockup needed:
 Cards `r16-desk-fixes`, `r16-desk-lines` and `r16-desk-ideas` (`tools/signoff/rounds/r16-desk.json`,
 mockups `mocks/r16-desk.html`), approved:
 - **Opening:** when Shiftbook starts, the Desk opens on the middle of the cards and boxes (zooming
-  out no further than 60%), not where it was left.
+  out no further than 60%), not where it was left. (Changed 10 Nov: 100% on today's cards.)
 - **Double-click:** an entry (any day) opens its details; a ticket opens its notepad full screen.
 - **Lines:** cards sharing a ticket link one to the next, oldest first; one word link per card
   (word links stay on). Lines run edge to edge at each card's real height and follow drags.

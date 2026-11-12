@@ -6,6 +6,7 @@
   // tickets whose notepad mentions it. Rules (links, the tree, versions) are in
   // crates/core/src/wiki.rs.
   import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import type { Note, NoteVersion, WikiList, WikiPage, WikiRow } from '../lib/api';
@@ -14,7 +15,9 @@
   import { app, attempt } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
-  import { attachMop } from '../lib/mops.svelte';
+  import { attachMop, openMopWindow } from '../lib/mops.svelte';
+  import { goToTicket } from '../lib/ticketFind';
+  import { saveAsTemplate } from '../lib/noteActions';
   import WikiText from '../components/WikiText.svelte';
 
   const SAVE_AFTER_MS = 700;
@@ -149,6 +152,7 @@
 
   function openLinker(l: { id: string; kind: string }) {
     if (l.kind === 'page') void open(l.id);
+    else if (l.kind === 'mop') openMopWindow(l.id);
     else openWindow('note', l.id);
   }
 
@@ -289,6 +293,7 @@
                   { label: 'Move up', icon: 'up' as const, act: () => void nudge(-1) },
                   { label: 'Move down', icon: 'down' as const, act: () => void nudge(1) },
                 ]),
+            ...(isTemplate ? [] : [{ label: 'Save as template', icon: 'copy' as const, act: () => void flush().then(() => saveAsTemplate(page?.note ?? p.note)) }]),
             { label: `Earlier versions (${p.versions})`, icon: 'restore', act: () => void showVersions() },
             { label: 'Open in a window', icon: 'expand', act: () => openWindow('note', p.note.id) },
             {
@@ -478,7 +483,7 @@
         <p class="meta">
           Saves as you type. Type <code>[[</code> and a page's title to link it{isTemplate ? ', and {{name}} for a blank to fill in each time' : ''}.
         </p>
-        <textarea class="body-in" bind:value={body} oninput={typed} onblur={() => void flush()} use:focusNow aria-label="Page text" spellcheck="true"></textarea>
+        <textarea use:tabIndent class="body-in" bind:value={body} oninput={typed} onblur={() => void flush()} use:focusNow aria-label="Page text" spellcheck="true"></textarea>
       {:else}
         <h1>
           {page.note.title}
@@ -541,7 +546,9 @@
       <h5>On tickets</h5>
       <div class="box">
         {#each page.onTickets as t (t.number)}
-          <div class="tk"><span class="num">{t.number}</span><span class="st" class:done={t.done}>{t.done ? 'Done' : 'Open'}</span></div>
+          <button type="button" class="tk" title="Show {t.number} on the Tickets page" onclick={() => void goToTicket(t.number)}
+            ><span class="num">{t.number}</span><span class="st" class:done={t.done}>{t.done ? 'Done' : 'Open'}</span></button
+          >
         {:else}
           <p class="none">No ticket's notepad mentions it yet.</p>
         {/each}
@@ -870,6 +877,19 @@
   .tk {
     display: flex;
     justify-content: space-between;
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 2px 4px;
+    border-radius: 5px;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .tk:hover {
+    background: color-mix(in srgb, var(--ink) 6%, transparent);
   }
 
   .tk .num {

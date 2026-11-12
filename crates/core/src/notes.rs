@@ -252,6 +252,14 @@ pub fn is_daily_note_for(kind: NoteKind, title: &str, date: time::Date) -> bool 
     kind == NoteKind::Daily && title == daily_note_title(date)
 }
 
+/// True when a note gets a card of its own on the Desk (the daily-use review, 10 Nov):
+/// jots, daily notes, meeting notes and a MOP that isn't on a ticket yet. Wiki pages and
+/// templates live in the wiki, and a MOP on a ticket shows as the chip on that ticket's
+/// card, so none of those is a second card. Drawers and boards still show what's filed there.
+pub fn shows_on_desk(kind: NoteKind, template: bool, on_ticket: bool) -> bool {
+    !template && kind != NoteKind::Page && !(kind == NoteKind::Mop && on_ticket)
+}
+
 /// What logging a jot as an entry makes (round 14).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JotEntry {
@@ -302,6 +310,22 @@ pub fn jot_to_entry(title: &str, body: &str) -> JotEntry {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn only_work_in_progress_gets_a_desk_card() {
+        use super::{shows_on_desk, NoteKind};
+        // Jots, daily and meeting notes are cards.
+        assert!(shows_on_desk(NoteKind::Jot, false, false));
+        assert!(shows_on_desk(NoteKind::Daily, false, false));
+        assert!(shows_on_desk(NoteKind::Meeting, false, false));
+        // A MOP written before its ticket is a card until it goes on one.
+        assert!(shows_on_desk(NoteKind::Mop, false, false));
+        assert!(!shows_on_desk(NoteKind::Mop, false, true));
+        // Templates and wiki pages live in the wiki.
+        assert!(!shows_on_desk(NoteKind::Mop, true, false));
+        assert!(!shows_on_desk(NoteKind::Page, false, false));
+        assert!(!shows_on_desk(NoteKind::Page, true, false));
+    }
+
     #[test]
     fn jots_become_entries() {
         use super::jot_to_entry;

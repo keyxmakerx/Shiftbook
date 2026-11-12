@@ -19,7 +19,8 @@
   // Desk is the Canvas, where the day happens; Day is for starting and ending it (round 9).
   // Round 18: tabs are only where you work; the places you go to look after your things sit
   // in the Organise menu after them, and Settings is the gear by Lock. The Timesheet hides at
-  // home. The Planner joins the tabs once it's built.
+  // home. Notes moved from the menu to a tab beside the Wiki (asked in chat, 6 Nov 2026). The
+  // Planner joins the tabs once it's built.
   const VIEW_LIST = $derived(shownTabs().map((id, i) => ({ id, label: VIEW_NAMES[id], key: String(i + 1) })));
   const organiseKey = $derived(String(VIEW_LIST.length + 1));
   const inOrganise = $derived(ORGANISE.includes(app.view));
@@ -29,7 +30,6 @@
     projects: { icon: 'box', sub: 'Hours, tickets and the board for each' },
     repeating: { icon: 'repeat', sub: 'Renewals, chores and regular events' },
     lists: { icon: 'list', sub: 'Checklists you reset and use again' },
-    notes: { icon: 'note', sub: 'Daily notes, meetings and jots' },
   };
 
   /** A count beside each row: open tickets and things due, from the bell. */
@@ -120,11 +120,10 @@
         {
           head: `${longDay(day.date)} · ${day.hours} h`,
           items: [
-            { label: 'Open this day', icon: 'desk', side: true, act: () => openDay(day.date) },
+            { label: 'Open this day', icon: 'desk', act: () => openDay(day.date) },
             {
               label: 'Log something for this day',
               icon: 'log',
-              side: true,
               act: () => {
                 void selectDay(day.date).then(onCapture);
               },
@@ -134,7 +133,6 @@
                   {
                     label: 'Open the Timesheet for this week',
                     icon: 'sheet' as const,
-                    top: true,
                     act: () => {
                       void selectDay(day.date).then(() => setView('timesheet'));
                     },
@@ -142,7 +140,6 @@
                   {
                     label: 'Book a holiday (8 h)',
                     icon: 'sun' as const,
-                    top: true,
                     act: () => void holiday(day.date),
                   },
                 ]
@@ -198,7 +195,7 @@
   }
 </script>
 
-<header class="ribbon">
+<header class="ribbon" class:lifted={app.organiseOpen}>
   <div class="brand"><b>Shiftbook</b><span class="lbl">alpha</span></div>
   <div class="acts">
     <button class="cap-btn" type="button" onclick={onCapture} title="Log, note or find (Ctrl+Space)">
@@ -245,7 +242,7 @@
       aria-pressed={inOrganise}
       aria-haspopup="menu"
       aria-expanded={app.organiseOpen}
-      title="Tickets, Projects, Repeating, Lists and Notes ({organiseKey})"
+      title="Tickets, Projects, Repeating and Lists ({organiseKey})"
       onclick={() => (app.organiseOpen = !app.organiseOpen)}
     >
       {inOrganise ? VIEW_NAMES[app.view] : 'Organise'} <span class="caret" aria-hidden="true">▾</span>
@@ -255,7 +252,6 @@
       <div class="paper omenu" role="menu" aria-label="Organise" tabindex="-1" bind:this={menuEl} onkeydown={menuKeys}>
         {#each ORGANISE as v, i (v)}
           {@const c = count(v)}
-          {#if v === 'notes'}<hr />{/if}
           <button type="button" role="menuitem" class:on={app.view === v} data-name={VIEW_NAMES[v]} onclick={() => go(v)} style:--k={i}>
             <Icon name={ORGANISE_ROWS[v]!.icon} size={16} />
             <span class="txt"><b>{VIEW_NAMES[v]}</b><small>{ORGANISE_ROWS[v]!.sub}</small></span>
@@ -312,6 +308,13 @@
     gap: 6px 16px;
     align-items: center;
     padding: 8px 12px;
+  }
+
+  /* The Organise menu hangs below the ribbon, over the stage. Notepad windows (40), the bell
+     (43 and 44) and the bottom bar (45) sit above the ribbon's own 10, so while the menu is open
+     the ribbon rises over them; modal sheets and toasts (60 and up) still go on top. */
+  .ribbon.lifted {
+    z-index: 50;
   }
 
   .brand {
@@ -378,12 +381,6 @@
       opacity: 0;
       transform: translateY(-6px) scale(0.97);
     }
-  }
-
-  .omenu hr {
-    border: 0;
-    border-top: 1px solid var(--rule);
-    margin: 3px 6px;
   }
 
   .views .omenu button {

@@ -6,15 +6,19 @@
   // Copy run log puts the steps with their times on the clipboard for the change record. The
   // rules are in crates/core/src/change.rs and crates/core/src/mop.rs.
   import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
+  import { indentDepth } from '../lib/wikiText';
   import { api } from '../lib/api';
   import type { CheckLine, MopRun, MopStatus, Note } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
   import { refreshMops } from '../lib/mops.svelte';
   import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, openWiki } from '../lib/store.svelte';
+  import { app, attempt, openWiki, refresh } from '../lib/store.svelte';
+  import { goToTicket } from '../lib/ticketFind';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
+  import { saveAsTemplate } from '../lib/noteActions';
   import WikiText from './WikiText.svelte';
 
   let { id, ontitle }: { id: string; ontitle?: (title: string) => void } = $props();
@@ -31,6 +35,7 @@
   let run = $state<MopRun | null>(null);
   let mode = $state<'read' | 'edit' | 'run'>('read');
   let text = $state('');
+  let titleText = $state('');
   let checks = $state<CheckLine[]>([]);
   let numbers = $state(true);
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -49,6 +54,7 @@
     note = n;
     run = r ?? null;
     text = n.body;
+    titleText = n.title;
     ontitle?.(n.title);
     mode = !run || (run.status === 'draft' && !n.body.trim()) ? 'edit' : run.status === 'running' ? 'run' : mode;
   }
@@ -79,11 +85,18 @@
     if (timer) clearTimeout(timer);
     timer = null;
     const n = note;
-    if (!n || text === n.body) return;
+    const title = titleText.trim() || n?.title || '';
+    if (!n || (text === n.body && title === n.title)) return;
     const saved = await attempt(() =>
-      api.updateNote(n.id, { kind: n.kind, title: n.title, body: text, projectId: n.projectId, tags: n.tags.join(', ') }),
+      api.updateNote(n.id, { kind: n.kind, title, body: text, projectId: n.projectId, tags: n.tags.join(', ') }),
     );
-    if (saved && note?.id === saved.id) note = { ...saved, body: text };
+    if (saved && note?.id === saved.id) {
+      note = { ...saved, body: text };
+      if (saved.title !== n.title) {
+        ontitle?.(saved.title);
+        void refreshMops();
+      }
+    }
   }
 
   onDestroy(() => void flush());
@@ -187,10 +200,19 @@
     const t = ticketIn.trim();
     if (!t) return;
     await flush();
-    if (!(await attempt(() => api.mopLink(id, t).then(() => true)))) return;
+    // A ticket on no day (made just now) goes on today's tray in the same step, so it
+    // shows on the Desk and can be found again.
+    const added = await attempt(() => api.mopLink(id, t, app.today));
+    if (added === undefined) return;
     ticketIn = '';
     await changed();
-    toast(`MOP is on ${run?.ticket ?? t} now`);
+    const number = run?.ticket ?? t;
+    await refresh();
+    toast(
+      added ? `MOP is on ${number} now, and ${number} is on today's Tickets tray.` : `MOP is on ${number} now.`,
+      'Go to the ticket',
+      () => void goToTicket(number),
+    );
   }
 
   async function follow(title: string) {
@@ -199,6 +221,10 @@
     else toast(`No wiki page called “${title}” yet.`);
   }
 </script>
+
+{#snippet ticketLink(number: string)}
+  <button type="button" class="linkish tk" title="Show {number} on the Tickets page" onclick={() => void goToTicket(number)}>{number}</button>
+{/snippet}
 
 {#if note}
   <div class="mop">
@@ -274,22 +300,28 @@
       <p class="from">Write it now; it can go on its ticket once the ticket exists.</p>
     {:else if run.templateId}
       <p class="from">
-        For <b>{run.ticket}</b> · from a <button type="button" class="linkish" onclick={() => openWiki(run!.templateId)}>wiki template</button>
+        For {@render ticketLink(run.ticket)} · from a <button type="button" class="linkish" onclick={() => openWiki(run!.templateId)}>wiki template</button>
       </p>
     {:else}
-      <p class="from">For <b>{run.ticket}</b></p>
+      <p class="from">For {@render ticketLink(run.ticket)}</p>
     {/if}
 
     <div class="body">
       {#if mode === 'edit'}
-        <textarea bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
+        <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} aria-label="MOP title" placeholder="Title" />
+        <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
       {:else if mode === 'read'}
         <WikiText body={text} onlink={(t) => void follow(t)} />
       {:else}
         <ol class="run" aria-label="Steps to tick off">
           {#each lines as line, i (i)}
             {@const c = checks[i]}
-            <li class:x={c?.crossed} class:blank={!line.trim()} class:head={/^\s*#/.test(line)}>
+            <li
+              class:x={c?.crossed}
+              class:blank={!line.trim()}
+              class:head={/^\s*#/.test(line)}
+              style:padding-left={line.trim() ? `${4 + Math.min(8, indentDepth(line)) * 18}px` : undefined}
+            >
               {#if numbers}<span class="no">{i + 1}</span>{/if}
               {#if c?.key}
                 <button
@@ -304,7 +336,7 @@
               {:else}
                 <span class="cb none"></span>
               {/if}
-              <span class="t">{line.replace(/^\s*#+\s*/, '')}</span>
+              <span class="t">{line.trimStart().replace(/^#+\s*/, '')}</span>
               {#if c?.ticked}<span class="at">{clock(at(c.key))}</span>{/if}
             </li>
           {/each}
@@ -322,6 +354,12 @@
         <label class="nums"><input type="checkbox" bind:checked={numbers} /> Line numbers</label>
         <button type="button" class="btn slim" onclick={() => void clearTicks()}>Clear ticks</button>
       {/if}
+      <button
+        type="button"
+        class="btn slim"
+        title="Put a copy in the wiki's Templates, to use again on other tickets"
+        onclick={() => void flush().then(() => note && saveAsTemplate({ ...note, body: text }))}>Save as template</button
+      >
       <button type="button" class="btn slim" onclick={() => void copyPlain()}><Icon name="copy" size={13} /> Copy as text</button>
       {#if run}<button type="button" class="btn slim primary" onclick={() => void copyLog()}><Icon name="copy" size={13} /> Copy run log</button>{/if}
     </footer>
@@ -457,15 +495,26 @@
     text-decoration: underline dashed;
   }
 
+  .linkish.tk {
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
   .body {
     flex: 1;
     min-height: 0;
     overflow: auto;
   }
 
+  .title-in {
+    width: 100%;
+    margin-bottom: 6px;
+    font: 600 15px var(--ui);
+  }
+
   textarea {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 44px);
     min-height: 220px;
     resize: none;
     border: 1px solid var(--rule);
@@ -546,6 +595,7 @@
   .t {
     flex: 1;
     white-space: pre-wrap;
+    tab-size: 4;
   }
 
   .at {

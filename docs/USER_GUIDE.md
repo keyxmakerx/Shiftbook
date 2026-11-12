@@ -9,15 +9,22 @@ works the way it does is in `DECISIONS.md`.
   the recovery key you choose a new password straight away. Screenshots, screen sharing and
   copying text out are blocked by default; the **Protected** pill allows them for 10 minutes.
 - **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
-  you arrange. Drag to move (it's remembered), drag empty paper or Shift + scroll to pan, scroll
-  to zoom, Fit everything. Click an entry or a ticket and its **slide-out** opens underneath:
+  you arrange. It opens at 100% on today's cards. Drag to move (it's remembered), drag empty
+  paper or Shift + scroll to pan, scroll to zoom, **Fit** (it stops at 80% so the cards stay
+  readable). New cards take the next free spot; the others stay where they are. Wiki pages,
+  templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
+  card). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
   open, more time and More. Double-click a card to open it; double-click empty paper to jot.
-  Right-click anything for its paper menu with everything. The side panel has today's hours,
-  Where was I?, Log work, the Tickets tray and the wrap-up. **Project areas**
+  Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
+  Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
+  Fit and **View** (Timeline, Show all link lines, Boards, Tidy into stacks, Clear old cards…).
+  The side panel has today's hours,
+  Log work, Due soon, Where was I?, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
-  that share a ticket or an uncommon word, and you can draw your own; **Timeline** lays the
-  Desk out by day and Back to my layout puts it back. The **toolbox** on the left has Move,
+  that share a ticket or an uncommon word, and you can draw your own (a card's lines show while
+  you point at it; View → Show all link lines shows them all); **Timeline** lays the Desk out
+  by day and Back to my layout puts it back. The **toolbox** on the left has Move,
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag on
   empty paper) and make it a project's area, a new project or just a label. **Shift + drag a
   card** to line it up: red lines show it matching other cards, a box's edges or middle, or the

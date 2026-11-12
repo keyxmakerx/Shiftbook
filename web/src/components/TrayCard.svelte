@@ -100,7 +100,7 @@
               items: list.map((r) => ({ label: r.name, icon: 'copy' as const, act: () => copy(r.name, r.text) })),
             }
           : { head: 'No saved responses yet', items: [{ label: 'Add your first response', icon: 'plus', act: editResponses }] },
-        { items: [{ label: 'Edit responses', icon: 'edit', top: true, act: editResponses }] },
+        { items: [{ label: 'Edit responses', icon: 'edit', act: editResponses }] },
       ],
     });
   }

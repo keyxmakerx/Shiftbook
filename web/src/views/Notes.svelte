@@ -7,18 +7,24 @@
   // Notes (r7-notes card): one list with a search box, kind filters and Include archived,
   // and the open note beside it. Notes save as you type. Archive moves a note out of the
   // way; search still finds it. Auto-archive (Settings → Notes) warns on the note first.
-  import { onDestroy } from 'svelte';
+  // Since round 18 wiki pages and MOP templates live in the wiki: they only show here when
+  // searching, marked "In the wiki", and open there. A MOP shows the ticket it's on, and opens
+  // here with Read, Edit and Run (the same as its window) and a way to the ticket.
+  import { onDestroy, untrack } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import { api } from '../lib/api';
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
   import { openMenu } from '../lib/menu.svelte';
   import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, openWiki, projectColor, projectName, words } from '../lib/store.svelte';
-  import { openMopWindow } from '../lib/mops.svelte';
+  import { mops, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
+  import { goToTicket } from '../lib/ticketFind';
   import { toast } from '../lib/toast.svelte';
   import { pickMopFiles } from '../lib/mopbook.svelte';
   import Icon from '../components/Icon.svelte';
   import WikiLinks from '../components/WikiLinks.svelte';
+  import MopRun from '../components/MopRun.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -40,6 +46,16 @@
   let bodyEl: HTMLTextAreaElement | undefined = $state();
 
   const projects = $derived(app.projects.filter((p) => !p.archived || p.id === draft.projectId));
+  /** The kinds Notes keeps: wiki pages live in the wiki. */
+  const NOTE_KINDS = KINDS.filter((k) => k !== 'page');
+  /** Wiki pages and MOP templates: kept in the wiki. */
+  const inWiki = (n: Note) => n.kind === 'page' || (n.kind === 'mop' && n.template);
+  /** The list shown: wiki pages only when searching. */
+  const shownNotes = $derived(query.trim() ? notes : notes.filter((n) => !inWiki(n)));
+  /** The open note is a MOP (not a template): it opens with Read, Edit and Run. */
+  const isMop = $derived(!!current && current.kind === 'mop' && !current.template);
+  /** The ticket a MOP is on (the newest MOP list), by note id. */
+  const mopTicket = (id: string) => mops.list.find((r) => r.mopId === id) ?? null;
 
   function blank(k: NoteKind): NoteInput {
     return { kind: k, title: '', body: '', projectId: null, tags: '' };
@@ -57,6 +73,14 @@
     hidden = list.hiddenArchived;
     loaded = true;
   }
+
+  // Changes made elsewhere (a MOP put on a ticket, a note changed in its window).
+  $effect(() => {
+    void app.changed;
+    untrack(() => {
+      if (loaded) void load();
+    });
+  });
 
   // Reload when the search or filters change (typing waits a moment).
   $effect(() => {
@@ -82,6 +106,10 @@
 
   async function select(n: Note) {
     await flush();
+    if (inWiki(n)) {
+      openWiki(n.id);
+      return;
+    }
     current = n;
     draft = toInput(n);
     editing = true;
@@ -140,14 +168,6 @@
     toast(archived ? 'Archived. Search still finds it.' : 'Back with your notes.', 'Undo', () => {
       void attempt(() => api.setNoteArchived(n.id, !archived)).then(() => refreshOpen(n.id)).then(load);
     }, () => void attempt(() => api.setNoteArchived(n.id, archived)).then(() => refreshOpen(n.id)).then(load));
-  }
-
-  async function setTemplate(n: Note, template: boolean) {
-    await flush();
-    if (!(await attempt(() => api.setNoteTemplate(n.id, template).then(() => true)))) return;
-    await refreshOpen(n.id);
-    await load();
-    toast(template ? 'Now a template. Open it in the notebook and press New from this.' : 'Back to a plain MOP.');
   }
 
   async function keep(n: Note) {
@@ -230,7 +250,7 @@
     <div class="filters">
       <div class="seg" role="group" aria-label="Kind">
         <button type="button" aria-pressed={kind === null} onclick={() => setKind(null)}>All</button>
-        {#each KINDS as k (k)}
+        {#each NOTE_KINDS as k (k)}
           <button type="button" aria-pressed={kind === k} onclick={() => setKind(k)}>{KIND_LABEL[k]}</button>
         {/each}
       </div>
@@ -247,7 +267,8 @@
     </div>
 
     <div class="items">
-      {#each notes as n, i (n.id)}
+      {#each shownNotes as n, i (n.id)}
+        {@const run = n.kind === 'mop' && !n.template ? mopTicket(n.id) : null}
         <button
           type="button"
           class="it"
@@ -261,7 +282,8 @@
           <span class="row1">
             <b>{#each highlight(n.title, query) as p, j (j)}{#if p.hit}<mark>{p.text}</mark>{:else}{p.text}{/if}{/each}</b>
             <span class="kind">{KIND_LABEL[n.kind]}</span>
-            {#if n.template}<span class="kind">Template</span>{/if}
+            {#if inWiki(n)}<span class="kind w">In the wiki</span>{:else if n.template}<span class="kind">Template</span>{/if}
+            {#if run}<span class="kind tk">{run.ticket} · {STATUS_WORD[run.status]}</span>{:else if n.kind === 'mop' && !n.template}<span class="kind soon">Not on a ticket</span>{/if}
             {#if n.archived}<span class="kind a">Archived</span>{/if}
             {#if n.archiveInDays !== null}<span class="kind soon" title={archiveWarning(n.archiveInDays)}>Moves soon</span>{/if}
           </span>
@@ -280,7 +302,7 @@
           {hidden} more in archived notes · show
         </button>
       {/if}
-      {#if loaded && notes.length === 0 && hidden === 0}
+      {#if loaded && shownNotes.length === 0 && hidden === 0}
         <p class="empty-note">
           {#if query.trim()}
             Nothing matches "{query.trim()}".
@@ -307,6 +329,25 @@
           <button type="button" class="btn" onclick={() => current && keep(current)}>Keep</button>
         </p>
       {/if}
+      {#if isMop && current}
+        {@const run = mopTicket(current.id)}
+        <div class="mophead">
+          <span class="lbl">{KIND_LABEL.mop}</span>
+          {#if run}
+            <span>on</span>
+            <button type="button" class="btn slim" title="Show {run.ticket} on the Tickets page" onclick={() => void goToTicket(run.ticket)}>
+              <Icon name="ticket" size={14} />{run.ticket}
+            </button>
+          {/if}
+          <span class="grow"></span>
+          <button type="button" class="btn slim" title="Open it in a window of its own" onclick={() => current && openMopWindow(current.id)}>
+            <Icon name="expand" size={14} />Pop out
+          </button>
+        </div>
+        {#key current.id}
+          <div class="mopbox"><MopRun id={current.id} ontitle={() => void load()} /></div>
+        {/key}
+      {:else}
       <input
         bind:this={titleEl}
         class="title"
@@ -326,7 +367,7 @@
         <label class="field">
           <span class="lbl">Kind</span>
           <select class="text-in" bind:value={draft.kind} onchange={edited}>
-            {#each KINDS as k (k)}<option value={k}>{KIND_LABEL[k]}</option>{/each}
+            {#each NOTE_KINDS as k (k)}<option value={k}>{KIND_LABEL[k]}</option>{/each}
           </select>
         </label>
         <label class="field">
@@ -347,6 +388,7 @@
         </label>
       </div>
       <textarea
+        use:tabIndent
         bind:this={bodyEl}
         class="body"
         placeholder="Write anything…"
@@ -355,6 +397,7 @@
         oninput={edited}
       ></textarea>
       <WikiLinks text={draft.body} />
+      {/if}
       <div class="foot">
         <span class="saved" aria-live="polite">
           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'waiting' ? '…' : ''}
@@ -377,30 +420,6 @@
               }}
             >
               <Icon name="log" size={15} />Log it as an entry
-            </button>
-          {/if}
-          {#if current.kind === 'mop'}
-            <button
-              type="button"
-              class="btn"
-              title={current.template ? 'Open it in the wiki' : 'Open it in a window: Read, Edit and Run'}
-              onclick={async () => {
-                await flush();
-                if (!current) return;
-                if (current.template) openWiki(current.id);
-                else openMopWindow(current.id);
-              }}
-            >
-              <Icon name="book" size={15} />{current.template ? 'Open in the wiki' : 'Open the MOP'}
-            </button>
-            <button
-              type="button"
-              class="btn"
-              aria-pressed={current.template}
-              title={"A template keeps its {{blanks}}; the notebook's New from this fills them in"}
-              onclick={() => current && void setTemplate(current, !current.template)}
-            >
-              <Icon name="copy" size={15} />{current.template ? 'Template' : 'Use as template'}
             </button>
           {/if}
           <button type="button" class="btn" onclick={() => current && setArchived(current, !current.archived)}>
@@ -537,6 +556,15 @@
     background: color-mix(in srgb, var(--none) 22%, transparent);
   }
 
+  .kind.w {
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+  }
+
+  .kind.tk {
+    background: color-mix(in srgb, var(--ok) 14%, transparent);
+    color: var(--ok);
+  }
+
   .kind.soon {
     background: var(--warn-wash);
     color: var(--warn);
@@ -627,6 +655,34 @@
 
   .body:focus {
     box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .mophead {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--mut);
+  }
+
+  .mophead .lbl {
+    font: 700 10.5px var(--ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .mophead .grow {
+    flex: 1;
+  }
+
+  .mopbox {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
   }
 
   .foot {

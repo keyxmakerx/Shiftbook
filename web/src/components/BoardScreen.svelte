@@ -9,6 +9,7 @@
   //             Archive's notes have Bring back.
   // Esc or ✕ goes back to the Desk.
   import { onMount } from 'svelte';
+  import { tabIndent } from '../lib/indent';
   import { api } from '../lib/api';
   import type { BoardChild, BoardData, CanvasCard as Card, Note } from '../lib/api';
   import { boards, closeBoard, onlyLists, openBoard, type BoardTab } from '../lib/boards.svelte';
@@ -461,7 +462,7 @@
                   aria-label="Note title"
                   disabled={data.key === 'daily' || data.key.startsWith('series:') || current?.kind === 'daily'}
                 />
-                <textarea class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
+                <textarea use:tabIndent class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
                 <WikiLinks text={body} />
                 <div class="foot">
                   <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>

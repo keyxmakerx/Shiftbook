@@ -5,7 +5,9 @@
   // is open.
   let lastView: CanvasView = START;
   let panelOpen = true;
-  let linksShown = true;
+  // Link lines start hidden (the daily-use review, 10 Nov): a card's lines show while you point
+  // at it, and View has "Show all link lines".
+  let linksShown = false;
   let lastTool: 'hand' | 'select' | 'box' = 'hand';
   let toolboxOpen = true;
   let cabinetShown = false;
@@ -46,8 +48,10 @@
     CARD_W,
     deskBoxes,
     drawerAt,
+    fanSheet,
     fanSpots,
     fitAll,
+    fitReadable,
     LINE_UP_PX,
     lineUp,
     lineUpWith,
@@ -65,7 +69,7 @@
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
   import { sameWork } from '../lib/sameWork';
   import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
-  import { menuOpen, openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
@@ -185,10 +189,10 @@
       links = desk.links;
       axis = desk.axis;
       if (!opened && board && board.clientWidth > 0) {
-        // The first time the Desk shows after starting, it opens on the middle of your cards
-        // and boxes rather than wherever the paper's corner happens to be.
+        // The first time the Desk shows after starting, it opens at 100% on today's cards
+        // (the daily-use review, 10 Nov) rather than wherever the paper's corner happens to be.
         opened = true;
-        view = openingView(everything(), board.clientWidth, board.clientHeight);
+        view = openingView(todaysSpots(), everything(), board.clientWidth, board.clientHeight);
       }
     }
     loaded = true;
@@ -201,11 +205,7 @@
    *  dragged or the selected card being dragged. */
   function pos(c: Card): { x: number; y: number } {
     if (mode === 'timeline') return { x: c.timelineX, y: c.timelineY };
-    if (c.stack && c.stack === fanned) {
-      const pile = stacks.find((st) => st.id === c.stack)!;
-      const members = pileMembers(c.stack);
-      return fanSpots(pile.x, pile.y, members.length)[members.indexOf(c)] ?? { x: c.x, y: c.y };
-    }
+    if (c.stack && c.stack === fanned && fan) return fan.spots[fan.members.indexOf(c)] ?? { x: c.x, y: c.y };
     if (areaDrag?.members.has(keyOf(c))) return { x: c.x + areaDrag.dx, y: c.y + areaDrag.dy };
     const k = keyOf(c);
     if (groupDrag && groupDrag.key !== k && selected.has(k)) return { x: c.x + groupDrag.dx, y: c.y + groupDrag.dy };
@@ -228,6 +228,48 @@
   const piles = $derived(mode === 'timeline' ? [] : stacks.filter((st) => !boxes[areaAt(boxes, st.x, st.y)]?.collapsed));
   const pileAt = (st: CanvasStack) =>
     areaDrag && areaDrag.piles.has(st.id) ? { ...st, x: st.x + areaDrag.dx, y: st.y + areaDrag.dy } : st;
+
+  /** A pile's face is this tall (CanvasPile's .pile). */
+  const PILE_H = 96;
+  /** The fanned-out pile: its cards, where each shows, the sheet behind them, and the tickets
+   *  on it that are still open (they can all be ticked done at once). */
+  const fan = $derived.by(() => {
+    const st = fanned ? piles.find((p) => p.id === fanned) : undefined;
+    if (!st) return null;
+    const p = pileAt(st);
+    const members = pileMembers(st.id);
+    const hs = members.map((c) => heights[keyOf(c)]);
+    const spots = fanSpots(p.x, p.y, members.length, undefined, hs);
+    return {
+      st,
+      at: { x: p.x, y: p.y },
+      members,
+      spots,
+      sheet: fanSheet(p.x, p.y, PILE_H, spots, hs),
+      open: members.filter((c) => c.tray && !c.tray.item.done),
+    };
+  });
+
+  /** Tick several tickets done at once (a pile's, or the selected ones), with one Undo. */
+  async function closeTickets(list: Card[]) {
+    const items = list.flatMap((c) => (c.tray && !c.tray.item.done ? [c.tray.item] : []));
+    if (!items.length) return;
+    const set = async (done: boolean) => {
+      const day = await attempt(async () => {
+        let last;
+        for (const i of items) last = await api.traySetDone(i.id, done);
+        return last;
+      });
+      await applyTray(day);
+      await load();
+      return !!day;
+    };
+    if (!(await set(true))) return;
+    selected = new Set();
+    toast(items.length === 1 ? `${items[0]!.ticket} is done` : `${items.length} tickets done`, 'Undo', () => void set(false));
+  }
+  /** The open tickets among the selected cards. */
+  const pickedOpen = $derived(cards.filter((c) => selected.has(keyOf(c)) && c.tray && !c.tray.item.done));
 
   /** Drop targets for a card: other cards showing, and piles (by their top card). */
   function dropTarget(card: Card, x: number, y: number): { ref: CardRef; x: number; y: number; key: string } | null {
@@ -293,7 +335,11 @@
   }
 
   function pileMenu(st: CanvasStack): MenuSpec {
-    const fan = { label: fanned === st.id ? 'Put them back in the pile' : 'Fan them out', icon: 'open' as const, side: true, act: () => (fanned = fanned === st.id ? null : st.id) };
+    const fan = { label: fanned === st.id ? 'Put them back in the pile' : 'Fan them out', icon: 'open' as const, act: () => (fanned = fanned === st.id ? null : st.id) };
+    const open = pileMembers(st.id).filter((c) => c.tray && !c.tray.item.done);
+    const closeAll = open.length
+      ? [{ label: open.length === 1 ? 'Tick its ticket done' : `Tick all ${open.length} tickets done`, icon: 'check' as const, act: () => void closeTickets(open) }]
+      : [];
     if (st.done) {
       return {
         sections: [
@@ -304,15 +350,14 @@
               {
                 label: 'See all done tickets',
                 icon: 'tray',
-                side: true,
                 act: () => {
                   app.itemsTab = 'done';
                   setView('items');
                 },
               },
+              ...fileItem((key) => void fileThese(pileMembers(st.id), key)),
             ],
           },
-          ...fileSection((key) => void fileThese(pileMembers(st.id), key)),
         ],
       };
     }
@@ -321,28 +366,37 @@
         {
           head: st.name ?? `A pile of ${st.count}`,
           items: [
-            { label: fanned === st.id ? 'Put them back in the pile' : 'Fan them out', icon: 'open', side: true, act: () => (fanned = fanned === st.id ? null : st.id) },
-            { label: 'Rename', icon: 'edit', side: true, act: () => (renamingPile = st.id) },
+            fan,
+            ...closeAll,
+            { label: 'Rename', icon: 'edit', act: () => (renamingPile = st.id) },
             {
               label: 'Take the pile apart',
               icon: 'x',
-              top: true,
               act: () => void attempt(() => api.canvasStackDissolve(st.id).then(() => true)).then((ok) => {
                 if (ok) void load();
               }),
             },
+            ...fileItem((key) => void fileThese(pileMembers(st.id), key, st)),
           ],
         },
-        ...fileSection((key) => void fileThese(pileMembers(st.id), key, st)),
       ],
     };
   }
 
   // ----- drawers -----
-  /** The "File in" choices for a card's or a pile's menu. */
-  function fileSection(file: (key: string) => void): MenuSpec['sections'] {
-    if (!drawers.length) return [];
-    return [{ head: 'File in a drawer', choices: drawers.map((d) => ({ label: d.name, color: d.color, checked: false, act: () => file(d.key) })) }];
+  /** "File in a drawer" for a card's or a pile's menu: one row whose drawers open in place
+   *  (the daily-use review, 10 Nov). `without` leaves a drawer out (the Archive, when the menu
+   *  has its own Archive row). */
+  function fileItem(file: (key: string) => void, without?: string): MenuItem[] {
+    const list = drawers.filter((d) => d.key !== without);
+    if (!list.length) return [];
+    return [
+      {
+        label: 'File in a drawer',
+        icon: 'folder',
+        sub: [{ choices: list.map((d) => ({ label: d.name, color: d.color, checked: false, act: () => file(d.key) })) }],
+      },
+    ];
   }
 
   /** File cards (one, a selection or a pile) in a drawer. A project's drawer also gives
@@ -394,12 +448,12 @@
     );
   }
 
-  /** The "Put away" item for a card's menu (entries and done tickets). */
-  function putAwaySection(card: Card): MenuSpec['sections'] {
+  /** The "Archive" row for a card's menu (entries and done tickets; notes have their own). */
+  function archiveItem(card: Card): MenuItem[] {
     if (!canPutAway(card)) return [];
     const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c)) && canPutAway(c)) : [card];
     const label = list.length > 1 ? `Archive ${list.length} cards` : 'Archive';
-    return [{ items: [{ label, icon: 'archive', top: true, act: () => void putAway(list) }] }];
+    return [{ label, icon: 'archive', act: () => void putAway(list) }];
   }
 
   // Tidy up: put away many at once.
@@ -441,11 +495,15 @@
     return { x: Math.round(at.x - CARD_W / 2), y: Math.round(at.y - CARD_H / 2) };
   }
 
-  /** The Desk's own menu sections for a card: file it. */
-  const cardExtra = (card: Card) => () => [
-    ...putAwaySection(card),
-    ...fileSection((key) => void fileThese(selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card], key)),
-  ];
+  /** The Desk's own rows for a card's menu: file it in a drawer, archive it. A card has one
+   *  Archive (the daily-use review, 10 Nov): its own row where it has one (entries, done tickets
+   *  and notes), and then the Archive drawer isn't offered under "File in a drawer" as well. */
+  const cardExtra = (card: Card) => (): MenuItem[] => {
+    const archive = archiveItem(card);
+    const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card];
+    const ownArchive = archive.length > 0 || card.kind === 'note';
+    return [...fileItem((key) => void fileThese(list, key), ownArchive ? ARCHIVE : undefined), ...archive];
+  };
 
   async function tidy() {
     const done = await attempt(() => api.canvasTidy(app.today));
@@ -623,7 +681,7 @@
   }
 
   function boxMenu(b: DeskBox): MenuSpec {
-    const fold = { label: b.collapsed ? 'Open it out' : 'Fold it up', icon: b.collapsed ? ('down' as const) : ('up' as const), side: true, act: () => void toggleBox(b) };
+    const fold = { label: b.collapsed ? 'Open it out' : 'Fold it up', icon: b.collapsed ? ('down' as const) : ('up' as const), act: () => void toggleBox(b) };
     if (!b.projectId) {
       return {
         sections: [
@@ -631,8 +689,8 @@
             head: b.label,
             items: [
               fold,
-              { label: 'Rename', icon: 'edit', side: true, act: () => (renaming = b.key) },
-              { label: 'Take the box off the Desk', icon: 'trash', danger: true, top: true, act: () => void removeLabel(b) },
+              { label: 'Rename', icon: 'edit', act: () => (renaming = b.key) },
+              { label: 'Take the box off the Desk', icon: 'trash', danger: true, act: () => void removeLabel(b) },
             ],
           },
         ],
@@ -645,13 +703,32 @@
         {
           head: `${p?.name ?? 'Project'} area`,
           items: [
-            { label: 'Open full screen', icon: 'expand', side: true, act: () => openBoard(`project:${a.projectId}`) },
+            { label: 'Open full screen', icon: 'expand', act: () => openBoard(`project:${a.projectId}`) },
             fold,
+            // The project's colour opens in place (the daily-use review, 10 Nov).
+            ...(p
+              ? [
+                  {
+                    label: 'Colour',
+                    icon: 'palette' as const,
+                    sub: [
+                      {
+                        swatches: {
+                          current: p.color,
+                          pick: (c: string) =>
+                            void attempt(() =>
+                              api.updateProject(p.id, { name: p.name, color: c, defaultTimesheetCodeId: p.defaultTimesheetCodeId, archived: p.archived }),
+                            ).then(refreshProjects),
+                        },
+                      },
+                    ],
+                  },
+                ]
+              : []),
             {
               label: 'Take the area off the Desk',
               icon: 'trash',
               danger: true,
-              side: true,
               act: () =>
                 void attempt(() => api.canvasAreaRemove(a.projectId).then(() => true)).then(async (ok) => {
                   if (!ok) return;
@@ -663,20 +740,6 @@
             },
           ],
         },
-        ...(p
-          ? [
-              {
-                head: `Colour for ${p.name}`,
-                swatches: {
-                  current: p.color,
-                  pick: (c: string) =>
-                    void attempt(() =>
-                      api.updateProject(p.id, { name: p.name, color: c, defaultTimesheetCodeId: p.defaultTimesheetCodeId, archived: p.archived }),
-                    ).then(refreshProjects),
-                },
-              },
-            ]
-          : []),
       ],
     };
   }
@@ -716,11 +779,14 @@
     return linkCurve(a, b);
   }
 
-  // Lines stay faint until you point at a card (or a pile, or tab to one); then its own lines
-  // come up solid and the rest fade back (sign-off r16-desk-lines, look C).
+  // A card's lines show while you point at it (or a pile, or tab to one), solid. With "Show all
+  // link lines" on, the others show too, faint, and fade back further while you point
+  // (sign-off r16-desk-lines, look C).
   let pointed = $state<string | null>(null);
   function pointAt(e: Event) {
     const t = e.target instanceof Element ? e.target : null;
+    // Moving from a card onto one of its lines keeps them showing, so a line can be clicked.
+    if (t?.closest('.links')) return;
     const c = t?.closest('[data-card]')?.getAttribute('data-card');
     const p = t?.closest('[data-pile]')?.getAttribute('data-pile');
     const next = c ?? (p ? `pile:${p}` : null);
@@ -754,7 +820,6 @@
               label: 'Remove this link',
               icon: 'x',
               danger: true,
-              side: true,
               act: () =>
                 void attempt(() => (l.drawn ? api.canvasLinkReset(l.a, l.b) : api.canvasLink(l.a, l.b, false)).then(() => true)).then(
                   async (ok) => {
@@ -816,7 +881,6 @@
     if (!from || keyOf(from) === keyOf(card)) return;
     if (kind === 'ticket') return addTicketTo(from, card);
     if (!(await attempt(() => api.canvasLink(refOf(from), refOf(card), true).then(() => true)))) return;
-    showLinks = true;
     await load();
     toast(`Linked “${titleOf(from)}” and “${titleOf(card)}”`, 'Undo', () => {
       void attempt(() => api.canvasLinkReset(refOf(from), refOf(card))).then(load);
@@ -831,6 +895,19 @@
         linkFrom = null;
         linkMode = 'line';
       }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  });
+
+  // Esc puts a fanned-out pile back.
+  $effect(() => {
+    if (!fanned) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || linkFrom || selected.size) return;
+      if ((e.target as HTMLElement | null)?.closest('input, textarea, [contenteditable="true"], [role="dialog"]')) return;
+      e.stopPropagation();
+      fanned = null;
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
@@ -1104,14 +1181,21 @@
     view = zoomAt(view, board.clientWidth / 2, board.clientHeight / 2, factor);
   }
 
+  /** Today's cards that show (from today, still open, followed up for today or pinned: the ones
+   *  "Just today" keeps bright) and the Done today pile, as card-sized spots. */
+  function todaysSpots() {
+    return [...shown.filter((c) => c.justToday).map(pos), ...piles.filter((st) => st.done).map((st) => ({ x: st.x, y: st.y }))];
+  }
+
   /** Every card and box that shows, as card-sized spots (boxes by their corners). */
   function everything() {
     return [...shown.map(pos), ...(mode === 'free' ? boxes.flatMap((a) => [{ x: a.x, y: a.y }, { x: a.x + a.w - CARD_W, y: a.y + a.h - CARD_H }]) : [])];
   }
 
+  /** Fit: everything in view, but no smaller than 80% so the cards stay readable. */
   function fit() {
     if (!board) return;
-    glide(fitAll(everything(), board.clientWidth, board.clientHeight));
+    glide(fitReadable(everything(), board.clientWidth, board.clientHeight));
   }
 
   /** Move the view smoothly to `to` (straight there when motion is off). */
@@ -1140,10 +1224,10 @@
   function goToBox(b: DeskBox) {
     goingTo = false;
     if (!board) return;
-    glide(fitAll([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
+    glide(fitReadable([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
   }
 
-  // Find asks for Fit everything, Tidy or the timeline; do it once the cards are in.
+  // Find asks for Fit, Tidy or the timeline; do it once the cards are in.
   $effect(() => {
     const ask = app.deskAsk;
     if (!ask || !loaded) return;
@@ -1210,6 +1294,34 @@
     }
   }
 
+  /** The tools bar's View menu: the timeline, all link lines, Boards, and the two ways to tidy up. */
+  function viewMenu(e: MouseEvent) {
+    const free = mode === 'free';
+    openMenu(e.currentTarget as HTMLElement, {
+      sections: [
+        {
+          head: 'View',
+          items: [
+            { label: free ? 'Timeline' : 'Back to my layout', icon: 'calendar', act: () => void toggleTimeline() },
+            { label: 'Show all link lines', icon: 'link', checked: showLinks, act: () => (showLinks = !showLinks) },
+            { label: 'Boards', icon: 'expand', act: () => openBoard('desk') },
+          ],
+        },
+        ...(free
+          ? [
+              {
+                head: 'Tidy up',
+                items: [
+                  { label: 'Tidy into stacks', icon: 'box' as const, act: () => void tidy() },
+                  { label: 'Clear old cards…', icon: 'archive' as const, act: openTidy },
+                ],
+              },
+            ]
+          : []),
+      ],
+    });
+  }
+
   async function emptyMenu(e: MouseEvent) {
     e.preventDefault();
     const { sx, sy } = boardPoint(e);
@@ -1222,12 +1334,12 @@
       {
         head: 'The Desk',
         items: [
-          { label: 'New jot here', icon: 'note', side: true, act: () => startJot(sx, sy) },
-          { label: 'Fit everything', icon: 'open', side: true, act: fit },
-          { label: mode === 'free' ? 'Lay out as a timeline' : 'Back to my layout', icon: 'calendar', top: true, act: () => void toggleTimeline() },
-          { label: showLinks ? 'Hide links' : 'Show links', icon: 'link', top: true, act: () => (showLinks = !showLinks) },
+          { label: 'New jot here', icon: 'note', act: () => startJot(sx, sy) },
+          { label: 'Fit', icon: 'open', act: fit },
+          { label: mode === 'free' ? 'Timeline' : 'Back to my layout', icon: 'calendar', act: () => void toggleTimeline() },
+          { label: 'Show all link lines', icon: 'link', checked: showLinks, act: () => (showLinks = !showLinks) },
           ...(mode === 'free'
-            ? [{ label: 'Draw a box (or Shift + drag)', icon: 'folder' as const, top: true, act: () => (tool = 'box') }]
+            ? [{ label: 'Draw a box (or Shift + drag)', icon: 'folder' as const, act: () => (tool = 'box') }]
             : []),
         ],
       },
@@ -1297,10 +1409,10 @@
           <span class="day" style:left="{day.x}px">{weekdayShort(day.date)} {dayMonth(day.date)}</span>
         {/each}
       {/if}
-      {#if showLinks}
+      {#if showLinks || pointed}
         <svg class="links" class:pointing={!!pointed} aria-hidden="true">
           {#each links as l (keyOf(l.a) + '|' + keyOf(l.b))}
-            {@const line = linkLine(l)}
+            {@const line = showLinks || lit(l) ? linkLine(l) : null}
             {#if line}
               {@const d = line.d}
               <g class="link" class:drawn={l.drawn} class:ticket={l.reason?.kind === 'ticket'} class:lit={lit(l)}>
@@ -1308,12 +1420,48 @@
                 <circle class="end" cx={line.from.x} cy={line.from.y} r="3" />
                 <circle class="end" cx={line.to.x} cy={line.to.y} r="3" />
               </g>
-              <!-- Lines take a click or right-click; the Links button hides them all. -->
+              <!-- Lines take a click or right-click. -->
               <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
               <path class="hit" {d} oncontextmenu={(e) => void linkMenu(l, e)} onclick={(e) => void linkMenu(l, e)}><title>{why(l)}</title></path>
             {/if}
           {/each}
         </svg>
+      {/if}
+      {#if fan}
+        <!-- The rest of the Desk dims while a pile is fanned out; a click on it puts the pile back. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="fan-dim"
+          aria-hidden="true"
+          onpointerdown={(e) => {
+            if (e.button !== 0) return;
+            e.stopPropagation();
+            fanned = null;
+          }}
+        ></div>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="fan-sheet"
+          class:done={fan.st.done}
+          style:left="{fan.sheet.x}px"
+          style:top="{fan.sheet.y}px"
+          style:width="{fan.sheet.w}px"
+          style:height="{fan.sheet.h}px"
+          onpointerdown={(e) => e.stopPropagation()}
+        >
+          <div class="fan-head" role="toolbar" aria-label="Pile">
+            <span class="fan-name">{fan.st.done ? 'Done today' : (fan.st.name ?? 'Pile')}</span>
+            <span class="fan-count">{fan.members.length} {fan.members.length === 1 ? 'card' : 'cards'}</span>
+            <span class="fan-gap"></span>
+            {#if fan.open.length}
+              <button type="button" class="btn" onclick={() => void closeTickets(fan.open)}>
+                <Icon name="check" size={13} />
+                {fan.open.length === 1 ? 'Tick the ticket done' : `Tick all ${fan.open.length} tickets done`}
+              </button>
+            {/if}
+            <button type="button" class="btn" title="Esc" onclick={() => (fanned = null)}>Put back</button>
+          </div>
+        </div>
       {/if}
       {#each piles as st (st.id)}
         {@const top = pileMembers(st.id).at(-1)}
@@ -1338,10 +1486,13 @@
       {/each}
       {#each shown as card (card.kind + card.id)}
         {@const p = pos(card)}
+        {@const fi = fan && card.stack === fan.st.id ? fan.members.indexOf(card) : -1}
         <CanvasCard
           {card}
           x={p.x}
           y={p.y}
+          z={fi >= 0 ? 50001 + fi : undefined}
+          enter={fi >= 0 && fan ? { dx: fan.at.x - p.x, dy: fan.at.y - p.y, i: fi } : undefined}
           zoom={view.zoom}
           locked={mode === 'timeline'}
           linking={!!linkFrom}
@@ -1500,6 +1651,12 @@
       <div class="selbar" role="toolbar" aria-label="Selection">
         <span>{selected.size} selected · drag one to move them all</span>
         <button type="button" class="btn" onclick={boxSelection}><Icon name="box" size={13} /> Box these</button>
+        {#if pickedOpen.length}
+          <button type="button" class="btn" onclick={() => void closeTickets(pickedOpen)}>
+            <Icon name="check" size={13} />
+            {pickedOpen.length === 1 ? 'Tick the ticket done' : `Tick ${pickedOpen.length} tickets done`}
+          </button>
+        {/if}
         {#if selected.size > 1}
           <span class="lineup" role="group" aria-label="Line up">
             <span class="lbl">Line up</span>
@@ -1519,29 +1676,19 @@
       </div>
     {/if}
 
+    <!-- Zoom and Fit, and one View menu for the rest (the daily-use review, 10 Nov). -->
     <div class="tools" role="toolbar" aria-label="Desk view">
       <button type="button" aria-label="Zoom out" onclick={() => zoomBy(1 / 1.2)}><Icon name="minus" size={14} /></button>
       <button type="button" class="pct" title="Back to 100%" onclick={() => (view = { ...view, zoom: 1 })}>{Math.round(view.zoom * 100)}%</button>
       <button type="button" aria-label="Zoom in" onclick={() => zoomBy(1.2)}><Icon name="plus" size={14} /></button>
-      <button type="button" class="wide" onclick={fit}>Fit everything</button>
+      <button type="button" class="wide" title="Zoom to show the cards, down to 80% so they stay readable" onclick={fit}>Fit</button>
       <span class="sep"></span>
-      <button type="button" class="wide" aria-pressed={mode === 'timeline'} onclick={() => void toggleTimeline()}>
-        <Icon name="calendar" size={14} />{mode === 'timeline' ? 'Back to my layout' : 'Timeline'}
-      </button>
-      <button type="button" class="wide" aria-pressed={showLinks} onclick={() => (showLinks = !showLinks)}>
-        <Icon name="link" size={14} />Links
-      </button>
-      <button type="button" class="wide" title="Step into a project, a meeting, the Daily notes, a folder or the Archive" onclick={() => openBoard('desk')}>
-        <Icon name="expand" size={14} />Boards
-      </button>
-      {#if mode === 'free'}
-        <button type="button" class="wide" title="Pile loose cards by project" onclick={() => void tidy()}>
-          <Icon name="box" size={14} />Tidy into stacks
-        </button>
-        <button type="button" class="wide" aria-expanded={tidying} title="Archive older cards, off the Desk" onclick={openTidy}>
-          <Icon name="archive" size={14} />Clear old cards…
+      {#if mode === 'timeline'}
+        <button type="button" class="wide" aria-pressed="true" onclick={() => void toggleTimeline()}>
+          <Icon name="calendar" size={14} />Back to my layout
         </button>
       {/if}
+      <button type="button" class="wide" aria-haspopup="menu" onclick={viewMenu}>View<Icon name="down" size={13} /></button>
     </div>
     {#if tidying}
       <div
@@ -1607,9 +1754,11 @@
             <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
           {/if}
         </div>
+        <!-- Log work comes first: it must be on screen when the app opens (1100 by 760), and
+             Due soon and Where was I? above it pushed it below the fold. -->
+        <LogWork />
         <DueSoonCard />
         <WhereWasI />
-        <LogWork />
         <TrayCard />
         <WrapUp />
       </div>
@@ -1862,6 +2011,87 @@
     text-transform: uppercase;
     color: var(--mut);
   }
+  /* A fanned-out pile (round 19): the Desk dims behind it and its cards sit on a sheet. */
+  .fan-dim {
+    position: absolute;
+    left: -50000px;
+    top: -50000px;
+    width: 100000px;
+    height: 100000px;
+    z-index: 49990;
+    background: color-mix(in srgb, var(--bg, #000) 62%, transparent);
+    animation: fan-fade calc(0.2s * var(--m)) ease-out both;
+  }
+
+  .fan-sheet {
+    position: absolute;
+    z-index: 49995;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--paper) 55%, var(--bg, #000));
+    border: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    box-shadow: var(--lift);
+    animation: fan-grow calc(0.26s * var(--m)) var(--ease) both;
+    transform-origin: 0 0;
+  }
+
+  .fan-sheet.done {
+    border-color: color-mix(in srgb, var(--ok) 45%, transparent);
+  }
+
+  .fan-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 6px 12px 0 16px;
+  }
+
+  .fan-name {
+    font: 700 15px var(--ui);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fan-count {
+    font: 600 12px var(--ui);
+    color: var(--mut);
+    white-space: nowrap;
+  }
+
+  .fan-gap {
+    flex: 1;
+  }
+
+  .fan-head .btn {
+    padding: 4px 10px;
+    font-size: 12.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+
+  @keyframes fan-fade {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes fan-grow {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fan-dim,
+    .fan-sheet {
+      animation: none;
+    }
+  }
+
   .selbar {
     position: absolute;
     left: 50%;

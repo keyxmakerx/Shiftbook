@@ -869,7 +869,7 @@ async fn tray_item_date(
 /// project come along. It starts still open (`NEW_TICKET_DONE`), reopening the item from
 /// `date`, unless the day is back-dated (before the ticket's newest day): then it takes the
 /// ticket as it stands, so a closed ticket stays closed.
-async fn insert_tray_row(
+pub(crate) async fn insert_tray_row(
     conn: &mut SqliteConnection,
     owner: OwnerId,
     date: Date,

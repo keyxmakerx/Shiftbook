@@ -4,7 +4,7 @@
 import { api } from './api';
 import type { Note, NoteKind } from './api';
 import { fmtMinutes } from './format';
-import type { MenuSection } from './menu.svelte';
+import type { MenuChoice, MenuItem, MenuSection } from './menu.svelte';
 import { app, attempt, flashEntry, openWiki, refresh, timeButtons } from './store.svelte';
 import { toast } from './toast.svelte';
 
@@ -47,6 +47,12 @@ export function logNoteSection(note: Note, after?: () => void, spot?: { x: numbe
   };
 }
 
+/** "Log it as an entry" as one row of a jot card's menu, its times opening in place (the
+ *  daily-use review, 10 Nov). */
+export function logNoteItem(note: Note, after?: () => void, spot?: { x: number; y: number }): MenuItem {
+  return { label: 'Log it as an entry', icon: 'log', sub: [{ choices: logNoteSection(note, after, spot).choices }] };
+}
+
 const KINDS: { kind: NoteKind; label: string }[] = [
   { kind: 'jot', label: 'Jot' },
   { kind: 'daily', label: 'Daily' },
@@ -79,20 +85,50 @@ export async function moveToWiki(note: Note, after?: () => void): Promise<void> 
   );
 }
 
+/** Wiki pages and MOPs live in the wiki: they don't change kind from a menu. */
+const inWiki = (note: Note) => note.kind === 'page' || note.kind === 'mop';
+
+function kindChoices(note: Note, after?: () => void): MenuChoice[] {
+  return KINDS.map((k) => ({
+    label: k.label,
+    color: null,
+    checked: note.kind === k.kind,
+    act: () => void changeKind(note, k.kind, after),
+  }));
+}
+
+/** "Move to the wiki…" for a note's menu; null for wiki pages and MOPs. */
+export function moveToWikiItem(note: Note, after?: () => void): MenuItem | null {
+  return inWiki(note) ? null : { label: 'Move to the wiki…', icon: 'book', act: () => void moveToWiki(note, after) };
+}
+
 /** "Change to ▸ Jot / Daily / Meeting" and "Move to the wiki…" for any note's menu (round 18).
- *  Wiki pages and MOPs get neither: they live in the wiki. */
+ *  Wiki pages and MOPs get neither: pages live in the wiki, and a MOP belongs to its ticket. */
 export function noteKindSections(note: Note, after?: () => void): MenuSection[] {
-  if (note.kind === 'page' || note.kind === 'mop') return [];
-  return [
-    {
-      head: 'Change to',
-      choices: KINDS.map((k) => ({
-        label: k.label,
-        color: null,
-        checked: note.kind === k.kind,
-        act: () => void changeKind(note, k.kind, after),
-      })),
-    },
-    { items: [{ label: 'Move to the wiki…', icon: 'book', act: () => void moveToWiki(note, after) }] },
-  ];
+  const wiki = moveToWikiItem(note, after);
+  if (!wiki) return [];
+  return [{ head: 'Change to', choices: kindChoices(note, after) }, { items: [wiki] }];
+}
+
+/** "Kind" as one row of a note card's menu, showing the kind it is now; the kinds open in
+ *  place (the daily-use review, 10 Nov). Null for wiki pages and MOPs. */
+export function noteKindItem(note: Note, after?: () => void): MenuItem | null {
+  if (inWiki(note)) return null;
+  const now = KINDS.find((k) => k.kind === note.kind)?.label;
+  return { label: 'Kind', icon: 'note', ...(now ? { value: now } : {}), sub: [{ choices: kindChoices(note, after) }] };
+}
+
+/** "Save as template" on a wiki page or a MOP (round 18): a copy goes to the wiki's
+ *  Templates, opened ready to edit so the parts that change each time can become {{blanks}}.
+ *  The page or MOP itself stays as it is. */
+export async function saveAsTemplate(note: Note): Promise<void> {
+  const made = await attempt(() =>
+    api.createNote({ kind: 'mop', title: `${note.title} (template)`, body: note.body, projectId: note.projectId, tags: note.tags.join(', '), template: true }),
+  );
+  if (!made) return;
+  await refresh();
+  openWiki(made.id, true);
+  toast('Saved as a template. Turn what changes each time into {{blanks}}, like {{site}}.', 'Undo', () =>
+    void attempt(() => api.setNoteDeleted(made.id, true)).then(refresh),
+  );
 }
