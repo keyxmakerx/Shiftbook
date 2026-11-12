@@ -11,10 +11,10 @@ import { TEXT_SIZES } from './api/generated/constants';
 /** Desk is the Canvas (home); Day is the structured view for starting and ending the day. */
 export type View = 'desk' | 'day' | 'timesheet' | 'wiki' | 'notes' | 'repeating' | 'lists' | 'items' | 'projects' | 'settings';
 
-/** Tabs are where you work (round 18). */
-export const TABS: readonly View[] = ['desk', 'day', 'timesheet', 'wiki'];
+/** Tabs are where you work (round 18; Notes became a tab, asked in chat 6 Nov 2026). */
+export const TABS: readonly View[] = ['desk', 'day', 'timesheet', 'notes', 'wiki'];
 /** The Organise menu: places you go to look after your things. */
-export const ORGANISE: readonly View[] = ['items', 'projects', 'repeating', 'lists', 'notes'];
+export const ORGANISE: readonly View[] = ['items', 'projects', 'repeating', 'lists'];
 
 /** The tabs shown: without the Timesheet at home (round 15). */
 export function tabsFor(work: boolean): readonly View[] {

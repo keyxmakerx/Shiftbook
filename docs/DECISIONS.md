@@ -2,6 +2,22 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 6 Nov 2026 (notes, MOPs and wiki audit)
+No mockup needed:
+- **Notes is a tab** beside the Wiki (Desk, Day, Timesheet, Notes, Wiki), out of the Organise
+  menu, which keeps Tickets, Projects, Repeating and Lists. Keys 1 to 5 for the tabs, 6 for the
+  menu (one fewer at home).
+- **Finding a MOP's ticket again:** the ticket number on a MOP, on a wiki page's On tickets and
+  on a MOP in Notes is a link that shows that ticket on the Tickets page. A MOP put on a ticket
+  that wasn't on any day yet puts the ticket on today's Tickets tray, so it's on the Desk. Find
+  finds MOPs by their ticket number. A ticket on no day, clicked on the Tickets page, opens its
+  MOP and offers Add to today.
+- **Notes keeps notes:** wiki pages and templates show in Notes only when searching, marked In
+  the wiki, and open in the wiki. A MOP in Notes shows its ticket and status and opens with Read,
+  Edit and Run; its title can be changed in Edit.
+- **Save as template** (promised in round 18) is on MOPs and on wiki pages' ⋯ menu: a copy goes
+  to Templates, open to edit; the MOP or page stays as it is.
+
 ## Round 18 — 4 Nov 2026 (a wiki, MOPs on tickets, fewer ways round)
 Cards in `tools/signoff/rounds/r18.json` (mockups `mocks/r18-*.html`), on the rounds 8 to 14
 sheet, which the owner chose to keep using. All approved:
