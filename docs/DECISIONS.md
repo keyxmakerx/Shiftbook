@@ -50,6 +50,13 @@ sheet, which the owner chose to keep using. All approved:
   how templates are made: the picker searches and puts recently used and the project's own
   templates first; templates are made with + Template in the Templates space or Save as
   template on any page or MOP.
+- **Pulling a template onto a ticket is quicker** (owner ask: "an easier way of pulling a
+  template for a ticket"). Every open ticket shows **+ MOP** (Desk cards and an entry's
+  slide-out too), the ticket slide-out has a **Use a template** button, and Ctrl+Space finding a
+  ticket offers **Use a template on it**. In the picker, the number keys 1-9 pick, Enter in the
+  search takes the top match, and a template with nothing left to type (only the ticket and
+  title) makes the MOP in one click with no second step.
+  MOP templates no longer get a card on the Desk; they live in the wiki's Templates space.
 - **Top bar:** four tabs where you work (Desk, Day, Timesheet, Wiki), an **Organise ▾** menu
   with Tickets (was Items), Projects (a new page), Repeating, Lists and Notes, and Settings as a
   gear. Keys 1 to 4 for the tabs, 5 for the menu.

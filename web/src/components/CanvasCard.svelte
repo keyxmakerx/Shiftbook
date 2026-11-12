@@ -423,7 +423,7 @@
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
-    <MopChip ticket={t.item.ticket} />
+    <MopChip ticket={t.item.ticket} offer={!t.item.done} />
     <span class="sub" class:muted={!t.item.note}>
       {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}
     </span>

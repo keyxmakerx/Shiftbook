@@ -15,6 +15,7 @@ use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, InboxItem, Note, TrayItem};
+use shiftbook_core::notes::shows_on_desk;
 use shiftbook_storage::canvas::{pair, CanvasSpot, CardRef};
 use shiftbook_storage::work::EntryRecord;
 use shiftbook_storage::{SqliteStore, StorageError};
@@ -370,7 +371,7 @@ pub async fn card_for(
             .await?
             .map(|i| tray_card(i, fields)),
         CardKind::Note => skip_missing(store.get_note(owner, NoteId::from_uuid(id)).await)?
-            .filter(|n| n.deleted_at.is_none())
+            .filter(|n| n.deleted_at.is_none() && shows_on_desk(n.kind, n.template))
             .map(|n| note_card(n, now, after)),
         CardKind::Inbox => {
             let wanted = InboxItemId::from_uuid(id);
@@ -558,7 +559,9 @@ pub async fn desk(
         all.push(tray_card(item, &fields));
     }
     for note in store.list_notes(owner, false).await? {
-        all.push(note_card(note, now, after));
+        if shows_on_desk(note.kind, note.template) {
+            all.push(note_card(note, now, after));
+        }
     }
     for scrap in store.list_inbox(owner).await? {
         all.push(inbox_card(scrap));
