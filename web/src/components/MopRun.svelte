@@ -12,7 +12,7 @@
   import { refreshMops } from '../lib/mops.svelte';
   import { copyText } from '../lib/protection.svelte';
   import { app, attempt, openWiki, refresh } from '../lib/store.svelte';
-  import { addToToday, goToTicket, onNoDay } from '../lib/ticketFind';
+  import { goToTicket } from '../lib/ticketFind';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
@@ -198,14 +198,14 @@
     const t = ticketIn.trim();
     if (!t) return;
     await flush();
-    if (!(await attempt(() => api.mopLink(id, t).then(() => true)))) return;
+    // A ticket on no day (made just now) goes on today's tray in the same step, so it
+    // shows on the Desk and can be found again.
+    const added = await attempt(() => api.mopLink(id, t, app.today));
+    if (added === undefined) return;
     ticketIn = '';
     await changed();
     const number = run?.ticket ?? t;
-    // A ticket made just now is on no day: put it on today's tray so it shows on the Desk
-    // and can be found again.
-    const added = (await onNoDay(number)) && (await addToToday(number, true));
-    if (!added) await refresh();
+    await refresh();
     toast(
       added ? `MOP is on ${number} now, and ${number} is on today's Tickets tray.` : `MOP is on ${number} now.`,
       'Go to the ticket',

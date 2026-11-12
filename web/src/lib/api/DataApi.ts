@@ -1501,8 +1501,9 @@ export interface DataApi {
   mopRuns(ticket: string | null): Promise<MopRun[]>;
   /** One MOP's run, or null for a note that isn't on a ticket. Tauri: `mop_run`. */
   mopRun(id: string): Promise<MopRun | null>;
-  /** Put a MOP written on its own on a ticket (made if new). Tauri: `mop_link`. */
-  mopLink(id: string, ticket: string): Promise<void>;
+  /** Put a MOP written on its own on a ticket (made if new). A ticket on no day goes on
+   *  `today`'s Tickets tray in the same step, and the answer is true. Tauri: `mop_link`. */
+  mopLink(id: string, ticket: string, today: IsoDate): Promise<boolean>;
   mopSetStatus(id: string, status: MopStatus): Promise<void>;
   /** The change window's day and start (minutes after midnight), or nulls to clear it. */
   mopSetWindow(id: string, on: IsoDate | null, at: number | null): Promise<void>;

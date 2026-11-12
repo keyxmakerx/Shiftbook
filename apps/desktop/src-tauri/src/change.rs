@@ -12,6 +12,7 @@ use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::OffsetDateTime;
 
+use crate::api::date_arg;
 use crate::session::{CommandError, VaultSession};
 
 type Res<T> = Result<T, CommandError>;
@@ -177,11 +178,19 @@ pub async fn mop_run(s: State<'_, VaultSession>, id: String) -> Res<Option<MopRu
     Ok(store.mop_run(owner, id_arg(&id)?).await?.map(run_view))
 }
 
-/// Maps to `DataApi.mopLink()`: put a MOP written on its own on `ticket` (made if new).
+/// Maps to `DataApi.mopLink()`: put a MOP written on its own on `ticket` (made if new). True
+/// when the ticket was on no day and went on `today`'s Tickets tray.
 #[tauri::command]
-pub async fn mop_link(s: State<'_, VaultSession>, id: String, ticket: String) -> Res<()> {
+pub async fn mop_link(
+    s: State<'_, VaultSession>,
+    id: String,
+    ticket: String,
+    today: String,
+) -> Res<bool> {
     let (store, owner) = s.data().await?;
-    Ok(store.link_mop(owner, id_arg(&id)?, &ticket).await?)
+    Ok(store
+        .link_mop(owner, id_arg(&id)?, &ticket, date_arg(&today)?)
+        .await?)
 }
 
 /// Maps to `DataApi.mopSetStatus()`.
