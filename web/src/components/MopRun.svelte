@@ -195,6 +195,17 @@
     if (await copyText(text)) toast('MOP copied as plain text');
   }
 
+  /** Save a copy as a text file named after the MOP (what the Name box says). Like every
+   *  export, the file is readable by anyone who can open it, and says so first. */
+  async function saveFile() {
+    const n = note;
+    if (!n) return;
+    await flush();
+    toast("The file won't be locked: anyone who can open its folder can read it.");
+    const name = await attempt(() => api.saveMopFile(n.id));
+    if (name) toast(`Saved as ${name}`);
+  }
+
   /** A MOP written before its ticket existed: put it on the ticket (made if new). */
   async function link() {
     const t = ticketIn.trim();
@@ -367,6 +378,12 @@
         onclick={() => void flush().then(() => note && saveAsTemplate({ ...note, body: text }))}>Save as template</button
       >
       <button type="button" class="btn slim" onclick={() => void copyPlain()}><Icon name="copy" size={13} /> Copy as text</button>
+      <button
+        type="button"
+        class="btn slim"
+        title="Save a copy as a text file, named after this MOP"
+        onclick={() => void saveFile()}><Icon name="save" size={13} /> Save as a file</button
+      >
       {#if run}<button type="button" class="btn slim primary" onclick={() => void copyLog()}><Icon name="copy" size={13} /> Copy run log</button>{/if}
     </footer>
   </div>
