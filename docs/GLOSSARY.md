@@ -12,7 +12,7 @@ had other names in earlier rounds; the old names are listed so `DECISIONS.md` st
 | **Tickets tray** | Where you paste tickets as you work on them. The day's tray tickets roll up into one "Tickets" entry (one per project). | Done tickets tray | `tray` |
 | **Roll-up entry** | The entry Shiftbook keeps from a day's tray tickets. Its time follows the tray. | Tray entry | `time_entries.source = 'tray'` |
 | **Tickets box** | A work card's tickets, each number once across its entries and folded-in tray tickets; ticking one ticks every copy. | Tickets strip | `web/src/lib/workTickets.ts` |
-| **Jot** | A quick note. Can be turned into an entry with **Log it as an entry**. | | `notes`, kind `jot` |
+| **Jot** | A quick note. Can be turned into an entry with **Log it as an entry**, or moved into a ticket's notepad with **Put on a ticket**. | | `notes`, kind `jot` |
 | **Daily, Meeting, Page, MOP** | The other note kinds. A MOP is a step-by-step procedure (method of procedure). | | `notes` |
 | **Inbox scrap** | A line saved from capture without a time, to sort later. | | `inbox_items` |
 | **Desk** | The home view: your records as paper cards you arrange. | Canvas | `views/Canvas.svelte`, `canvas` |

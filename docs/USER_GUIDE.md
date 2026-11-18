@@ -13,7 +13,8 @@ works the way it does is in `DECISIONS.md`.
   paper or Shift + scroll to pan, scroll to zoom, **Fit** (it stops at 80% so the cards stay
   readable). New cards take the next free spot; the others stay where they are. Wiki pages,
   templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
-  card). Click an entry or a ticket and its **slide-out** opens underneath:
+  card; give the MOP a name in the **Name** box at the top of its window and the chip shows
+  it). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
   open, more time and More. Double-click a card to open it; double-click empty paper to jot.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
@@ -53,7 +54,9 @@ works the way it does is in `DECISIONS.md`.
   earlier day adds the time today (to today's entry with the same title and project, or a copy
   of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
-  an entry**: its title becomes what you did and the jot is archived); the Inbox.
+  an entry**: its title becomes what you did and the jot is archived; on the Desk, right-click
+  a note card and **Put on a ticket** to move its words into that ticket's notepad, so the
+  ticket is one card instead of two); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up

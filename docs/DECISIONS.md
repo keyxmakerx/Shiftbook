@@ -2,6 +2,26 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Asked in chat — 18 Nov 2026 (one card for a ticket and what's written about it)
+The owner showed a Desk where one MOP had turned into a ticket card, a MOP card and a note
+card, joined by lines. The MOP card was already gone (10 Nov, below). No mockup needed for the rest:
+- **Put on a ticket:** right-click a jot, Daily or meeting note on the Desk and pick a ticket
+  (the ones a line joins it to come first). The note's words go into that ticket's notepad,
+  under what's there, the note moves to the archive, and the notepad opens under the ticket's
+  card to show where they went. Undo puts both back. The rule is `note_into_notepad` in core.
+- **A ticket card says when its notepad has more:** its first line, then "✎ 4 more lines in
+  its notepad". The slide-out's notepad grows to show what's in it (up to about ten lines).
+- **One notepad at a time on the Desk:** clicking a ticket's card used to open its notepad
+  under the card and again under its row in the Tickets tray beside the Desk; typing in one
+  could be saved over by the other. Now only the one you clicked opens.
+- **A note card never says its title twice:** a jot's title is its first line, cut at 80
+  letters; the line under it carries on from there instead of starting the same sentence again
+  (Desk cards, boards and the Notes list).
+- **Naming a MOP:** the MOP window has a **Name** box in view in Read, Edit and Run (it was an
+  unmarked box that only Edit showed). A MOP that has been given a name shows it on its
+  ticket's chip ("MOP · Ready · VPN client upgrade"); one still called "MOP for CHG…" doesn't
+  repeat the ticket.
+
 ## Asked in chat — 12 Nov 2026 (review fixes)
 No mockup needed:
 - **A MOP put on a new ticket keeps a place on the Desk:** the 6 Nov promise below didn't
