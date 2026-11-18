@@ -2,6 +2,46 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 21 — 18 Nov 2026 (quality-of-life audit)
+Ten cards from running the real app (0.8.2) with made-up data (`rounds/r21-audit.json`). The
+owner approved nine and changed one:
+- **Find keeps what you type** (`r21-find`): the effect that resets the Find box when it opens
+  read the typed text, so every keystroke emptied the box. It now runs only when the box
+  opens (`web/src/lib/edge.ts`).
+- **The 26 October approvals get built** (`r21-october`): `r15-human-vanish`,
+  `r15-human-firstday` and the ten picks on `r15-qol-new` were approved then and never built
+  or written down here. Everyday pieces first: logging to another day keeps you on today, no
+  "nothing logged" dots before a first entry, hours as 45m and 1h 30m (the timesheet copy
+  stays decimal), "+ New project…" in every project picker, then the ten ideas.
+- **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
+  time; Done asks first when steps aren't ticked; the run log carries the date and the finish
+  time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I
+  saw" line under any step goes into the run log.
+- **Notepads for command output** (`r21-notepads`): Ctrl+F finds inside the open notepad or
+  MOP, and Ctrl+; drops in the time. Fixed-width is approved with a change the owner asked
+  for in a note: it should apply to code blocks, labelled by the kind of equipment (Linux,
+  Juniper, Cisco and so on) and filled in by itself where it can. That goes back on the sheet
+  with a picture before it is built.
+- **Tickets and projects join up** (`r21-ticket-project`): a ticket takes the project of the
+  work it is logged on unless one was set by hand; rename, colour and archive sit on the
+  Projects page as well as in Settings.
+- **Saved responses when a ticket is ticked done** (`r21-close-response`): Copy a response
+  next to Undo, with the ticket number filled in.
+- **Ticket links open in the browser** (`r21-open-links`): approved, which settles the
+  question left open on 25 October and replaces "No opener plugin" in SECURITY.md. The owner
+  limited it in a note: only a ticket's own link and a vendor's portal link, set up per ticket
+  prefix in Settings → Fields. Addresses typed in notes stay plain text.
+- **Eight small fixes** (`r21-small`): real days in place of "Looking back" and "Ahead"; the
+  bell's stale "Just finished" and its Done on things not yet due; Fit no longer slides cards
+  under the toolbox; Settings no longer lights the Organise tab; Find puts exact words and
+  ticket numbers first and shows the matching line; the version shows in Settings; "W…" in
+  Due soon; the user guide catches up.
+- **Order for the bigger pieces** (`r21-bigger`): export and import, pictures in notes,
+  project due dates and estimates, a shortcut that works from any app, Word MOP import, then
+  Planner and the meeting canvas. Each gets its own card with a picture first.
+- **Backups stay as they are** (`r21-backups`, changed): the owner's note was "Just leave a
+  local backup." No second folder, and nothing else from that card.
+
 ## Asked in chat — 12 Nov 2026 (review fixes)
 No mockup needed:
 - **A MOP put on a new ticket keeps a place on the Desk:** the 6 Nov promise below didn't

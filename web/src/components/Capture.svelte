@@ -6,10 +6,12 @@
   // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox. Round 15: "/" opens
   // it too, every action the app has is a command here (grouped Go to / Do / Settings), a
   // day such as "last friday" or "12 oct" offers that day, and "help" lists everything.
+  import { untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { Capture, Entry, InboxItem, MeetingSeries, MopRun, Note, TrayItem } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
   import { toIsoDate } from '../lib/dates';
+  import { edge } from '../lib/edge';
   import { KIND_LABEL } from '../lib/notes';
   import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
   import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
@@ -251,19 +253,28 @@
     input?.focus();
   }
 
+  // Start clean each time the box opens (or is handed words to start with), and only then.
+  // This effect must depend on nothing but "is it open" and the words handed over: it used
+  // to read `text`, so every keystroke re-ran it and emptied the box (round 21). `flipped`
+  // and `untrack` both guard against that coming back.
+  const flipped = edge();
   $effect(() => {
-    if (app.captureOpen) {
-      text = launch.prefill;
-      launch.prefill = '';
-      pickedTime = '';
-      pickedProject = '';
-      seen = null;
-      hits = [];
-      sel = 0;
-      if (text) read();
+    const change = flipped(app.captureOpen);
+    const handed = app.captureOpen && launch.prefill !== '';
+    if (change === 'on' || handed) {
+      untrack(() => {
+        text = launch.prefill;
+        launch.prefill = '';
+        pickedTime = '';
+        pickedProject = '';
+        seen = null;
+        hits = [];
+        sel = 0;
+        if (text) read();
+      });
       queueMicrotask(() => input?.focus());
       void api.meetingSeries().then((list) => (series = list), () => {});
-    } else {
+    } else if (change === 'off') {
       launch.timerCapture = false;
     }
   });
