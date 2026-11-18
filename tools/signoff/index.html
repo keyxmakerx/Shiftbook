@@ -88,7 +88,8 @@ body:not([data-view="done"]) .card .card-head { padding-bottom: 0; }
 .figure { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .figure .frame { border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; background: var(--wash); }
 .figure iframe { display: block; width: 100%; border: 0; background: #FFFFFF; }
-.figure img { display: block; width: 100%; height: auto; }
+.figure img { display: block; width: 100%; height: auto; margin: 0 auto; }
+.figure a { display: block; }
 .figure .cap { font-size: 0.85rem; color: var(--muted); }
 .figure .tools { display: flex; gap: 8px; }
 .ghost { background: none; border: 1px solid var(--rule); border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 0.82rem; color: var(--muted); }
@@ -259,7 +260,10 @@ body[data-view="done"] .fold { display: inline-block; }
       frame.appendChild(ifr);
     } else if (f.src) {
       var img = document.createElement('img'); img.src = f.src; img.alt = f.caption || ''; img.loading = 'lazy';
-      frame.appendChild(img);
+      // `w` is how wide the picture is in the app: it never shows bigger than that, and a tap opens it full size.
+      if (f.w > 0) img.style.maxWidth = 'min(100%, ' + Number(f.w) + 'px)';
+      var open = document.createElement('a'); open.href = f.src; open.target = '_blank'; open.rel = 'noopener'; open.title = 'Open the picture full size';
+      open.appendChild(img); frame.appendChild(open);
     }
     box.appendChild(frame);
     if (f.caption) box.appendChild(rich(h('figcaption', 'cap'), f.caption));

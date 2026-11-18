@@ -2,9 +2,12 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
-## Asked in chat — 18 Nov 2026 (one card for a ticket and what's written about it)
+## Round 19 — 18 Nov 2026 (one card for a ticket and what's written about it) · awaiting sign-off
 The owner showed a Desk where one MOP had turned into a ticket card, a MOP card and a note
-card, joined by lines. The MOP card was already gone (10 Nov, below). No mockup needed for the rest:
+card, joined by lines. The MOP card was already gone (10 Nov, below). The rest is built in pull
+request #78 and **not approved yet**: it is on the sign-off sheet as round 19
+(`tools/signoff/rounds/r19.json`), four cards with before and after pictures. The pull request
+stays a draft until the owner has answered them.
 - **Put on a ticket:** right-click a jot, Daily or meeting note on the Desk and pick a ticket
   (the ones a line joins it to come first). The note's words go into that ticket's notepad,
   under what's there, the note moves to the archive, and the notepad opens under the ticket's
@@ -21,6 +24,11 @@ card, joined by lines. The MOP card was already gone (10 Nov, below). No mockup 
   unmarked box that only Edit showed). A MOP that has been given a name shows it on its
   ticket's chip ("MOP · Ready · VPN client upgrade"); one still called "MOP for CHG…" doesn't
   repeat the ticket.
+
+Three questions are on the same round, with nothing changed for them yet: whether to turn off
+lines made from a shared word (kept on 30 Oct), whether new cards should land inside the part of
+the Desk in view (they fill rows five wide; the first window shows fewer than three), and whether
+**+ MOP** should come off the front of Desk cards (added in round 18).
 
 ## Asked in chat — 12 Nov 2026 (review fixes)
 No mockup needed:

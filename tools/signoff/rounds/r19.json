@@ -1,0 +1,233 @@
+{
+ "meta": {
+  "round": 19,
+  "heading": "One card per ticket, naming a MOP, and three things to decide",
+  "intro": "Four changes made after your Desk picture, then three questions. None of it is in your copy of Shiftbook yet: it waits in pull request #78 until you've answered. Each card asks one thing. Press one of the two buttons; a note is optional."
+ },
+ "cards": {
+  "r19-put-on-ticket": {
+   "area": "Desk · new",
+   "round": 19,
+   "order": 1,
+   "version": 1,
+   "title": "A note can go onto its ticket, so one MOP is one card",
+   "body": [
+    "Your picture had one MOP spread over three cards joined by lines: the ticket, the MOP and a SUMMARY OF WORK note. The MOP card is already gone in 0.8.2 (it sits on the ticket's card as a chip). This does the same for the note."
+   ],
+   "bullets": [
+    "Right-click a jot, Daily or meeting note and choose **Put on a ticket**, then the ticket. Tickets the note has a line to come first.",
+    "Its words go into that ticket's notepad, under whatever is already there.",
+    "The note's card leaves the Desk. It goes to the archive, not the bin.",
+    "The notepad opens under the ticket so you can see where the words went. **Undo** stays up for ten seconds and puts both back."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app running this change, with made-up tickets.",
+    "Once it's released: go to the **Desk** (press 1).",
+    "Right-click a note card that belongs with a ticket.",
+    "Choose **Put on a ticket**, then click the ticket's number.",
+    "The note card goes, and the ticket's notepad opens with the note's words at the bottom."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/b9e14092dc375a2d3f2aa05c6e8e9dc8",
+     "caption": "Before: the ticket and its note are two cards joined by a line.",
+     "w": 540
+    },
+    {
+     "src": "/_blob/485fb82294b74c0e566ac7c6e68e89a9",
+     "caption": "Right-click the note, then **Put on a ticket**.",
+     "w": 540
+    },
+    {
+     "src": "/_blob/9e270ccb733c1cf039a51945c25624e7",
+     "caption": "After: one card. The note's words are in the ticket's notepad, with Undo at the bottom.",
+     "w": 540
+    }
+   ],
+   "ask": "Is this how a note should join its ticket?",
+   "note_hint": "What should work differently"
+  },
+  "r19-notepad": {
+   "area": "Desk · fixes",
+   "round": 19,
+   "order": 2,
+   "version": 1,
+   "title": "A ticket's notepad shows more, and opens only once",
+   "body": [
+    "Three things I found on the Desk while looking into your picture."
+   ],
+   "bullets": [
+    "A ticket card shows the first line of its notepad, then **✎ 4 more lines in its notepad** when there is more. Before, nothing said so.",
+    "The notepad under a card grows to fit what's in it, up to about ten lines. It used to stay three lines tall.",
+    "One click on a ticket's card opened its notepad twice: under the card, and again in the Tickets tray on the right. Typing in one could be saved over by the other. Now only the one you clicked opens."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, with made-up tickets.",
+    "Once it's released: on the **Desk**, find a ticket card whose notepad has a few lines.",
+    "The card should show the first line and say how many more lines there are.",
+    "Click the card. The notepad should open under it, tall enough to read, and the same ticket in the **Tickets tray** on the right should stay closed."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/90387c7e6c35a1c4527e8e872bfba9bc",
+     "caption": "The ticket card: before (left) and now (right).",
+     "w": 516
+    },
+    {
+     "src": "/_blob/cd172e20aae6b83748c71d2250693d8c",
+     "caption": "Before: one click opened the notepad under the card (left) and again in the Tickets tray (right), each three lines tall.",
+     "w": 662
+    },
+    {
+     "src": "/_blob/b86b550b7eb6321a5c68977853fa7535",
+     "caption": "Now: it opens once, where you clicked, and you can read all of it.",
+     "w": 662
+    }
+   ],
+   "ask": "Is the notepad right now?",
+   "note_hint": "What still looks or works wrong"
+  },
+  "r19-note-title": {
+   "area": "Desk and Notes · fix",
+   "round": 19,
+   "order": 3,
+   "version": 1,
+   "title": "A note card no longer says its first line twice",
+   "body": [
+    "A jot's title is its first line. When that line was long, the card showed it as the title and then started the same sentence again underneath. Now the line underneath carries on from where the title stops, or is left out when there is nothing more to say. The same fix applies on boards and in the Notes list."
+   ],
+   "where": [
+    "Not in your copy yet. The picture below is the real app, before and now.",
+    "Once it's released: on the **Desk**, look at a jot whose first line is long enough to be cut short with …",
+    "The smaller line under the title should not repeat the title."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/e2eb7fe9db76520a651ad61d6c90bb7d",
+     "caption": "The same jot: before (left) and now (right).",
+     "w": 516
+    }
+   ],
+   "ask": "Does the card read right now?",
+   "note_hint": "What it should say instead"
+  },
+  "r19-mop-name": {
+   "area": "MOPs · your ask",
+   "round": 19,
+   "order": 4,
+   "version": 1,
+   "title": "You can name a MOP, and the name shows on its ticket",
+   "body": [
+    "You asked how to name a MOP. There was a box for it, but it had no label and only showed in Edit, so it looked like part of the text."
+   ],
+   "bullets": [
+    "The MOP window has a **Name** box that is always there, in Read, Edit and Run. Click it and type; it saves as you type.",
+    "A MOP you've named shows its name on its ticket's chip, like **MOP · Draft · VPN client upgrade**. One still called \"MOP for CHG…\" just says **MOP · Draft**, so the ticket number isn't said twice."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, with made-up tickets.",
+    "Once it's released: on the **Desk**, click a ticket's **MOP · …** chip to open its MOP.",
+    "The **Name** box is just under the Read / Edit / Run buttons. Click in it and type a name.",
+    "Close the window. The chip on that ticket's card should now end with the name."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/619699f68d3fe50490e3bb68e0a6d61f",
+     "caption": "Before: no name box in Read (top), and an unmarked box in Edit (bottom).",
+     "w": 656
+    },
+    {
+     "src": "/_blob/0a70f0bf0085317938de5b17b1aa4a66",
+     "caption": "Now: a **Name** box in every mode.",
+     "w": 656
+    },
+    {
+     "src": "/_blob/35b22b8c8538c0b7d2ee743dd9247013",
+     "caption": "The name on the ticket's chip.",
+     "w": 252
+    }
+   ],
+   "ask": "Is this how naming a MOP should work?",
+   "note_hint": "What should work differently"
+  },
+  "r19-q-word-lines": {
+   "area": "Your call · Desk lines",
+   "round": 19,
+   "order": 5,
+   "version": 1,
+   "title": "Lines between cards that only share a word",
+   "body": [
+    "The Desk joins two cards with a line when they share a ticket number. It also joins them when they are the only two cards using the same word. In the picture, an incident about a lobby status board is joined to a note about a task board, only because both say \"board\".",
+    "On 30 October you chose to keep these word lines, one per card. I'm asking again because your picture looked tangled. Lines from ticket numbers, and lines you draw yourself, would stay either way. Nothing changes unless you press Yes."
+   ],
+   "where": [
+    "On the **Desk**, point at a card. Its lines light up.",
+    "Rest the mouse on a line and it says why it is there. \"Both say …\" means a word line; \"Both mention …\" means a ticket line."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/1bd363b2c01c682ae6acc32540e40df6",
+     "caption": "A word line: these two cards have nothing to do with each other.",
+     "w": 304
+    }
+   ],
+   "ask": "Turn off the lines made from shared words?",
+   "yes": "Yes, tickets only",
+   "no": "No, keep them",
+   "note_hint": "Anything about the lines"
+  },
+  "r19-q-in-view": {
+   "area": "Your call · Desk layout",
+   "round": 19,
+   "order": 6,
+   "version": 1,
+   "title": "New cards can start out of sight on the right",
+   "body": [
+    "Shiftbook lays new cards out five in a row. At the size the window first opens, the Desk shows fewer than three cards across, because the Tickets tray takes the rest. So some new cards start past the edge until you scroll, press **Fit** or make the window bigger.",
+    "I can make a row only as wide as the Desk is showing, so new cards always start where you can see them. Cards you've already placed wouldn't move."
+   ],
+   "where": [
+    "Open Shiftbook without making the window bigger, and go to the **Desk**.",
+    "Paste four or five new tickets into the **Tickets tray**.",
+    "Look for their cards: some land past the edge of what you can see until you press **Fit**."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/f869fcd33e25c6ad4c5f21a11a9e7be7",
+     "caption": "The window at the size Shiftbook first opens. The cards on the right are cut off by the Tickets tray.",
+     "w": 860
+    }
+   ],
+   "ask": "Keep new cards inside the part of the Desk you can see?",
+   "yes": "Yes, keep in view",
+   "no": "No, leave it",
+   "note_hint": "Anything about where cards land"
+  },
+  "r19-q-plus-mop": {
+   "area": "Your call · ticket cards",
+   "round": 19,
+   "order": 7,
+   "version": 1,
+   "title": "Every ticket card carries a + MOP line",
+   "body": [
+    "In round 18 (4 November) you asked for a quicker way to pull a template onto a ticket, so every open ticket's card got a dashed **+ MOP** line. It works, but it also sits on incidents and requests that will never have a MOP, and on a busy Desk it is one more thing on every card.",
+    "I could take it off the front of Desk cards. You would still attach a MOP from the ticket's slide-out (**Use a template**), from right-click → More → **Attach a MOP…**, and from Ctrl+Space. A ticket that has a MOP keeps its chip."
+   ],
+   "where": [
+    "On the **Desk**, look at any ticket card that has no MOP.",
+    "The dashed **+ MOP** line sits under the ticket number."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/d35a063cdb30a1dcaef290b2801f7e88",
+     "caption": "Three tickets, three **+ MOP** lines. Only the change is likely to need one.",
+     "w": 512
+    }
+   ],
+   "ask": "Take + MOP off the front of Desk cards?",
+   "yes": "Yes, take it off",
+   "no": "No, keep it",
+   "note_hint": "Anything about + MOP"
+  }
+ }
+}
