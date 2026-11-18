@@ -91,8 +91,8 @@ names the round it came from. Nothing here is optional unless it says so.
    the name to move the area with its cards, the corner to resize; drop a card in to give it the
    project, drag it out of its own project's area to take the project away, both with Undo);
    links (automatic for a shared ticket, also one written in a note, and for two cards that
-   share two or more uncommon words no other card uses, at most one word link per card; dashed
-   for words, solid for tickets;
+   share two or more specific words no other card uses (five letters or more, and not on core's
+   list of everyday words), at most one word link per card; dashed for words, solid for tickets;
    click a line to remove it; "Link to another card" on any card draws one; lines show for the
    card you point at, and View → Show all link lines shows them all); the timeline (a column per day, oldest left, wrapping after 5 cards; Back
    to my layout restores the view; cards can't be dragged while it shows).

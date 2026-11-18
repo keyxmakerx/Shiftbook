@@ -22,7 +22,7 @@ had other names in earlier rounds; the old names are listed so `DECISIONS.md` st
 | **Pile** | Cards dropped on each other; click to fan out. **Done today** is the pile Shiftbook keeps. | Stack | `canvas_stacks`, `piles` |
 | **Drawer** | Where a card is filed off the Desk: one per project plus your folders. Filed cards still count and show in Find. | Cabinet | `piles` |
 | **Board** | A full screen you step into (a project, a meeting series, Daily notes, a folder, the Archive) as a Notebook, a Board or a List. | Sub-canvas | `boards` |
-| **Link** | A line between cards that share a ticket or two or more uncommon words, or one you drew. | | `canvas_links`, `canvas::auto_links` |
+| **Link** | A line between cards that share a ticket or two or more specific words, or one you drew. | | `canvas_links`, `canvas::auto_links` |
 | **Pin** | An entry, ticket or note kept as a chip on the bottom bar, optionally with a day to chase it. | | `pins` |
 | **Bring up** | Ask for something to come up first in Where was I? on the next work day. | | `next_up_items`, `nextup` |
 | **Next up** | The short "Tomorrow I start with…" list from the wrap-up. | | `next_up_items` |

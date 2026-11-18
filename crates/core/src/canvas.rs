@@ -277,73 +277,64 @@ pub struct LinkText {
     pub text: String,
 }
 
-/// A word worth linking on: long enough and not an everyday word.
-fn link_words(text: &str) -> Vec<String> {
-    const COMMON: &[&str] = &[
-        "about",
-        "after",
-        "again",
-        "before",
-        "being",
-        "check",
-        "could",
-        "daily",
-        "doing",
-        "done",
-        "every",
-        "first",
-        "follow",
-        "from",
-        "have",
-        "here",
-        "into",
-        "jot",
-        "just",
-        "later",
-        "meeting",
-        "might",
-        "minutes",
-        "need",
-        "next",
-        "note",
-        "notes",
-        "other",
-        "should",
-        "some",
-        "still",
-        "that",
-        "their",
-        "them",
-        "then",
-        "there",
-        "these",
-        "they",
-        "thing",
-        "things",
-        "this",
-        "those",
-        "ticket",
-        "tickets",
-        "today",
-        "tomorrow",
-        "update",
-        "what",
-        "when",
-        "where",
-        "which",
-        "while",
-        "with",
-        "work",
-        "worked",
-        "would",
-        "yesterday",
-        "your",
-    ];
+/// Everyday words. They never count as a key word, however few cards use them: a word line is
+/// for two cards about the same specific thing, not two that both say "because" and "really".
+/// Lower case, separated by spaces. Words under [`MIN_WORD_LETTERS`] letters are out anyway; the
+/// short ones here ("and", "but") are listed so the rule reads whole.
+const EVERYDAY_WORDS: &str = "
+    about above across actually added adding after afternoon again against ahead all almost
+    along already alright although always among and another answer answers any anybody
+    anyone anything anyway anywhere apparently april are around asked asking august
+    available basic basically became because become becomes before began begin begins behind
+    being believe below beside besides better between beyond bigger bring brings brought
+    bunch but called calling can cannot certain certainly change changed changes changing
+    check checked checking checks clear clearly close closed comes coming common completely
+    continue continued could couldn couple create created current currently daily december
+    definitely despite detail details didn different directly doesn doing done during
+    earlier early easily eight either eleven email emailed emails ended ending enough entire
+    entirely entries entry evening every everybody everyone everything everywhere exactly
+    example except expect expected extra fairly february feels fifth fifty final finally
+    finish finished first fixed fixing follow followed following follows for forty found
+    fourth friday from fully general generally getting given gives giving going gonna gotten
+    great had hadn happen happened happens happy has hasn have haven having heard hello
+    hence here herself higher himself hoping hours however hundred important incident
+    incidents indeed info information inside instead into issue issues its itself january
+    jot just keeping keeps known knows large larger later latest learn least leave leaves
+    letting likely likes little longer looked looking looks lower mainly major makes making
+    march maybe means meant meeting meetings message messages might minor minute minutes
+    monday month months morning mostly moved moving myself nearly need needed needing needs
+    neither never next night nights nobody nor normal normally not note notes nothing
+    november nowhere number numbers obviously october off often older opened opening other
+    others otherwise our ourselves out outside people per perhaps person phone picked place
+    placed planned plans please point possible possibly pretty previous previously probably
+    problem problems project projects proper properly putting question questions quick
+    quickly quite rather reach reached ready really reason recent recently remember remind
+    replied reply request requested requests right running saturday saying second seeing
+    seemed seems sending september seven several shall short should shouldn showed showing
+    shown shows similar simple simply since small smaller some somebody somehow someone
+    something sometimes somewhat somewhere sorry speak spoke start started starting starts
+    status stays still stopped stuff sunday taken takes taking talked talking tasks tells
+    thank thanks that the their theirs them themselves then there therefore these they thing
+    things think thinking thinks third thirty this those though thought thousand three
+    through throughout thursday ticket tickets times today together tomorrow tonight too
+    total totally toward towards tried tries trying tuesday turned turns twelve twenty under
+    underneath unless until update updated updates updating upon using usual usually various
+    via wait waited waiting wanted wants was wasn wednesday weekend weekly weeks welcome
+    weren what whatever when whenever where whereas wherever whether which while whoever
+    whole whose with within without work worked working works would wouldn write writes
+    writing written wrong wrote years yesterday yet you young your yours yourself
+";
+
+/// Fewest letters in a word worth linking on.
+const MIN_WORD_LETTERS: usize = 5;
+
+/// The words in `text` worth linking on: long enough, not a number and not an everyday word.
+fn link_words(text: &str, everyday: &std::collections::BTreeSet<&str>) -> Vec<String> {
     let mut out: Vec<String> = text
         .split(|c: char| !c.is_alphanumeric())
         .map(str::to_lowercase)
-        .filter(|w| w.chars().count() >= 5 && !w.chars().all(|c| c.is_ascii_digit()))
-        .filter(|w| !COMMON.contains(&w.as_str()))
+        .filter(|w| w.chars().count() >= MIN_WORD_LETTERS && !w.chars().all(|c| c.is_ascii_digit()))
+        .filter(|w| !everyday.contains(w.as_str()))
         .collect();
     out.sort();
     out.dedup();
@@ -356,10 +347,11 @@ fn link_words(text: &str) -> Vec<String> {
 /// Cards sharing a ticket are linked in a chain, in the order given (the Desk passes them oldest
 /// first), not every one to every other: five days on one ticket is four lines, not ten.
 ///
-/// A key word is an uncommon word only two cards use. Two cards get a word line when they share
-/// at least [`MIN_SHARED_WORDS`] of them: one shared word is too often a coincidence ("board" the
-/// display in the lobby, "board" the task list). A card gets at most [`MAX_WORD_LINKS`] word
-/// links, and the pair sharing the most words gets its line first.
+/// A key word is a specific word only two cards use: five letters or more and not one of the
+/// everyday words (`EVERYDAY_WORDS`). Two cards get a word line when they share at least
+/// [`MIN_SHARED_WORDS`] of them: one shared word is too often a coincidence ("board" the display
+/// in the lobby, "board" the task list). A card gets at most [`MAX_WORD_LINKS`] word links, and
+/// the pair sharing the most words gets its line first.
 pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
     use std::collections::{BTreeMap, BTreeSet};
     let mut holders: BTreeMap<String, Vec<usize>> = BTreeMap::new();
@@ -382,9 +374,10 @@ pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
         }
     }
     out.sort_by_key(|l| (l.0, l.1));
+    let everyday: BTreeSet<&str> = EVERYDAY_WORDS.split_ascii_whitespace().collect();
     let mut users: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (i, c) in cards.iter().enumerate() {
-        for w in link_words(&c.text) {
+        for w in link_words(&c.text, &everyday) {
             users.entry(w).or_default().push(i);
         }
     }
@@ -872,6 +865,58 @@ mod tests {
             auto_links(&cards),
             vec![(0, 1, LinkReason::Word("alpha, bravo, charlie".into()))]
         );
+    }
+
+    #[test]
+    fn everyday_words_never_count_toward_a_word_line() {
+        // Each of these is used by these two cards only, and none of them says what a card is
+        // about.
+        let cards = [
+            lt(
+                &[],
+                "Because people really keep asking, probably start looking through everything",
+            ),
+            lt(
+                &[],
+                "I really think people are probably looking through everything because of it",
+            ),
+            lt(&[], "optics arrived"),
+        ];
+        assert!(auto_links(&cards).is_empty());
+        // One specific word and any number of everyday ones is still one shared word.
+        let cards = [
+            lt(&[], "Because people really keep asking about the cutsheet"),
+            lt(
+                &[],
+                "People are really asking because the cutsheet is wrong",
+            ),
+        ];
+        assert!(auto_links(&cards).is_empty());
+        // Two specific words make the line, and only they are named.
+        let cards = [
+            lt(
+                &[],
+                "Because people really keep asking about the inventory cutsheet",
+            ),
+            lt(
+                &[],
+                "People are really asking because the cutsheet and the inventory differ",
+            ),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("cutsheet, inventory".into()))]
+        );
+    }
+
+    #[test]
+    fn the_everyday_list_is_lower_case_words() {
+        let mut seen = std::collections::BTreeSet::new();
+        for w in EVERYDAY_WORDS.split_ascii_whitespace() {
+            assert!(w.chars().all(|c| c.is_ascii_lowercase()), "{w}");
+            assert!(seen.insert(w), "{w} is listed twice");
+        }
+        assert!(seen.contains("and") && seen.contains("but") && seen.contains("because"));
     }
 
     #[test]
