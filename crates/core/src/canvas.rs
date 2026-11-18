@@ -264,7 +264,7 @@ pub fn new_area(x: i32, y: i32) -> Area {
 pub enum LinkReason {
     /// Both mention this ticket.
     Ticket(String),
-    /// Both use this uncommon word.
+    /// Both use these uncommon words (a few of them, comma-separated).
     Word(String),
 }
 
@@ -351,12 +351,15 @@ fn link_words(text: &str) -> Vec<String> {
 }
 
 /// Links drawn automatically between cards: cards that share a ticket (also one written in a
-/// note's text), and any two that are the only cards using the same uncommon word. A pair is
-/// linked once, by its first reason.
+/// note's text), and two cards that share key words. A pair is linked once, by its first reason.
 ///
 /// Cards sharing a ticket are linked in a chain, in the order given (the Desk passes them oldest
-/// first), not every one to every other: five days on one ticket is four lines, not ten. A card
-/// gets at most [`MAX_WORD_LINKS`] word links.
+/// first), not every one to every other: five days on one ticket is four lines, not ten.
+///
+/// A key word is an uncommon word only two cards use. Two cards get a word line when they share
+/// at least [`MIN_SHARED_WORDS`] of them: one shared word is too often a coincidence ("board" the
+/// display in the lobby, "board" the task list). A card gets at most [`MAX_WORD_LINKS`] word
+/// links, and the pair sharing the most words gets its line first.
 pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
     use std::collections::{BTreeMap, BTreeSet};
     let mut holders: BTreeMap<String, Vec<usize>> = BTreeMap::new();
@@ -385,26 +388,39 @@ pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
             users.entry(w).or_default().push(i);
         }
     }
-    let mut per_card = vec![0usize; cards.len()];
+    // The key words each pair shares, in alphabetical order.
+    let mut shared: BTreeMap<(usize, usize), Vec<String>> = BTreeMap::new();
     for (word, who) in users {
         if let [a, b] = who[..] {
-            if linked.contains(&(a, b))
-                || per_card[a] >= MAX_WORD_LINKS
-                || per_card[b] >= MAX_WORD_LINKS
-            {
-                continue;
-            }
-            linked.insert((a, b));
-            per_card[a] += 1;
-            per_card[b] += 1;
-            out.push((a, b, LinkReason::Word(word)));
+            shared.entry((a, b)).or_default().push(word);
         }
+    }
+    let mut pairs: Vec<((usize, usize), Vec<String>)> = shared
+        .into_iter()
+        .filter(|(pair, words)| words.len() >= MIN_SHARED_WORDS && !linked.contains(pair))
+        .collect();
+    pairs.sort_by(|x, y| y.1.len().cmp(&x.1.len()).then(x.0.cmp(&y.0)));
+    let mut per_card = vec![0usize; cards.len()];
+    for ((a, b), words) in pairs {
+        if per_card[a] >= MAX_WORD_LINKS || per_card[b] >= MAX_WORD_LINKS {
+            continue;
+        }
+        per_card[a] += 1;
+        per_card[b] += 1;
+        let said = words[..words.len().min(SHOWN_SHARED_WORDS)].join(", ");
+        out.push((a, b, LinkReason::Word(said)));
     }
     out
 }
 
 /// Most word links one card gets, so the Desk doesn't turn into a web.
 pub const MAX_WORD_LINKS: usize = 1;
+
+/// Fewest key words two cards must share before a line joins them.
+pub const MIN_SHARED_WORDS: usize = 2;
+
+/// Most shared words a line names when asked why it is there.
+const SHOWN_SHARED_WORDS: usize = 3;
 
 // ---------- timeline (step 2) ----------
 
@@ -815,27 +831,58 @@ mod tests {
     }
 
     #[test]
-    fn links_uncommon_words_used_by_exactly_two_cards() {
+    fn links_two_cards_that_share_two_key_words() {
         let cards = [
             lt(&[], "Core switch cutover plan"),
-            lt(&[], "cutover went fine"),
+            lt(&[], "The cutover of the core went fine"),
             lt(&[], "optics arrived"),
             lt(&[], "spare optics for the switch"),
             lt(&[], "optics again"),
         ];
-        let links = auto_links(&cards);
-        assert!(links.contains(&(0, 1, LinkReason::Word("cutover".into()))));
-        assert!(
-            !links
-                .iter()
-                .any(|l| l.2 == LinkReason::Word("switch".into())),
-            "card 0 already has its word link"
+        // "cutover" joins cards 0 and 1 and "switch" joins 0 and 3, but each pair shares only that
+        // one word. "optics" is used by three cards, so it is nobody's key word.
+        assert!(auto_links(&cards).is_empty());
+        let cards = [
+            lt(&[], "Core switch cutover plan"),
+            lt(&[], "The switch cutover went fine"),
+            lt(&[], "optics arrived"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("cutover, switch".into()))]
         );
-        assert!(
-            !links
-                .iter()
-                .any(|l| l.2 == LinkReason::Word("optics".into())),
-            "three cards use it"
+    }
+
+    #[test]
+    fn one_shared_word_is_not_enough_for_a_line() {
+        let cards = [
+            lt(&["INC0045001"], "Status board in the lobby is blank"),
+            lt(&[], "Need to get the board updated before Friday"),
+        ];
+        assert!(auto_links(&cards).is_empty());
+    }
+
+    #[test]
+    fn a_line_names_at_most_three_shared_words() {
+        let cards = [
+            lt(&[], "alpha bravo charlie delta echoes"),
+            lt(&[], "echoes delta charlie bravo alpha"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("alpha, bravo, charlie".into()))]
+        );
+    }
+
+    #[test]
+    fn a_pair_already_joined_by_a_ticket_gets_no_word_line() {
+        let cards = [
+            lt(&["CHG0012345"], "Firewall client upgrade"),
+            lt(&[], "chg0012345: firewall client upgrade went fine"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Ticket("CHG0012345".into()))]
         );
     }
 
@@ -863,17 +910,17 @@ mod tests {
     }
 
     #[test]
-    fn word_links_are_capped_per_card() {
-        let hub = lt(&[], "alpha bravo charlie delta");
+    fn word_links_are_capped_per_card_and_the_most_shared_pair_wins() {
         let cards = [
-            hub,
-            lt(&[], "alpha"),
-            lt(&[], "bravo"),
-            lt(&[], "charlie"),
-            lt(&[], "delta"),
+            lt(&[], "alpha bravo charlie delta echoes foxtrot golfing"),
+            lt(&[], "alpha bravo"),
+            lt(&[], "charlie delta echoes"),
+            lt(&[], "foxtrot golfing"),
         ];
-        let links = auto_links(&cards);
-        assert_eq!(links.iter().filter(|l| l.0 == 0).count(), MAX_WORD_LINKS);
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 2, LinkReason::Word("charlie, delta, echoes".into()))]
+        );
     }
 
     #[test]

@@ -23,8 +23,8 @@ works the way it does is in `DECISIONS.md`.
   The side panel has today's hours,
   Log work, Due soon, Where was I?, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
-  that share a ticket or an uncommon word, and you can draw your own (a card's lines show while
-  you point at it; View → Show all link lines shows them all); **Timeline** lays the Desk out
+  that share a ticket, or two or more uncommon words no other card uses, and you can draw your
+  own (a card's lines show while you point at it; View → Show all link lines shows them all); **Timeline** lays the Desk out
   by day and Back to my layout puts it back. The **toolbox** on the left has Move,
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag on
   empty paper) and make it a project's area, a new project or just a label. **Shift + drag a
