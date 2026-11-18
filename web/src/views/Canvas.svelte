@@ -177,8 +177,15 @@
   const countDone = $derived(hasHome(app.prefs?.useMode) && !app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7]);
   const doneToday = $derived(app.entries.filter((e) => !e.isTray).length);
 
+  /** How wide the Desk is showing. Cards nobody has moved are laid out to fit it (the rule is
+   *  core's `row_cards`), so a new card starts where it can be seen. */
+  function deskWidth(): number | null {
+    const w = board ? Math.round(board.clientWidth) : 0;
+    return w > 0 ? w : null;
+  }
+
   async function load() {
-    const desk = await attempt(() => api.canvas(app.today));
+    const desk = await attempt(() => api.canvas(app.today, deskWidth()));
     if (desk) {
       cards = desk.cards;
       areas = desk.areas;
@@ -562,7 +569,7 @@
   }
 
   async function tidy() {
-    const done = await attempt(() => api.canvasTidy(app.today));
+    const done = await attempt(() => api.canvasTidy(app.today, deskWidth()));
     if (!done) return;
     await load();
     if (!done.stacks.length) {

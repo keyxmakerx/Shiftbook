@@ -6,9 +6,9 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::canvas::{
-    area_at, auto_links, auto_place, box_status, is_recent, moved_card_stays, stays_in_just_today,
-    ticket_home, timeline, tray_place, work_groups, Area, BoxStatus, CardKind, Drawer, LinkReason,
-    LinkText, MemberState, TrayPlace, ORIGIN,
+    area_at, auto_links, auto_place, box_status, is_recent, moved_card_stays, row_cards,
+    stays_in_just_today, ticket_home, timeline, tray_place, work_groups, Area, BoxStatus, CardKind,
+    Drawer, LinkReason, LinkText, MemberState, TrayPlace, ORIGIN,
 };
 use shiftbook_core::dates::format_date;
 use shiftbook_core::hours::format_hours;
@@ -541,11 +541,14 @@ pub fn card_ref(kind: CardKind, id: Uuid) -> CardRefView {
     }
 }
 
-/// Everything on the Desk, with each card's project (for Tidy into stacks).
+/// Everything on the Desk, with each card's project (for Tidy into stacks). `view_w` is how
+/// wide the Desk is showing (canvas units at 100%), when the caller knows: cards nobody has
+/// moved are laid out in rows that fit it.
 pub async fn desk(
     store: &SqliteStore,
     owner: OwnerId,
     today: Date,
+    view_w: Option<i32>,
 ) -> Result<(DeskView, Vec<Option<Uuid>>)> {
     let fields = links_for(store, owner).await?;
     let prefs = store.prefs(owner).await?;
@@ -718,7 +721,13 @@ pub async fn desk(
     // The Done today pile sits where the owner left it, or takes the first free spot.
     let pile_needs_spot = !done_today.is_empty() && prefs.done_pile.is_none();
     taken.extend(prefs.done_pile.filter(|_| !done_today.is_empty()));
-    let mut free = auto_place(loose.len() + usize::from(pile_needs_spot), &taken).into_iter();
+    // Rows are only as wide as the Desk is showing, so a new card starts in view (round 19).
+    let mut free = auto_place(
+        loose.len() + usize::from(pile_needs_spot),
+        &taken,
+        row_cards(view_w),
+    )
+    .into_iter();
     let done_spot = match prefs.done_pile {
         Some(at) => at,
         None if pile_needs_spot => free.next().unwrap_or(ORIGIN),

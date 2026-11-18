@@ -2,8 +2,8 @@
 //!
 //! Cards are time entries, Done tickets, notes and Inbox scraps. The Canvas adds only layout:
 //! where a card sits. A card the owner has never moved has no saved spot; it gets one from
-//! [`auto_place`] each time, in rows from the top left, skipping the spots taken by moved
-//! cards. Entries and Done tickets older than [`RECENT_DAYS`] leave the Canvas unless the owner
+//! [`auto_place`] each time, in rows from the top left no wider than the Desk is showing,
+//! skipping the spots taken by moved cards. Entries and Done tickets older than [`RECENT_DAYS`] leave the Canvas unless the owner
 //! moved them; notes and scraps stay until they are archived or removed (see docs/CANVAS.md).
 
 use std::str::FromStr;
@@ -22,7 +22,7 @@ pub const CARD_W: i32 = 220;
 pub const CARD_H: i32 = 120;
 /// Space between auto-placed cards.
 pub const GAP: i32 = 24;
-/// Auto-placed cards fill rows this many cards wide.
+/// Auto-placed cards fill rows at most this many cards wide (see [`row_cards`]).
 pub const ROW_CARDS: i32 = 5;
 /// Where auto-placing starts.
 pub const ORIGIN: (i32, i32) = (40, 40);
@@ -166,16 +166,31 @@ fn overlaps(a: (i32, i32), b: (i32, i32)) -> bool {
     (a.0 - b.0).abs() < CARD_W + GAP / 2 && (a.1 - b.1).abs() < CARD_H + GAP / 2
 }
 
-/// Spots for `count` cards that haven't been moved, in reading order, skipping any spot that
-/// would overlap a moved card in `taken`. The first card (newest, as the caller orders them)
-/// gets the top-left free spot.
-pub fn auto_place(count: usize, taken: &[(i32, i32)]) -> Vec<(i32, i32)> {
+/// How many auto-placed cards go in a row when the Desk is showing `view_w` canvas units
+/// across (its width on screen at 100%): as many as fit whole, from one up to [`ROW_CARDS`],
+/// so a card nobody has moved starts where it can be seen (round 19). Rows are [`ROW_CARDS`]
+/// wide when the width isn't known.
+pub fn row_cards(view_w: Option<i32>) -> i32 {
+    match view_w {
+        // n cards fit when ORIGIN.0 + n * CARD_W + (n - 1) * GAP <= view_w.
+        Some(w) => {
+            (w.saturating_sub(ORIGIN.0).saturating_add(GAP) / (CARD_W + GAP)).clamp(1, ROW_CARDS)
+        }
+        None => ROW_CARDS,
+    }
+}
+
+/// Spots for `count` cards that haven't been moved, in reading order in rows `row` cards wide
+/// (see [`row_cards`]), skipping any spot that would overlap a moved card in `taken`. The
+/// first card (newest, as the caller orders them) gets the top-left free spot.
+pub fn auto_place(count: usize, taken: &[(i32, i32)], row: i32) -> Vec<(i32, i32)> {
+    let row = row.clamp(1, ROW_CARDS);
     let mut out = Vec::with_capacity(count);
     let mut slot: i32 = 0;
     while out.len() < count {
         let spot = (
-            ORIGIN.0 + (slot % ROW_CARDS) * (CARD_W + GAP),
-            ORIGIN.1 + (slot / ROW_CARDS) * (CARD_H + GAP),
+            ORIGIN.0 + (slot % row) * (CARD_W + GAP),
+            ORIGIN.1 + (slot / row) * (CARD_H + GAP),
         );
         slot = slot.saturating_add(1);
         if !taken.iter().any(|t| overlaps(*t, spot)) {
@@ -674,7 +689,7 @@ mod tests {
 
     #[test]
     fn auto_places_in_rows_from_the_top_left() {
-        let spots = auto_place(6, &[]);
+        let spots = auto_place(6, &[], ROW_CARDS);
         assert_eq!(spots[0], ORIGIN);
         assert_eq!(spots[1], (ORIGIN.0 + CARD_W + GAP, ORIGIN.1));
         assert_eq!(
@@ -688,11 +703,48 @@ mod tests {
     fn auto_place_steps_around_moved_cards() {
         // A moved card sitting on the first two slots pushes new cards along.
         let taken = [(ORIGIN.0 + 100, ORIGIN.1)];
-        let spots = auto_place(2, &taken);
+        let spots = auto_place(2, &taken, ROW_CARDS);
         assert_eq!(spots[0], (ORIGIN.0 + 2 * (CARD_W + GAP), ORIGIN.1));
         assert!(spots.iter().all(|s| !overlaps(*s, taken[0])));
         // Far-away cards don't matter.
-        assert_eq!(auto_place(1, &[(5_000, 5_000)])[0], ORIGIN);
+        assert_eq!(auto_place(1, &[(5_000, 5_000)], ROW_CARDS)[0], ORIGIN);
+    }
+
+    #[test]
+    fn a_row_is_only_as_wide_as_the_desk_is_showing() {
+        // The window at the size it first opens shows about 700 across: two cards fit whole.
+        assert_eq!(row_cards(Some(704)), 2);
+        // Exactly room for three, and one unit short of it.
+        let three = ORIGIN.0 + 3 * CARD_W + 2 * GAP;
+        assert_eq!(row_cards(Some(three)), 3);
+        assert_eq!(row_cards(Some(three - 1)), 2);
+        // Never wider than before, never no cards at all, and five when nobody says.
+        assert_eq!(row_cards(Some(4_000)), ROW_CARDS);
+        assert_eq!(row_cards(Some(120)), 1);
+        assert_eq!(row_cards(Some(-50)), 1);
+        assert_eq!(row_cards(Some(i32::MAX)), ROW_CARDS);
+        assert_eq!(row_cards(None), ROW_CARDS);
+
+        // Two to a row: the third card starts the second row, inside the same width.
+        let spots = auto_place(5, &[], 2);
+        assert_eq!(spots[1], (ORIGIN.0 + CARD_W + GAP, ORIGIN.1));
+        assert_eq!(spots[2], (ORIGIN.0, ORIGIN.1 + CARD_H + GAP));
+        assert!(spots.iter().all(|s| s.0 + CARD_W <= 704));
+        // A moved card in the way is still stepped around.
+        let taken = [ORIGIN];
+        assert_eq!(
+            auto_place(1, &taken, 2)[0],
+            (ORIGIN.0 + CARD_W + GAP, ORIGIN.1)
+        );
+        // A row count that makes no sense is treated as one card or the most allowed.
+        assert_eq!(
+            auto_place(2, &[], 0)[1],
+            (ORIGIN.0, ORIGIN.1 + CARD_H + GAP)
+        );
+        assert_eq!(
+            auto_place(6, &[], 99)[5],
+            (ORIGIN.0, ORIGIN.1 + CARD_H + GAP)
+        );
     }
 
     #[test]

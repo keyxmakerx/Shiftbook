@@ -1331,8 +1331,10 @@ export interface DataApi {
   setInboxDeleted(id: string, deleted: boolean): Promise<void>;
 
   // ----- the Desk (Canvas) -----
-  /** Everything on the Desk: cards (bottom first), project areas, links and the timeline. Tauri: `canvas`. */
-  canvas(today: IsoDate): Promise<DeskData>;
+  /** Everything on the Desk: cards (bottom first), project areas, links and the timeline. Tauri: `canvas`.
+   *  `width` is how wide the Desk is showing, in pixels at 100% (null when it isn't on screen):
+   *  cards nobody has moved are laid out in rows that fit it. */
+  canvas(today: IsoDate, width: number | null): Promise<DeskData>;
   /** Put a card where it was dropped, on top. Tauri: `canvas_move`. */
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void>;
   /** Put a project's area here, making it the first time. Tauri: `canvas_area`. */
@@ -1367,8 +1369,8 @@ export interface DataApi {
   canvasFolderSave(id: string | null, name: string): Promise<{ id: string; name: string }>;
   /** Remove a folder (its cards show on the Desk while it's gone), or bring it back. */
   canvasFolderRemove(id: string, removed: boolean): Promise<void>;
-  /** Tidy into stacks: pile loose cards by project. */
-  canvasTidy(today: IsoDate): Promise<TidyResult>;
+  /** Tidy into stacks: pile loose cards by project. `width` as for `canvas()`. */
+  canvasTidy(today: IsoDate, width: number | null): Promise<TidyResult>;
   /** One board's full screen (see `BoardData`). Tauri: `board`. */
   board(today: IsoDate, key: string): Promise<BoardData>;
   /** Put a card where it was dropped on a board's own canvas. Tauri: `board_move`. */
