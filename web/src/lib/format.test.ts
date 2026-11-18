@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   dayMonth,
+  dayDistance,
   dayMonthYear,
   daysBetween,
   fmtHours,
   fmtMinutes,
   isWeekend,
   longDay,
+  onDay,
   relativeDay,
   toIso,
   weekdayShort,
@@ -53,7 +55,25 @@ describe('display formatting', () => {
     expect(isWeekend('2026-10-19')).toBe(false);
     expect(relativeDay('2026-10-15', '2026-10-15')).toBe('Today');
     expect(relativeDay('2026-10-14', '2026-10-15')).toBe('Yesterday');
-    expect(relativeDay('2026-10-01', '2026-10-15')).toBe('Looking back');
+    expect(relativeDay('2026-10-16', '2026-10-15')).toBe('Tomorrow');
+    expect(relativeDay('2026-10-01', '2026-10-15')).toBe('Thu 1 October');
+    expect(relativeDay('2026-11-02', '2026-10-15')).toBe('Mon 2 November');
+    expect(relativeDay('2025-12-31', '2026-10-15')).toBe('Wed 31 December 2025');
+  });
+
+  it('says a day mid-sentence without a stray capital', () => {
+    expect(onDay('2026-10-15', '2026-10-15')).toBe('today');
+    expect(onDay('2026-10-14', '2026-10-15')).toBe('yesterday');
+    expect(onDay('2026-10-16', '2026-10-15')).toBe('tomorrow');
+    expect(onDay('2026-10-01', '2026-10-15')).toBe('Thu 1 October');
+  });
+
+  it('says how far a day is from today', () => {
+    expect(dayDistance('2026-10-15', '2026-10-15')).toBe('Today');
+    expect(dayDistance('2026-10-14', '2026-10-15')).toBe('Yesterday');
+    expect(dayDistance('2026-10-16', '2026-10-15')).toBe('Tomorrow');
+    expect(dayDistance('2026-10-07', '2026-10-15')).toBe('8 days ago');
+    expect(dayDistance('2026-10-18', '2026-10-15')).toBe('In 3 days');
   });
 });
 

@@ -51,19 +51,28 @@ export function fitAll(cards: { x: number; y: number }[], width: number, height:
  *  daily-use review, 10 Nov). */
 export const FIT_MIN_ZOOM = 0.8;
 
-/** The middle of `cards` in the middle of the board, at `zoom`. */
-function centred(cards: Spot[], width: number, height: number, zoom: number): CanvasView {
-  const cx = (Math.min(...cards.map((c) => c.x)) + Math.max(...cards.map((c) => c.x + CARD_W))) / 2;
-  const cy = (Math.min(...cards.map((c) => c.y)) + Math.max(...cards.map((c) => c.y + CARD_H))) / 2;
-  return { zoom, x: width / 2 - cx * zoom, y: height / 2 - cy * zoom };
+/** `cards` at `zoom` when they don't all fit: across and down separately, a direction they
+ *  fit in is centred, and one they overflow starts at its first card (a margin in), so the
+ *  first cards can be read and the rest run off the far side. */
+function fromTheStart(cards: Spot[], width: number, height: number, zoom: number, margin = 40): CanvasView {
+  const along = (lo: number, hi: number, room: number) =>
+    (hi - lo) * zoom + 2 * margin <= room ? (room - (hi - lo) * zoom) / 2 - lo * zoom : margin - lo * zoom;
+  return {
+    zoom,
+    x: along(Math.min(...cards.map((c) => c.x)), Math.max(...cards.map((c) => c.x + CARD_W)), width),
+    y: along(Math.min(...cards.map((c) => c.y)), Math.max(...cards.map((c) => c.y + CARD_H)), height),
+  };
 }
 
-/** Fit: every card in view, zoomed out no further than `FIT_MIN_ZOOM`; when they don't fit at
- *  that zoom, the middle of them at it. */
-export function fitReadable(cards: Spot[], width: number, height: number): CanvasView {
-  const fitted = fitAll(cards, width, height);
-  if (cards.length === 0 || width <= 0 || height <= 0 || fitted.zoom >= FIT_MIN_ZOOM) return fitted;
-  return centred(cards, width, height, FIT_MIN_ZOOM);
+/** Fit: every card in view, zoomed out no further than `FIT_MIN_ZOOM`. When they don't fit at
+ *  that zoom they start from their first card instead (round 21; it used to show the middle
+ *  of them, which hid the first column). `left` pixels at the board's left edge are kept
+ *  clear: the toolbox sits there, and Fit used to slide cards under it. */
+export function fitReadable(cards: Spot[], width: number, height: number, left = 0): CanvasView {
+  if (cards.length === 0 || width - left <= 0 || height <= 0) return fitAll(cards, width, height);
+  const fitted = fitAll(cards, width - left, height);
+  const view = fitted.zoom >= FIT_MIN_ZOOM ? fitted : fromTheStart(cards, width - left, height, FIT_MIN_ZOOM);
+  return { ...view, x: view.x + left };
 }
 
 /** Where the first card sits in the start view: the start view's offset plus core's `ORIGIN`

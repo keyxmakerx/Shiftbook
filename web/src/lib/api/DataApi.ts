@@ -321,7 +321,7 @@ export interface BellItem {
   title: string;
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
-    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
+    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null; just: boolean }
     | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }

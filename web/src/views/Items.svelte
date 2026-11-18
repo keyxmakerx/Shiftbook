@@ -13,7 +13,7 @@
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
   import { bringUpSection, followWords } from '../lib/bringUp';
-  import { fmtMinutes, relativeDay } from '../lib/format';
+  import { fmtMinutes, onDay, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { openRepeating, refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
@@ -76,7 +76,7 @@
         minutes: t.minutes,
         last: t.last,
         follow,
-        followText: follow ? (follow <= app.today ? (follow === app.today ? 'Today' : `Since ${relativeDay(follow, app.today)}`) : relativeDay(follow, app.today)) : '',
+        followText: follow ? (follow <= app.today ? (follow === app.today ? 'Today' : `Since ${onDay(follow, app.today)}`) : relativeDay(follow, app.today)) : '',
         now: !!follow && follow <= app.today,
         done: t.done,
         ticket: t,

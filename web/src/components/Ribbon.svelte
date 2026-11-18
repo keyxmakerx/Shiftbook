@@ -87,6 +87,7 @@
 
   let viewsEl: HTMLElement | undefined = $state();
   let pill = $state({ left: 0, width: 0 });
+  let lastLeft = 0;
   let grown = $state(false);
 
   $effect(() => {
@@ -95,7 +96,9 @@
     void VIEW_LIST;
     const place = () => {
       const b = viewsEl?.querySelector<HTMLElement>('button[aria-pressed="true"]');
-      if (b) pill = { left: b.offsetLeft, width: b.offsetWidth };
+      // No tab is lit in Settings; the pill used to stay on the last one (round 21).
+      if (b) lastLeft = b.offsetLeft;
+      pill = { left: lastLeft, width: b ? b.offsetWidth : 0 };
     };
     place();
     window.addEventListener('resize', place);
@@ -229,7 +232,7 @@
     </button>
   </div>
   <nav class="views" aria-label="Views" bind:this={viewsEl}>
-    <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px"></span>
+    <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px" style:opacity={pill.width ? 1 : 0}></span>
     {#each VIEW_LIST as v (v.id)}
       <button type="button" aria-pressed={app.view === v.id} title="{v.label} ({v.key})" onclick={() => setView(v.id)}>
         {v.label}

@@ -4,7 +4,7 @@
   // layout; the Desk canvas stays on the computer, so Desk is today as one list.
   import { onMount } from 'svelte';
   import { bell } from '../lib/bell.svelte';
-  import { dayOfMonth, fmtHours, longDay, relativeDay, weekdayShort } from '../lib/format';
+  import { dayOfMonth, fmtHours, longDay, dayDistance, weekdayShort } from '../lib/format';
   import type { IconName } from '../lib/icons';
   import type { View } from '../lib/keys';
   import { app, ribbonDay, ribbonWeekOf, selectDay, setView, shownViews } from '../lib/store.svelte';
@@ -109,7 +109,7 @@
       <h1>{app.view === 'day' ? longDay(app.selected) : longDay(app.today)}</h1>
       <span class="sum">
         {#if app.view === 'day' && app.selected !== app.today}
-          {relativeDay(app.selected, app.today)} · <b>{fmtHours(ribbonDay(app.selected)?.minutes ?? 0)} h</b>
+          {dayDistance(app.selected, app.today)} · <b>{fmtHours(ribbonDay(app.selected)?.minutes ?? 0)} h</b>
         {:else}
           Today <b>{fmtHours(todayMinutes)} h</b> · Week <b>{fmtHours(weekMinutes)} h</b>
         {/if}

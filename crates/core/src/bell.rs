@@ -51,6 +51,10 @@ pub enum BellAbout {
         minutes: u32,
         /// The project its time goes to, if set.
         project: Option<String>,
+        /// It ended within the last [`JUST_FINISHED_MINUTES`]. After that it is still
+        /// offered, under Today, as not logged yet (round 21: a 09:15 stand-up read "Just
+        /// finished" under Now at half past five).
+        just: bool,
     },
     /// This week's timesheet isn't entered yet (round 15, see `crate::reminder`).
     #[serde(rename_all = "camelCase")]
@@ -119,6 +123,9 @@ pub struct BellItem {
     pub about: BellAbout,
 }
 
+/// How long after it ends a meeting still counts as "just finished" and sits under Now.
+pub const JUST_FINISHED_MINUTES: u32 = 30;
+
 /// A pin to chase: its title, `kind:id` and chase date.
 pub type ChasePin = (String, String, Date);
 
@@ -141,8 +148,9 @@ pub fn bell_items(
         .collect();
     finished.sort_by_key(|m| (m.at, m.name.to_lowercase()));
     for m in &finished {
+        let just = now < m.at + m.length_minutes + JUST_FINISHED_MINUTES;
         items.push(BellItem {
-            when: BellWhen::Now,
+            when: if just { BellWhen::Now } else { BellWhen::Today },
             title: format!(
                 "{}, {} to {}",
                 m.name,
@@ -154,6 +162,7 @@ pub fn bell_items(
                 name: m.name.clone(),
                 minutes: m.length_minutes,
                 project: m.project_id.map(|p| p.to_string()),
+                just,
             },
         });
     }
@@ -408,9 +417,19 @@ mod tests {
                 series: ops.id.to_string(),
                 name: "Weekly ops".into(),
                 minutes: 30,
-                project: None
+                project: None,
+                just: true
             }
         );
+        // Half an hour on it is still offered, but no longer as "now" or "just finished".
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 11 * 60);
+        assert_eq!(items[0].when, BellWhen::Today);
+        assert!(matches!(
+            items[0].about,
+            BellAbout::MeetingDone { just: false, .. }
+        ));
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 59);
+        assert_eq!(items[0].when, BellWhen::Now);
         // A short meeting shows as finished rather than started.
         ops.length_minutes = 10;
         let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 12);

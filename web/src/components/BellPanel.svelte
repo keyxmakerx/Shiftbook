@@ -10,7 +10,7 @@
   import { api } from '../lib/api';
   import type { BellItem, CardKind } from '../lib/api';
   import { bell, nowMinutes, refreshBell, snoozeHour, snoozeSheet } from '../lib/bell.svelte';
-  import { addDays, fmtMinutes, relativeDay } from '../lib/format';
+  import { addDays, fmtMinutes, onDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { bringUp } from '../lib/bringUp';
   import { markDone, openRepeating } from '../lib/repeating.svelte';
@@ -139,18 +139,21 @@
         return `${i.about.hours} h logged${n ? ` · ${n} ${n === 1 ? 'entry needs' : 'entries need'} a code` : ''}`;
       }
       case 'meeting_done':
-        return i.about.project
-          ? `Just finished · logs to ${projectName(i.about.project)}, with the meeting note linked`
-          : 'Just finished · logs your time, with the meeting note linked';
+        return (
+          (i.about.just ? 'Just finished' : 'Not logged yet') +
+          (i.about.project
+            ? ` · logs to ${projectName(i.about.project)}, with the meeting note linked`
+            : ' · logs your time, with the meeting note linked')
+        );
       case 'meeting':
         return i.about.state.state === 'later' ? 'Your meeting note opens from here' : 'Open your meeting note';
       case 'follow_up': {
         const card = cardOf(i.about);
         const what = card ? `${KIND_WORD[card[0]]} · ` : '';
-        return what + (i.about.on === app.today ? 'follow up today' : `follow up since ${relativeDay(i.about.on, app.today)}`);
+        return what + (i.about.on === app.today ? 'follow up today' : `follow up since ${onDay(i.about.on, app.today)}`);
       }
       case 'due':
-        return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${relativeDay(i.about.nextDue, app.today)}`;
+        return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${onDay(i.about.nextDue, app.today)}`;
       case 'change_window':
         return `MOP · ${STATUS_WORD[i.about.status]}`;
       case 'still_open':
@@ -179,7 +182,7 @@
     </header>
     {#if away}
       <p class="since">
-        Things that came due since you last opened Shiftbook{away.since ? `, ${relativeDay(away.since, app.today).toLowerCase()}` : ''}.
+        Things that came due since you last opened Shiftbook{away.since ? `, ${onDay(away.since, app.today)}` : ''}.
       </p>
     {/if}
     {#each [['Now', now], [away ? 'Since then' : 'Today', today]] as [head, list] (head)}
@@ -220,6 +223,10 @@
                   {@const title = i.title}
                   {#if i.about.state === 'renewed'}
                     <button type="button" class="btn primary" onclick={() => openDue(id, true)}>New date…</button>
+                  {:else if i.about.state === 'due_soon' && i.about.nextDue > app.today}
+                    <!-- Not due yet: Open comes first, and Done says it is early (round 21). -->
+                    <button type="button" class="btn primary" onclick={() => openDue(id, false)}>Open</button>
+                    <button type="button" class="btn" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done early</button>
                   {:else}
                     <button type="button" class="btn primary" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done</button>
                     <button type="button" class="btn" onclick={() => openDue(id, false)}>Open</button>

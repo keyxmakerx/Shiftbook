@@ -7,7 +7,7 @@
   import { api } from '../lib/api';
   import type { ProjectGlance } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
-  import { relativeDay } from '../lib/format';
+  import { onDay } from '../lib/format';
   import { phone } from '../lib/phone.svelte';
   import { app, attempt, refreshProjects, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -85,7 +85,7 @@
             <span><b>{g.hoursAll}</b> h in all</span>
           </div>
           <p class="sub">
-            {g.lastWorked ? `Last worked ${relativeDay(g.lastWorked, app.today).toLowerCase()}` : 'Not worked on yet'}
+            {g.lastWorked ? `Last worked ${onDay(g.lastWorked, app.today)}` : 'Not worked on yet'}
           </p>
           <div class="acts">
             {#if !phone.on}

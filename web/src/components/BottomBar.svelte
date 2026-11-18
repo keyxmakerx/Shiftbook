@@ -4,7 +4,7 @@
   // chips (round 14) come next, orange once their follow-up day comes; today's hours and the
   // bell sit on the right. The shortcut hint lives here too.
   import { bell } from '../lib/bell.svelte';
-  import { fmtHours, relativeDay } from '../lib/format';
+  import { fmtHours, onDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { chipMenu, pins } from '../lib/pins.svelte';
   import { app, ribbonDay } from '../lib/store.svelte';
@@ -41,8 +41,8 @@
       : p.chaseOn === app.today
         ? 'follow up today'
         : p.due
-          ? `follow up since ${relativeDay(p.chaseOn, app.today)}`
-          : `follow up ${relativeDay(p.chaseOn, app.today)}`;
+          ? `follow up since ${onDay(p.chaseOn, app.today)}`
+          : `follow up ${onDay(p.chaseOn, app.today)}`;
     return `${p.title} · ${when} · click to open, right-click to follow up or unpin`;
   }
 

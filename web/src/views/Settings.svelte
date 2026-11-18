@@ -3,6 +3,7 @@
   // Phone and computer, and Security.
   import Icon from '../components/Icon.svelte';
   import type { IconName } from '../lib/icons';
+  import { api } from '../lib/api';
   import type { SettingsSection } from '../lib/keys';
   import { app, words } from '../lib/store.svelte';
   import { hasWork } from '../lib/words';
@@ -41,6 +42,15 @@
 
   // Opens on the section asked for (e.g. from the tray's responses menu or Find), then stays put.
   const section = $derived<SettingsSection>(app.settingsSection);
+
+  // Which version this is, under the list of sections (round 21: nothing in the app said).
+  let version = $state('');
+  $effect(() => {
+    void api.appInfo().then(
+      (info) => (version = info.version),
+      () => {},
+    );
+  });
 </script>
 
 <div class="cz">
@@ -51,6 +61,7 @@
         <Icon name={s.icon} size={16} />{s.label}
       </button>
     {/each}
+    {#if version}<p class="ver">Shiftbook {version}</p>{/if}
   </nav>
   <div class="body">
     {#key section}
@@ -129,6 +140,12 @@
     background: color-mix(in srgb, var(--accent) 14%, transparent);
     color: var(--ink);
     font-weight: 650;
+  }
+
+  .ver {
+    margin: 10px 10px 0;
+    color: var(--mut);
+    font-size: 12px;
   }
 
   .sec {

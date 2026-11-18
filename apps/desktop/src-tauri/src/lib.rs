@@ -40,17 +40,19 @@ pub struct AppInfo {
 }
 
 /// Builds the `AppInfo` for this build.
-fn current_app_info() -> AppInfo {
+fn current_app_info(version: &str) -> AppInfo {
     AppInfo {
         name: shiftbook_core::app_name().to_string(),
-        version: env!("CARGO_PKG_VERSION").to_string(),
+        version: version.to_string(),
     }
 }
 
-/// Returns the app name and version. Maps to `DataApi.appInfo()`.
+/// Returns the app name and version. Maps to `DataApi.appInfo()`. The version is the one the
+/// app was packaged with: a release takes it from its tag (see release.yml), which the crate
+/// version doesn't follow, so Settings shows what the user actually installed (round 21).
 #[tauri::command]
-fn app_info() -> AppInfo {
-    current_app_info()
+fn app_info(app: tauri::AppHandle) -> AppInfo {
+    current_app_info(&app.package_info().version.to_string())
 }
 
 /// `needs_setup`, `locked` or `unlocked`. Maps to `DataApi.vaultStatus()`.
@@ -918,14 +920,14 @@ mod tests {
 
     #[test]
     fn app_info_has_name_and_version() {
-        let info = current_app_info();
+        let info = current_app_info("0.8.2");
         assert_eq!(info.name, "Shiftbook");
-        assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(info.version, "0.8.2");
     }
 
     #[test]
     fn app_info_serializes_with_expected_keys() {
-        let json = serde_json::to_value(current_app_info()).unwrap();
+        let json = serde_json::to_value(current_app_info("0.8.2")).unwrap();
         assert_eq!(json["name"], "Shiftbook");
         assert!(json["version"].is_string());
     }

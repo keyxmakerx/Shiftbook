@@ -87,19 +87,17 @@ works the way it does is in `DECISIONS.md`.
   Auto-archive (Settings → Notes, 3 months by default, can be off) moves Jot, Daily and Meeting
   notes that haven't changed for that long, after a week of warning on the note with a Keep
   button. Capture's Find shows notes too, archived ones included.
-- **MOP notebook:** a window like Notepad++ with a tab per MOP (Notes → MOP → Open the MOP
-  notebook, Open in notebook on a MOP, or Ctrl+Space "Open the MOP notebook"). It rolls up,
-  minimises to the bottom bar or fills the screen, and saves as you type. Three ways to show a
-  MOP, switched at the top of the window, all still editable: **Numbered** (line numbers you can
-  hide, colours for headings, numbered steps, Verify/Expected lines, Rollback sections and
-  `[[blanks]]`, and a status bar with the line, column, lines, characters and what's
-  selected), **Minimal** (just the text) and **Checklist** (tick a line, or Ctrl+Enter; a
-  ticked heading or step crosses out the section under it; Clear ticks starts a fresh run).
-  Ctrl+F finds. **Use as template** keeps a MOP's `[[blanks]]`; **New from this** asks for
-  each blank once and fills it in everywhere (empty ones stay highlighted). Drop text files
-  (.txt, .md…) anywhere on Shiftbook, or use Add MOP files…, to copy them in as encrypted
-  MOPs or templates; the files themselves are untouched. Word files need saving as plain text
-  first. Save as a text file writes an unencrypted copy, after a warning.
+- **MOPs:** a MOP (a method of procedure: the steps for a change) lives on a ticket, where it
+  shows as a chip on the ticket's card, or on its own under Notes → MOP. Click the chip to open
+  it in a window that floats over the Desk. Along the top: where it stands (**Draft**,
+  **Ready**, **Running**, **Done** or **Backed out**), the change window's day and time (the
+  bell reminds you on the day), and three ways to see it. **Read** shows it plainly, **Edit**
+  is for writing it, and **Run** gives every line a tick box that notes the time you ticked
+  it. At the bottom: how many steps are ticked and when the run started, **Clear ticks** for a
+  fresh run, **Copy as text**, **Copy run log** (what was ticked and when, to paste into the
+  change ticket) and **Save as template**. Templates are kept in the Wiki; **Use a template**
+  in a ticket's slide-out, or Ctrl+Space with the ticket number, starts a MOP from one with
+  the ticket filled in.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list.
@@ -123,12 +121,12 @@ works the way it does is in `DECISIONS.md`.
   grouping), Responses (saved messages for tickets), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
   such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
   (Back up now, the daily automatic backups, Restore from a backup or a file), Security (auto-lock, change password, and **Delete all
-  data** to start again; the unlock screen offers it too if the recovery key is lost).
+  data** to start again; the unlock screen offers it too if the recovery key is lost). The version you have installed shows under the list of sections.
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 7 switch views (Desk, Day, Timesheet, Notes, Repeating, Lists, Settings; at home the Timesheet is hidden and it's 1 to 6), Ctrl+L lock, Ctrl + / − / 0
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Wiki), 6 opens **Organise** (Tickets, Projects, Repeating, Lists) and Ctrl+, opens Settings (at home the Timesheet is hidden, so the numbers move down one), Ctrl+L lock, Ctrl + / − / 0
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 

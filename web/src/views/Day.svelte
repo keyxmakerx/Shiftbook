@@ -1,7 +1,7 @@
 <script lang="ts">
   // The Desk: today's card (date, hours ring, week total, "Where was I?", Log work, entries) beside the
   // Done tickets tray and the Inbox.
-  import { fmtHours, fromIso, longDay, relativeDay, weekdayLong } from '../lib/format';
+  import { fmtHours, fromIso, longDay, dayDistance, weekdayLong } from '../lib/format';
   import { countTo } from '../lib/motion';
   import { app, ribbonDay, ribbonWeekOf } from '../lib/store.svelte';
   import { hasHome } from '../lib/words';
@@ -54,7 +54,7 @@
     {#if !phone.on}
       <div class="sum">
         <div class="when">
-          <span class="lbl">{relativeDay(app.selected, app.today)}</span>
+          <span class="lbl">{dayDistance(app.selected, app.today)}</span>
           <h1>{longDay(app.selected)}</h1>
         </div>
         {#if countDone}

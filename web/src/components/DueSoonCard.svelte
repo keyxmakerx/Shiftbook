@@ -23,7 +23,7 @@
       {#each due as r (r.id)}
         <li class:late={r.state === 'overdue'}>
           <span class="t">
-            <b>{r.name}</b>
+            <b title={r.name}>{r.name}</b>
             <small>{r.state === 'renewed' ? 'put in the new expiry date' : r.dueWords}</small>
           </span>
           {#if r.state === 'renewed'}
@@ -86,9 +86,11 @@
     border-bottom: 0;
   }
 
+  /* The name keeps room to be read: when the buttons leave it less than about 11em they
+     drop to the next line (round 21: "Wildcard cert renewal" was cut to "W…"). */
   .t {
-    flex: 1;
-    min-width: 0;
+    flex: 1 1 11em;
+    min-width: min(11em, 100%);
     display: flex;
     flex-direction: column;
   }

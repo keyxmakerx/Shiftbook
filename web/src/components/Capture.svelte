@@ -12,7 +12,7 @@
   import { openBoard } from '../lib/boards.svelte';
   import { toIsoDate } from '../lib/dates';
   import { edge } from '../lib/edge';
-  import { KIND_LABEL } from '../lib/notes';
+  import { KIND_LABEL, matchingLine } from '../lib/notes';
   import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
   import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
   import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
@@ -601,8 +601,9 @@
             {/if}
           {:else if hit.kind === 'note'}
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
+            {@const line = matchingLine(hit.note.body, text)}
             <span class="what"><b>{hit.note.title}</b>
-              <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}</small></span>
+              <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}{line ? ' · ' + line : ''}</small></span>
           {:else if hit.kind === 'change'}
             <i class="dot cmd" aria-hidden="true">↶</i>
             <span class="what"><b>Undo: {hit.change.text}</b>

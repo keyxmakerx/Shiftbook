@@ -34,7 +34,13 @@ minutes: number,
 /**
  * The project its time goes to, if set.
  */
-project: string | null, } | { "kind": "timesheet", 
+project: string | null, 
+/**
+ * It ended within the last [`JUST_FINISHED_MINUTES`]. After that it is still
+ * offered, under Today, as not logged yet (round 21: a 09:15 stand-up read "Just
+ * finished" under Now at half past five).
+ */
+just: boolean, } | { "kind": "timesheet", 
 /**
  * The week's first day.
  */

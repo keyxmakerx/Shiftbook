@@ -1195,7 +1195,7 @@
   /** Fit: everything in view, but no smaller than 80% so the cards stay readable. */
   function fit() {
     if (!board) return;
-    glide(fitReadable(everything(), board.clientWidth, board.clientHeight));
+    glide(fitReadable(everything(), board.clientWidth, board.clientHeight, START.x));
   }
 
   /** Move the view smoothly to `to` (straight there when motion is off). */
@@ -1224,7 +1224,7 @@
   function goToBox(b: DeskBox) {
     goingTo = false;
     if (!board) return;
-    glide(fitReadable([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
+    glide(fitReadable([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight, START.x));
   }
 
   // Find asks for Fit, Tidy or the timeline; do it once the cards are in.
