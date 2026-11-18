@@ -306,9 +306,15 @@
       <p class="from">For {@render ticketLink(run.ticket)}</p>
     {/if}
 
+    <!-- Its name, always in view (it used to be an unmarked box only Edit showed): type a new
+         one and it's saved, and shows on the window, the bottom bar and in Find. -->
+    <label class="name">
+      <span>Name</span>
+      <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} placeholder="Give this MOP a name" autocomplete="off" />
+    </label>
+
     <div class="body">
       {#if mode === 'edit'}
-        <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} aria-label="MOP title" placeholder="Title" />
         <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
       {:else if mode === 'read'}
         <WikiText body={text} onlink={(t) => void follow(t)} />
@@ -506,15 +512,30 @@
     overflow: auto;
   }
 
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .name span {
+    flex: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mut);
+  }
+
   .title-in {
-    width: 100%;
-    margin-bottom: 6px;
+    flex: 1;
+    min-width: 0;
     font: 600 15px var(--ui);
   }
 
   textarea {
     width: 100%;
-    height: calc(100% - 44px);
+    height: 100%;
     min-height: 220px;
     resize: none;
     border: 1px solid var(--rule);
