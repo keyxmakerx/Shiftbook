@@ -59,6 +59,7 @@
     MIN_AREA,
     NEW_AREA,
     openingView,
+    panToShow,
     rectFrom,
     toCanvas,
     zoomAt,
@@ -184,9 +185,20 @@
     return w > 0 ? w : null;
   }
 
+  /** The width the cards on screen were laid out for. */
+  let laidOutFor: number | null = null;
+  /** The cards the Desk has shown so far, to tell when one is new. */
+  let seen: Set<string> | null = null;
+
   async function load() {
-    const desk = await attempt(() => api.canvas(app.today, deskWidth()));
+    const width = deskWidth();
+    const desk = await attempt(() => api.canvas(app.today, width));
     if (desk) {
+      // A card that has just appeared and that nobody has placed: the newest is the last.
+      const had = seen;
+      const fresh = had ? desk.cards.filter((c) => !c.placed && !c.stack && !had.has(`${c.kind}:${c.id}`)) : [];
+      seen = new Set(desk.cards.map((c) => `${c.kind}:${c.id}`));
+      laidOutFor = width;
       cards = desk.cards;
       areas = desk.areas;
       labels = desk.labels;
@@ -201,6 +213,12 @@
         // (the daily-use review, 10 Nov) rather than wherever the paper's corner happens to be.
         opened = true;
         view = openingView(todaysSpots(), everything(), board.clientWidth, board.clientHeight);
+      } else if (fresh.length && board && mode === 'free') {
+        // A new card that landed outside what the Desk is showing: slide just far enough to
+        // show it (round 19: new cards start where you can see them).
+        const card = fresh[fresh.length - 1]!;
+        const to = panToShow(view, { x: card.x, y: card.y }, board.clientWidth, board.clientHeight);
+        if (to !== view) glide(to);
       }
     }
     loaded = true;
@@ -593,6 +611,20 @@
   // in a window counts too, so its links show straight away rather than all at once later).
   onMount(() => {
     if (app.selected !== app.today) void selectDay(app.today);
+    // Cards nobody has moved fit the Desk's width, so they are laid out again when it changes
+    // (the window resized, the side panel folded away), once the resizing has settled.
+    let settle: ReturnType<typeof setTimeout> | null = null;
+    const watch = new ResizeObserver(() => {
+      if (settle) clearTimeout(settle);
+      settle = setTimeout(() => {
+        if (loaded && deskWidth() !== laidOutFor) void load();
+      }, 250);
+    });
+    if (board) watch.observe(board);
+    return () => {
+      watch.disconnect();
+      if (settle) clearTimeout(settle);
+    };
   });
   $effect(() => {
     void app.changed;
