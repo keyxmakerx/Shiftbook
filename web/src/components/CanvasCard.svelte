@@ -16,7 +16,7 @@
   import { logNoteItem, moveToWikiItem, noteKindItem } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
-  import { openFullWindow, openWindow } from '../lib/windows.svelte';
+  import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
@@ -234,9 +234,10 @@
     }
     else if (card.inbox) void logScrap();
     else if (card.tray) {
-      // A ticket has no details screen: its notepad opens on a screen of its own.
+      // A ticket has no details screen: its notepad opens in a window that can be moved about
+      // (round 19; it used to fill the screen). Full screen is one button away on the window.
       closePanel();
-      openFullWindow('tray', card.tray.item.id);
+      openWindow('tray', card.tray.item.id);
     }
   }
 
@@ -433,7 +434,9 @@
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
-    <MopChip ticket={t.item.ticket} offer={!t.item.done} />
+    <!-- A ticket's MOP shows here; "+ MOP" stays off the card's front (round 19): it's in the
+         slide-out, the right-click menu and Ctrl+Space. -->
+    <MopChip ticket={t.item.ticket} />
     {@const more = moreLines(t.item.note)}
     <span class="sub" class:one={more > 0} class:muted={!t.item.note}>
       {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}

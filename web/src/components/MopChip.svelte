@@ -1,6 +1,7 @@
 <script lang="ts">
   // A ticket's MOP (round 18): "MOP · Ready" opens it; with `offer`, a ticket without one gets
-  // "+ MOP" to pick a template. On cards, in the tickets box and on the Tickets page.
+  // "+ MOP" to pick a template. In the tickets box, the slide-out and on the Tickets page; a
+  // Desk card's front shows only a MOP the ticket has (round 19).
   import { attachMop, mopFor, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { ownName } from '../lib/mop';
 
