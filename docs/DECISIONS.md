@@ -2,24 +2,29 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
-## Round 20 — 18 Nov 2026 (round 19's answers and notes, built) — awaiting sign-off
-Round 19's answers and notes (listed under round 19 below) were built after pull request #78 and
-put on the sign-off sheet as round 20 (`tools/signoff/rounds/r20.json`), five cards with before
-and after pictures of the real app. Nothing here is decided until the owner answers:
+## Round 20 — 18 Nov 2026 (round 19's answers and notes, built)
+Round 19's answers and notes (listed under round 19 below) were built and put on the sign-off
+sheet as round 20 (`tools/signoff/rounds/r20.json`), five cards with before and after pictures
+of the real app. The owner approved all five on 18 Nov:
 - **+ MOP is off the front of Desk cards.** It stays in the ticket's slide-out, in right-click →
-  More → Attach a MOP…, in Ctrl+Space, and everywhere else it showed.
+  More → Attach a MOP…, in Ctrl+Space, and everywhere else it showed. This changes round 18's
+  "every open ticket shows + MOP" for Desk cards.
 - **New cards start in view.** A row of cards nobody has moved is only as wide as the Desk is
   showing (`row_cards` in core: two across in the first window, five at most). When that is full
   the next card goes underneath and the Desk slides to it. Cards nobody has moved are laid out
   again when the Desk's width changes; a card the owner has moved never moves.
 - **A ticket's notepad opens as a window you can move** on a double-click, not full screen (full
-  screen is a button on the window). One click still opens it under the card.
+  screen is a button on the window). One click still opens it under the card. This replaces the
+  30 Oct choice below.
 - **Save as a file** is back at the bottom of the MOP window (it went with the MOP notebook in
   round 18). The file is offered under the MOP's name, and the app warns that it isn't locked.
-- **Asked: should a word line need two shared words?** One shared word joined cards that had
-  nothing to do with each other. The rule on offer: two or more uncommon words that only those
-  two cards use (`MIN_SHARED_WORDS` in core). Yes keeps word lines under that rule; no turns word
-  lines off, leaving ticket lines and drawn ones.
+- **A word line needs two shared words** (yes to "two words", then in chat: "auto connect on two
+  shared words that are specific words, not like and but, etc"). Two cards get a word line when
+  they share two or more specific words that no other card uses (`MIN_SHARED_WORDS` in core). A
+  specific word has five letters or more and is not on core's list of everyday words
+  (`EVERYDAY_WORDS`: because, really, looking, people, issue, request, day and month names…).
+  One shared word no longer makes a line. Ticket lines and drawn lines are unchanged, and a
+  card still gets one word line at most. This tightens the 30 Oct "word links stay on" below.
 
 ## Round 19 — 18 Nov 2026 (one card for a ticket and what's written about it)
 The owner showed a Desk where one MOP had turned into a ticket card, a MOP card and a note
@@ -43,8 +48,8 @@ cards with before and after pictures. The owner approved all four on 18 Nov:
   ticket's chip ("MOP · Ready · VPN client upgrade"); one still called "MOP for CHG…" doesn't
   repeat the ticket.
 
-The owner's notes on those cards, and answers to the round's three questions. None of these is
-built in pull request #78; they follow it:
+The owner's notes on those cards, and answers to the round's three questions. These were built
+next and signed off as round 20, above:
 - **A ticket's notepad opens as a movable window** ("make the default notepad the movable kind,
   not the full screen"): double-clicking a ticket's card opens its notepad as a window you can
   move, not one filling the screen. This replaces the 30 Oct choice below.
@@ -58,7 +63,7 @@ built in pull request #78; they follow it:
   Cards already placed don't move.
 - **Lines from shared words** (yes to "tickets only", with the note "some shared stuff makes
   sense, like shared ticket, shared key word(s), but not every single one"): ticket lines stay.
-  What should count as a shared keyword is asked again on the sheet before anything changes.
+  What should count as a shared keyword was asked again in round 20.
 
 ## Asked in chat — 12 Nov 2026 (review fixes)
 No mockup needed:
