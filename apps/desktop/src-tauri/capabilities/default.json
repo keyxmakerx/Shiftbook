@@ -62,6 +62,7 @@
     "allow-tray-add",
     "allow-tray-set-minutes",
     "allow-tray-set-note",
+    "allow-note-to-ticket",
     "allow-tray-set-done",
     "allow-tray-set-project",
     "allow-tray-set-recurring",

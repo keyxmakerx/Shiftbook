@@ -263,6 +263,9 @@ export class TauriApi implements DataApi {
   traySetNote(id: string, note: string): Promise<TrayDay> {
     return call('tray_set_note', { id, note });
   }
+  noteToTicket(note: string, id: string): Promise<TrayDay> {
+    return call('note_to_ticket', { note, id });
+  }
   traySetDone(id: string, done: boolean): Promise<TrayDay> {
     return call('tray_set_done', { id, done });
   }

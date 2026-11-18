@@ -1260,6 +1260,8 @@ export interface DataApi {
   traySetMinutes(id: string, minutes: number): Promise<TrayDay>;
   /** A tray ticket's notepad (blank clears it). */
   traySetNote(id: string, note: string): Promise<TrayDay>;
+  /** Put a note's words in a tray ticket's notepad (under what's there) and archive the note. */
+  noteToTicket(note: string, id: string): Promise<TrayDay>;
   /** Tick a ticket done (also on the earlier days it came back on), or untick it: still open. */
   traySetDone(id: string, done: boolean): Promise<TrayDay>;
   /** The project a ticket's minutes count under (null = the day's "Tickets" entry). */

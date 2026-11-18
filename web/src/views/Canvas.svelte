@@ -72,12 +72,13 @@
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
-  import { closePanel } from '../lib/panel.svelte';
+  import { closePanel, openNotepad } from '../lib/panel.svelte';
   import { easeOut, scale as motion } from '../lib/motion';
   import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
+  import { ticketChoices } from '../lib/putOnTicket';
   import BoxPrompt from '../components/BoxPrompt.svelte';
   import PastePrompt from '../components/PastePrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
@@ -502,8 +503,63 @@
     const archive = archiveItem(card);
     const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card];
     const ownArchive = archive.length > 0 || card.kind === 'note';
-    return [...fileItem((key) => void fileThese(list, key), ownArchive ? ARCHIVE : undefined), ...archive];
+    return [
+      ...putOnTicketItem(card),
+      ...fileItem((key) => void fileThese(list, key), ownArchive ? ARCHIVE : undefined),
+      ...archive,
+    ];
   };
+
+  /** "Put on a ticket ▸" for a jot, daily or meeting note (one card per ticket, 18 Nov): its
+   *  words go into the ticket's notepad and the note card leaves the Desk. */
+  function putOnTicketItem(card: Card): MenuItem[] {
+    const note = card.note;
+    if (!note || note.kind === 'page' || note.kind === 'mop') return [];
+    const choices = ticketChoices(card, cards, links);
+    if (!choices.length) return [];
+    return [
+      {
+        label: 'Put on a ticket',
+        icon: 'ticket',
+        sub: [
+          {
+            choices: choices.map((c) => ({
+              label: c.tray!.item.ticket,
+              color: null,
+              checked: false,
+              act: () => void putOnTicket(note, c.tray!.item, keyOf(c)),
+            })),
+          },
+        ],
+      },
+    ];
+  }
+
+  async function putOnTicket(note: NonNullable<Card['note']>, item: TrayItem, ticketKey: string) {
+    const had = item.note ?? '';
+    closePanel();
+    const day = await attempt(() => api.noteToTicket(note.id, item.id));
+    if (!day) return;
+    await refresh();
+    await load();
+    // The ticket's notepad opens under its card, so it's plain where the words went.
+    openNotepad(ticketKey, 'card');
+    toast(
+      `Put “${note.title}” in ${item.ticket}'s notepad`,
+      'Undo',
+      () => {
+        // An open notepad keeps its own draft: fold it away so it can't save the words back.
+        closePanel();
+        void attempt(async () => {
+          await api.traySetNote(item.id, had);
+          await api.setNoteArchived(note.id, false);
+        })
+          .then(refresh)
+          .then(load);
+      },
+      () => void attempt(() => api.noteToTicket(note.id, item.id)).then(refresh).then(load),
+    );
+  }
 
   async function tidy() {
     const done = await attempt(() => api.canvasTidy(app.today));
