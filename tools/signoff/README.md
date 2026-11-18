@@ -15,6 +15,9 @@ Round 19 (`rounds/r19.json`) is on the round 15 sheet, the one this project can 
 pictures are screenshots of the real app with made-up tickets, uploaded to the sheet (Artifact
 publish with `asset: true`) and not kept in the repo.
 
+Round 20 (`rounds/r20.json`) is on the same sheet, with its pictures stored the same way: what
+the owner's round 19 answers and notes asked for, built, and one question about word lines.
+
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.
 

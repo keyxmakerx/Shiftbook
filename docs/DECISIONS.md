@@ -2,6 +2,25 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 20 — 18 Nov 2026 (round 19's answers and notes, built) — awaiting sign-off
+Round 19's answers and notes (listed under round 19 below) were built after pull request #78 and
+put on the sign-off sheet as round 20 (`tools/signoff/rounds/r20.json`), five cards with before
+and after pictures of the real app. Nothing here is decided until the owner answers:
+- **+ MOP is off the front of Desk cards.** It stays in the ticket's slide-out, in right-click →
+  More → Attach a MOP…, in Ctrl+Space, and everywhere else it showed.
+- **New cards start in view.** A row of cards nobody has moved is only as wide as the Desk is
+  showing (`row_cards` in core: two across in the first window, five at most). When that is full
+  the next card goes underneath and the Desk slides to it. Cards nobody has moved are laid out
+  again when the Desk's width changes; a card the owner has moved never moves.
+- **A ticket's notepad opens as a window you can move** on a double-click, not full screen (full
+  screen is a button on the window). One click still opens it under the card.
+- **Save as a file** is back at the bottom of the MOP window (it went with the MOP notebook in
+  round 18). The file is offered under the MOP's name, and the app warns that it isn't locked.
+- **Asked: should a word line need two shared words?** One shared word joined cards that had
+  nothing to do with each other. The rule on offer: two or more uncommon words that only those
+  two cards use (`MIN_SHARED_WORDS` in core). Yes keeps word lines under that rule; no turns word
+  lines off, leaving ticket lines and drawn ones.
+
 ## Round 19 — 18 Nov 2026 (one card for a ticket and what's written about it)
 The owner showed a Desk where one MOP had turned into a ticket card, a MOP card and a note
 card, joined by lines. The MOP card was already gone (10 Nov, below). The rest was built in pull

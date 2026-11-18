@@ -11,12 +11,15 @@ works the way it does is in `DECISIONS.md`.
 - **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
   you arrange. It opens at 100% on today's cards. Drag to move (it's remembered), drag empty
   paper or Shift + scroll to pan, scroll to zoom, **Fit** (it stops at 80% so the cards stay
-  readable). New cards take the next free spot; the others stay where they are. Wiki pages,
+  readable). New cards take the next free spot inside the part of the Desk you can see (when
+  that is full they go underneath and the Desk slides to show them); cards you have placed stay
+  where they are. Wiki pages,
   templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
   card; give the MOP a name in the **Name** box at the top of its window and the chip shows
   it). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
-  open, more time and More. Double-click a card to open it; double-click empty paper to jot.
+  open, more time and More. Double-click a card to open it (a ticket's notepad opens as a window
+  you can move; full screen is a button on it); double-click empty paper to jot.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
   Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
   Fit and **View** (Timeline, Show all link lines, Boards, Tidy into stacks, Clear old cards…).
@@ -102,7 +105,8 @@ works the way it does is in `DECISIONS.md`.
   each blank once and fills it in everywhere (empty ones stay highlighted). Drop text files
   (.txt, .md…) anywhere on Shiftbook, or use Add MOP files…, to copy them in as encrypted
   MOPs or templates; the files themselves are untouched. Word files need saving as plain text
-  first. Save as a text file writes an unencrypted copy, after a warning.
+  first. **Save as a file**, at the bottom of a MOP's window, writes an unencrypted text copy
+  named after the MOP, after a warning.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list.
