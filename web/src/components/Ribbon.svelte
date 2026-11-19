@@ -11,7 +11,7 @@
   import { toast } from '../lib/toast.svelte';
   import { ORGANISE, VIEW_NAMES, type View } from '../lib/keys';
   import type { IconName } from '../lib/icons';
-  import { hasWork } from '../lib/words';
+  import { hasTimesheet, hasWork } from '../lib/words';
   import Icon from './Icon.svelte';
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
@@ -131,7 +131,7 @@
                 void selectDay(day.date).then(onCapture);
               },
             },
-            ...(hasWork(app.prefs?.useMode)
+            ...(hasTimesheet(app.prefs)
               ? [
                   {
                     label: 'Open the Timesheet for this week',
@@ -140,6 +140,10 @@
                       void selectDay(day.date).then(() => setView('timesheet'));
                     },
                   },
+                ]
+              : []),
+            ...(hasWork(app.prefs?.useMode)
+              ? [
                   {
                     label: 'Book a holiday (8 h)',
                     icon: 'sun' as const,

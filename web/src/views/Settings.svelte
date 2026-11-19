@@ -6,7 +6,7 @@
   import { api } from '../lib/api';
   import type { SettingsSection } from '../lib/keys';
   import { app, words } from '../lib/store.svelte';
-  import { hasWork } from '../lib/words';
+  import { hasTimesheet } from '../lib/words';
   import Backups from './customize/Backups.svelte';
   import Fields from './customize/Fields.svelte';
   import Look from './customize/Look.svelte';
@@ -35,7 +35,7 @@
 
   // At home the Timesheet section hides and Meetings are called Regular events (round 15).
   const SECTIONS = $derived(
-    ALL_SECTIONS.filter((s) => s.id !== 'timesheet' || hasWork(app.prefs?.useMode)).map((s) =>
+    ALL_SECTIONS.filter((s) => s.id !== 'timesheet' || hasTimesheet(app.prefs)).map((s) =>
       s.id === 'meetings' ? { ...s, label: words().meetings } : s,
     ),
   );

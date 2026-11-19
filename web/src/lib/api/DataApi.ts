@@ -121,6 +121,8 @@ export interface Prefs {
   wrapupAt: string | null;
   /** The optional "Now doing" timer is turned on (off by default). */
   timer: boolean;
+  /** "I fill in a timesheet" (on by default): off hides the Timesheet and its reminders. */
+  useTimesheet: boolean;
   /** Phone: the due reminder's time `HH:MM` on work days, or null when it's off. */
   remindAt: string | null;
   /** Phone: a wrap-up nudge at the wrap-up time (off by default). */
@@ -474,6 +476,7 @@ export type PrefKey =
   | 'ui.text_size'
   | 'day.wrapup_at'
   | 'day.timer'
+  | 'timesheet.use'
   | 'phone.remind_at'
   | 'phone.wrapup_nudge'
   | 'timer.paused'

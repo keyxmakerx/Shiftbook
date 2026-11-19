@@ -62,6 +62,10 @@ wrapupAt: string | null,
  */
 timer: boolean, 
 /**
+ * "I fill in a timesheet" (see [`Prefs::shows_timesheet`]).
+ */
+useTimesheet: boolean, 
+/**
  * Phone: due reminder time `HH:MM`, `None` when off.
  */
 remindAt: string | null, 

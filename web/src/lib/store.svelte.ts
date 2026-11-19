@@ -22,7 +22,7 @@ import { errorMessage } from './messages';
 import { useMopWord } from './notes';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
-import { hasWork, wordsFor, type Words } from './words';
+import { hasTimesheet, wordsFor, type Words } from './words';
 import { DEFAULT_TIME_BUTTONS } from './api/generated/constants';
 
 export const app = $state({
@@ -240,12 +240,12 @@ export function openWiki(id: string | null, edit = false): void {
 
 /** Every view in this mode (tabs, the Organise menu, Settings). */
 export function shownViews(): readonly View[] {
-  return viewsFor(hasWork(app.prefs?.useMode));
+  return viewsFor(hasTimesheet(app.prefs));
 }
 
 /** The tabs in this mode (round 18: where you work). */
 export function shownTabs(): readonly View[] {
-  return tabsFor(hasWork(app.prefs?.useMode));
+  return tabsFor(hasTimesheet(app.prefs));
 }
 
 /** The words for what Shiftbook is for (round 15). */

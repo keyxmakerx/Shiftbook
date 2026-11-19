@@ -6,6 +6,7 @@
   import { MAX_TIME_BUTTONS } from '../../lib/api/generated/constants';
   import { fmtMinutes } from '../../lib/format';
   import { app, DEFAULT_TIMES, savePref, timeButtons } from '../../lib/store.svelte';
+  import { hasWork } from '../../lib/words';
   import { toast } from '../../lib/toast.svelte';
 
   /** Most time buttons (core's `MAX_TIME_BUTTONS`). */
@@ -142,6 +143,24 @@
       />
     </div>
   </article>
+
+  {#if hasWork(prefs.useMode)}
+  <article class="paper cz-card">
+    <h3>Timesheet</h3>
+    <p class="sub">
+      Shows the Timesheet, its codes and the “needs a code” reminders. Leave it off if you just
+      want a log of what you did; your entries stay as they are either way.
+    </p>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={prefs.useTimesheet}
+        onchange={(e) => savePref('timesheet.use', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      I fill in a timesheet
+    </label>
+  </article>
+  {/if}
 
   <article class="paper cz-card">
     <h3>Timer</h3>

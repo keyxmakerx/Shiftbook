@@ -50,3 +50,11 @@ export function hasWork(mode: UseMode | undefined): boolean {
 export function hasHome(mode: UseMode | undefined): boolean {
   return mode === 'home' || mode === 'both';
 }
+
+/**
+ * True when the Timesheet, its codes and its reminders show: Shiftbook is used for work and
+ * "I fill in a timesheet" is on (core's `Prefs::shows_timesheet`).
+ */
+export function hasTimesheet(prefs: { useMode: UseMode; useTimesheet: boolean } | null | undefined): boolean {
+  return hasWork(prefs?.useMode) && prefs?.useTimesheet !== false;
+}

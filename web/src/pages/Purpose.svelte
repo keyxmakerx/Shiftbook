@@ -8,7 +8,7 @@
   import { api } from '../lib/api';
   import { errorMessage } from '../lib/messages';
 
-  let { onDone }: { onDone: () => void } = $props();
+  let { onDone }: { onDone: (mode: UseMode) => void } = $props();
   let mode = $state<UseMode>('work');
   let working = $state(false);
   let error = $state('');
@@ -19,7 +19,7 @@
     error = '';
     try {
       await api.setUseMode(mode);
-      onDone();
+      onDone(mode);
     } catch (err) {
       error = errorMessage(err);
       working = false;

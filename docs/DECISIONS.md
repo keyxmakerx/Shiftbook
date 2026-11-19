@@ -19,6 +19,28 @@ owner approved nine and changed one:
   or written down here. Everyday pieces first: logging to another day keeps you on today, no
   "nothing logged" dots before a first entry, hours as 45m and 1h 30m (the timesheet copy
   stays decimal), "+ New project…" in every project picker, then the ten ideas.
+  How the everyday pieces were built (choices made while building):
+  - *Stay on today:* logging to another day from Find never changes the day that shows; the
+    message says where it went, with Show it and Undo. A strip under the ribbon names any
+    other day the Desk or Day shows, with Back to today.
+  - *First entry:* a day before the earliest entry there is never gets a dot on the ribbon
+    or a "nothing logged" warning on the Timesheet (`mark_gaps`, `SheetContext.first_logged`).
+  - *Hours:* 45m and 1h 30m everywhere; the Timesheet and the bell's timesheet line stay in
+    decimal hours.
+  - *Now card:* Carry on keeps the card as "Now" with when it started, time buttons, Other
+    time… and Switch, and the rest of the list under it. It is not saved: after a lock,
+    "Where was I?" comes back as before.
+  - *Wrap-up on top:* at wrap-up time the card is first in the Desk's panel, the rest folds
+    (Show them brings it back) and the bell has a dot and a line. Nothing folds while you are
+    typing in it, or on a day with nothing logged yet.
+  - *Esc keeps a jot:* a Desk jot with words in it is kept on Esc, with Undo.
+  - *A few helpers:* one screen after "What's Shiftbook for?": wrap-up (ticked, 5 pm), timer,
+    "I fill in a timesheet" and the days worked. Skip changes nothing.
+  - *"I fill in a timesheet"* is a new setting (`timesheet.use`, Settings → Your day). It is
+    **on** for a vault that never chose, so nothing disappears for anyone already using the
+    Timesheet; the helpers screen starts with it unticked, as in the approved picture. Off
+    hides the Timesheet tab, its settings, the "needs a code" count and the bell's reminder.
+    Entries and codes are untouched.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

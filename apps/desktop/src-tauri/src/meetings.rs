@@ -303,7 +303,7 @@ async fn timesheet_reminder(
     now: u32,
 ) -> Res<Option<BellItem>> {
     let prefs = store.prefs(owner).await?;
-    if !prefs.use_mode.has_work() {
+    if !prefs.shows_timesheet() {
         return Ok(None);
     }
     let start = week_of(today, prefs.week_start);

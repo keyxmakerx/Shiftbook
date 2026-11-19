@@ -131,6 +131,10 @@ works the way it does is in `DECISIONS.md`.
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
 - **Work, Home or Both:** the first run asks what Shiftbook is for (Settings → Look changes it).
+  Then **A few helpers** offers the end-of-day wrap-up (ticked, at 5 pm), the timer, “I fill in
+  a timesheet” and the days you work; Skip changes nothing, and all four are in Settings → Your
+  day. With “I fill in a timesheet” off, the Timesheet tab, its settings and the “needs a code”
+  reminders are hidden (your entries and codes stay as they are).
   Home turns the hours targets off, hides the Timesheet, uses everyday words and gives Log work a
   **✓ Done** button that saves a line with no time.
 - **Repeating:** bills, bins, renewals and birthdays. Each one repeats or expires on a date;

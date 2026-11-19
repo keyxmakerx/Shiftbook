@@ -42,6 +42,9 @@ pub const KEY_TEXT_SIZE: &str = "ui.text_size";
 pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 /// The optional "Now doing" timer: `true` or `false` (off by default).
 pub const KEY_TIMER: &str = "day.timer";
+/// "I fill in a timesheet": `true` or `false` (on by default; round 21). Off hides the
+/// Timesheet, its codes and the "needs a code" reminders for someone who only wants a log.
+pub const KEY_USE_TIMESHEET: &str = "timesheet.use";
 /// Phone: the quiet due reminder's time `HH:MM` on work days, or blank when it's off
 /// (off by default). See [`crate::nudge`].
 pub const KEY_REMIND_AT: &str = "phone.remind_at";
@@ -233,6 +236,8 @@ pub struct Prefs {
     pub wrapup_at: Option<String>,
     /// The "Now doing" timer is turned on.
     pub timer: bool,
+    /// "I fill in a timesheet" (see [`Prefs::shows_timesheet`]).
+    pub use_timesheet: bool,
     /// Phone: due reminder time `HH:MM`, `None` when off.
     pub remind_at: Option<String>,
     /// Phone: a wrap-up nudge at the wrap-up time.
@@ -274,6 +279,12 @@ impl Prefs {
     pub fn day_target(&self, date: time::Date) -> u32 {
         self.day_targets[usize::from(date.weekday().number_days_from_monday())]
     }
+
+    /// True when the Timesheet, its codes and its reminders show: Shiftbook is used for work
+    /// (Work or Both) and "I fill in a timesheet" is on.
+    pub fn shows_timesheet(&self) -> bool {
+        self.use_mode.has_work() && self.use_timesheet
+    }
 }
 
 impl Default for Prefs {
@@ -293,6 +304,7 @@ impl Default for Prefs {
             remind_at: None,
             wrapup_nudge: false,
             timer: false,
+            use_timesheet: true,
             quick_unlock: false,
             block_copy: true,
             hide_screenshots: true,
@@ -396,8 +408,9 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY
-        | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_USE_TIMESHEET | KEY_WRAPUP_NUDGE
+        | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG
+        | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
         KEY_DESK_DAYS => match v.parse::<u32>() {
             Ok(n) if DESK_DAYS_CHOICES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
@@ -541,6 +554,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
+            KEY_USE_TIMESHEET => prefs.use_timesheet = v != "false",
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
@@ -609,6 +623,18 @@ mod tests {
         assert_eq!(p.tickets_code, Some(id));
         let p = prefs_from_settings(&[(KEY_TICKETS_CODE, "")]);
         assert_eq!(p.tickets_code, None);
+    }
+
+    #[test]
+    fn the_timesheet_shows_for_work_unless_turned_off() {
+        // On unless it was turned off, and never in Home.
+        assert!(Prefs::default().shows_timesheet());
+        let off = prefs_from_settings(&[(KEY_USE_TIMESHEET, "false")]);
+        assert!(!off.use_timesheet && !off.shows_timesheet());
+        let home = prefs_from_settings(&[(KEY_USE_MODE, "home")]);
+        assert!(home.use_timesheet && !home.shows_timesheet());
+        let both = prefs_from_settings(&[(KEY_USE_MODE, "both"), (KEY_USE_TIMESHEET, "true")]);
+        assert!(both.shows_timesheet());
     }
 
     #[test]
@@ -874,6 +900,11 @@ mod tests {
     fn timer_on_and_paused() {
         assert_eq!(validate_pref(KEY_TIMER, "true"), Ok("true".into()));
         assert!(validate_pref(KEY_TIMER, "yes").is_err());
+        assert_eq!(
+            validate_pref(KEY_USE_TIMESHEET, "false"),
+            Ok("false".into())
+        );
+        assert!(validate_pref(KEY_USE_TIMESHEET, "no").is_err());
         assert_eq!(validate_pref(KEY_REMIND_AT, "8:00"), Ok("08:00".into()));
         assert_eq!(validate_pref(KEY_REMIND_AT, ""), Ok(String::new()));
         assert!(validate_pref(KEY_REMIND_AT, "8am").is_err());

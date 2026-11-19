@@ -142,7 +142,10 @@
   let panel = $state(panelOpen);
   // The wrap-up on top (round 21): the rest of the panel folds while it waits, unless you are
   // typing in it at that moment (nothing folds away under your fingers) or you show it again.
-  const wrapping = $derived(app.selected === app.today && wrapupDue());
+  // An empty day folds nothing: Log work has to be there to have something to wrap up.
+  const wrapping = $derived(
+    app.selected === app.today && wrapupDue() && (app.entries.length > 0 || (app.tray?.items.length ?? 0) > 0),
+  );
   let unfolded = $state(false);
   let restEl: HTMLElement | undefined = $state();
   $effect(() => {

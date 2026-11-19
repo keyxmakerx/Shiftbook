@@ -9,6 +9,7 @@
   import { toast } from '../lib/toast.svelte';
   import { clockLabel, insertLine, MAX_LINES, removeLine } from '../lib/wrapup';
   import { wrapupDue } from '../lib/wrapupState.svelte';
+  import { hasTimesheet } from '../lib/words';
 
   const at = $derived(app.prefs?.wrapupAt ?? null);
   const show = $derived(app.selected === app.today && wrapupDue());
@@ -90,15 +91,17 @@
 
     <div class="stats">
       <div><b>{fmtMinutes(dayMinutes)}</b><span class="lbl">logged today</span></div>
-      <button
-        type="button"
-        class="stat"
-        class:warn={uncoded > 0}
-        title="Open the Timesheet to pick codes"
-        onclick={() => setView('timesheet')}
-      >
-        <b>{uncoded}</b><span class="lbl">{uncoded === 1 ? 'needs a code' : 'need a code'}</span>
-      </button>
+      {#if hasTimesheet(app.prefs)}
+        <button
+          type="button"
+          class="stat"
+          class:warn={uncoded > 0}
+          title="Open the Timesheet to pick codes"
+          onclick={() => setView('timesheet')}
+        >
+          <b>{uncoded}</b><span class="lbl">{uncoded === 1 ? 'needs a code' : 'need a code'}</span>
+        </button>
+      {/if}
       <div><b>{trayCount}</b><span class="lbl">{trayCount === 1 ? 'ticket in tray' : 'tickets in tray'}</span></div>
     </div>
 
@@ -166,7 +169,7 @@
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     gap: 8px;
   }
 
