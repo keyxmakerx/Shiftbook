@@ -2,6 +2,12 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 22 — 18 Nov 2026 (waiting for an answer)
+One card, `r22-code-blocks` (`rounds/r22-code-blocks.json`): the owner's note on `r21-notepads`
+drawn as a plan. Pasted command output becomes a fixed-width block inside a notepad, labelled
+by itself with the kind of equipment (Cisco, Juniper, Linux, Windows); a notepad reads one way
+and is typed in another. Not built until it is answered.
+
 ## Round 21 — 18 Nov 2026 (quality-of-life audit)
 Ten cards from running the real app (0.8.2) with made-up data (`rounds/r21-audit.json`). The
 owner approved nine and changed one:
