@@ -124,6 +124,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "snoozed tickets",
         include_str!("../migrations/0023_ticket_snoozes.sql"),
     ),
+    (
+        24,
+        "days off",
+        include_str!("../migrations/0024_days_off.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -335,6 +340,7 @@ mod tests {
                     "category_code_defaults",
                     "custom_fields",
                     "custom_values",
+                    "days_off",
                     "frequencies",
                     "inbox_items",
                     "items",

@@ -248,6 +248,10 @@ pub async fn bell_for(
     today: time::Date,
     now: u32,
 ) -> Res<Vec<BellItem>> {
+    // A day off is quiet (round 21): nothing reminds you of work.
+    if !store.days_off(owner, today, today).await?.is_empty() {
+        return Ok(Vec::new());
+    }
     let meetings = store.meeting_series(owner).await?;
     let next_up = store.next_up_all(owner).await?;
     let mut open: Vec<String> = store

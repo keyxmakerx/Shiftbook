@@ -26,6 +26,7 @@ use shiftbook_core::quicklog::{
 use shiftbook_core::reshape::{check_split, merge, MergePart};
 use shiftbook_core::samework::{same_work, same_work_target, SameWork, WorkLine, SAME_WORK_DAYS};
 use shiftbook_core::tickets::add_tickets;
+use shiftbook_core::timeoff::TIME_OFF_TITLE;
 use shiftbook_core::tray::{
     carried_open, check_snooze, clean_tray_note, new_tray_tickets, plan_rollups, snoozed_until,
     validate_tray_minutes, RollupAction, Snooze, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE,
@@ -2413,6 +2414,98 @@ impl SqliteStore {
         }
         tx.commit().await?;
         Ok(())
+    }
+
+    /// The days from `from` to `to` that have something logged (round 21, time off).
+    pub async fn logged_days(&self, owner: OwnerId, from: Date, to: Date) -> Result<Vec<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT date FROM time_entries WHERE owner_id = $1 AND date >= $2 \
+             AND date <= $3 AND deleted_at IS NULL ORDER BY date",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|d| Ok(parse_date(d)?)).collect()
+    }
+
+    /// Book days off (round 21): each day gets a "Holiday" entry with its minutes, on the
+    /// time-off code when one is set, and the mark that makes it a day off. All of them or
+    /// none. Returns the new entries in the order given.
+    pub async fn book_days_off(
+        &self,
+        owner: OwnerId,
+        days: &[(Date, Minutes)],
+    ) -> Result<Vec<TimeEntryId>> {
+        let wanted = self.prefs(owner).await?.time_off_code;
+        let mut tx = self.write_tx().await?;
+        // A code that has been deleted since it was chosen is just left off.
+        let code = match wanted {
+            Some(c) if code_exists(&mut tx, owner, c).await.is_ok() => Some(c),
+            _ => None,
+        };
+        let now = now_text();
+        let mut ids = Vec::with_capacity(days.len());
+        for &(date, minutes) in days {
+            let input = EntryInput {
+                date,
+                minutes,
+                description: TIME_OFF_TITLE.to_string(),
+                project: None,
+                recurring: None,
+                category: None,
+                next_step: None,
+                timesheet_code_id: code,
+            };
+            let entry = checked_entry(owner, &input)?;
+            insert_entry(&mut tx, &entry, None, None).await?;
+            sqlx::query(
+                "INSERT INTO days_off (id, owner_id, entry_id, created_at, updated_at, \
+                 deleted_at) VALUES ($1, $2, $3, $4, $4, NULL)",
+            )
+            .bind(Uuid::now_v7().to_string())
+            .bind(owner.to_string())
+            .bind(entry.id.to_string())
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+            ids.push(entry.id);
+        }
+        tx.commit().await?;
+        Ok(ids)
+    }
+
+    /// The live entries that make `date` a day off.
+    pub async fn day_off_entries(&self, owner: OwnerId, date: Date) -> Result<Vec<TimeEntryId>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT e.id FROM days_off d JOIN time_entries e ON e.id = d.entry_id \
+             WHERE d.owner_id = $1 AND e.owner_id = $1 AND d.deleted_at IS NULL \
+             AND e.deleted_at IS NULL AND e.date = $2 ORDER BY e.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|id| Ok(parse_uuid(id)?.into())).collect()
+    }
+
+    /// The days off from `from` to `to`: the days of live entries booked as time off.
+    pub async fn days_off(&self, owner: OwnerId, from: Date, to: Date) -> Result<Vec<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT e.date FROM days_off d JOIN time_entries e ON e.id = d.entry_id \
+             WHERE d.owner_id = $1 AND e.owner_id = $1 AND d.deleted_at IS NULL \
+             AND e.deleted_at IS NULL AND e.date >= $2 AND e.date <= $3 ORDER BY e.date",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|d| Ok(parse_date(d)?)).collect()
     }
 
     /// Carry a still-open ticket into `date`'s tray: a new open row with 15 minutes, its

@@ -130,6 +130,15 @@
         onchange={(id) => pref('timesheet.tickets_code', id ?? '')}
       />
     </div>
+    <div class="cz-row">
+      <span class="cz-grow"><strong>Days off</strong> <span class="from">booked as “Holiday”</span></span>
+      <CodeSelect
+        value={app.prefs.timeOffCode}
+        label="Code for days off"
+        empty="Unassigned"
+        onchange={(id) => pref('timesheet.time_off_code', id ?? '')}
+      />
+    </div>
   {/if}
   {#if kinds.length > 0}
     <p class="grp">Kinds of repeating thing</p>

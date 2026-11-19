@@ -99,6 +99,8 @@ pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The timesheet code for each day's "Tickets" roll-up entry (round 15): a code id, or
 /// blank for none.
 pub const KEY_TICKETS_CODE: &str = "timesheet.tickets_code";
+/// The timesheet code days off are booked on (a code id; empty for none).
+pub const KEY_TIME_OFF_CODE: &str = "timesheet.time_off_code";
 /// The time buttons everyone starts with.
 pub const DEFAULT_TIME_BUTTONS: [u32; 5] = [15, 30, 45, 60, 120];
 /// Most time buttons.
@@ -280,6 +282,8 @@ pub struct Prefs {
     pub time_buttons: Vec<u32>,
     /// The timesheet code for each day's "Tickets" roll-up entry.
     pub tickets_code: Option<crate::ids::TimesheetCodeId>,
+    /// The timesheet code days off are booked on.
+    pub time_off_code: Option<crate::ids::TimesheetCodeId>,
 }
 
 impl Prefs {
@@ -332,6 +336,7 @@ impl Default for Prefs {
             ),
             time_buttons: DEFAULT_TIME_BUTTONS.to_vec(),
             tickets_code: None,
+            time_off_code: None,
         }
     }
 }
@@ -501,8 +506,8 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_TIME_BUTTONS => parse_time_buttons(v)
             .map(|l| l.iter().map(u32::to_string).collect::<Vec<_>>().join(","))
             .ok_or_else(|| invalid(value)),
-        KEY_TICKETS_CODE if v.is_empty() => Ok(String::new()),
-        KEY_TICKETS_CODE => v
+        KEY_TICKETS_CODE | KEY_TIME_OFF_CODE if v.is_empty() => Ok(String::new()),
+        KEY_TICKETS_CODE | KEY_TIME_OFF_CODE => v
             .parse::<crate::ids::TimesheetCodeId>()
             .map(|c| c.to_string())
             .map_err(|_| invalid(value)),
@@ -608,6 +613,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
                 }
             }
             KEY_TICKETS_CODE => prefs.tickets_code = v.parse().ok(),
+            KEY_TIME_OFF_CODE => prefs.time_off_code = v.parse().ok(),
             _ => {}
         }
     }
@@ -631,6 +637,18 @@ mod tests {
         let json = serde_json::to_value(Prefs::default()).unwrap();
         assert_eq!(json["blockCopy"], true);
         assert_eq!(json["hideScreenshots"], true);
+    }
+
+    #[test]
+    fn time_off_code() {
+        let id = crate::ids::TimesheetCodeId::new();
+        let text = id.to_string();
+        assert_eq!(validate_pref(KEY_TIME_OFF_CODE, &text), Ok(text.clone()));
+        assert_eq!(validate_pref(KEY_TIME_OFF_CODE, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_TIME_OFF_CODE, "Leave").is_err());
+        assert_eq!(Prefs::default().time_off_code, None);
+        let p = prefs_from_settings(&[(KEY_TIME_OFF_CODE, text.as_str())]);
+        assert_eq!(p.time_off_code, Some(id));
     }
 
     #[test]

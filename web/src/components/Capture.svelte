@@ -13,7 +13,7 @@
   import { toIsoDate } from '../lib/dates';
   import { edge } from '../lib/edge';
   import { KIND_LABEL, matchingLine } from '../lib/notes';
-  import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
+  import { addDays, dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
   import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
   import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
   import {
@@ -38,6 +38,7 @@
   import { pickMopFiles } from '../lib/mopbook.svelte';
   import { mopFor, mops, openMop, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
+  import { askTimeOff, bookDayOff } from '../lib/timeOffPrompt.svelte';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
   import { agoText, type Change } from '../lib/undoHistory';
@@ -177,6 +178,7 @@
       : []),
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book a holiday (8 h)', group: 'Do', words: 'today leave vacation', run: () => holiday() },
+    { label: 'Book several days off…', group: 'Do', words: 'holiday leave vacation time off week', run: () => askTimeOff(firstDayOff()) },
     ...(guards().copy || guards().screens
       ? [
           {
@@ -363,22 +365,19 @@
     return out;
   }
 
+  // Where "Book several days off…" starts: today, or tomorrow once today has work on it.
+  function firstDayOff(): string {
+    const today = app.ribbon.flatMap((w) => w.days).find((d) => d.date === app.today);
+    return today && today.minutes > 0 ? addDays(app.today, 1) : app.today;
+  }
+
   async function holiday() {
     const date = app.today;
-    const entry = await attempt(() =>
-      api.createEntry(
-        { date, minutes: 480, description: 'Holiday', projectId: null, recurringId: null, category: null, notes: null, timesheetCodeId: null },
-        '',
-      ),
-    );
-    if (!entry) return;
+    const id = await bookDayOff(date);
+    if (!id) return;
     setView('day');
     await selectDay(date);
-    await refresh();
-    flashEntry(entry.id);
-    toast('Today booked as holiday', 'Undo', () => {
-      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
+    flashEntry(id);
   }
 
   async function toInbox(line: string) {

@@ -44,6 +44,7 @@ pub mod sheet;
 pub mod standup;
 pub mod task;
 pub mod tickets;
+pub mod timeoff;
 pub mod timer;
 pub mod timesheet;
 pub mod todos;

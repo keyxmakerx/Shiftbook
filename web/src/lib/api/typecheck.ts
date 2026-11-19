@@ -35,6 +35,9 @@ import type { FieldKind as GenFieldKind } from './generated/FieldKind';
 import type { FingerprintStatus as GenFingerprintStatus } from './generated/FingerprintStatus';
 import type { FollowUpView as GenFollowUp } from './generated/FollowUpView';
 import type { MergeView as GenMerge } from './generated/MergeView';
+import type { OffDay as GenOffDay } from './generated/OffDay';
+import type { TimeOffBooked as GenTimeOffBooked } from './generated/TimeOffBooked';
+import type { TimeOffPlan as GenTimeOffPlan } from './generated/TimeOffPlan';
 import type { SplitView as GenSplit } from './generated/SplitView';
 import type { OpenAge as GenOpenAge } from './generated/OpenAge';
 import type { FrequencyView as GenFrequency } from './generated/FrequencyView';
@@ -140,6 +143,9 @@ export type Checks = [
   Assert<Same<Ui.FingerprintStatus, GenFingerprintStatus>>,
   Assert<Same<Ui.FollowUp, GenFollowUp>>,
   Assert<Same<Ui.MergeResult, GenMerge>>,
+  Assert<Same<Ui.OffDay, GenOffDay>>,
+  Assert<Same<Ui.TimeOffBooked, GenTimeOffBooked>>,
+  Assert<Same<Ui.TimeOffPlan, GenTimeOffPlan>>,
   Assert<Same<Ui.SplitResult, GenSplit>>,
   Assert<Same<Ui.OpenAge, GenOpenAge>>,
   Assert<Same<Ui.Frequency, GenFrequency>>,

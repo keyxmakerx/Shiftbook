@@ -136,4 +136,8 @@ timeButtons: Array<number>,
 /**
  * The timesheet code for each day's "Tickets" roll-up entry.
  */
-ticketsCode: TimesheetCodeId | null, };
+ticketsCode: TimesheetCodeId | null, 
+/**
+ * The timesheet code days off are booked on.
+ */
+timeOffCode: TimesheetCodeId | null, };

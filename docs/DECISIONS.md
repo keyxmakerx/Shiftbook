@@ -84,6 +84,19 @@ owner approved nine and changed one:
     entries selected (Merge these two; the one logged first keeps its name). The day's
     Tickets entry can do neither, since it comes from the tray. Rules in
     `shiftbook_core::reshape`; Undo restores both entries exactly (`unmerge_entries`).
+  - *Time off for several days:* "Book several days off…" (a ribbon day's menu, or Find)
+    asks for the first and last day and shows what gets booked before booking it. Every
+    work day in between (a weekday with a daily target) that has nothing logged gets a
+    "Holiday" entry with that day's usual hours; weekends and days already logged are
+    skipped, never overwritten. At most 62 days in one go. "Book a holiday (8 h)" still
+    books one day straight away, whatever is on it, with that weekday's hours (8 h when it
+    has none). Each day off is marked in a new table (`days_off`, migration 24) that points
+    at its entry, so deleting the entry or pressing Undo takes the mark away too. A day off
+    is grey in the ribbon and the bell says nothing on it. Days still to come in the ribbon
+    now have a menu, for booking them off and for "Not a day off after all". With a code
+    picked under Settings → Timesheet → Default codes → Days off
+    (`timesheet.time_off_code`), the entries are booked on it; without one they have no
+    code, as before. Rules in `shiftbook_core::timeoff`.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

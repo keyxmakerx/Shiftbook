@@ -1708,3 +1708,84 @@ fn an_entry_splits_in_two_and_two_merge_into_one() {
             .is_err());
     });
 }
+
+#[test]
+fn days_off_are_booked_together_and_follow_their_entries() {
+    let dir = TestDir::new("daysoff");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let (mon, tue, wed) = (
+            date!(2026 - 11 - 02),
+            date!(2026 - 11 - 03),
+            date!(2026 - 11 - 04),
+        );
+        s.create_entry(me, &input(tue, 60, "Patching"), "")
+            .await
+            .unwrap();
+        assert_eq!(s.logged_days(me, mon, wed).await.unwrap(), [tue]);
+        assert!(s.logged_days(other, mon, wed).await.unwrap().is_empty());
+
+        // The time-off code has to be one of yours; once set, days off are booked on it.
+        let code = s
+            .add_timesheet_code(
+                me,
+                &CodeInput {
+                    area: "Leave".into(),
+                    phase_label: "Phase".into(),
+                    code: "Annual leave".into(),
+                    sort_order: 0,
+                    hidden: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(s
+            .set_pref(
+                other,
+                shiftbook_core::prefs::KEY_TIME_OFF_CODE,
+                &code.id.to_string()
+            )
+            .await
+            .is_err());
+        s.set_pref(
+            me,
+            shiftbook_core::prefs::KEY_TIME_OFF_CODE,
+            &code.id.to_string(),
+        )
+        .await
+        .unwrap();
+
+        let ids = s
+            .book_days_off(me, &[(mon, Minutes(480)), (wed, Minutes(240))])
+            .await
+            .unwrap();
+        assert_eq!(ids.len(), 2);
+        let day = s.list_entries(me, mon, mon).await.unwrap();
+        assert_eq!(day.len(), 1);
+        assert_eq!(day[0].entry.id, ids[0]);
+        assert_eq!(day[0].entry.description, "Holiday");
+        assert_eq!(day[0].entry.minutes, Minutes(480));
+        assert_eq!(day[0].entry.timesheet_code_id, Some(code.id));
+        assert!(!day[0].is_tray);
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon, wed]);
+        assert_eq!(s.days_off(me, tue, tue).await.unwrap(), []);
+        assert!(s.days_off(other, mon, wed).await.unwrap().is_empty());
+
+        assert_eq!(s.day_off_entries(me, wed).await.unwrap(), [ids[1]]);
+        assert!(s.day_off_entries(me, tue).await.unwrap().is_empty());
+        assert!(s.day_off_entries(other, wed).await.unwrap().is_empty());
+        // Deleting the entry takes the day off away; putting it back brings it back.
+        s.delete_entry(me, ids[1]).await.unwrap();
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon]);
+        s.restore_entry(me, ids[1]).await.unwrap();
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon, wed]);
+
+        // One bad day and nothing is booked.
+        let thu = date!(2026 - 11 - 05);
+        assert!(s
+            .book_days_off(me, &[(thu, Minutes(480)), (thu, Minutes(100_000))])
+            .await
+            .is_err());
+        assert!(s.list_entries(me, thu, thu).await.unwrap().is_empty());
+    });
+}

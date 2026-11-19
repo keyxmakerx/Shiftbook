@@ -51,6 +51,8 @@ pub struct RibbonDay {
     pub future: bool,
     /// Nothing logged on a day that has a target (see [`mark_gaps`]).
     pub gap: bool,
+    /// Booked as a day off (see [`crate::timeoff::mark_off`]).
+    pub off: bool,
 }
 
 /// One week in the ribbon.
@@ -125,6 +127,7 @@ pub fn build_ribbon(
                         parts,
                         future: date > today,
                         gap: false,
+                        off: false,
                     }
                 })
                 .collect();

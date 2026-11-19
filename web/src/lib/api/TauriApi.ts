@@ -9,6 +9,8 @@ import type {
   CaptureLines,
   FollowUp,
   MergeResult,
+  TimeOffBooked,
+  TimeOffPlan,
   SplitInput,
   SplitResult,
   OpenAge,
@@ -221,6 +223,18 @@ export class TauriApi implements DataApi {
 
   splitEntry(id: string, split: SplitInput): Promise<SplitResult> {
     return call('split_entry', { id, split });
+  }
+  timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan> {
+    return call('time_off_plan', { from, to });
+  }
+  bookTimeOff(from: IsoDate, to: IsoDate): Promise<TimeOffBooked> {
+    return call('book_time_off', { from, to });
+  }
+  bookDayOff(date: IsoDate): Promise<TimeOffBooked> {
+    return call('book_day_off', { date });
+  }
+  unbookDayOff(date: IsoDate): Promise<string[]> {
+    return call('unbook_day_off', { date });
   }
   mergeEntries(keep: string, other: string): Promise<MergeResult> {
     return call('merge_entries', { keep, other });

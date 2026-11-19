@@ -138,6 +138,14 @@ works the way it does is in `DECISIONS.md`.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
   with nothing logged gets a dot, and clicking it opens Log work for that day (days before your
   first entry never get one, and the Timesheet doesn't warn about them).
+- **Time off:** right-click a day in the ribbon (days still to come too) and **Book a holiday
+  (8 h)** books that day; **Book several days off…** (also in Find) asks for the first and
+  last day and shows what it will do before you press Book: every work day in between with
+  nothing logged gets a "Holiday" entry with your usual hours for that day, and weekends and
+  days you already logged are left alone. Days off are grey in the ribbon and the bell stays
+  quiet on them. One Undo takes the whole booking back; later, right-click the day and pick
+  **Not a day off after all**, or delete its Holiday entry. If your days off go on a
+  timesheet code, pick it once under **Settings → Timesheet → Default codes → Days off**.
 - **Time is written as 45m and 1h 30m** everywhere except the Timesheet, which keeps decimal
   hours (0.75, 1.5) because that is what a timesheet tool takes.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code

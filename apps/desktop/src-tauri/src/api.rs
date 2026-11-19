@@ -28,6 +28,7 @@ use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, 
 use shiftbook_core::samework::should_ask;
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
+use shiftbook_core::timeoff::{mark_off, one_day_off, plan_time_off, TimeOffPlan};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
 use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
 use shiftbook_core::tray::{open_ages, OpenAge};
@@ -1104,6 +1105,89 @@ pub async fn tray_restore(s: State<'_, VaultSession>, id: String) -> Res<TrayDay
     tray_result(&store, owner, day).await
 }
 
+// ---------- time off ----------
+
+/// Time off that was booked (round 21): the new entries, for Undo.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct TimeOffBooked {
+    /// The "Holiday" entries, one per day booked, in day order.
+    entries: Vec<String>,
+    /// Their time together, as decimal hours.
+    hours: String,
+}
+
+async fn time_off_plan_for(
+    store: &shiftbook_storage::SqliteStore,
+    owner: shiftbook_core::ids::OwnerId,
+    from: &str,
+    to: &str,
+) -> Res<TimeOffPlan> {
+    let (from, to) = (date_arg(from)?, date_arg(to)?);
+    let targets = store.prefs(owner).await?.day_targets;
+    let logged = store.logged_days(owner, from, to).await?;
+    Ok(
+        plan_time_off(from, to, &targets, &logged)
+            .map_err(shiftbook_storage::StorageError::from)?,
+    )
+}
+
+/// Maps to `DataApi.timeOffPlan()`: what booking `from` to `to` off would do. Work days
+/// with nothing logged get booked; weekends and days already logged are skipped.
+#[tauri::command]
+pub async fn time_off_plan(
+    s: State<'_, VaultSession>,
+    from: String,
+    to: String,
+) -> Res<TimeOffPlan> {
+    let (store, owner) = s.data().await?;
+    time_off_plan_for(&store, owner, &from, &to).await
+}
+
+/// Maps to `DataApi.bookTimeOff()`: book the plan for `from` to `to`.
+#[tauri::command]
+pub async fn book_time_off(
+    s: State<'_, VaultSession>,
+    from: String,
+    to: String,
+) -> Res<TimeOffBooked> {
+    let (store, owner) = s.data().await?;
+    let plan = time_off_plan_for(&store, owner, &from, &to).await?;
+    let days: Vec<_> = plan.to_book().collect();
+    let entries = store.book_days_off(owner, &days).await?;
+    Ok(TimeOffBooked {
+        entries: entries.iter().map(ToString::to_string).collect(),
+        hours: plan.hours,
+    })
+}
+
+/// Maps to `DataApi.bookDayOff()`: book one day off, whatever is on it already. It gets
+/// the weekday's usual hours, or 8 h on a day that has none.
+#[tauri::command]
+pub async fn book_day_off(s: State<'_, VaultSession>, date: String) -> Res<TimeOffBooked> {
+    let (store, owner) = s.data().await?;
+    let date = date_arg(&date)?;
+    let minutes = one_day_off(date, &store.prefs(owner).await?.day_targets);
+    let entries = store.book_days_off(owner, &[(date, minutes)]).await?;
+    Ok(TimeOffBooked {
+        entries: entries.iter().map(ToString::to_string).collect(),
+        hours: shiftbook_core::hours::format_hours(minutes),
+    })
+}
+
+/// Maps to `DataApi.unbookDayOff()`: the day's "Holiday" entries are deleted (they can be
+/// restored). Returns their ids.
+#[tauri::command]
+pub async fn unbook_day_off(s: State<'_, VaultSession>, date: String) -> Res<Vec<String>> {
+    let (store, owner) = s.data().await?;
+    let ids = store.day_off_entries(owner, date_arg(&date)?).await?;
+    for id in &ids {
+        store.delete_entry(owner, *id).await?;
+    }
+    Ok(ids.iter().map(ToString::to_string).collect())
+}
+
 // ---------- ribbon and timesheet ----------
 
 /// Maps to `DataApi.ribbon()`: the last four weeks up to the week of `today`.
@@ -1125,6 +1209,7 @@ pub async fn ribbon(s: State<'_, VaultSession>, today: String) -> Res<Vec<Ribbon
         &store.prefs(owner).await?.day_targets,
         store.first_entry_date(owner).await?,
     );
+    mark_off(&mut weeks, &store.days_off(owner, from, to).await?);
     Ok(weeks)
 }
 

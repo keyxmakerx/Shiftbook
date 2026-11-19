@@ -28,6 +28,7 @@
   import { closeFind, finder, openFind, stampTime } from '../lib/finder.svelte';
   import DayPrompt from '../components/DayPrompt.svelte';
   import SplitPrompt from '../components/SplitPrompt.svelte';
+  import TimeOffPrompt from '../components/TimeOffPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
   import Day from '../views/Day.svelte';
@@ -205,6 +206,7 @@
 <Toast />
 <DayPrompt />
 <SplitPrompt />
+<TimeOffPrompt />
 <AskText />
 <FindBar />
 <ShortcutOverlay />

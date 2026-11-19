@@ -145,6 +145,8 @@ export interface Prefs {
   timeButtons: number[];
   /** The timesheet code for each day's "Tickets" entry, or null (Customize → Timesheet). */
   ticketsCode: string | null;
+  /** The timesheet code days off are booked on. */
+  timeOffCode: string | null;
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
   /** Copying text out is blocked until allowed for 10 minutes (on by default). */
@@ -502,6 +504,7 @@ export type PrefKey =
   | 'day.standup_words'
   | 'day.time_buttons'
   | 'timesheet.tickets_code'
+  | 'timesheet.time_off_code'
   | 'security.quick_unlock'
   | 'security.block_copy'
   | 'security.hide_screenshots'
@@ -680,6 +683,31 @@ export interface RibbonDay {
   future: boolean;
   /** Nothing logged on a day that has a target. */
   gap: boolean;
+  /** Booked as a day off. */
+  off: boolean;
+}
+
+/** One day of a time-off range: booked with `minutes`, or skipped (`free`: no target that
+ * weekday; `logged`: something is on it already). */
+export interface OffDay {
+  date: IsoDate;
+  minutes: number;
+  skip: 'free' | 'logged' | null;
+}
+
+/** What booking a range off does. */
+export interface TimeOffPlan {
+  days: OffDay[];
+  /** How many days get booked. */
+  booked: number;
+  minutes: number;
+  hours: string;
+}
+
+/** Time off that was booked: the new entries (for Undo) and their hours together. */
+export interface TimeOffBooked {
+  entries: string[];
+  hours: string;
 }
 
 export interface RibbonWeek {
@@ -1312,6 +1340,17 @@ export interface DataApi {
   getEntry(id: string): Promise<Entry>;
   /** One entry becomes two that share its time (round 21). Tauri: `split_entry`. */
   splitEntry(id: string, split: SplitInput): Promise<SplitResult>;
+  /** What booking `from` to `to` off would do: work days with nothing logged get a
+   * "Holiday" entry, weekends and logged days are skipped. Tauri: `time_off_plan`. */
+  timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan>;
+  /** Book that plan. Tauri: `book_time_off`. */
+  bookTimeOff(from: IsoDate, to: IsoDate): Promise<TimeOffBooked>;
+  /** Book one day off whatever is on it, with the weekday's usual hours (8 h on a day
+   * that has none). Tauri: `book_day_off`. */
+  bookDayOff(date: IsoDate): Promise<TimeOffBooked>;
+  /** Take a day off back: its "Holiday" entries are deleted. Returns their ids, for Undo.
+   * Tauri: `unbook_day_off`. */
+  unbookDayOff(date: IsoDate): Promise<string[]>;
   /** `other` goes into `keep`: time, notepad and tickets (same day only). Tauri: `merge_entries`. */
   mergeEntries(keep: string, other: string): Promise<MergeResult>;
   /** Undo a merge with what it returned. Tauri: `unmerge_entries`. */

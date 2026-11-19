@@ -46,6 +46,14 @@ pub enum CoreError {
     #[error("Pick two different entries to merge.")]
     MergeSame,
 
+    /// Time off asked for a range whose last day is before its first (round 21).
+    #[error("The last day off is before the first.")]
+    TimeOffBackwards,
+
+    /// Time off asked for more days than one booking takes.
+    #[error("That's more than two months. Book it in two parts.")]
+    TimeOffTooLong,
+
     /// A required text field was empty.
     #[error("{field} can't be empty.")]
     Required {
