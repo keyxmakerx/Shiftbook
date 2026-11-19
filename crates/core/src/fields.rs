@@ -3,8 +3,8 @@
 //! Kinds: text, number, choice (from a list of options) and link. A field can
 //! have a **link template** such as `https://example.atlassian.net/browse/{ticket}`
 //! and a **ticket prefix** such as `PROJ-`: tickets starting with the prefix
-//! (ignoring case) get a "copy link" option. Links are only shown and copied,
-//! never opened (the app makes no network requests).
+//! (ignoring case) get a link to open in the browser or copy (round 21; the app
+//! itself makes no network requests, it hands the address to the browser).
 
 use serde::{Deserialize, Serialize};
 
@@ -126,16 +126,24 @@ pub fn join_options(options: &[String]) -> String {
     options.join("\n")
 }
 
+/// A web address that may be handed to the browser (round 21): `http://` or `https://`
+/// with something after it, no spaces or control characters, and not overlong. Anything
+/// else (`file:`, `javascript:`, an app's own scheme) is never opened.
+pub fn may_open(url: &str) -> bool {
+    let lower = url.to_ascii_lowercase();
+    let rest = lower
+        .strip_prefix("https://")
+        .or_else(|| lower.strip_prefix("http://"));
+    rest.is_some_and(|r| !r.is_empty() && !r.starts_with('/'))
+        && url.chars().count() <= MAX_TEMPLATE_CHARS * 4
+        && !url.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
+/// A link template is a web address with `{ticket}` where the ticket goes. Since round 21
+/// it may leave `{ticket}` out: then every matching ticket gets the same link, such as a
+/// vendor's support portal.
 fn check_template(template: &str) -> Result<(), CoreError> {
-    let lower = template.to_ascii_lowercase();
-    let scheme_ok = lower.starts_with("https://") || lower.starts_with("http://");
-    if !scheme_ok
-        || !template.contains(TICKET_PLACEHOLDER)
-        || template.chars().count() > MAX_TEMPLATE_CHARS
-        || template
-            .chars()
-            .any(|c| c.is_whitespace() || c.is_control())
-    {
+    if template.chars().count() > MAX_TEMPLATE_CHARS || !may_open(template) {
         return Err(CoreError::LinkTemplateInvalid);
     }
     Ok(())
@@ -331,9 +339,10 @@ mod tests {
         let choice = validate_field("Size", FieldKind::Choice, "S\nM\nL", "", "").unwrap();
         assert_eq!(choice.options, vec!["S", "M", "L"]);
         assert_eq!(choice.link_template, None);
+        // (A link with no {ticket} is allowed since round 21: a vendor's portal.)
         for bad in [
             "javascript:alert(1){ticket}",
-            "https://example.com/browse/",
+            "https://",
             "ftp://example.com/{ticket}",
             "https://exa mple.com/{ticket}",
         ] {
@@ -403,5 +412,44 @@ mod tests {
             build_link("https://x.test/?q={ticket}&a={ticket}", "a b/é"),
             "https://x.test/?q=a%20b%2F%C3%A9&a=a%20b%2F%C3%A9"
         );
+        // A vendor's portal: the same link for every matching ticket.
+        assert_eq!(
+            build_link("https://support.vendor.test/cases", "SR-88"),
+            "https://support.vendor.test/cases"
+        );
+        assert!(validate_field(
+            "Vendor portal",
+            FieldKind::Link,
+            "",
+            "https://support.vendor.test/cases",
+            "SR-"
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn only_web_addresses_may_be_opened() {
+        assert!(may_open("https://example.atlassian.net/browse/PROJ-123"));
+        assert!(may_open("HTTP://intranet.test/t?id=1"));
+        for bad in [
+            "",
+            "https://",
+            "https:///etc/passwd",
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "ftp://x.test/a",
+            "mailto:someone@x.test",
+            "x.test/a",
+            " https://x.test",
+            "https://x.test/a b",
+            "https://x.test/\n",
+            "ms-settings:privacy",
+        ] {
+            assert!(!may_open(bad), "{bad:?}");
+        }
+        assert!(!may_open(&format!(
+            "https://x.test/{}",
+            "a".repeat(MAX_TEMPLATE_CHARS * 4)
+        )));
     }
 }

@@ -4,7 +4,7 @@
 use serde::Serialize;
 use shiftbook_core::boards::links_in;
 use shiftbook_core::dates::{format_date, format_timestamp};
-use shiftbook_core::fields::{build_link, ticket_matches_prefix};
+use shiftbook_core::fields::{build_link, may_open, ticket_matches_prefix};
 use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{
     InboxItemId, NoteId, OwnerId, ProjectId, RecurringTaskId, TimeEntryId, TimesheetCodeId,
@@ -122,6 +122,13 @@ pub fn ticket_links(fields: &[CustomField], ticket: &str) -> Vec<LinkView> {
             })
         })
         .collect()
+}
+
+/// True when `url` may be handed to the browser for `ticket` (round 21): it is one of the
+/// links the user's own link fields build for that ticket, and a web address. Nothing the
+/// page makes up, and nothing typed in a note, passes.
+pub fn ticket_link_allowed(fields: &[CustomField], ticket: &str, url: &str) -> bool {
+    may_open(url) && ticket_links(fields, ticket).iter().any(|l| l.url == url)
 }
 
 pub fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
@@ -278,5 +285,41 @@ mod tests {
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].url, "https://example.atlassian.net/browse/proj-12");
         assert!(ticket_links(&fields, "INC0045678").is_empty());
+    }
+
+    #[test]
+    fn only_a_tickets_own_links_may_be_opened() {
+        let fields = link_fields(&[
+            field(
+                Some("PROJ-"),
+                Some("https://example.atlassian.net/browse/{ticket}"),
+                false,
+            ),
+            // A vendor's portal: the same link for each of its tickets.
+            field(
+                Some("SR-"),
+                Some("https://support.vendor.test/cases"),
+                false,
+            ),
+        ]);
+        let own = "https://example.atlassian.net/browse/PROJ-12";
+        assert!(ticket_link_allowed(&fields, "PROJ-12", own));
+        assert!(ticket_link_allowed(
+            &fields,
+            "SR-88",
+            "https://support.vendor.test/cases"
+        ));
+        // Another ticket's link, a made-up address, or one for a ticket no field matches.
+        assert!(!ticket_link_allowed(&fields, "PROJ-13", own));
+        assert!(!ticket_link_allowed(
+            &fields,
+            "PROJ-12",
+            "https://elsewhere.test/"
+        ));
+        assert!(!ticket_link_allowed(&fields, "INC0045678", own));
+        assert!(!ticket_link_allowed(&fields, "SR-88", "file:///etc/passwd"));
+        // A link field saved before the check on web addresses can't be opened either.
+        let old = link_fields(&[field(Some("X-"), Some("ms-settings:{ticket}"), false)]);
+        assert!(!ticket_link_allowed(&old, "X-1", "ms-settings:X-1"));
     }
 }

@@ -1,6 +1,6 @@
 <script lang="ts">
   // Settings → Fields: your own fields on entries, tickets or projects. Link fields (for
-  // example Jira) turn matching tickets into links you can copy.
+  // example Jira, or a vendor's portal) turn matching tickets into links you can open or copy.
   import type { FieldInput } from '../../lib/api';
   import { app } from '../../lib/store.svelte';
   import FieldEditor from './FieldEditor.svelte';

@@ -130,7 +130,9 @@ works the way it does is in `DECISIONS.md`.
   wrap-up, timer), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Responses (saved messages for tickets), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
-  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
+  such as `PROJ-` give matching tickets an ↗ that opens their link in your browser, and a
+  “Copy link” option; leave `{ticket}` out of the link for a vendor's portal, the same page
+  for all their tickets; web addresses typed in notes are never opened), Backups
   (Back up now, the daily automatic backups, Restore from a backup or a file), Security (auto-lock, change password, and **Delete all
   data** to start again; the unlock screen offers it too if the recovery key is lost). The version you have installed shows under the list of sections.
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The

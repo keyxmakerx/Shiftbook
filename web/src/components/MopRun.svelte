@@ -482,7 +482,13 @@
 
     <footer>
       <span class="count">
-        {#if mode === 'run' || ticked}{ticked} of {tickable} ticked{/if}{#if run?.startedAt}{' · started '}{clock(run.startedAt)}{/if}{#if run?.finishedAt}{' · finished '}{clock(run.finishedAt)}{/if}
+        {[
+          mode === 'run' || ticked ? `${ticked} of ${tickable} ticked` : '',
+          run?.startedAt ? `started ${clock(run.startedAt)}` : '',
+          run?.finishedAt ? `finished ${clock(run.finishedAt)}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </span>
       <span class="grow"></span>
       {#if mode === 'run'}

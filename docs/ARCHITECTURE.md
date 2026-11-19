@@ -54,7 +54,9 @@
   `check_backup`, `restore_backup`; the daily automatic backup starts after `unlock`.
 - Plugins: `dialog` (pick a backup file, called from Rust commands only; the WebView gets no
   dialog permission). `fs` (scoped to app data + user-picked paths) is allowed if export needs it.
-  Not allowed: `shell`, `http`, `opener` for remote URLs, updater (until signing is set up).
+  `opener` (round 21): called from Rust only, by `open_ticket_link`, to hand a ticket's own link
+  to the user's browser; the WebView gets no opener permission (SECURITY.md "Opening a ticket's
+  link"). Not allowed: `shell`, `http`, updater (until signing is set up).
 
 ## Server specifics (Phase 2 — plan only)
 - Axum + tower; same `core`/`storage` crates; Postgres (or SQLite for tiny installs).
@@ -129,8 +131,9 @@ Interpretations made where the spec is silent:
 - **Crib sheet:** items with the same title in a line merge (tickets combined); Unassigned is
   listed first; the ticket count counts each number once; weekend days without entries are
   hidden in the UI; "nothing logged" warns only for Monday–Friday before today.
-- **Link templates** must start with `http://` or `https://` and contain `{ticket}`; the ticket
-  is percent-encoded. Links are only displayed and copied.
+- **Link templates** must start with `http://` or `https://`; `{ticket}` is replaced by the
+  ticket, percent-encoded, and may be left out (a vendor's portal: one page for all its
+  tickets). A ticket's own link can be opened in the browser or copied; nothing else is opened.
 
 ## Storage, vault and unlock (M1)
 `crates/storage` modules:

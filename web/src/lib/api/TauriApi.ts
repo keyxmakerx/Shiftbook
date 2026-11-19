@@ -454,6 +454,9 @@ export class TauriApi implements DataApi {
   responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]> {
     return call('responses_for', { ticket, today, name });
   }
+  openTicketLink(ticket: string, url: string): Promise<void> {
+    return call('open_ticket_link', { ticket, url });
+  }
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]> {
     return call('save_responses', { items });
   }

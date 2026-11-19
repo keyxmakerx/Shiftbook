@@ -27,6 +27,10 @@ time.workspace = true
 tokio.workspace = true
 zeroize.workspace = true
 uuid.workspace = true
+# Hands a ticket's link to the user's own browser (round 21), called from Rust only: the
+# WebView gets no opener permission, and only links built from the user's own link fields
+# are ever opened (see `open_ticket_link`).
+tauri-plugin-opener = "2"
 
 [features]
 # Writes the UI's TypeScript types (web/src/lib/api/generated) when testing; see

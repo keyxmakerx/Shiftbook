@@ -94,6 +94,7 @@ fn main() {
             "find_day",
             "list_responses",
             "responses_for",
+            "open_ticket_link",
             "save_responses",
             "where_was_i",
             "timer_offer",

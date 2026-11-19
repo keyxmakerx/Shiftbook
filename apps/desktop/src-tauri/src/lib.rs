@@ -694,6 +694,8 @@ async fn bring_in_sync_file(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Called from Rust only (open_ticket_link); the page has no opener permission.
+        .plugin(tauri_plugin_opener::init())
         .plugin(phone::init())
         .setup(|app| {
             // Tauri's per-user app data folder; never a hard-coded path.
@@ -798,6 +800,7 @@ pub fn run() {
             api::find_day,
             api::list_responses,
             api::responses_for,
+            api::open_ticket_link,
             api::save_responses,
             api::where_was_i,
             api::timer_offer,

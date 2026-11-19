@@ -148,8 +148,8 @@ pub enum CoreError {
         input: String,
     },
 
-    /// A link template must start with http:// or https:// and contain {ticket}.
-    #[error("A link needs to start with https:// and contain {{ticket}} where the ticket goes.")]
+    /// A link template must be a web address: http:// or https://, no spaces.
+    #[error("A link needs to start with https:// and have no spaces. Put {{ticket}} where the ticket number goes.")]
     LinkTemplateInvalid,
 
     /// Log work needs a ticket or a few words.

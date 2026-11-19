@@ -11,6 +11,7 @@ import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
 import { responseButton } from './responses';
+import { openLinkItems } from './ticketLinks';
 import { toast } from './toast.svelte';
 import { repeating, repeatingChoices } from './repeating.svelte';
 import { openWindow } from './windows.svelte';
@@ -147,6 +148,8 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
   // Its MOP (round 18) when it has one; attaching one from a template is under More.
   const hasMop = !!mopFor(item.ticket);
   if (hasMop) items.push({ label: 'Open its MOP', icon: 'book', act: () => openMop(item.ticket) });
+  // Its link in the browser (round 21), when a link field matches; copying it is under More.
+  items.push(...openLinkItems(item.ticket, item.links));
   items.push(
     {
       label: 'Time',
@@ -215,6 +218,7 @@ export function carriedMenu(item: CarriedItem, notepad?: () => void): MenuSpec {
             act: () => void carryCarried(item),
           },
           { label: 'Copy ticket number', icon: 'copy', act: () => void copy(item.ticket, item.ticket) },
+          ...openLinkItems(item.ticket, item.links),
           ...item.links.map((l) => ({
             label: `Copy ${l.fieldName} link`,
             icon: 'link' as const,

@@ -1637,6 +1637,28 @@ pub async fn list_responses(s: State<'_, VaultSession>) -> Res<Vec<ResponseView>
     Ok(response_views(store.responses(owner).await?))
 }
 
+/// Maps to `DataApi.openTicketLink()`: hand one of `ticket`'s links to the user's own browser
+/// (round 21, card r21-open-links). The page can't open an address of its choosing: `url`
+/// has to be one of the links the user's own link fields build for that ticket, and a web
+/// address (`shiftbook_core::fields::may_open`). Shiftbook itself still never goes online.
+#[tauri::command]
+pub async fn open_ticket_link(
+    app: tauri::AppHandle,
+    s: State<'_, VaultSession>,
+    ticket: String,
+    url: String,
+) -> Res<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let (store, owner) = s.data().await?;
+    let fields = links_for(&store, owner).await?;
+    if !shiftbook_app::views::ticket_link_allowed(&fields, &ticket, &url) {
+        return Err(CommandError::InvalidInput);
+    }
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|_| CommandError::StorageError)
+}
+
 /// Maps to `DataApi.responsesFor()`: the saved responses ready to copy, with `{ticket}`,
 /// `{date}` and `{name}` filled in by `shiftbook_core::responses::fill_response`. With no
 /// ticket (the tray's Responses button) `{ticket}` stays as typed.

@@ -753,7 +753,7 @@ export interface FieldInput {
 export interface CustomValue {
   fieldId: string;
   value: string;
-  /** For link fields: the value turned into a link (shown and copied, never opened). */
+  /** For link fields: the value turned into a link (shown and copied). */
   link: string | null;
 }
 
@@ -1400,6 +1400,12 @@ export interface DataApi {
    * one is given) filled in. Tauri: `responses_for`.
    */
   responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]>;
+  /**
+   * Hand one of a ticket's links to the user's own browser (round 21). Only a link that the
+   * user's link fields build for that ticket is opened; anything else is refused. Tauri:
+   * `open_ticket_link`. (A web build can open the same link in a new tab.)
+   */
+  openTicketLink(ticket: string, url: string): Promise<void>;
   /** Replace the list (rows with no message dropped, at most 30). Tauri: `save_responses`. */
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 
