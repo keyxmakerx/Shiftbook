@@ -61,6 +61,13 @@ owner approved nine and changed one:
     stands out in amber once the days reach the number in Settings → Your day
     (`tickets.stale_days`, 3 unless changed, 1 to 60). Tickets carried from earlier days are
     listed longest open first (`shiftbook_core::tray::open_ages`, `carried_open`).
+  - *Several lines in Log work:* pasting text with more than one line opens a list, one
+    entry per line (`shiftbook_core::capture::capture_lines`: blank lines dropped, a bullet,
+    number or tick box in front taken off, 20 lines at a time). A line with a time in it
+    keeps it; the others pick one, or a time button fills them all. Log all logs them in
+    order with one Undo. "One entry instead" keeps the old behaviour (several tickets pasted
+    on their own lines as one entry). It never asks "Add to …?": each line goes where a
+    single line with no answer would.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

@@ -44,7 +44,9 @@ works the way it does is in `DECISIONS.md`.
   with Copy. See `CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
-  entry); the **Tickets** tray (paste tickets as you work on them; a small box asks how long
+  entry; paste **several lines** and each becomes its own entry: a list shows them with the
+  time each line had, a time button fills the lines that had none, and Log all logs them, with
+  one Undo for the lot, or One entry instead puts it all on one line as before); the **Tickets** tray (paste tickets as you work on them; a small box asks how long
   you've spent so far (15 minutes if you skip it), which you can step up or down later, and
   they roll up into one “Tickets” entry for the day; a box beside each ticket takes a few
   words, and its slide-out holds a full notepad; a new ticket starts **Still open** and comes

@@ -761,6 +761,7 @@ pub fn run() {
             api::items,
             api::item_set_done,
             api::parse_capture_line,
+            api::capture_lines_of,
             api::capture_log,
             api::tray_day,
             api::tray_add,

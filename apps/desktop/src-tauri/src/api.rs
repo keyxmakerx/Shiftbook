@@ -5,7 +5,9 @@
 //! Every command maps 1:1 to a `DataApi` method in `web/src/lib/api/`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::capture::{parse_capture, Capture, CaptureProject};
+use shiftbook_core::capture::{
+    capture_lines, parse_capture, without_time, Capture, CaptureProject,
+};
 use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::fields::{build_link, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
@@ -789,6 +791,55 @@ pub async fn parse_capture_line(
         &projects,
         &repeating,
     ))
+}
+
+/// One of several lines pasted into Log work (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureLineView {
+    /// The line to log: its words without the list marker or the time.
+    text: String,
+    /// What it means; `minutes` is set when the line had a time in it.
+    capture: Capture,
+}
+
+/// Several lines pasted into Log work, read one by one.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureLinesView {
+    lines: Vec<CaptureLineView>,
+    /// Lines past the most taken at once.
+    left_out: u32,
+}
+
+/// Maps to `DataApi.captureLines()`: pasted text as Log work lines, one entry each.
+#[tauri::command]
+pub async fn capture_lines_of(
+    s: State<'_, VaultSession>,
+    text: String,
+    today: String,
+) -> Res<CaptureLinesView> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
+    let start = week_start(&store, owner).await?;
+    let (lines, more) = capture_lines(&text);
+    Ok(CaptureLinesView {
+        lines: lines
+            .into_iter()
+            .map(|line| {
+                let capture = capture_with(&line, today, start, &projects, &repeating);
+                CaptureLineView {
+                    text: without_time(&line, &capture),
+                    capture,
+                }
+            })
+            .collect(),
+        left_out: u32::try_from(more).unwrap_or(u32::MAX),
+    })
 }
 
 /// Maps to `DataApi.captureLog()`: log a capture line (it must have hours).

@@ -58,6 +58,7 @@
     "allow-items",
     "allow-item-set-done",
     "allow-parse-capture-line",
+    "allow-capture-lines-of",
     "allow-capture-log",
     "allow-tray-day",
     "allow-tray-add",

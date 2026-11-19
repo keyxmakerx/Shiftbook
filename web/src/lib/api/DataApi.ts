@@ -611,6 +611,21 @@ export interface TrayDay {
   hours: string;
 }
 
+/** One of several lines pasted into Log work. */
+export interface CaptureLine {
+  /** The line to log: its words without the list marker or the time. */
+  text: string;
+  /** What it means; `minutes` is set when the line had a time in it. */
+  capture: Capture;
+}
+
+/** Several lines pasted into Log work, one entry each (round 21). */
+export interface CaptureLines {
+  lines: CaptureLine[];
+  /** Lines past the most taken at once. */
+  leftOut: number;
+}
+
 /** Mirrors `shiftbook_core::capture::Capture`. */
 export interface Capture {
   minutes: number | null;
@@ -1291,6 +1306,8 @@ export interface DataApi {
   // ----- capture -----
   /** What a capture line means (for the live chips). */
   parseCapture(text: string, today: IsoDate): Promise<Capture>;
+  /** Several lines pasted into Log work, read one by one (round 21). Tauri: `capture_lines_of`. */
+  captureLines(text: string, today: IsoDate): Promise<CaptureLines>;
   /** Log a capture line; it must contain hours. */
   captureLog(text: string, today: IsoDate): Promise<Entry>;
 

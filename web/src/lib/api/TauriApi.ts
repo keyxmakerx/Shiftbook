@@ -6,6 +6,7 @@ import { toApiError } from './DataApi';
 import type {
   AwayList,
   Frequency,
+  CaptureLines,
   FollowUp,
   OpenAge,
   ItemSummary,
@@ -246,6 +247,9 @@ export class TauriApi implements DataApi {
     return call('item_set_done', { id, done, today });
   }
 
+  captureLines(text: string, today: IsoDate): Promise<CaptureLines> {
+    return call('capture_lines_of', { text, today });
+  }
   parseCapture(text: string, today: IsoDate): Promise<Capture> {
     return call('parse_capture_line', { text, today });
   }

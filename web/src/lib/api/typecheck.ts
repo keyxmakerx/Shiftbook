@@ -19,6 +19,7 @@ import type { LabelView as GenCanvasLabel } from './generated/LabelView';
 import type { DeskLinkView as GenCanvasLink } from './generated/DeskLinkView';
 import type { StackView as GenCanvasStack } from './generated/StackView';
 import type { Capture as GenCapture } from './generated/Capture';
+import type { CaptureLinesView as GenCaptureLines } from './generated/CaptureLinesView';
 import type { CardKind as GenCardKind } from './generated/CardKind';
 import type { CardRefView as GenCardRef } from './generated/CardRefView';
 import type { CarriedView as GenCarriedItem } from './generated/CarriedView';
@@ -121,6 +122,7 @@ export type Checks = [
   Assert<Same<Ui.CanvasLink, GenCanvasLink>>,
   Assert<Same<Ui.CanvasStack, GenCanvasStack>>,
   Assert<Same<Ui.Capture, GenCapture>>,
+  Assert<Same<Ui.CaptureLines, GenCaptureLines>>,
   Assert<Same<Ui.CardKind, GenCardKind>>,
   Assert<Same<Ui.CardRef, GenCardRef>>,
   Assert<Same<Ui.CarriedItem, GenCarriedItem>>,

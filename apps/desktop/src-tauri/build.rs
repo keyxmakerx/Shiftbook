@@ -55,6 +55,7 @@ fn main() {
             "items",
             "item_set_done",
             "parse_capture_line",
+            "capture_lines_of",
             "capture_log",
             "tray_day",
             "tray_add",
