@@ -8,6 +8,12 @@ drawn as a plan. Pasted command output becomes a fixed-width block inside a note
 by itself with the kind of equipment (Cisco, Juniper, Linux, Windows); a notepad reads one way
 and is typed in another. Not built until it is answered.
 
+A second card, `r22-today-row` (`rounds/r22-today-row.json`): the Today row approved on
+26 October (`r15-human-vanish`) against the 10 November change ("New cards don't shove the
+rest", below). With a full Desk the next free spot is bottom right, often off the edge; a
+Today row puts today's cards on top, and yesterday's join Earlier each morning. The rest of
+`r15-human-vanish` is built; this piece waits for the answer.
+
 ## Round 21 — 18 Nov 2026 (quality-of-life audit)
 Ten cards from running the real app (0.8.2) with made-up data (`rounds/r21-audit.json`). The
 owner approved nine and changed one:

@@ -1,0 +1,45 @@
+{
+ "meta": {
+  "round": 22,
+  "heading": "Two follow-ups: code blocks, and where new Desk cards land",
+  "intro": "Round 22 is two cards. Both are plans with pictures; neither is built yet. What you approved in round 21 is being built now and your answers are under Done. Press one of the two buttons on each; a note is optional."
+ },
+ "cards": {
+  "r22-today-row": {
+   "area": "The Desk · from your 26 October approval",
+   "round": 22,
+   "order": 2,
+   "version": 1,
+   "title": "A Today row for new cards on the Desk",
+   "body": [
+    "On 26 October you approved a **Today row**. On 10 November the Desk changed another way: a new card now takes the next free spot after all the others, so nothing gets shoved. That works, but with a full Desk the next free spot is at the bottom right (first picture: what I logged today is half off the edge).",
+    "The Today row (second picture) puts what you log today at the top, right of the toolbox, where you are looking."
+   ],
+   "bullets": [
+    "The one trade-off: each morning, yesterday's cards drop down to join **Earlier**. Nothing moves during the day.",
+    "Cards you placed yourself never move, exactly as now. Boxes and drawers are untouched."
+   ],
+   "ask": "Add the Today row?",
+   "yes": "Yes, add it",
+   "no": "Leave it as it is",
+   "note_hint": "Anything you'd change about it",
+   "where": [
+    "In Shiftbook, open the **Desk** with more than a dozen cards on it.",
+    "Press Ctrl+Space, type **30m test card** and press Enter.",
+    "Look for the new card: it is at the end of the last row, often past the right edge."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/d867b10acb4479e01b37ed8517a93649",
+     "caption": "Now: the entry I just logged (orange outline) lands bottom right, half off the edge. A second one is fully out of view.",
+     "w": 978
+    },
+    {
+     "src": "/_blob/35c6d39348ec1e5f8183721aa8cbe4c4",
+     "caption": "With a Today row: today's cards along the top, everything older under Earlier.",
+     "w": 978
+    }
+   ]
+  }
+ }
+}
