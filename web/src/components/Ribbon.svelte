@@ -3,7 +3,7 @@
   // and the last four weeks as days of coloured hours (click a day to open it).
   import { api } from '../lib/api';
   import type { RibbonDay } from '../lib/api';
-  import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
+  import { dayOfMonth, fmtMinutes, longDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, guardedWords, guards, protection, protectNow } from '../lib/protection.svelte';
   import { bell } from '../lib/bell.svelte';
@@ -121,7 +121,7 @@
     return {
       sections: [
         {
-          head: `${longDay(day.date)} · ${day.hours} h`,
+          head: `${longDay(day.date)} · ${fmtMinutes(day.minutes)}`,
           items: [
             { label: 'Open this day', icon: 'desk', act: () => openDay(day.date) },
             {
@@ -276,8 +276,8 @@
             class:future={day.future}
             class:gap={day.gap}
             disabled={day.future}
-            title="{longDay(day.date)} · {day.gap ? 'nothing logged yet, click to log' : `${day.hours} h`}{day.future ? '' : ' · right-click for options'}"
-            aria-label="{longDay(day.date)}, {day.gap ? 'nothing logged' : `${day.hours} hours`}"
+            title="{longDay(day.date)} · {day.gap ? 'nothing logged yet, click to log' : fmtMinutes(day.minutes)}{day.future ? '' : ' · right-click for options'}"
+            aria-label="{longDay(day.date)}, {day.gap ? 'nothing logged' : fmtMinutes(day.minutes)}"
             onclick={() => openDay(day.date, day.gap)}
             use:paperMenu={() => dayMenu(day)}
           >

@@ -8,7 +8,7 @@
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
   import { focusNow } from '../lib/focus';
-  import { dayMonth, weekdayShort } from '../lib/format';
+  import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
   import { responseButton } from '../lib/responses';
@@ -142,14 +142,14 @@
   </header>
   <div class="grid">
     <div class="sq parent" style:--c={projectColor(entry.projectId)}>
-      <span class="kind">Entry · {card.workHours ?? entry.hours} h</span>
+      <span class="kind">Entry · {fmtMinutes(card.workMinutes ?? entry.minutes)}</span>
       <span class="title">{entry.description || 'Untitled'}</span>
       <span class="sub">{projectById(entry.projectId)?.name ?? 'No project'}</span>
       {#if card.work.length}
         <span class="days">
           {#each days as d (d.id)}
             <button type="button" class="day" title="Open this day's entry" onclick={() => (app.drawer = d.id)}>
-              {d.date === app.today ? 'Today' : `${weekdayShort(d.date)} ${dayMonth(d.date)}`} · {d.hours} h
+              {d.date === app.today ? 'Today' : `${weekdayShort(d.date)} ${dayMonth(d.date)}`} · {fmtMinutes(d.minutes)}
             </button>
           {/each}
         </span>

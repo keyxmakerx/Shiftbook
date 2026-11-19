@@ -239,7 +239,7 @@
   // ----- what things say -----
   function line(c: Card): { kind: string; text: string; day: string } {
     const day = (iso: string) => (iso === app.today ? 'Today' : relativeDay(iso, app.today));
-    if (c.entry) return { kind: `Entry · ${c.entry.hours} h`, text: c.entry.description || 'Untitled', day: day(c.entry.date) };
+    if (c.entry) return { kind: `Entry · ${fmtMinutes(c.entry.minutes)}`, text: c.entry.description || 'Untitled', day: day(c.entry.date) };
     if (c.tray)
       return {
         kind: `${c.tray.item.done ? 'Ticket' : 'Still open'} · ${fmtMinutes(c.tray.item.minutes)}`,
@@ -491,7 +491,7 @@
             </div>
             {#if data.key.startsWith('project:')}
               <aside class="side" aria-label="Time and tickets">
-                <div class="stat"><span class="big">{data.hours ?? '0'} h</span><span class="cap">logged in all</span></div>
+                <div class="stat"><span class="big">{fmtMinutes(data.minutes ?? 0)}</span><span class="cap">logged in all</span></div>
                 <div class="stat">
                   <span class="big" class:warn={data.openTickets > 0}>{data.openTickets}</span><span class="cap">tickets still open</span>
                 </div>

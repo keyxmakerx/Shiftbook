@@ -581,7 +581,7 @@
             <i class="dot" style:--c={projectColor(hit.entry.projectId)}></i>
             <span class="what"><b>{hit.entry.description || 'Untitled'}</b>
               <small>{relativeDay(hit.entry.date, app.today)}{hit.entry.tickets.length ? ' · ' + hit.entry.tickets.map((t) => t.number).join(', ') : ''}</small></span>
-            <span class="mono amt">{hit.entry.hours} h</span>
+            <span class="mono amt">{fmtMinutes(hit.entry.minutes)}</span>
           {:else if hit.kind === 'ticket'}
             {@const t = hit.ticket}
             <i class="dot" style:--c={t.projectId ? projectColor(t.projectId) : 'var(--accent)'}></i>
@@ -616,7 +616,7 @@
                 {#if wk}<small>{wk.hours} h logged</small>{/if}</span>
             {:else}
               {@const rd = ribbonDay(hit.date)}
-              <span class="what"><b>Go to {longDay(hit.date)}</b><small>Day{rd ? ` · ${rd.hours} h` : ''}</small></span>
+              <span class="what"><b>Go to {longDay(hit.date)}</b><small>Day{rd ? ` · ${fmtMinutes(rd.minutes)}` : ''}</small></span>
             {/if}
           {:else if hit.kind === 'scrap'}
             <i class="dot" style:--c="var(--warn)"></i>

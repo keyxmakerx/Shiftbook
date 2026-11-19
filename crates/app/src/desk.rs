@@ -11,9 +11,7 @@ use shiftbook_core::canvas::{
     LinkText, MemberState, TrayPlace, ORIGIN,
 };
 use shiftbook_core::dates::format_date;
-use shiftbook_core::hours::format_hours;
 use shiftbook_core::ids::{InboxItemId, NoteId, OwnerId, ProjectId, TimeEntryId, TrayItemId};
-use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, InboxItem, Note, TrayItem};
 use shiftbook_core::notes::shows_on_desk;
 use shiftbook_storage::canvas::{pair, CanvasSpot, CardRef};
@@ -64,8 +62,8 @@ pub struct CardView {
     /// For an entry: the same work on other days, folded into this card (round 14), newest
     /// first. This card shows the newest.
     pub work: Vec<EntryView>,
-    /// The time across this card and `work`, as hours (only when there is other work).
-    pub work_hours: Option<String>,
+    /// The minutes across this card and `work` (only when there is other work).
+    pub work_minutes: Option<u32>,
     /// Tickets from the Tickets tray with a number this work has, folded into this card.
     pub folded: Vec<TrayCardView>,
     /// Stays bright under "Just today" (round 15): from today, still open, brought up for
@@ -227,7 +225,7 @@ pub fn blank(kind: CardKind, id: Uuid) -> CardView {
         note: None,
         inbox: None,
         work: Vec::new(),
-        work_hours: None,
+        work_minutes: None,
         folded: Vec::new(),
         just_today: false,
     }
@@ -499,7 +497,7 @@ pub fn fold_same_work(
             }
         }
         if group.len() > 1 {
-            head.card.work_hours = Some(format_hours(Minutes(minutes)));
+            head.card.work_minutes = Some(minutes);
         }
         cards.push(head);
     }
@@ -915,6 +913,7 @@ pub async fn desk(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use shiftbook_core::minutes::Minutes;
     use time::macros::{date, datetime};
 
     fn tray(number: &str) -> Pending {

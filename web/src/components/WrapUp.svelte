@@ -4,7 +4,7 @@
   // tomorrow. "Where was I?" shows that list the next morning.
   import { tick } from 'svelte';
   import { api } from '../lib/api';
-  import { fmtHours, weekdayLong } from '../lib/format';
+  import { fmtMinutes, weekdayLong } from '../lib/format';
   import { app, attempt, ribbonDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { clockLabel, insertLine, isWrapupTime, MAX_LINES, removeLine } from '../lib/wrapup';
@@ -98,7 +98,7 @@
     </div>
 
     <div class="stats">
-      <div><b>{fmtHours(dayMinutes)} h</b><span class="lbl">logged today</span></div>
+      <div><b>{fmtMinutes(dayMinutes)}</b><span class="lbl">logged today</span></div>
       <button
         type="button"
         class="stat"

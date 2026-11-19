@@ -8,7 +8,7 @@
   import { api } from '../lib/api';
   import type { ProjectGlance } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
-  import { onDay } from '../lib/format';
+  import { fmtMinutes, onDay } from '../lib/format';
   import { phone } from '../lib/phone.svelte';
   import { askText } from '../lib/askText.svelte';
   import { openMenu, paperMenu, type MenuSpec } from '../lib/menu.svelte';
@@ -132,8 +132,8 @@
             </button>
           </h2>
           <div class="nums">
-            <span><b>{g.hoursWeek}</b> h this week</span>
-            <span><b>{g.hoursAll}</b> h in all</span>
+            <span><b>{fmtMinutes(g.minutesWeek)}</b> this week</span>
+            <span><b>{fmtMinutes(g.minutesAll)}</b> in all</span>
           </div>
           <p class="sub">
             {g.lastWorked ? `Last worked ${onDay(g.lastWorked, app.today)}` : 'Not worked on yet'}

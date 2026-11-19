@@ -4,7 +4,7 @@
   // layout; the Desk canvas stays on the computer, so Desk is today as one list.
   import { onMount } from 'svelte';
   import { bell } from '../lib/bell.svelte';
-  import { dayOfMonth, fmtHours, longDay, dayDistance, weekdayShort } from '../lib/format';
+  import { dayDistance, dayOfMonth, fmtMinutes, longDay, weekdayShort } from '../lib/format';
   import type { IconName } from '../lib/icons';
   import type { View } from '../lib/keys';
   import { app, ribbonDay, ribbonWeekOf, selectDay, setView, shownViews } from '../lib/store.svelte';
@@ -110,9 +110,9 @@
       <h1>{app.view === 'day' ? longDay(app.selected) : longDay(app.today)}</h1>
       <span class="sum">
         {#if app.view === 'day' && app.selected !== app.today}
-          {dayDistance(app.selected, app.today)} · <b>{fmtHours(ribbonDay(app.selected)?.minutes ?? 0)} h</b>
+          {dayDistance(app.selected, app.today)} · <b>{fmtMinutes(ribbonDay(app.selected)?.minutes ?? 0)}</b>
         {:else}
-          Today <b>{fmtHours(todayMinutes)} h</b> · Week <b>{fmtHours(weekMinutes)} h</b>
+          Today <b>{fmtMinutes(todayMinutes)}</b> · Week <b>{fmtMinutes(weekMinutes)}</b>
         {/if}
       </span>
     </div>
@@ -138,10 +138,10 @@
           type="button"
           aria-pressed={d.date === app.selected}
           class:gap={d.gap}
-          aria-label="{longDay(d.date)}, {d.gap ? 'nothing logged' : `${d.hours} hours`}"
+          aria-label="{longDay(d.date)}, {d.gap ? 'nothing logged' : fmtMinutes(d.minutes)}"
           onclick={() => void selectDay(d.date)}
         >
-          <small>{weekdayShort(d.date)}</small><b>{dayOfMonth(d.date)}</b><small>{d.gap ? '·' : d.hours}</small>
+          <small>{weekdayShort(d.date)}</small><b>{dayOfMonth(d.date)}</b><small>{d.gap ? '·' : fmtMinutes(d.minutes)}</small>
         </button>
       {/each}
     </div>

@@ -433,10 +433,10 @@ export interface ProjectGlance {
   name: string;
   color: string | null;
   archived: boolean;
-  /** Hours this week, e.g. "4.5". */
-  hoursWeek: string;
-  /** Every hour logged against it. */
-  hoursAll: string;
+  /** Minutes this week. */
+  minutesWeek: number;
+  /** Every minute logged against it. */
+  minutesAll: number;
   /** The last day it was worked on. */
   lastWorked: IsoDate | null;
   /** Its tickets still open. */
@@ -822,8 +822,8 @@ export interface CanvasCard {
   inbox: InboxItem | null;
   /** For an entry: the same work on other days, folded into this card, newest first. */
   work: Entry[];
-  /** The time across this card and `work`, as hours (only when there is other work). */
-  workHours: string | null;
+  /** The minutes across this card and `work` (only when there is other work). */
+  workMinutes: number | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
   /** Stays bright under "Just today": from today, still open, brought up for today or pinned. */
@@ -946,8 +946,8 @@ export interface BoardData {
   children: BoardChild[];
   /** Newest first, each with its spot on this board. */
   cards: CanvasCard[];
-  /** For a project: every minute logged against it, as hours. */
-  hours: string | null;
+  /** For a project: every minute logged against it. */
+  minutes: number | null;
   /** For a project: its tickets still open. */
   openTickets: number;
   /** An archived project. */

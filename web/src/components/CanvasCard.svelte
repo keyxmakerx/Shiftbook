@@ -383,8 +383,8 @@
     <span class="kind">
       {#if card.work.length}
         {@const days = new Set([e.date, ...card.work.map((w) => w.date)]).size}
-        Entry · {card.workHours} h · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
-      {:else}Entry · {e.hours} h{dayWord(e.date)}{/if}
+        Entry · {fmtMinutes(card.workMinutes ?? e.minutes)} · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
+      {:else}Entry · {fmtMinutes(e.minutes)}{dayWord(e.date)}{/if}
     </span>
     {#if renaming.id === e.id}
       <RenameBox entry={e} also={card.work} />

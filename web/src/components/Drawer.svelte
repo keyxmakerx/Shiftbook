@@ -5,10 +5,9 @@
   // Changes save as you go. Click outside, Esc or Done closes it.
   import { api } from '../lib/api';
   import type { CodeSource, CustomValue, Entry, EntryInput, ResolvedCode } from '../lib/api';
-  import { longDay } from '../lib/format';
+  import { fmtMinutes, longDay } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { countTo } from '../lib/motion';
-  import { fmtHours } from '../lib/format';
   import { app, attempt, flashEntry, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
@@ -252,10 +251,10 @@
       </div>
 
       <div class="field rise" style:--i={2}>
-        <span class="lbl">Hours</span>
+        <span class="lbl">Time</span>
         <div class="step">
           <button class="hbtn" type="button" disabled={entry.isTray || entry.minutes === 0} onclick={() => step(-15)}>−15m</button>
-          <span class="big mono" aria-live="polite">{fmtHours(shown)}</span>
+          <span class="big mono" aria-live="polite">{fmtMinutes(shown)}</span>
           <button class="hbtn" type="button" disabled={entry.isTray} onclick={() => step(15)}>+15m</button>
           <button class="hbtn" type="button" disabled={entry.isTray} onclick={() => step(60)}>+1h</button>
         </div>

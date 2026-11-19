@@ -112,19 +112,6 @@ export function dayDistance(iso: string, today: string): string {
   return diff < 0 ? `${-diff} days ago` : `In ${diff} days`;
 }
 
-/**
- * Minutes as decimal hours with at most two decimals and no trailing zeros, like core's
- * `format_hours` (90 → "1.5", 75 → "1.25", 20 → "0.33"). Used only while numbers count up.
- */
-export function fmtHours(minutes: number): string {
-  const hundredths = Math.floor((Math.max(0, minutes) * 100 + 30) / 60);
-  const whole = Math.floor(hundredths / 100);
-  const rest = hundredths % 100;
-  if (rest === 0) return String(whole);
-  if (rest % 10 === 0) return `${whole}.${rest / 10}`;
-  return `${whole}.${pad2(rest)}`;
-}
-
 /** Minutes as "15m", "1h", "1h 30m". */
 export function fmtMinutes(minutes: number): string {
   const h = Math.floor(minutes / 60);

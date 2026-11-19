@@ -114,6 +114,8 @@ works the way it does is in `DECISIONS.md`.
   entries that need a code, the tray and a short “Tomorrow I start with…” list.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
   with nothing logged gets a dot, and clicking it opens Log work for that day.
+- **Time is written as 45m and 1h 30m** everywhere except the Timesheet, which keeps decimal
+  hours (0.75, 1.5) because that is what a timesheet tool takes.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and

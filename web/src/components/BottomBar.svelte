@@ -4,7 +4,7 @@
   // chips (round 14) come next, orange once their follow-up day comes; today's hours and the
   // bell sit on the right. The shortcut hint lives here too.
   import { bell } from '../lib/bell.svelte';
-  import { fmtHours, onDay } from '../lib/format';
+  import { fmtMinutes, onDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { chipMenu, pins } from '../lib/pins.svelte';
   import { app, ribbonDay } from '../lib/store.svelte';
@@ -125,7 +125,7 @@
     {#if app.justToday}<span class="hint" role="status">Showing today, still open, brought up and pinned</span>{/if}
   {/if}
   <span class="hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> for shortcuts</span>
-  <span class="hours mono" title="Logged today">{fmtHours(today)} h today</span>
+  <span class="hours mono" title="Logged today">{fmtMinutes(today)} today</span>
   <button
     type="button"
     class="bell"

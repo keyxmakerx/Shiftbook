@@ -102,7 +102,7 @@
       >
         <Icon name="copy" size={14} /> Responses
       </button>
-      <span class="total mono">{app.tray?.hours ?? '0'} h</span>
+      <span class="total mono">{fmtMinutes(app.tray?.minutes ?? 0)}</span>
     </span>
   </h3>
   <p class="hint">Paste tickets as you work on them. Each stays open, and comes back tomorrow, until you tick it done.</p>

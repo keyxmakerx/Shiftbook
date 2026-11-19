@@ -68,7 +68,7 @@
   } from '../lib/canvasView';
   import { input as entryInput, moveEntryTo } from '../lib/entryActions';
   import { sameWork } from '../lib/sameWork';
-  import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
+  import { dayMonth, fmtMinutes, fromIso, weekdayShort } from '../lib/format';
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
@@ -1757,8 +1757,8 @@
           {#if countDone}
             <div><span class="big mono">{doneToday}</span><span class="lbl">{doneToday === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : weekdayShort(app.selected)}</span></div>
           {:else}
-            <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
-            <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+            <div><span class="big mono">{fmtMinutes(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
+            <div><span class="big mono">{fmtMinutes(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
           {/if}
         </div>
         <!-- Log work comes first: it must be on screen when the app opens (1100 by 760), and

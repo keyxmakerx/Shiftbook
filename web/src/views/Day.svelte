@@ -1,7 +1,7 @@
 <script lang="ts">
   // The Desk: today's card (date, hours ring, week total, "Where was I?", Log work, entries) beside the
   // Done tickets tray and the Inbox.
-  import { fmtHours, fromIso, longDay, dayDistance, weekdayLong } from '../lib/format';
+  import { dayDistance, fmtMinutes, fromIso, longDay, weekdayLong } from '../lib/format';
   import { countTo } from '../lib/motion';
   import { app, ribbonDay, ribbonWeekOf } from '../lib/store.svelte';
   import { hasHome } from '../lib/words';
@@ -63,7 +63,7 @@
             <span class="lbl">{doneCount === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : 'this day'}</span>
           </div>
         {:else}
-          <div class="ring" title={target ? `${fmtHours(dayMinutes)} of ${fmtHours(target)} hours` : 'No target on this day'}>
+          <div class="ring" title={target ? `${fmtMinutes(dayMinutes)} of ${fmtMinutes(target)}` : 'No target on this day'}>
             <svg viewBox="0 0 46 46" aria-hidden="true">
               <circle class="track" cx="23" cy="23" r="19" />
               <circle
@@ -75,9 +75,9 @@
                 stroke-dashoffset={RING * (1 - (target ? Math.min(shownDay / target, 1) : 0))}
               />
             </svg>
-            <div><div class="big">{fmtHours(shownDay)}</div><span class="lbl">{target ? `of ${fmtHours(target)} h` : `no target ${weekdayLong(app.selected)}s`}</span></div>
+            <div><div class="big">{fmtMinutes(shownDay)}</div><span class="lbl">{target ? `of ${fmtMinutes(target)}` : `no target ${weekdayLong(app.selected)}s`}</span></div>
           </div>
-          <div><div class="big week">{fmtHours(shownWeek)}</div><span class="lbl">this week</span></div>
+          <div><div class="big week">{fmtMinutes(shownWeek)}</div><span class="lbl">this week</span></div>
         {/if}
       </div>
     {/if}

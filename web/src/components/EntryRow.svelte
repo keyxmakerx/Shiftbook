@@ -4,6 +4,7 @@
   // opens the details drawer; right-click opens its paper menu with everything.
   // On a phone (round 15): swipe right for +15 minutes, left for Timer and Delete.
   import { api } from '../lib/api';
+  import { fmtMinutes } from '../lib/format';
   import type { Entry } from '../lib/api';
   import { addEntryTime, canTime as canTimeEntry, entryMenu, removeEntry } from '../lib/entryActions';
   import { phone } from '../lib/phone.svelte';
@@ -182,7 +183,7 @@
     <!-- Done without time (round 15): a tick, not "0h". -->
     <span class="h done" title="Done">✓</span>
   {:else}
-    <span class="h">{entry.hours}</span>
+    <span class="h">{fmtMinutes(entry.minutes)}</span>
   {/if}
   <span class="t">
     {#if renaming.id === entry.id}

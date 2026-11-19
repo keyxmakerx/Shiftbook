@@ -5,7 +5,6 @@ import {
   dayDistance,
   dayMonthYear,
   daysBetween,
-  fmtHours,
   fmtMinutes,
   isWeekend,
   longDay,
@@ -21,25 +20,13 @@ describe('display formatting', () => {
     expect(dayMonthYear('2025-11-03')).toBe('3 November 2025');
   });
 
-  it('formats hours like the app does', () => {
-    const cases: [number, string][] = [
-      [0, '0'],
-      [90, '1.5'],
-      [75, '1.25'],
-      [20, '0.33'],
-      [60, '1'],
-      [480, '8'],
-      [1, '0.02'],
-    ];
-    for (const [m, text] of cases) expect(fmtHours(m), String(m)).toBe(text);
-    expect(fmtHours(-5)).toBe('0');
-  });
-
   it('formats minutes for buttons and toasts', () => {
     expect(fmtMinutes(15)).toBe('15m');
     expect(fmtMinutes(60)).toBe('1h');
     expect(fmtMinutes(90)).toBe('1h 30m');
     expect(fmtMinutes(120)).toBe('2h');
+    expect(fmtMinutes(0)).toBe('0m');
+    expect(fmtMinutes(45)).toBe('45m');
   });
 
   it('handles local dates', () => {
