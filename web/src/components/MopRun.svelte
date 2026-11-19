@@ -267,6 +267,17 @@
     if (await copyText(text)) toast('MOP copied as plain text');
   }
 
+  /** Save a copy as a text file named after the MOP (what the Name box says). Like every
+   *  export, the file is readable by anyone who can open it, and says so first. */
+  async function saveFile() {
+    const n = note;
+    if (!n) return;
+    await flush();
+    toast("The file won't be locked: anyone who can open its folder can read it.");
+    const name = await attempt(() => api.saveMopFile(n.id));
+    if (name) toast(`Saved as ${name}`);
+  }
+
   /** A MOP written before its ticket existed: put it on the ticket (made if new). */
   async function link() {
     const t = ticketIn.trim();
@@ -378,6 +389,13 @@
       <p class="from">For {@render ticketLink(run.ticket)}</p>
     {/if}
 
+    <!-- Its name, always in view (it used to be an unmarked box only Edit showed): type a new
+         one and it's saved, and shows on the window, the bottom bar and in Find. -->
+    <label class="name">
+      <span>Name</span>
+      <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} placeholder="Give this MOP a name" autocomplete="off" />
+    </label>
+
     {#if asking !== null}
       <div class="strip ask" role="group" aria-label="Steps not ticked">
         <span class="say"><b>{asking === 1 ? "1 step isn't ticked." : `${asking} steps aren't ticked.`}</b> Mark it done anyway?</span>
@@ -410,7 +428,6 @@
     <!-- Ctrl+F looks in here when the MOP is being read or run (in Edit, in the text box). -->
     <div class="body" data-find={mode === 'edit' ? undefined : ''}>
       {#if mode === 'edit'}
-        <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} aria-label="MOP title" placeholder="Title" />
         <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
       {:else if mode === 'read'}
         <WikiText body={text} onlink={(t) => void follow(t)} />
@@ -503,6 +520,12 @@
         onclick={() => void flush().then(() => note && saveAsTemplate({ ...note, body: text }))}>Save as template</button
       >
       <button type="button" class="btn slim" onclick={() => void copyPlain()}><Icon name="copy" size={13} /> Copy as text</button>
+      <button
+        type="button"
+        class="btn slim"
+        title="Save a copy as a text file, named after this MOP"
+        onclick={() => void saveFile()}><Icon name="save" size={13} /> Save as a file</button
+      >
       {#if run}<button type="button" class="btn slim primary" onclick={() => void copyLog()}><Icon name="copy" size={13} /> Copy run log</button>{/if}
     </footer>
   </div>
@@ -648,15 +671,30 @@
     overflow: auto;
   }
 
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .name span {
+    flex: none;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mut);
+  }
+
   .title-in {
-    width: 100%;
-    margin-bottom: 6px;
+    flex: 1;
+    min-width: 0;
     font: 600 15px var(--ui);
   }
 
   textarea {
     width: 100%;
-    height: calc(100% - 44px);
+    height: 100%;
     min-height: 220px;
     resize: none;
     border: 1px solid var(--rule);

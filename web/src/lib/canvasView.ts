@@ -96,6 +96,21 @@ export function openingView(today: Spot[], all: Spot[], width: number, height: n
   return { zoom: 1, x: FIRST_CARD.x - left, y: FIRST_CARD.y - top };
 }
 
+/** The view moved the least it takes to show the whole card at `spot` on a board `width` by
+ *  `height`, a little in from the edges; the same view when the card already shows. The zoom
+ *  stays as it is. Used when a new card lands outside what the Desk is showing. */
+export function panToShow(view: CanvasView, spot: Spot, width: number, height: number, margin = 24): CanvasView {
+  if (width <= 0 || height <= 0) return view;
+  const left = spot.x * view.zoom + view.x;
+  const top = spot.y * view.zoom + view.y;
+  const w = CARD_W * view.zoom;
+  const h = CARD_H * view.zoom;
+  // A card bigger than the board lines up at its top left corner.
+  const dx = left < margin || w > width - 2 * margin ? margin - left : Math.min(0, width - margin - (left + w));
+  const dy = top < margin || h > height - 2 * margin ? margin - top : Math.min(0, height - margin - (top + h));
+  return dx === 0 && dy === 0 ? view : { ...view, x: view.x + dx, y: view.y + dy };
+}
+
 import type { BoxStatus, CanvasArea, CanvasLabel } from './api';
 
 export interface Rect {

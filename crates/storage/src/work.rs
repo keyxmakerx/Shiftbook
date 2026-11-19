@@ -18,7 +18,7 @@ use shiftbook_core::ids::{
 use shiftbook_core::items::back_dated;
 use shiftbook_core::minutes::{Minutes, MAX_ENTRY_MINUTES};
 use shiftbook_core::model::{EntryTarget, Project, TargetType, Ticket, TimeEntry, TrayItem};
-use shiftbook_core::notes::jot_to_entry;
+use shiftbook_core::notes::{goes_on_ticket, jot_to_entry, note_into_notepad};
 use shiftbook_core::prefs::next_project_color;
 use shiftbook_core::quicklog::{
     plan_add_time, plan_quick_log, AddTimePlan, DayEntry, PastUse, QuickLogPlan,
@@ -932,6 +932,32 @@ async fn live_tray_item(
     .fetch_optional(&mut *conn)
     .await?;
     tray_from_row(&row.ok_or(StorageError::NotFound)?)
+}
+
+/// Write a tray ticket's notepad: its item's, so it shows wherever the ticket does (round 15),
+/// or the row's own when it has no item.
+async fn set_tray_note_in(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    id: TrayItemId,
+    note: Option<&str>,
+) -> Result<()> {
+    match tray_row_item(&mut *conn, owner, &id.to_string()).await? {
+        Some(of) => set_item_note(&mut *conn, owner, of, note).await,
+        None => {
+            sqlx::query(
+                "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE id = $3 \
+                 AND owner_id = $4",
+            )
+            .bind(note)
+            .bind(now_text())
+            .bind(id.to_string())
+            .bind(owner.to_string())
+            .execute(&mut *conn)
+            .await?;
+            Ok(())
+        }
+    }
 }
 
 async fn tray_item_date(
@@ -2145,23 +2171,43 @@ impl SqliteStore {
         let note = clean_tray_note(note)?;
         let mut tx = self.write_tx().await?;
         let date = tray_item_date(&mut tx, owner, id, true).await?;
-        match tray_row_item(&mut tx, owner, &id.to_string()).await? {
-            // One notepad per ticket (round 15): it shows wherever the ticket does.
-            Some(of) => set_item_note(&mut tx, owner, of, note.as_deref()).await?,
-            None => {
-                sqlx::query(
-                    "UPDATE ticket_tray SET note = $1, updated_at = $2 WHERE id = $3 \
-                     AND owner_id = $4",
-                )
-                .bind(note)
-                .bind(now_text())
-                .bind(id.to_string())
-                .bind(owner.to_string())
-                .execute(&mut *tx)
-                .await?;
-            }
-        }
+        set_tray_note_in(&mut tx, owner, id, note.as_deref()).await?;
         let day = tray_day_in(&mut tx, owner, date).await?;
+        tx.commit().await?;
+        Ok(day)
+    }
+
+    /// Put a note on a tray ticket (one card per ticket, 18 Nov): its words go into the
+    /// ticket's notepad, under what's there (see `shiftbook_core::notes::note_into_notepad`),
+    /// and the note moves to the archive in the same step. Undo is setting the notepad back
+    /// and taking the note out of the archive.
+    pub async fn note_to_ticket(
+        &self,
+        owner: OwnerId,
+        note: NoteId,
+        id: TrayItemId,
+    ) -> Result<TrayDay> {
+        let n = self.get_note(owner, note).await?;
+        // A wiki page or a MOP isn't a loose note to fold into a notepad.
+        if !goes_on_ticket(n.kind) {
+            return Err(StorageError::NotFound);
+        }
+        let mut tx = self.write_tx().await?;
+        let item = live_tray_item(&mut tx, owner, id).await?;
+        let merged = note_into_notepad(item.note.as_deref(), &n.title, &n.body);
+        let merged = clean_tray_note(&merged)?;
+        set_tray_note_in(&mut tx, owner, id, merged.as_deref()).await?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE notes SET archived_at = $1, updated_at = $1 \
+             WHERE id = $2 AND owner_id = $3 AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(note.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let day = tray_day_in(&mut tx, owner, item.date).await?;
         tx.commit().await?;
         Ok(day)
     }

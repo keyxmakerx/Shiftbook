@@ -1,0 +1,190 @@
+{
+ "meta": {
+  "round": 20,
+  "heading": "What you said yes to, built, and one question about lines",
+  "intro": "Five cards from your round 19 answers and notes. None of it is in your copy of Shiftbook yet, and none of it is in pull request #78: it waits on my side until you've answered here. Each card asks one thing. Press one of the two buttons; a note is optional."
+ },
+ "cards": {
+  "r20-plus-mop": {
+   "area": "Desk · your answer",
+   "round": 20,
+   "order": 1,
+   "version": 1,
+   "title": "+ MOP is off the front of Desk cards",
+   "body": [
+    "You answered **Yes, take it off**. A ticket card on the Desk no longer carries the dashed **+ MOP** line. A ticket that has a MOP keeps its chip."
+   ],
+   "bullets": [
+    "You can still attach a MOP from the ticket's slide-out (**Use a template**), from right-click → More → **Attach a MOP…**, and from Ctrl+Space.",
+    "Only Desk cards changed. **+ MOP** stays everywhere else it was."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, with made-up tickets.",
+    "Once it's released: on the **Desk**, look at a ticket card that has no MOP.",
+    "There should be no **+ MOP** line under the ticket number."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/322157c8d45d054f90d7b61b21206f13",
+     "caption": "Before: every open ticket has a **+ MOP** line.",
+     "w": 512
+    },
+    {
+     "src": "/_blob/a18d0f885e1bf9b2cec7ad44dbed3ca3",
+     "caption": "Now: the same cards without it.",
+     "w": 512
+    }
+   ],
+   "ask": "Do the cards look right without + MOP?",
+   "note_hint": "What should be different"
+  },
+  "r20-in-view": {
+   "area": "Desk · your answer",
+   "round": 20,
+   "order": 2,
+   "version": 1,
+   "title": "New cards start where you can see them",
+   "body": [
+    "You answered **Yes, keep in view**. A row of new cards is now only as wide as the Desk is showing: two cards across at the size the window first opens, more when the window is bigger. It was always five across."
+   ],
+   "bullets": [
+    "When the part you can see is full, the next card goes underneath, and the Desk slides just far enough to show it.",
+    "A card you have moved yourself stays exactly where you put it.",
+    "Cards you have never moved are laid out again when you make the window wider or narrower, so they stay in view. Say so in a note if you'd rather they stayed put."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, at the size the window first opens.",
+    "Once it's released: open Shiftbook without making the window bigger, and go to the **Desk**.",
+    "Paste a new ticket into the **Tickets tray**.",
+    "Its card should appear inside the Desk. If the Desk has to slide to show it, it does that by itself."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/ca56762df45bc3fb164e6672f4d4a4fc",
+     "caption": "Before: INC0045002 has just been pasted in. Its card is past the right edge, so you can't see it.",
+     "w": 860
+    },
+    {
+     "src": "/_blob/450b06894b2603fa8b0172bd968d48ad",
+     "caption": "Now: its card lands at the bottom left, and the Desk has slid down a little to show it.",
+     "w": 860
+    }
+   ],
+   "ask": "Is this where new cards should land?",
+   "note_hint": "Anything about where cards land"
+  },
+  "r20-notepad-window": {
+   "area": "Desk · your note",
+   "round": 20,
+   "order": 3,
+   "version": 1,
+   "title": "Double-click a ticket and its notepad opens as a window you can move",
+   "body": [
+    "Your note on the notepad card: \"Try to make the default Note pad the movable kind not the full screen though\". Double-clicking a ticket's card used to fill the whole screen with its notepad. Now it opens as a small window over the Desk."
+   ],
+   "bullets": [
+    "Drag the window by its top bar, and resize it from its bottom right corner. It stays open while you work on the Desk behind it.",
+    "The buttons at its top right roll it up, send it to the bottom bar, make it full screen, or close it. Full screen is still one click away.",
+    "One click on a ticket's card still opens the notepad under the card, as before."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, with made-up tickets.",
+    "Once it's released: on the **Desk**, double-click a ticket's card.",
+    "Its notepad should open as a small window over the Desk, not fill the screen.",
+    "Drag it by its top bar to move it."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/54167dc2e8c256cb6ac8f4617ce3430d",
+     "caption": "Before: a double-click filled the screen with the notepad.",
+     "w": 700
+    },
+    {
+     "src": "/_blob/7479cc5a676ef12f50f1109481a280a8",
+     "caption": "Now: the notepad is a window over the Desk.",
+     "w": 700
+    }
+   ],
+   "ask": "Is this the notepad you meant?",
+   "note_hint": "What you meant instead"
+  },
+  "r20-save-file": {
+   "area": "MOPs · your note",
+   "round": 20,
+   "order": 4,
+   "version": 1,
+   "title": "Save a MOP as a file, and the file keeps the MOP's name",
+   "body": [
+    "Your note on the naming card: \"If I download it needs to keep that name too\". The MOP window had no way to download a MOP at all: the button went missing when the MOP notebook was retired in round 18. It is back."
+   ],
+   "bullets": [
+    "**Save as a file** sits at the bottom of the MOP window, next to **Copy as text**.",
+    "Your computer's save window opens with the MOP's name already filled in, like **VPN client upgrade, DR firewall.txt**. A MOP you haven't named is offered as **MOP for CHG0012345.txt**.",
+    "The file is plain text that anyone can open. Shiftbook says so when you press the button, because everything inside Shiftbook is locked and this copy is not."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app, before and now, with a made-up MOP.",
+    "Once it's released: on the **Desk**, click a ticket's **MOP · …** chip to open its MOP.",
+    "At the bottom of the window, press **Save as a file**.",
+    "The save window should already show the MOP's name. Pick a folder and save."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/c580d1530161c70788a261cad03edf5a",
+     "caption": "Before: the bottom of the MOP window, with no way to save a file.",
+     "w": 656
+    },
+    {
+     "src": "/_blob/e5f095621abe3f7fd6461666095c7f87",
+     "caption": "Now: **Save as a file**, next to Copy as text.",
+     "w": 656
+    },
+    {
+     "src": "/_blob/6c40d2583143f2d77e5174d8795fe233",
+     "caption": "The save window, with the MOP's name filled in. This is my test computer's save window; yours will be the one your computer normally shows.",
+     "w": 640
+    }
+   ],
+   "ask": "Is this the download you meant?",
+   "note_hint": "What you meant instead"
+  },
+  "r20-q-word-lines": {
+   "area": "Your call · Desk lines",
+   "round": 20,
+   "order": 5,
+   "version": 1,
+   "title": "A line from shared words needs two words, not one",
+   "body": [
+    "You pressed **Yes, tickets only**, with the note \"I think some shared stuff makes sense, like shared ticket, shared key word(s) but not every single one.\" So I have not turned word lines off. Here is a rule that keeps the useful ones.",
+    "Today, two cards get a line when they share one unusual word that no other card uses. I'd make that two words or more. In the pictures, \"board\" alone no longer joins the lobby incident to the task note. The two notes about the inventory spreadsheet stay joined, because they share both \"inventory\" and \"spreadsheet\"."
+   ],
+   "bullets": [
+    "Lines from a shared ticket number stay as they are.",
+    "Lines you draw yourself stay (right-click a card, then **Link to another card**).",
+    "Rest the mouse on a word line and it names the words, like **Both say “inventory, spreadsheet”**.",
+    "Press **No** and I'll turn word lines off completely, as the button you pressed last time said. A note can ask for something else."
+   ],
+   "where": [
+    "Not in your copy yet. The pictures below are the real app with **Show all link lines** on, today and with the new rule.",
+    "In your copy today: on the **Desk**, open **View** in the bottom bar and tick **Show all link lines**.",
+    "Dashed lines are word lines. Rest the mouse on one and it says which word."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/2a8cca006be571434d1ebc9a62f3e78e",
+     "caption": "Today: two word lines. The top one is only there because both cards say \"board\".",
+     "w": 538
+    },
+    {
+     "src": "/_blob/d1fca5812a37f548087e83f5c592176c",
+     "caption": "With the new rule: the \"board\" line is gone. The inventory notes share two words, so their line stays.",
+     "w": 538
+    }
+   ],
+   "ask": "Should a word line need two shared words?",
+   "yes": "Yes, two words",
+   "no": "No, tickets only",
+   "note_hint": "Anything about the lines"
+  }
+ }
+}

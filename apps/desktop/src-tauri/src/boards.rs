@@ -6,7 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use shiftbook_core::boards::{boards_for, Board, Facts, BOARD_DAYS};
-use shiftbook_core::canvas::{auto_place, CardKind, Drawer};
+use shiftbook_core::canvas::{auto_place, CardKind, Drawer, ROW_CARDS};
 use shiftbook_core::model::EntryTarget;
 use shiftbook_core::notes::NoteKind;
 use shiftbook_storage::SqliteStore;
@@ -346,7 +346,7 @@ pub async fn board(s: State<'_, VaultSession>, today: String, key: String) -> Re
         .iter()
         .filter(|p| !spots.contains_key(&(p.kind, p.id)))
         .count();
-    let mut free = auto_place(loose, &taken).into_iter();
+    let mut free = auto_place(loose, &taken, ROW_CARDS).into_iter();
     let cards = mine
         .into_iter()
         .map(|mut p| {

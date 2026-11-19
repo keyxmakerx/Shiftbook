@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { areaAt, boxAround, cardUnder, fanPerRow, fanSheet, fanSpots, FAN_GAP, FAN_PAD, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, FIT_MIN_ZOOM, fitReadable, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
+import { panToShow, areaAt, boxAround, cardUnder, fanPerRow, fanSheet, fanSpots, FAN_GAP, FAN_PAD, CARD_H, CARD_W, cardIn, deskBoxes, fitAll, linkCurve, BOX_INSET, HOME, LINE_UP_GAP, lineUp, lineUpWith, MAX_ZOOM, MIN_ZOOM, FIT_MIN_ZOOM, fitReadable, openingView, rectFrom, START, toCanvas, zoomAt } from './canvasView';
 
 describe('canvas view', () => {
   it('maps screen points to canvas units', () => {
@@ -91,6 +91,26 @@ describe('canvas view', () => {
     expect(300 + many.y).toBe(START.y + 40);
     // Nothing for today: the same with every card (here starting at the corner, as the start view).
     expect(openingView([], [{ x: 40, y: 40 }, { x: 6000, y: 40 }], 800, 600)).toEqual(START);
+  });
+
+  it('slides just far enough to show a card that landed out of view', () => {
+    const view = { x: 0, y: 0, zoom: 1 };
+    // Already showing: nothing moves, and it is the very same view.
+    expect(panToShow(view, { x: 100, y: 100 }, 800, 600)).toBe(view);
+    // Below the bottom edge: up by what it takes, sideways not at all.
+    const down = panToShow(view, { x: 100, y: 700 }, 800, 600);
+    expect(down.x).toBe(0);
+    expect(700 + down.y + CARD_H).toBe(600 - 24);
+    // Off to the right and above the top at once.
+    const corner = panToShow(view, { x: 900, y: -200 }, 800, 600);
+    expect(900 + corner.x + CARD_W).toBe(800 - 24);
+    expect(-200 + corner.y).toBe(24);
+    // Zoomed out: measured in screen pixels, and the zoom is kept.
+    const far = panToShow({ x: 0, y: 0, zoom: 0.5 }, { x: 2000, y: 0 }, 800, 600);
+    expect(far.zoom).toBe(0.5);
+    expect(2000 * 0.5 + far.x + CARD_W * 0.5).toBe(800 - 24);
+    // No board to measure against: left alone.
+    expect(panToShow(view, { x: 5000, y: 5000 }, 0, 0)).toBe(view);
   });
 
   it('finds the area holding a card by its centre, top area first', () => {

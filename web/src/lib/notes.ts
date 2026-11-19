@@ -76,7 +76,7 @@ export function snippet(body: string, title: string, query: string, max = 120): 
     const cut = flat.slice(start, start + max);
     return '…' + cut + (start + max < flat.length ? '…' : '');
   }
-  const rest = flat.toLowerCase().startsWith(title.toLowerCase()) ? flat.slice(title.length).trim() : flat;
+  const rest = afterTitle(flat, title);
   return rest.length > max ? rest.slice(0, max).trimEnd() + '…' : rest;
 }
 
@@ -98,6 +98,20 @@ export function matchingLine(body: string, query: string, max = 80): string {
     return (start > 0 ? '…' : '') + line.slice(start, start + max).trimEnd() + (start + max < line.length ? '…' : '');
   }
   return '';
+}
+
+/** `flat` (a body on one line) without a start that only repeats the title. A title made from
+ *  a long first line is cut short with "…": the taste then carries on from where it stopped,
+ *  so a card never says the same sentence twice. */
+function afterTitle(flat: string, title: string): string {
+  const t = title.replace(/\s+/g, ' ').trim();
+  const cut = t.endsWith('…');
+  const said = (cut ? t.slice(0, -1) : t).toLowerCase();
+  if (!said || !flat.toLowerCase().startsWith(said)) return flat;
+  const rest = flat.slice(said.length);
+  if (!cut) return rest.trim();
+  // Only a "?" or a full stop left over isn't worth a line.
+  return /[\p{L}\p{N}]/u.test(rest) ? '…' + rest.trimEnd() : '';
 }
 
 /** "Moves to the archive in 3 days", or "tomorrow". */

@@ -1789,3 +1789,56 @@ fn days_off_are_booked_together_and_follow_their_entries() {
         assert!(s.list_entries(me, thu, thu).await.unwrap().is_empty());
     });
 }
+
+#[test]
+fn a_note_put_on_a_ticket_goes_into_its_notepad() {
+    use crate::notes::NoteInput;
+    use shiftbook_core::notes::NoteKind;
+    let dir = TestDir::new("notetoticket");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let day = s.tray_add(me, DAY, "CHG0012345").await.unwrap();
+        let t = day.items[0].id;
+        s.tray_set_note(me, t, "Window is Friday").await.unwrap();
+        let jot = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Jot,
+                    title: String::new(),
+                    body: "Summary of work\nUpgrade the VPN client".into(),
+                    project: None,
+                    tags: String::new(),
+                    template: false,
+                },
+            )
+            .await
+            .unwrap();
+        // Someone else can't put it on their ticket, and nothing changes.
+        assert!(s.note_to_ticket(other, jot.id, t).await.is_err());
+        let day = s.note_to_ticket(me, jot.id, t).await.unwrap();
+        assert_eq!(
+            day.items[0].note.as_deref(),
+            Some("Window is Friday\n\nSummary of work\nUpgrade the VPN client")
+        );
+        // The note moves to the archive, off the Desk.
+        assert!(s.get_note(me, jot.id).await.unwrap().archived_at.is_some());
+        // A MOP stays a MOP: it isn't folded into a notepad.
+        let mop = s
+            .create_note(
+                me,
+                &NoteInput {
+                    kind: NoteKind::Mop,
+                    title: "Upgrade steps".into(),
+                    body: "1. Back up".into(),
+                    project: None,
+                    tags: String::new(),
+                    template: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(s.note_to_ticket(me, mop.id, t).await.is_err());
+        assert!(s.get_note(me, mop.id).await.unwrap().archived_at.is_none());
+    });
+}

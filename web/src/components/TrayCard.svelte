@@ -9,7 +9,7 @@
   import type { CarriedItem, TrayItem } from '../lib/api';
   import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
   import { paperMenu } from '../lib/menu.svelte';
-  import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
+  import { closePanel, openNotepad, panel, panelOpenAt, togglePanel } from '../lib/panel.svelte';
   import { app, attempt, projectById, projectColor, ticketTimes, words } from '../lib/store.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -76,8 +76,9 @@
   const oneLine = (note: string | null) => !note || !note.includes('\n');
 
   const keyOf = (item: TrayItem) => `tray:${item.id}`;
-  const isOpen = (item: TrayItem) => panel.open === keyOf(item);
-  const toggle = (item: TrayItem, focus = false) => togglePanel(keyOf(item), focus);
+  // 'row': on the Desk the same ticket's card has this key too, and only one of them opens.
+  const isOpen = (item: TrayItem) => panelOpenAt(keyOf(item), 'row');
+  const toggle = (item: TrayItem, focus = false) => togglePanel(keyOf(item), focus, 'row');
 
   function rowClick(e: MouseEvent, item: TrayItem) {
     if ((e.target as HTMLElement).closest('input, button, a')) return;
@@ -88,8 +89,8 @@
   // From this button nothing is matched to a ticket (owner's call, round 8); ticking a ticket
   // done offers the same menu for that ticket (round 21).
 
-  const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item)));
-  const carriedMenuFor = (item: CarriedItem) => carriedMenu(item, () => openNotepad(keyOf(item)));
+  const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item), 'row'));
+  const carriedMenuFor = (item: CarriedItem) => carriedMenu(item, () => openNotepad(keyOf(item), 'row'));
   /** The first line of a carried ticket's notepad, or the entry it is on. */
   const carriedNote = (item: CarriedItem) => item.note?.split('\n')[0] ?? (item.entryTitle ? `on ${item.entryTitle}` : '');
 </script>

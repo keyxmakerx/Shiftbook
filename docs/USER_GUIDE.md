@@ -11,11 +11,15 @@ works the way it does is in `DECISIONS.md`.
 - **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
   you arrange. It opens at 100% on today's cards. Drag to move (it's remembered), drag empty
   paper or Shift + scroll to pan, scroll to zoom, **Fit** (it stops at 80% so the cards stay
-  readable). New cards take the next free spot; the others stay where they are. Wiki pages,
+  readable). New cards take the next free spot inside the part of the Desk you can see (when
+  that is full they go underneath and the Desk slides to show them); cards you have placed stay
+  where they are. Wiki pages,
   templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
-  card). Click an entry or a ticket and its **slide-out** opens underneath:
+  card; give the MOP a name in the **Name** box at the top of its window and the chip shows
+  it). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
-  open, more time and More. Double-click a card to open it; double-click empty paper to jot. Enter keeps
+  open, more time and More. Double-click a card to open it (a ticket's notepad opens as a window
+  you can move; full screen is a button on it); double-click empty paper to jot. Enter keeps
   the jot, and so does Esc when it has words in it (with Undo); Esc on an empty one closes it.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
   Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
@@ -23,7 +27,8 @@ works the way it does is in `DECISIONS.md`.
   The side panel has today's hours,
   Log work, Due soon, Where was I?, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
-  that share a ticket or an uncommon word, and you can draw your own (a card's lines show while
+  that share a ticket, or two or more specific words no other card uses (everyday words such
+  as "because" or "really" never count), and you can draw your own (a card's lines show while
   you point at it; View → Show all link lines shows them all); **Timeline** lays the Desk out
   by day and Back to my layout puts it back. The **toolbox** on the left has Move,
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag on
@@ -64,7 +69,9 @@ works the way it does is in `DECISIONS.md`.
   earlier day adds the time today (to today's entry with the same title and project, or a copy
   of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type (the first time you open it each day it already lists today's meetings with their times and the things you brought up for today as tick boxes, then a Notes heading; nothing is kept until you type or tick, and **Settings → Notes** switches either part off), and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
-  an entry**: its title becomes what you did and the jot is archived); the Inbox.
+  an entry**: its title becomes what you did and the jot is archived; on the Desk, right-click
+  a note card and **Put on a ticket** to move its words into that ticket's notepad, so the
+  ticket is one card instead of two); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
@@ -127,7 +134,8 @@ works the way it does is in `DECISIONS.md`.
   again cleanly. At the bottom: how many steps are ticked and when the run started and
   finished, **Clear ticks** for a fresh run, **Copy as text**, **Copy run log** (the day, the
   start and finish, what was ticked and when, and what you saw, to paste into the change
-  ticket) and **Save as template**. Templates are kept in the Wiki; **Use a template**
+  ticket), **Save as a file** (an unencrypted text copy named after the MOP, after a warning)
+  and **Save as template**. Templates are kept in the Wiki; **Use a template**
   in a ticket's slide-out, or Ctrl+Space with the ticket number, starts a MOP from one with
   the ticket filled in.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row

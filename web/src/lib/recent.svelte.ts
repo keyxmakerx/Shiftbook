@@ -199,6 +199,7 @@ export async function jump(r: Recent): Promise<void> {
       if (r.day) await selectDay(r.day);
       flashEntry(r.id);
       panel.focusPad = false;
+      panel.from = 'row';
       panel.open = cardKey(r);
     }
     // Let what just opened settle before it is listed again, first.

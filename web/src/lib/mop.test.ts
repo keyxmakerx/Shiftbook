@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { counts, findAll, formatBook, looksLikeText, paint } from './mop';
+import { counts, findAll, formatBook, looksLikeText, ownName, paint } from './mop';
 
 describe('MOP notebook display', () => {
   it('colours headings, steps, checks and blanks', () => {
@@ -42,5 +42,13 @@ describe('MOP notebook display', () => {
     expect(looksLikeText('Core swap.txt')).toBe(true);
     expect(looksLikeText('README')).toBe(true);
     expect(looksLikeText('change.docx')).toBe(false);
+  });
+});
+
+describe('ownName', () => {
+  it("is the MOP's name once it has been given one", () => {
+    expect(ownName('MOP for CHG0012345', 'chg0012345')).toBe('');
+    expect(ownName('  VPN client  upgrade ', 'CHG0012345')).toBe('VPN client upgrade');
+    expect(ownName('CHG0012345 · Firewall rule review', 'CHG0012345')).toBe('CHG0012345 · Firewall rule review');
   });
 });

@@ -829,6 +829,7 @@ pub fn run() {
             api::tray_add,
             api::tray_set_minutes,
             api::tray_set_note,
+            api::note_to_ticket,
             api::tray_set_done,
             api::tray_set_project,
             api::tray_set_recurring,
