@@ -409,8 +409,14 @@ export interface MopRun {
   windowAt: number | null;
   /** When each ticked line was ticked (UTC). */
   tickTimes: { key: string; at: string }[];
-  /** When it first went Running (UTC). */
+  /** When this run went Running (UTC); cleared when it goes back to Draft or Ready. */
   startedAt: string | null;
+  /** When it went Done or Backed out (UTC). */
+  finishedAt: string | null;
+  /** How long the finished run took, rounded to a quarter hour, to offer as time to log. */
+  ranMinutes: number | null;
+  /** What was seen at each step that has something written. */
+  seen: { key: string; text: string }[];
 }
 
 /** A MOP template offered for a ticket. */
@@ -1524,6 +1530,8 @@ export interface DataApi {
   mopSetWindow(id: string, on: IsoDate | null, at: number | null): Promise<void>;
   /** Tick lines off, keeping when each was ticked. Tauri: `mop_tick`. */
   mopTick(id: string, ticks: string[]): Promise<Note>;
+  /** Write what was seen at one step (blank takes it away), for the run log. Tauri: `mop_set_seen`. */
+  mopSetSeen(id: string, key: string, text: string): Promise<void>;
 
   // ----- the wiki (round 18) -----
   /** The side list: spaces with their pages, pages in no space, and templates. Tauri: `wiki`. */

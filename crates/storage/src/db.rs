@@ -114,6 +114,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "MOPs on their change ticket",
         include_str!("../migrations/0021_mop_runs.sql"),
     ),
+    (
+        22,
+        "closing out a MOP run: finish time and what was seen",
+        include_str!("../migrations/0022_mop_run_close.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {

@@ -85,6 +85,37 @@ export async function carryCarried(item: CarriedItem): Promise<void> {
   await applyTray(await attempt(() => api.trayAdd(app.selected, item.ticket)));
 }
 
+/**
+ * Put time on a ticket today (round 21: a finished MOP run offers how long it took). A
+ * ticket on today's Tickets tray gets it added to its own row; any other is logged the way
+ * Log work would, onto today's entry with that ticket or a new one.
+ */
+export async function logTicketTime(ticket: string, minutes: number): Promise<void> {
+  const day = await attempt(() => api.trayDay(app.today));
+  if (!day) return;
+  const row = day.items.find((i) => i.ticket.toLowerCase() === ticket.toLowerCase());
+  if (row) {
+    const next = Math.min(480, row.minutes + minutes);
+    await applyTray(await attempt(() => api.traySetMinutes(row.id, next)));
+    toast(`Added ${fmtMinutes(next - row.minutes)} to ${row.ticket}: ${fmtMinutes(next)} today`, 'Undo', () => {
+      void attempt(() => api.traySetMinutes(row.id, row.minutes)).then(applyTray);
+    });
+    return;
+  }
+  const before = new Set((await attempt(() => api.listEntries(app.today, app.today)))?.map((e) => e.id));
+  // A ticket already ticked done stays done: the time is for work that is finished.
+  const item = (await attempt(() => api.items([ticket])))?.[0];
+  const entry = await attempt(() => api.quickLog(app.today, ticket, minutes, null));
+  if (!entry) return;
+  const existed = before.has(entry.id);
+  if (item?.done) await attempt(() => api.itemSetDone(item.id, true, app.today));
+  await refresh();
+  toast(existed ? `Added ${fmtMinutes(minutes)} to ${entry.description}` : `Logged ${fmtMinutes(minutes)} on ${ticket}`, 'Undo', () => {
+    const undo: Promise<unknown> = existed ? api.addEntryMinutes(entry.id, -minutes) : api.deleteEntry(entry.id);
+    void attempt(() => undo).then(refresh);
+  });
+}
+
 export async function removeTray(item: TrayItem): Promise<void> {
   await applyTray(await attempt(() => api.trayRemove(item.id)));
   toast(`Took ${item.ticket} out of the tray`, 'Undo', () => {

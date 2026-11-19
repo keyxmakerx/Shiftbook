@@ -117,6 +117,7 @@
     "allow-mop-set-status",
     "allow-mop-set-window",
     "allow-mop-tick",
+    "allow-mop-set-seen",
     "allow-wiki",
     "allow-wiki-page",
     "allow-wiki-page-by-title",

@@ -4,8 +4,10 @@
 
 use std::collections::HashMap;
 
-use shiftbook_core::change::{join_tick_times, parse_tick_times, tick_times, MopStatus, TickTimes};
-use shiftbook_core::dates::{format_date, parse_date};
+use shiftbook_core::change::{
+    join_tick_times, parse_tick_times, run_times, set_seen, tick_times, MopStatus, Seen, TickTimes,
+};
+use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
 use shiftbook_core::ids::{NoteId, OwnerId, ProjectId};
 use shiftbook_core::model::Note;
 use shiftbook_core::mop::{clean_values, fill_blanks, filled_title};
@@ -63,8 +65,25 @@ pub struct MopRun {
     pub window: Option<(Date, u32)>,
     /// When each ticked line was ticked.
     pub tick_times: TickTimes,
-    /// When it first went Running.
+    /// When this run went Running (cleared when it goes back to Draft or Ready).
     pub started_at: Option<OffsetDateTime>,
+    /// When it went Done or Backed out.
+    pub finished_at: Option<OffsetDateTime>,
+    /// What was seen at each step that has something written.
+    pub seen: Seen,
+}
+
+/// The stored form of what was seen: a JSON list of `[key, text]` pairs ("" for none).
+fn join_seen(seen: &[(String, String)]) -> String {
+    if seen.is_empty() {
+        return String::new();
+    }
+    serde_json::to_string(seen).unwrap_or_default()
+}
+
+/// Read the stored form back; anything unreadable is nothing.
+fn parse_seen(text: &str) -> Seen {
+    serde_json::from_str(text).unwrap_or_default()
 }
 
 fn run_from_row(row: &SqliteRow) -> Result<MopRun> {
@@ -89,13 +108,15 @@ fn run_from_row(row: &SqliteRow) -> Result<MopRun> {
         window,
         tick_times: parse_tick_times(&row.try_get::<String, _>("tick_times")?),
         started_at: parse_opt_ts(row.try_get("started_at")?)?,
+        finished_at: parse_opt_ts(row.try_get("finished_at")?)?,
+        seen: parse_seen(&row.try_get::<String, _>("seen")?),
     })
 }
 
 macro_rules! run_select {
     () => {
         "SELECT r.id, n.title, i.number, r.template_id, r.status, r.window_on, \
-         r.window_at, r.tick_times, r.started_at FROM mop_runs r \
+         r.window_at, r.tick_times, r.started_at, r.finished_at, r.seen FROM mop_runs r \
          JOIN notes n ON n.id = r.id JOIN items i ON i.id = r.item_id \
          WHERE r.owner_id = $1 AND r.deleted_at IS NULL AND n.deleted_at IS NULL"
     };
@@ -269,28 +290,77 @@ impl SqliteStore {
         row.as_ref().map(run_from_row).transpose()
     }
 
-    /// Set where a MOP stands. The first time it goes Running, its start is kept.
+    /// Set where a MOP stands. Its start and finish follow
+    /// `shiftbook_core::change::run_times`: Running starts the clock, Done or Backed out
+    /// stops it, and going back to Draft or Ready clears both.
     pub async fn set_mop_status(
         &self,
         owner: OwnerId,
         mop: NoteId,
         status: MopStatus,
     ) -> Result<()> {
+        let mut tx = self.write_tx().await?;
+        let row: Option<(Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT started_at, finished_at FROM mop_runs \
+             WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(mop.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let (started, finished) = row.ok_or(StorageError::NotFound)?;
         let now = now_text();
-        let done = sqlx::query(
-            "UPDATE mop_runs SET status = $1, updated_at = $2, \
-             started_at = CASE WHEN $1 = 'running' AND started_at IS NULL THEN $2 ELSE started_at END \
-             WHERE id = $3 AND owner_id = $4 AND deleted_at IS NULL",
+        let (started, finished) = run_times(
+            status,
+            parse_opt_ts(started)?,
+            parse_opt_ts(finished)?,
+            parse_ts(&now)?,
+        );
+        sqlx::query(
+            "UPDATE mop_runs SET status = $1, updated_at = $2, started_at = $3, \
+             finished_at = $4 WHERE id = $5 AND owner_id = $6 AND deleted_at IS NULL",
         )
         .bind(status.as_str())
         .bind(&now)
+        .bind(started.map(format_timestamp))
+        .bind(finished.map(format_timestamp))
         .bind(mop.to_string())
         .bind(owner.to_string())
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await?;
-        if done.rows_affected() == 0 {
-            return Err(StorageError::NotFound);
-        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Write what was seen at one step of a MOP's run (blank takes it away), for the run
+    /// log. `key` is the step's tick key.
+    pub async fn set_mop_seen(
+        &self,
+        owner: OwnerId,
+        mop: NoteId,
+        key: &str,
+        text: &str,
+    ) -> Result<()> {
+        let mut tx = self.write_tx().await?;
+        let before: Option<String> = sqlx::query_scalar(
+            "SELECT seen FROM mop_runs WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL",
+        )
+        .bind(mop.to_string())
+        .bind(owner.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        let before = parse_seen(&before.ok_or(StorageError::NotFound)?);
+        let seen = set_seen(&before, key, text)?;
+        sqlx::query(
+            "UPDATE mop_runs SET seen = $1, updated_at = $2 WHERE id = $3 AND owner_id = $4",
+        )
+        .bind(join_seen(&seen))
+        .bind(now_text())
+        .bind(mop.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
         Ok(())
     }
 

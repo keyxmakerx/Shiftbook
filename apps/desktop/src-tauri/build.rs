@@ -114,6 +114,7 @@ fn main() {
             "mop_set_status",
             "mop_set_window",
             "mop_tick",
+            "mop_set_seen",
             "wiki",
             "wiki_page",
             "wiki_page_by_title",

@@ -612,6 +612,9 @@ export class TauriApi implements DataApi {
   mopTick(id: string, ticks: string[]): Promise<Note> {
     return call('mop_tick', { id, ticks });
   }
+  mopSetSeen(id: string, key: string, text: string): Promise<void> {
+    return call('mop_set_seen', { id, key, text });
+  }
   wiki(): Promise<WikiList> {
     return call('wiki');
   }

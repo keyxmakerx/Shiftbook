@@ -96,9 +96,14 @@ works the way it does is in `DECISIONS.md`.
   **Ready**, **Running**, **Done** or **Backed out**), the change window's day and time (the
   bell reminds you on the day), and three ways to see it. **Read** shows it plainly, **Edit**
   is for writing it, and **Run** gives every line a tick box that notes the time you ticked
-  it. At the bottom: how many steps are ticked and when the run started, **Clear ticks** for a
-  fresh run, **Copy as text**, **Copy run log** (what was ticked and when, to paste into the
-  change ticket) and **Save as template**. Templates are kept in the Wiki; **Use a template**
+  it; the small note button beside a step opens a **what I saw** line under it, for pasted
+  output or a few words. **Done** asks first when steps aren't ticked. A finished run offers
+  to **tick its ticket done**, **log the time** it took (rounded to 15 minutes) and copy the
+  run log. Going back to Ready clears the start time, so a run started by mistake starts
+  again cleanly. At the bottom: how many steps are ticked and when the run started and
+  finished, **Clear ticks** for a fresh run, **Copy as text**, **Copy run log** (the day, the
+  start and finish, what was ticked and when, and what you saw, to paste into the change
+  ticket) and **Save as template**. Templates are kept in the Wiki; **Use a template**
   in a ticket's slide-out, or Ctrl+Space with the ticket number, starts a MOP from one with
   the ticket filled in.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row

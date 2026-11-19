@@ -850,6 +850,7 @@ pub fn run() {
             change::mop_set_status,
             change::mop_set_window,
             change::mop_tick,
+            change::mop_set_seen,
             wiki::wiki,
             wiki::wiki_page,
             wiki::wiki_page_by_title,

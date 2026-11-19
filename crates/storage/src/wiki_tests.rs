@@ -288,6 +288,32 @@ fn a_mop_on_its_ticket() {
         assert_eq!(run.window, Some((date!(2026 - 11 - 04), 22 * 60)));
         assert_eq!(run.tick_times.len(), 1);
         assert_eq!(run.tick_times[0].0, keys[1]);
+        // What was seen at a step is kept for the run log; blank takes it away.
+        s.set_mop_seen(me, mop.id, &keys[1], "Gi0/1 up up\n")
+            .await
+            .unwrap();
+        let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
+        assert_eq!(run.seen, [(keys[1].clone(), "Gi0/1 up up".to_string())]);
+        s.set_mop_seen(me, mop.id, &keys[1], " ").await.unwrap();
+        assert!(s
+            .mop_run(me, mop.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .seen
+            .is_empty());
+        // Done stops the clock; back to Ready clears it for a fresh run (round 21).
+        s.set_mop_status(me, mop.id, MopStatus::Done).await.unwrap();
+        let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
+        assert!(run.started_at.is_some() && run.finished_at.is_some());
+        s.set_mop_status(me, mop.id, MopStatus::Ready)
+            .await
+            .unwrap();
+        let run = s.mop_run(me, mop.id).await.unwrap().unwrap();
+        assert!(run.started_at.is_none() && run.finished_at.is_none());
+        s.set_mop_status(me, mop.id, MopStatus::Running)
+            .await
+            .unwrap();
         // Unticking drops its time.
         s.tick_mop(me, mop.id, &[]).await.unwrap();
         assert!(s
