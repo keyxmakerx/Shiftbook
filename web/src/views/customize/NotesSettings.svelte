@@ -35,4 +35,30 @@
       </select>
     </label>
   </article>
+  <article class="paper cz-card">
+    <h3>What today's note starts with</h3>
+    <p class="sub">
+      The first time you open today's note it can already hold the day's meetings and the things
+      you brought up for today, as tick boxes, with a Notes heading to write under. Nothing is
+      kept until you type or tick something. Turn both off for a blank note.
+    </p>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        class="daily-meetings"
+        checked={prefs.dailyMeetings}
+        onchange={(e) => savePref('notes.daily_meetings', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      Today's meetings, with their times
+    </label>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        class="daily-brought"
+        checked={prefs.dailyBrought}
+        onchange={(e) => savePref('notes.daily_brought', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      What you brought up for today
+    </label>
+  </article>
 {/if}

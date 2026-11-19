@@ -62,7 +62,7 @@ works the way it does is in `DECISIONS.md`.
   from the same day into it (its time, notes and tickets come over). On the Desk, select two
   entries from the same day and press **Merge these two**. Both have Undo. +15m/+30m/+1h on an entry from an
   earlier day adds the time today (to today's entry with the same title and project, or a copy
-  of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type (the first time you open it each day it already lists today's meetings with their times and the things you brought up for today as tick boxes, then a Notes heading; nothing is kept until you type or tick, and **Settings → Notes** switches either part off), and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
   an entry**: its title becomes what you did and the jot is archived); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on

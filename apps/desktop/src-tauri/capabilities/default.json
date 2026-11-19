@@ -44,6 +44,7 @@
     "allow-log-meeting",
     "allow-skip-meeting",
     "allow-bell",
+    "allow-daily-note-start",
     "allow-add-entry-minutes",
     "allow-add-entry-time",
     "allow-log-note",

@@ -41,6 +41,7 @@ fn main() {
             "log_meeting",
             "skip_meeting",
             "bell",
+            "daily_note_start",
             "add_entry_minutes",
             "add_entry_time",
             "log_note",

@@ -161,6 +161,8 @@
     }
     choose(null);
     fresh = true;
+    // Today's note starts with the day's meetings and what was brought up (round 21).
+    if (key === 'daily') body = (await attempt(() => api.dailyNoteStart(app.today))) ?? '';
     setTimeout(() => screen?.querySelector<HTMLTextAreaElement>('.body')?.focus(), 0);
   }
 

@@ -55,6 +55,8 @@
   let daily = $state('');
   let dailyFor = $state('');
   let saving = $state<'' | 'waiting' | 'saved'>('');
+  // The note is showing its start (meetings, brought-up things) and isn't saved yet.
+  let started = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   async function flush() {
@@ -69,6 +71,7 @@
   }
 
   function typed() {
+    started = false;
     saving = 'waiting';
     if (timer !== null) clearTimeout(timer);
     timer = setTimeout(() => void flush(), SAVE_AFTER_MS);
@@ -78,10 +81,14 @@
   async function loadDaily(day: string) {
     await flush();
     const note = await attempt(() => api.dailyNote(day));
+    // A day with no note yet starts with its meetings and what was brought up for it
+    // (round 21). Only today: it is about now. Nothing is saved until something is typed.
+    const start = !note && day === app.today ? ((await attempt(() => api.dailyNoteStart(day))) ?? '') : '';
     if (app.selected !== day) return;
-    daily = note?.body ?? '';
+    daily = note?.body ?? start;
     dailyFor = day;
     saving = '';
+    started = !note && start !== '';
   }
 
   $effect(() => {
@@ -196,7 +203,13 @@
       aria-label="Today's note"
     ></textarea>
     <p class="status" aria-live="polite">
-      {saving === 'waiting' ? 'Saving…' : saving === 'saved' ? 'Saved in Notes' : ''}
+      {saving === 'waiting'
+        ? 'Saving…'
+        : saving === 'saved'
+          ? 'Saved in Notes'
+          : started
+            ? 'Started from today’s meetings and what you brought up. It’s kept once you type or tick.'
+            : ''}
     </p>
   {:else}
     {#each meetings as n (n.id)}

@@ -97,6 +97,16 @@ owner approved nine and changed one:
     picked under Settings → Timesheet → Default codes → Days off
     (`timesheet.time_off_code`), the entries are booked on it; without one they have no
     code, as before. Rules in `shiftbook_core::timeoff`.
+  - *Today's note starts with the day:* a day's Daily note that doesn't exist yet opens
+    already holding "Meetings" (the series that meet that weekday, with their times),
+    "Brought up for today" (the same follow-ups the bell lists, as tick boxes that count as
+    to-dos) and a "Notes" heading. Only for today, only the parts there is something for,
+    and nothing at all on a day off. It is shown, not saved: the note is made the first
+    time something is typed or ticked, so a day you never write on leaves no note behind.
+    Two switches under Settings → Notes turn the meetings or the brought-up things off
+    (`notes.daily_meetings`, `notes.daily_brought`, both on unless changed); the mock's
+    editable template was left out, the two switches cover it. The Daily board's "Today's
+    note" starts the same way. Rule in `shiftbook_core::notes::daily_start`.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

@@ -66,6 +66,10 @@ pub const KEY_MOPBOOK: &str = "ui.mopbook";
 /// Days without a change before a note moves to the archive, one of
 /// [`AUTO_ARCHIVE_CHOICES`] (`0` = off).
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
+/// Today's note starts with the day's meetings (round 21): `true` (default) or `false`.
+pub const KEY_DAILY_MEETINGS: &str = "notes.daily_meetings";
+/// Today's note starts with what was brought up for the day: `true` (default) or `false`.
+pub const KEY_DAILY_BROUGHT: &str = "notes.daily_brought";
 /// Where the Desk's "Done today" pile sits, `x y` in canvas units, or blank for automatic.
 pub const KEY_DONE_PILE: &str = "desk.done_pile";
 /// What Shiftbook is for: `work`, `home` or `both` (see [`crate::home`]).
@@ -260,6 +264,10 @@ pub struct Prefs {
     pub right_drag: bool,
     /// Days a ticket can be still open before its age shows in amber.
     pub ticket_stale_days: u32,
+    /// Today's note starts with the day's meetings.
+    pub daily_meetings: bool,
+    /// Today's note starts with what was brought up for the day.
+    pub daily_brought: bool,
     /// Days an entry card stays on the Desk by itself (today counts as one).
     pub desk_days: u32,
     /// Cards the owner moved stay until put away (otherwise they leave after `desk_days`).
@@ -322,6 +330,8 @@ impl Default for Prefs {
             hide_screenshots: true,
             right_drag: false,
             ticket_stale_days: DEFAULT_TICKET_STALE_DAYS,
+            daily_meetings: true,
+            daily_brought: true,
             desk_days: crate::canvas::RECENT_DAYS as u32,
             moved_stay: false,
             paused_timer: None,
@@ -424,7 +434,7 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_GROUP_BY => ok(&["code", "project"]),
         KEY_COMMENT_TICKETS | KEY_TIMER | KEY_USE_TIMESHEET | KEY_WRAPUP_NUDGE
         | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG
-        | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
+        | KEY_DESK_MOVED_STAY | KEY_DAILY_MEETINGS | KEY_DAILY_BROUGHT => ok(&["true", "false"]),
         KEY_TICKET_STALE_DAYS => match v.parse::<u32>() {
             Ok(n) if (1..=MAX_TICKET_STALE_DAYS).contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
@@ -573,6 +583,8 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
             KEY_USE_TIMESHEET => prefs.use_timesheet = v != "false",
+            KEY_DAILY_MEETINGS => prefs.daily_meetings = v != "false",
+            KEY_DAILY_BROUGHT => prefs.daily_brought = v != "false",
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
@@ -637,6 +649,18 @@ mod tests {
         let json = serde_json::to_value(Prefs::default()).unwrap();
         assert_eq!(json["blockCopy"], true);
         assert_eq!(json["hideScreenshots"], true);
+    }
+
+    #[test]
+    fn daily_note_start_switches() {
+        let p = Prefs::default();
+        assert!(p.daily_meetings && p.daily_brought);
+        let p = prefs_from_settings(&[(KEY_DAILY_MEETINGS, "false")]);
+        assert!(!p.daily_meetings && p.daily_brought);
+        let p = prefs_from_settings(&[(KEY_DAILY_BROUGHT, "false")]);
+        assert!(p.daily_meetings && !p.daily_brought);
+        assert!(validate_pref(KEY_DAILY_MEETINGS, "sometimes").is_err());
+        assert_eq!(validate_pref(KEY_DAILY_BROUGHT, "true"), Ok("true".into()));
     }
 
     #[test]

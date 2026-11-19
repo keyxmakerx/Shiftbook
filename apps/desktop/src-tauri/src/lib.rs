@@ -747,6 +747,7 @@ pub fn run() {
             meetings::log_meeting,
             meetings::skip_meeting,
             meetings::bell,
+            meetings::daily_note_start,
             api::add_entry_minutes,
             api::add_entry_time,
             api::log_note,

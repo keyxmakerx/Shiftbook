@@ -133,6 +133,10 @@ export interface Prefs {
   pausedTimer: PausedTimer | null;
   /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
   notesAutoArchiveDays: number;
+  /** Today's note starts with the day's meetings. */
+  dailyMeetings: boolean;
+  /** Today's note starts with what was brought up for the day. */
+  dailyBrought: boolean;
   /** Open windows and where they are. */
   windows: WindowSpot[];
   /** The MOP notebook window. */
@@ -498,6 +502,8 @@ export type PrefKey =
   | 'phone.wrapup_nudge'
   | 'timer.paused'
   | 'notes.auto_archive_days'
+  | 'notes.daily_meetings'
+  | 'notes.daily_brought'
   | 'ui.windows'
   | 'ui.mopbook'
   | 'desk.done_pile'
@@ -1614,6 +1620,9 @@ export interface DataApi {
   listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList>;
   getNote(id: string): Promise<Note>;
   createNote(note: NoteInput): Promise<Note>;
+  /** What today's note starts with before anything is typed: the day's meetings and what
+   * was brought up for it (each can be switched off), or ''. Tauri: `daily_note_start`. */
+  dailyNoteStart(today: IsoDate): Promise<string>;
   /** The day's Daily note (titled "Daily · Mon 19 Oct 2026"), or null. Tauri: `daily_note`. */
   dailyNote(date: IsoDate): Promise<Note | null>;
   /** Write the day's Daily note, creating it once something is typed. Tauri: `save_daily_note`. */

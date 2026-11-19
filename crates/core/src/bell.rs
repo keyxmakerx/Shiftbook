@@ -171,6 +171,41 @@ pub const JUST_FINISHED_MINUTES: u32 = 30;
 /// A pin to chase: its title, `kind:id` and chase date.
 pub type ChasePin = (String, String, Date);
 
+/// One thing up for following up: the day it was due, its title, its card
+/// (`kind:id`) and its next-up id when it came from a next-up line.
+pub type BroughtUp = (Date, String, Option<String>, Option<String>);
+
+/// What is brought up by `today`: next-up lines whose day has come, and pins due to chase,
+/// merged by card (the earlier day wins), longest waiting first.
+pub fn brought_up(next_up: &[NextUpItem], pins: &[ChasePin], today: Date) -> Vec<BroughtUp> {
+    let mut follow: Vec<BroughtUp> = Vec::new();
+    let mut brought: Vec<&NextUpItem> = next_up
+        .iter()
+        .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
+        .filter(|i| i.show_from.is_some_and(|d| d <= today))
+        .collect();
+    brought.sort_by_key(|i| (i.show_from, i.created_at));
+    for i in brought {
+        let card = i.about.map(|(k, id)| format!("{}:{id}", k.as_str()));
+        let on = i.show_from.unwrap_or(today);
+        match follow.iter_mut().find(|f| card.is_some() && f.2 == card) {
+            Some(f) => f.0 = f.0.min(on),
+            None => follow.push((on, i.text.clone(), card, Some(i.id.to_string()))),
+        }
+    }
+    for (title, card, on) in pins.iter().filter(|(_, _, on)| *on <= today) {
+        match follow
+            .iter_mut()
+            .find(|f| f.2.as_deref() == Some(card.as_str()))
+        {
+            Some(f) => f.0 = f.0.min(*on),
+            None => follow.push((*on, title.clone(), Some(card.clone()), None)),
+        }
+    }
+    follow.sort_by_key(|f| f.0);
+    follow
+}
+
 /// Everything for the bell at `now` (minutes after local midnight on `today`): meetings in
 /// start order (one that just finished offers to log its time instead), then things brought up (oldest first), then pins due to chase (longest
 /// waiting first), then still-open tickets as one item.
@@ -232,32 +267,7 @@ pub fn bell_items(
             },
         });
     }
-    // (on, title, card, next-up id), merged by card: the earlier day wins.
-    let mut follow: Vec<(Date, String, Option<String>, Option<String>)> = Vec::new();
-    let mut brought: Vec<&NextUpItem> = next_up
-        .iter()
-        .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
-        .filter(|i| i.show_from.is_some_and(|d| d <= today))
-        .collect();
-    brought.sort_by_key(|i| (i.show_from, i.created_at));
-    for i in brought {
-        let card = i.about.map(|(k, id)| format!("{}:{id}", k.as_str()));
-        let on = i.show_from.unwrap_or(today);
-        match follow.iter_mut().find(|f| card.is_some() && f.2 == card) {
-            Some(f) => f.0 = f.0.min(on),
-            None => follow.push((on, i.text.clone(), card, Some(i.id.to_string()))),
-        }
-    }
-    for (title, card, on) in pins.iter().filter(|(_, _, on)| *on <= today) {
-        match follow
-            .iter_mut()
-            .find(|f| f.2.as_deref() == Some(card.as_str()))
-        {
-            Some(f) => f.0 = f.0.min(*on),
-            None => follow.push((*on, title.clone(), Some(card.clone()), None)),
-        }
-    }
-    follow.sort_by_key(|f| f.0);
+    let follow = brought_up(next_up, pins, today);
     for (on, title, card, id) in &follow {
         items.push(BellItem {
             when: BellWhen::Today,
@@ -407,6 +417,20 @@ mod tests {
             updated_at: datetime!(2026-10-01 09:00 UTC),
             deleted_at: None,
         }
+    }
+
+    #[test]
+    fn the_days_meetings_in_start_order() {
+        // `series` meets on Mondays and Wednesdays.
+        let mut gone = series("Old sync", 480);
+        gone.deleted_at = Some(datetime!(2026-10-02 09:00 UTC));
+        let all = [series("Change board", 840), series("Stand-up", 570), gone];
+        let monday = time::macros::date!(2026 - 10 - 19);
+        assert_eq!(
+            crate::meetings::meetings_on(&all, monday),
+            [(570, "Stand-up"), (840, "Change board")]
+        );
+        assert!(crate::meetings::meetings_on(&all, crate::dates::add_days(monday, 1)).is_empty());
     }
 
     fn brought(text: &str, from: Date) -> NextUpItem {

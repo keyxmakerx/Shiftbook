@@ -590,6 +590,9 @@ export class TauriApi implements DataApi {
   createNote(note: NoteInput): Promise<Note> {
     return call('create_note', { note });
   }
+  dailyNoteStart(today: IsoDate): Promise<string> {
+    return call('daily_note_start', { today });
+  }
   dailyNote(date: IsoDate): Promise<Note | null> {
     return call('daily_note', { date });
   }

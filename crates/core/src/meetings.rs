@@ -121,6 +121,19 @@ pub enum MeetingToday {
     Started(u32),
 }
 
+/// The meetings on `date`: every live series that meets on its weekday, as
+/// `(minutes after midnight, name)` in start order.
+pub fn meetings_on(series: &[crate::model::MeetingSeries], date: Date) -> Vec<(u32, &str)> {
+    let weekday = usize::from(date.weekday().number_days_from_monday());
+    let mut out: Vec<(u32, &str)> = series
+        .iter()
+        .filter(|m| m.deleted_at.is_none() && m.days[weekday])
+        .map(|m| (m.at, m.name.as_str()))
+        .collect();
+    out.sort_by_key(|(at, name)| (*at, name.to_lowercase()));
+    out
+}
+
 /// Today's meeting of a series, if it meets today and isn't long over.
 pub fn meeting_today(
     days: &[bool; 7],

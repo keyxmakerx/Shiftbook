@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-daily-note-start"
+description = "Enables the daily_note_start command without any pre-configured scope."
+commands.allow = ["daily_note_start"]
+
+[[permission]]
+identifier = "deny-daily-note-start"
+description = "Denies the daily_note_start command without any pre-configured scope."
+commands.deny = ["daily_note_start"]

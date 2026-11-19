@@ -94,6 +94,14 @@ rightDrag: boolean,
  */
 ticketStaleDays: number, 
 /**
+ * Today's note starts with the day's meetings.
+ */
+dailyMeetings: boolean, 
+/**
+ * Today's note starts with what was brought up for the day.
+ */
+dailyBrought: boolean, 
+/**
  * Days an entry card stays on the Desk by itself (today counts as one).
  */
 deskDays: number, 

@@ -275,14 +275,7 @@ pub async fn bell_for(
             open.push(t);
         }
     }
-    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(store, owner, today)
-        .await?
-        .into_iter()
-        .filter_map(|(p, title)| {
-            p.chase_on
-                .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
-        })
-        .collect();
+    let chase = chase_pins(store, owner, today).await?;
     let now = now.min(24 * 60 - 1);
     let mut items = bell_items(&meetings, &next_up, &chase, &open, today, now);
     items = with_todos(items, &notepads(store, owner, today).await?);
@@ -298,6 +291,54 @@ pub async fn bell_for(
     items.extend(later);
     let due = crate::home::due_things(store, owner, today).await?;
     Ok(with_due(items, &due, today))
+}
+
+/// The pins with a day to chase them on, as the bell wants them.
+async fn chase_pins(
+    store: &SqliteStore,
+    owner: OwnerId,
+    today: time::Date,
+) -> Res<Vec<shiftbook_core::bell::ChasePin>> {
+    Ok(crate::pins::pinned(store, owner, today)
+        .await?
+        .into_iter()
+        .filter_map(|(p, title)| {
+            p.chase_on
+                .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
+        })
+        .collect())
+}
+
+/// Maps to `DataApi.dailyNoteStart()`: what today's note starts with before anything is
+/// typed (round 21): the day's meetings and what was brought up for it, each unless switched
+/// off in Settings → Notes. Empty when there is neither, and on a day off.
+#[tauri::command]
+pub async fn daily_note_start(s: State<'_, VaultSession>, today: String) -> Res<String> {
+    let (store, owner) = s.data().await?;
+    let today = parse_date(&today).map_err(|_| CommandError::InvalidInput)?;
+    let prefs = store.prefs(owner).await?;
+    if !store.days_off(owner, today, today).await?.is_empty() {
+        return Ok(String::new());
+    }
+    let series = if prefs.daily_meetings {
+        store.meeting_series(owner).await?
+    } else {
+        Vec::new()
+    };
+    let brought = if prefs.daily_brought {
+        shiftbook_core::bell::brought_up(
+            &store.next_up_all(owner).await?,
+            &chase_pins(&store, owner, today).await?,
+            today,
+        )
+    } else {
+        Vec::new()
+    };
+    let titles: Vec<&str> = brought.iter().map(|b| b.1.as_str()).collect();
+    Ok(shiftbook_core::notes::daily_start(
+        &shiftbook_core::meetings::meetings_on(&series, today),
+        &titles,
+    ))
 }
 
 /// The notepads the bell looks in for open to-dos (round 21): the entries the Desk shows by
