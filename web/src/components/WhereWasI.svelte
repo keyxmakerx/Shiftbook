@@ -5,13 +5,17 @@
   // decided by the app (crates/core/src/resume.rs).
   import { api } from '../lib/api';
   import { bell } from '../lib/bell.svelte';
-  import { cardLead, cardTitle, carryOnText, lastLogged } from '../lib/resume';
+  import { fmtMinutes } from '../lib/format';
+  import { afterNow, cardLead, cardTitle, carryOnText, lastLogged, startedAt } from '../lib/resume';
   import { copyStandup } from '../lib/standup';
-  import { app, attempt, focusLog, projectById, projectColor } from '../lib/store.svelte';
+  import { app, attempt, focusLog, logNow, projectById, projectColor, timeButtons } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import TicketChip from './TicketChip.svelte';
 
-  const card = $derived(app.resume);
+  // Carry on turns the card into "Now" (round 21): it stays, with the rest of the list, until
+  // the thing is logged or you switch.
+  const now = $derived(app.now);
+  const card = $derived(app.now?.card ?? app.resume);
   const entry = $derived(card?.entry ?? null);
   const project = $derived(projectById(entry?.projectId));
   const color = $derived(projectColor(entry?.projectId ?? null));
@@ -21,19 +25,50 @@
 
   function carryOn() {
     if (!card) return;
-    const text = carryOnText(card);
+    app.now = { card, startedAt: Date.now() };
     app.resume = null;
-    focusLog(text);
-    toast("Ready in Log work. Pick a time when you're done.");
+  }
+
+  /** Once the Now card's thing is logged: tick it off the list and move on to the next. */
+  function logged(on: NonNullable<typeof app.now>) {
+    return () => {
+      if (app.now !== on) return;
+      const first = on.card.entry ? null : on.card.list[0];
+      if (first) void attempt(() => api.tickNextUp(first.id, true));
+      app.now = null;
+      app.resume = afterNow(on.card);
+    };
+  }
+
+  /** A time button on the Now card: log it through Log work. */
+  function logIt(minutes: number) {
+    const on = app.now;
+    if (on) logNow(carryOnText(on.card), minutes, logged(on));
+  }
+
+  /** Other time: the line goes to Log work to type or pick any time; the card stays until
+   *  that is logged. */
+  function otherTime() {
+    const on = app.now;
+    if (on) focusLog(carryOnText(on.card), null, logged(on));
+  }
+
+  /** Switch: back to "Where was I?" with the whole list. */
+  function switchAway() {
+    if (!app.now) return;
+    app.resume = app.now.card;
+    app.now = null;
   }
 
   function somethingElse() {
     app.resume = null;
+    app.now = null;
     focusLog();
   }
 
   function later() {
     app.resume = null;
+    app.now = null;
     app.resumeLater = true;
     toast("It's back when you next unlock.");
   }
@@ -47,10 +82,15 @@
 </script>
 
 {#if card}
-  <section class="resume" style:--c={entry ? color : 'var(--accent)'} aria-labelledby="resume-h">
+  <section class="resume" class:now={!!now} style:--c={entry ? color : 'var(--accent)'} aria-labelledby="resume-h">
     <div class="top">
-      <span class="lbl">Where was I? · {cardLead(card)}</span>
-      <span class="ago">{entry ? lastLogged(card.changedAt, new Date()) : card.list[0]?.from ? 'You brought this up for today' : 'From your wrap-up'}</span>
+      {#if now}
+        <span class="lbl">Now</span>
+        <span class="ago">started {startedAt(now.startedAt)}</span>
+      {:else}
+        <span class="lbl">Where was I? · {cardLead(card)}</span>
+        <span class="ago">{entry ? lastLogged(card.changedAt, new Date()) : card.list[0]?.from ? 'You brought this up for today' : 'From your wrap-up'}</span>
+      {/if}
     </div>
     <h3 id="resume-h">{cardTitle(card)}</h3>
 
@@ -62,7 +102,21 @@
         </div>
       {/if}
       {#if entry.notes}<p class="next"><b>Notepad:</b> {entry.notes.split('\n')[0]}</p>{/if}
-    {:else if rest.length}
+    {/if}
+
+    {#if now}
+      <div class="acts">
+        <span class="lbl done-lbl">Done · log it</span>
+        {#each timeButtons() as m (m)}
+          <button class="btn" type="button" onclick={() => logIt(m)}>{fmtMinutes(m)}</button>
+        {/each}
+        <button class="btn" type="button" title="Put it in Log work to type a time" onclick={otherTime}>Other time…</button>
+        <button class="btn" type="button" title="Back to Where was I?" onclick={switchAway}>Switch</button>
+      </div>
+    {/if}
+
+    {#if !entry && rest.length}
+      {#if now}<span class="lbl">Then</span>{/if}
       <ul class="then" aria-label="Then">
         {#each rest as item (item.id)}
           <li>
@@ -75,12 +129,13 @@
       </ul>
     {/if}
 
-    {#if awayCount}
+    {#if awayCount && !now}
       <button type="button" class="away" onclick={() => (bell.open = true)}>
         While you were away: {awayCount} {awayCount === 1 ? 'thing' : 'things'} came due. See them
       </button>
     {/if}
 
+    {#if !now}
     <div class="acts">
       <button class="btn primary" type="button" onclick={carryOn}>Carry on</button>
       <button class="btn" type="button" onclick={somethingElse}>Something else</button>
@@ -89,6 +144,7 @@
         Copy for stand-up
       </button>
     </div>
+    {/if}
   </section>
 {/if}
 
@@ -194,6 +250,15 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    align-items: center;
     margin-top: 4px;
+  }
+
+  .resume.now {
+    background: color-mix(in srgb, var(--c) 12%, var(--paper));
+  }
+
+  .done-lbl {
+    margin-right: 2px;
   }
 </style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   // Log work: paste a ticket or say what you did, then press a time button. The app
   // reuses today's entry for a ticket it already has (see crates/core/src/quicklog.rs).
+  import { untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { Capture, SameWork } from '../lib/api';
   import type { Entry } from '../lib/api';
@@ -59,15 +60,30 @@
   // The repeats come from the last day with work, which on a Monday is usually Friday.
   const repeatDay = $derived(repeats[0] && repeats[0].date !== addDays(app.selected, -1) ? weekdayLong(repeats[0].date) : 'yesterday');
 
+  /** What to do once a line handed over with its time (the Now card) has been logged. */
+  let afterLog: (() => void) | null = null;
+
   $effect(() => {
     const serial = app.logFocus.serial;
     if (serial === 0) return;
-    spot = app.logFocus.spot;
-    if (app.logFocus.text) {
-      text = app.logFocus.text;
-      recognise();
-    }
-    queueMicrotask(() => input?.focus());
+    untrack(() => {
+      spot = app.logFocus.spot;
+      if (app.logFocus.text) {
+        text = app.logFocus.text;
+        recognise();
+      }
+      // A line that comes with its time is logged straight away, once (the request is used
+      // up, so opening Day or the Desk later doesn't log it again).
+      const minutes = app.logFocus.minutes;
+      afterLog = app.logFocus.text ? app.logFocus.then : null;
+      app.logFocus.then = null;
+      if (minutes !== null && app.logFocus.text) {
+        app.logFocus.minutes = null;
+        void log(minutes, app.logFocus.text);
+        return;
+      }
+      queueMicrotask(() => input?.focus());
+    });
   });
 
   function recognise() {
@@ -77,6 +93,8 @@
     if (!now.trim()) {
       seen = null;
       spot = null;
+      // The line that was handed over is gone, so nothing waits on it any more.
+      afterLog = null;
       return;
     }
     timer = setTimeout(async () => {
@@ -169,8 +187,11 @@
     spot = null;
     text = '';
     seen = null;
+    const after = afterLog;
+    afterLog = null;
     await refresh();
     flashEntry(entry.id);
+    after?.();
     toast(
       minutes === 0
         ? existed

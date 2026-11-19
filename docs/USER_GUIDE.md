@@ -76,7 +76,10 @@ works the way it does is in `DECISIONS.md`.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
   day starts, the Desk shows what to pick up: things you brought up for today (**Bring up
   tomorrow** in any slide-out or right-click menu picks the next work day), then the list from
-  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** puts it into Log work;
+  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** turns
+  the card into **Now**: what you're on and when you started, with time buttons to log it when
+  it's done (Other time… puts it in Log work), Switch to go back, and the rest of your list
+  kept underneath with its ticks. Logging it ticks it off and the next one comes up.
   **Later** hides it until the next unlock.
 - **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
   today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded

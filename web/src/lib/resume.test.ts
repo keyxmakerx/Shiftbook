@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Entry, ResumeCard } from './api/DataApi';
-import { cardLead, cardTitle, carryOnText, lastLogged, noticeReturn } from './resume';
+import { afterNow, cardLead, cardTitle, carryOnText, lastLogged, noticeReturn } from './resume';
 
 function entry(description: string, tickets: string[], notes: string | null = null): Entry {
   return {
@@ -47,6 +47,15 @@ describe('Where was I?', () => {
       'Fix CHG0012345 rollback',
     );
     expect(carryOnText(list(['Chase the printer tickets', 'Renew certs']))).toBe('Chase the printer tickets');
+  });
+
+  it('keeps the rest of the list once the first thing is logged', () => {
+    const card = list(['Chase the printer tickets', 'Order toner', 'Renew certs']);
+    card.list[1]!.done = true;
+    // The first is logged, the ticked one is finished: the next open one leads.
+    expect(afterNow(card)?.list.map((i) => i.text)).toEqual(['Renew certs']);
+    expect(afterNow(list(['Only this']))).toBeNull();
+    expect(afterNow(fromEntry(entry('x', [])))).toBeNull();
   });
 
   it('words the card for the list, a break or another return', () => {
