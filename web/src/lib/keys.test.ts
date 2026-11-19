@@ -33,6 +33,15 @@ describe('keyboard shortcuts', () => {
     expect(shortcutFor(key('ContextMenu'))).toEqual({ kind: 'menu-key' });
   });
 
+  it('finds in the open notepad and stamps the time while writing', () => {
+    expect(shortcutFor(key('f', { ctrlKey: true }))).toEqual({ kind: 'find-in' });
+    expect(shortcutFor(key('F', { metaKey: true, typing: true }))).toEqual({ kind: 'find-in' });
+    expect(shortcutFor(key('f', { ctrlKey: true, shiftKey: true }))).toBeNull();
+    expect(shortcutFor(key(';', { ctrlKey: true, typing: true }))).toEqual({ kind: 'stamp' });
+    // Not in a text box: there is nowhere to put the time.
+    expect(shortcutFor(key(';', { ctrlKey: true }))).toBeNull();
+  });
+
   it('leaves typing alone', () => {
     expect(shortcutFor(key('n', { typing: true }))).toBeNull();
     expect(shortcutFor(key('2', { typing: true }))).toBeNull();

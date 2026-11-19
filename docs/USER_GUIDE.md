@@ -58,7 +58,10 @@ works the way it does is in `DECISIONS.md`.
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
   to the title bar, – minimises it to the bottom bar, ⤢ fills the screen, ✕ closes it. Windows
-  come back where they were after you unlock. The thin **bottom bar** lines windows up from the
+  come back where they were after you unlock. **Ctrl+F** finds a word in the notepad the cursor
+  is in, or in the window in front (a notepad, or a MOP being read, edited or run): the match
+  is marked, Enter goes to the next one, Shift+Enter to the one before, Esc closes it. **Ctrl+;**
+  drops the time (like 14:05) into a notepad, for a running log. The thin **bottom bar** lines windows up from the
   left (click to show or tuck away, right-click for more), with today's hours and the **bell** on
   the right: its panel slides in with meetings about to start, things brought up for today and
   tickets still open. Meetings that repeat are set in **Settings → Meetings** (days, time, how
@@ -139,7 +142,7 @@ works the way it does is in `DECISIONS.md`.
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Wiki), 6 opens **Organise** (Tickets, Projects, Repeating, Lists) and Ctrl+, opens Settings (at home the Timesheet is hidden, so the numbers move down one), Ctrl+L lock, Ctrl + / − / 0
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Wiki), 6 opens **Organise** (Tickets, Projects, Repeating, Lists) and Ctrl+, opens Settings (at home the Timesheet is hidden, so the numbers move down one), Ctrl+L lock, Ctrl+F find in the open notepad or MOP, Ctrl+; the time into a notepad, Ctrl + / − / 0
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
 

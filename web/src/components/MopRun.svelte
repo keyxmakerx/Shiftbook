@@ -407,7 +407,8 @@
       </div>
     {/if}
 
-    <div class="body">
+    <!-- Ctrl+F looks in here when the MOP is being read or run (in Edit, in the text box). -->
+    <div class="body" data-find={mode === 'edit' ? undefined : ''}>
       {#if mode === 'edit'}
         <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} aria-label="MOP title" placeholder="Title" />
         <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>

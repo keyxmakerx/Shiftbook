@@ -23,6 +23,8 @@
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
   import AskText from '../components/AskText.svelte';
+  import FindBar from '../components/FindBar.svelte';
+  import { closeFind, finder, openFind, stampTime } from '../lib/finder.svelte';
   import DayPrompt from '../components/DayPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
@@ -97,6 +99,7 @@
       case 'escape':
         if (app.organiseOpen) app.organiseOpen = false;
         else if (menuOpen()) closeMenu();
+        else if (finder.open) closeFind();
         else if (app.captureOpen) app.captureOpen = false;
         else if (app.drawer) app.drawer = null;
         break;
@@ -129,6 +132,17 @@
         }
         break;
       }
+      case 'find-in':
+        // Ctrl+F is ours either way, so the WebView's own find bar never opens over the app.
+        event.preventDefault();
+        if (menuOpen() || app.captureOpen) return;
+        if (!openFind()) toast('Click in a notepad or open a MOP first, then press Ctrl+F.');
+        break;
+      case 'stamp':
+        if (!(target instanceof HTMLTextAreaElement) || target.readOnly) return;
+        event.preventDefault();
+        stampTime(target);
+        break;
       case 'menu-key':
         // Elements with a paper menu handle the Menu key themselves.
         break;
@@ -188,6 +202,7 @@
 <Toast />
 <DayPrompt />
 <AskText />
+<FindBar />
 <ShortcutOverlay />
 
 <style>
