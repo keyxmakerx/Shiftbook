@@ -598,6 +598,8 @@ export interface CarriedItem extends TrayItem {
   entryId: string | null;
   /** That entry's title. */
   entryTitle: string | null;
+  /** The day it comes back, while it is snoozed on the tray's day (round 21). */
+  snoozedUntil: IsoDate | null;
 }
 
 export interface TrayDay {
@@ -1325,6 +1327,11 @@ export interface DataApi {
   traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay>;
   /** Work on a still-open ticket again on `date`: it joins that day's tray. */
   trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
+  /**
+   * Keep a still-open ticket out of "Still open from before" until `until` (round 21), or wake
+   * it now with null. `today` is the day it is done on; `date`'s tray comes back. Tauri: `tray_snooze`.
+   */
+  traySnooze(ticket: string, today: IsoDate, until: IsoDate | null, date: IsoDate): Promise<TrayDay>;
   /** One tray ticket, or null when it was taken out (for a window showing its notepad). */
   trayItem(id: string): Promise<TrayItem | null>;
 

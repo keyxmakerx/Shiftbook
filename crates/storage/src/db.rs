@@ -119,6 +119,11 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "closing out a MOP run: finish time and what was seen",
         include_str!("../migrations/0022_mop_run_close.sql"),
     ),
+    (
+        23,
+        "snoozed tickets",
+        include_str!("../migrations/0023_ticket_snoozes.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -347,6 +352,7 @@ mod tests {
                     "settings",
                     "task_checklist_items",
                     "tasks",
+                    "ticket_snoozes",
                     "ticket_tray",
                     "tickets",
                     "time_entries",

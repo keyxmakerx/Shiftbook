@@ -68,6 +68,13 @@ owner approved nine and changed one:
     order with one Undo. "One entry instead" keeps the old behaviour (several tickets pasted
     on their own lines as one entry). It never asks "Add to …?": each line goes where a
     single line with no answer would.
+  - *Snooze:* a still-open ticket can be snoozed until a later day (within a year), from
+    its right-click menu in the tray or on the Desk. It is kept by ticket number in a new
+    table (`ticket_snoozes`, migration 23), so it covers a ticket on an entry as well as one
+    in the tray. Snoozed tickets sit under a "Snoozed (n)" fold with the day they come back
+    and a Wake button. They still count as open everywhere else (the bell's count, the Desk
+    card, the wrap-up). A ticket comes back on its day, and working on it after the snooze
+    was made wakes it early (`shiftbook_core::tray::snoozed_until`).
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

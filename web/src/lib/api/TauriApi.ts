@@ -278,6 +278,9 @@ export class TauriApi implements DataApi {
   traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay> {
     return call('tray_set_recurring', { id, recurringId });
   }
+  traySnooze(ticket: string, today: IsoDate, until: IsoDate | null, date: IsoDate): Promise<TrayDay> {
+    return call('tray_snooze', { ticket, today, until, date });
+  }
   trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
     return call('tray_carry', { id, date });
   }

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tray-snooze"
+description = "Enables the tray_snooze command without any pre-configured scope."
+commands.allow = ["tray_snooze"]
+
+[[permission]]
+identifier = "deny-tray-snooze"
+description = "Denies the tray_snooze command without any pre-configured scope."
+commands.deny = ["tray_snooze"]

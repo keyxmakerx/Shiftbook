@@ -10,7 +10,11 @@ import type { TrayItemId } from "./TrayItemId";
  * A still-open ticket from an earlier day in a tray: a tray row, or a ticket on an entry
  * (then `entry_id` and `entry_title` say which, and `id` is the entry ticket's id).
  */
-export type CarriedView = { entryId: TimeEntryId | null, entryTitle: string | null, id: TrayItemId, date: string, ticket: string, minutes: Minutes, note: string | null, done: boolean, projectId: ProjectId | null, recurringId: RecurringTaskId | null, links: Array<LinkView>, 
+export type CarriedView = { entryId: TimeEntryId | null, entryTitle: string | null, 
+/**
+ * The day it comes back, while it is snoozed on the tray's day (round 21).
+ */
+snoozedUntil: string | null, id: TrayItemId, date: string, ticket: string, minutes: Minutes, note: string | null, done: boolean, projectId: ProjectId | null, recurringId: RecurringTaskId | null, links: Array<LinkView>, 
 /**
  * To-dos in its notepad that aren't ticked (round 21).
  */

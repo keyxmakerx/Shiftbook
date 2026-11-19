@@ -478,6 +478,40 @@ fn open_entry_tickets_come_back_in_the_tray() {
         assert!(s.tray_carried(me, DAY).await.unwrap().is_empty());
         assert!(s.tray_carried(other, next).await.unwrap().is_empty());
 
+        // Snoozed on the 16th until the 19th: it still comes back, marked with its day, until
+        // then; nobody else's is touched, and waking it clears the mark.
+        let until = date!(2026 - 10 - 19);
+        s.snooze_ticket(me, "task1601563", next, Some(until))
+            .await
+            .unwrap();
+        let marks = |list: Vec<crate::work::CarriedTicket>| -> Vec<Option<Date>> {
+            list.into_iter().map(|c| c.snoozed_until).collect()
+        };
+        assert_eq!(
+            marks(s.tray_carried(me, next).await.unwrap()),
+            [None, Some(until), None]
+        );
+        assert_eq!(
+            marks(s.tray_carried(me, until).await.unwrap()),
+            [None, None, None]
+        );
+        assert!(s
+            .snooze_ticket(me, "TASK1601563", next, Some(next))
+            .await
+            .is_err());
+        // A new snooze replaces the old one.
+        s.snooze_ticket(me, "TASK1601563", next, Some(date!(2026 - 10 - 17)))
+            .await
+            .unwrap();
+        assert_eq!(
+            marks(s.tray_carried(me, next).await.unwrap())[1],
+            Some(date!(2026 - 10 - 17))
+        );
+        s.snooze_ticket(me, "TASK1601563", next, None)
+            .await
+            .unwrap();
+        assert_eq!(marks(s.tray_carried(me, next).await.unwrap())[1], None);
+
         // Working on it again puts it in that day's tray, and it stops showing as carried.
         s.tray_add(me, next, "TASK1601564").await.unwrap();
         // Each open day is listed (for how long a ticket has been open), up to the day asked.

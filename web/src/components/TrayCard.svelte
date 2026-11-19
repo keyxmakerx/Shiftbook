@@ -14,7 +14,8 @@
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
   import { openResponses } from '../lib/responses';
-  import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, trayMenu } from '../lib/trayActions';
+  import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, snoozeTicket, trayMenu } from '../lib/trayActions';
+  import { followWords } from '../lib/bringUp';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import KnownTickets from './KnownTickets.svelte';
@@ -28,6 +29,8 @@
     if (repeating.items.length === 0 && app.tray?.items.some((i) => i.recurringId)) void refreshRepeating();
   });
   let text = $state('');
+  /** The Snoozed fold under "Still open from before" is open. */
+  let showSnoozed = $state(false);
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);
   /** More than one ticket was pasted, so each row keeps its number even once others are answered. */
@@ -235,10 +238,12 @@
     <p class="empty-note">Nothing in the Tickets tray yet for this day.</p>
   {/if}
   {#if app.tray && app.tray.carried.length > 0}
+    {@const awake = app.tray.carried.filter((c) => !c.snoozedUntil)}
+    {@const asleep = app.tray.carried.filter((c) => c.snoozedUntil)}
     <div class="carried">
-      <span class="lbl">Still open from before</span>
+      {#if awake.length}<span class="lbl">Still open from before</span>{/if}
       <ul class="items">
-        {#each app.tray.carried as item (item.id)}
+        {#each awake as item (item.id)}
           {@const age = ageOf(app.ages, item.ticket)}
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
           <li
@@ -278,6 +283,26 @@
           {/if}
         {/each}
       </ul>
+      {#if asleep.length}
+        <button type="button" class="fold" aria-expanded={showSnoozed} onclick={() => (showSnoozed = !showSnoozed)}>
+          <Icon name="clock" size={12} /> Snoozed ({asleep.length})
+          <span class="hint">{showSnoozed ? 'hide' : 'show'}</span>
+        </button>
+        {#if showSnoozed}
+          <ul class="items">
+            {#each asleep as item (item.id)}
+              <li class="item zz" use:paperMenu={() => carriedMenuFor(item)}>
+                <TicketChip number={item.ticket} links={item.links} color="var(--mut)" />
+                <span class="note faint" title={item.note ?? item.entryTitle ?? ''}>{carriedNote(item)}</span>
+                <span class="since aged" title="Snoozed until {weekdayShort(item.snoozedUntil ?? '')} {dayMonth(item.snoozedUntil ?? '')}. It still counts as open.">
+                  back {followWords(item.snoozedUntil ?? '', app.today)}
+                </span>
+                <button type="button" class="today" title="Bring it back now" onclick={() => void snoozeTicket(item.ticket, null, item.snoozedUntil)}>Wake</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {/if}
     </div>
   {/if}
 </article>
@@ -528,6 +553,34 @@
 
   .carried .item {
     grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  }
+
+  .carried .item.zz {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    opacity: 0.8;
+  }
+
+  .fold {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ink-2);
+    font: 600 12px var(--ui);
+    cursor: pointer;
+  }
+
+  .fold:hover {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+
+  .fold .hint {
+    font-weight: 500;
+    color: var(--mut);
   }
 
   .lbl {

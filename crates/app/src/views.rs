@@ -94,6 +94,8 @@ pub struct CarriedView {
     pub item: TrayItemView,
     pub entry_id: Option<TimeEntryId>,
     pub entry_title: Option<String>,
+    /// The day it comes back, while it is snoozed on the tray's day (round 21).
+    pub snoozed_until: Option<String>,
 }
 
 /// An Inbox scrap.
@@ -196,6 +198,7 @@ pub fn carried_view(c: CarriedTicket, fields: &[CustomField]) -> CarriedView {
         item: tray_item_view(c.item, fields),
         entry_id,
         entry_title,
+        snoozed_until: c.snoozed_until.map(shiftbook_core::dates::format_date),
     }
 }
 

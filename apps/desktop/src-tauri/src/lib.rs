@@ -771,6 +771,7 @@ pub fn run() {
             api::tray_set_project,
             api::tray_set_recurring,
             api::tray_carry,
+            api::tray_snooze,
             api::tray_remove,
             api::tray_restore,
             api::ribbon,

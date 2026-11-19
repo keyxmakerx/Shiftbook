@@ -956,6 +956,26 @@ pub async fn tray_carry(s: State<'_, VaultSession>, id: String, date: String) ->
     tray_result(&store, owner, day).await
 }
 
+/// Maps to `DataApi.traySnooze()`: keep a still-open ticket out of "Still open from before"
+/// until `until` (round 21), or wake it now with no day. `today` is the day it is done on and
+/// `date` the tray that is showing, which comes back.
+#[tauri::command]
+pub async fn tray_snooze(
+    s: State<'_, VaultSession>,
+    ticket: String,
+    today: String,
+    until: Option<String>,
+    date: String,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let until = until.as_deref().map(date_arg).transpose()?;
+    store
+        .snooze_ticket(owner, &ticket, date_arg(&today)?, until)
+        .await?;
+    let day = store.tray_day(owner, date_arg(&date)?).await?;
+    tray_result(&store, owner, day).await
+}
+
 /// Maps to `DataApi.trayRemove()`.
 #[tauri::command]
 pub async fn tray_remove(s: State<'_, VaultSession>, id: String) -> Res<TrayDayView> {

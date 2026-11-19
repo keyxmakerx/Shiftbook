@@ -3,9 +3,10 @@
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { CarriedItem, TrayDay, TrayItem } from './api';
-import { followUpItem } from './bringUp';
+import { dayChoiceLabel, followUpItem, followWords } from './bringUp';
+import { askDay } from './dayPrompt.svelte';
 import { attachMop, mopFor, openMop } from './mops.svelte';
-import { fmtMinutes } from './format';
+import { addDays, fmtMinutes, longDay } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
 import { newProjectChoice } from './newProject';
 import { pinMenuItem } from './pins.svelte';
@@ -167,6 +168,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     },
     followUpItem('tray', item.id, item.ticket),
   );
+  if (!item.done) items.push(snoozeItem(item));
   const choices = [
     ...app.projects
       .filter((p) => !p.archived || p.id === item.projectId)
@@ -203,6 +205,56 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
 }
 
 /**
+ * Snooze a still-open ticket (round 21): it stays out of "Still open from before" until
+ * `until`, still counted as open. Null wakes it now. `was` is the day it had, for Undo.
+ */
+export async function snoozeTicket(ticket: string, until: string | null, was: string | null = null): Promise<void> {
+  const shown = () => app.tray?.date ?? app.selected;
+  const show = (day: TrayDay | undefined) => {
+    if (day && app.tray?.date === day.date) app.tray = day;
+  };
+  const day = await attempt(() => api.traySnooze(ticket, app.today, until, shown()));
+  if (!day) return;
+  show(day);
+  // Undo goes back to the day it had, when that is still ahead.
+  const back = was && was > app.today ? was : null;
+  toast(
+    until ? `${ticket} is snoozed until ${longDay(until)}. It still counts as open.` : `${ticket} is back with your open tickets`,
+    'Undo',
+    () => void attempt(() => api.traySnooze(ticket, app.today, back, shown())).then(show),
+  );
+}
+
+/** "Snooze" in a still-open ticket's menu: the next work day, in 3 days, next week, or any day. */
+function snoozeItem(item: TrayItem | CarriedItem): MenuItem {
+  const until = 'snoozedUntil' in item ? item.snoozedUntil : null;
+  const tomorrow = addDays(app.today, 1);
+  const next = app.bringUpDays.find((d) => d > app.today) ?? tomorrow;
+  const days = new Map<string, string>([
+    [next, dayChoiceLabel(next, app.today)],
+    [addDays(app.today, 3), 'In 3 days'],
+    [addDays(app.today, 7), 'Next week'],
+  ]);
+  // The next work day can be three days off (a Friday): one row for it then.
+  days.set(next, dayChoiceLabel(next, app.today));
+  if (until && !days.has(until)) days.set(until, dayChoiceLabel(until, app.today));
+  const choices = [...days].map(([day, label]) => ({
+    label,
+    color: null,
+    checked: until === day,
+    act: () => void snoozeTicket(item.ticket, day, until),
+  }));
+  choices.push({
+    label: 'Pick a day…',
+    color: null,
+    checked: false,
+    act: () => void askDay('Snooze it until…', tomorrow).then((day) => (day && day > app.today ? snoozeTicket(item.ticket, day, until) : undefined)),
+  });
+  if (until) choices.push({ label: 'Wake it now', color: null, checked: false, act: () => void snoozeTicket(item.ticket, null, until) });
+  return { label: 'Snooze', icon: 'clock', ...(until ? { value: `back ${followWords(until, app.today)}` } : {}), sub: [{ head: 'Comes back', choices }] };
+}
+
+/**
  * The paper menu of a still-open ticket from before. One on an entry has no tray row to
  * change, so it gets the few things that apply: done, work on it again, copy.
  */
@@ -219,6 +271,7 @@ export function carriedMenu(item: CarriedItem, notepad?: () => void): MenuSpec {
             icon: 'plus',
             act: () => void carryCarried(item),
           },
+          snoozeItem(item),
           { label: 'Copy ticket number', icon: 'copy', act: () => void copy(item.ticket, item.ticket) },
           ...openLinkItems(item.ticket, item.links),
           ...item.links.map((l) => ({

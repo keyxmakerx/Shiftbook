@@ -26,8 +26,9 @@ use shiftbook_core::quicklog::{
 use shiftbook_core::samework::{same_work, same_work_target, SameWork, WorkLine, SAME_WORK_DAYS};
 use shiftbook_core::tickets::add_tickets;
 use shiftbook_core::tray::{
-    carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
-    RollupAction, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE, TRAY_ENTRY_TITLE,
+    carried_open, check_snooze, clean_tray_note, new_tray_tickets, plan_rollups, snoozed_until,
+    validate_tray_minutes, RollupAction, Snooze, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE,
+    TRAY_ENTRY_TITLE,
 };
 use shiftbook_core::validate::{
     clean_notes, validate_color, validate_project, validate_time_entry,
@@ -126,6 +127,33 @@ pub struct CarriedTicket {
     pub item: TrayItem,
     /// The entry it is on, with the entry's title, when it isn't a tray row.
     pub entry: Option<(TimeEntryId, String)>,
+    /// The day it comes back, while it is snoozed on the tray's day (round 21).
+    pub snoozed_until: Option<Date>,
+}
+
+/// Every live snooze, by ticket number.
+async fn ticket_snoozes(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+) -> Result<Vec<(String, Snooze)>> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT ticket_number, snoozed_on, wake_on FROM ticket_snoozes WHERE owner_id = $1 \
+         AND deleted_at IS NULL",
+    )
+    .bind(owner.to_string())
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.into_iter()
+        .map(|(ticket, on, until)| {
+            Ok((
+                ticket,
+                Snooze {
+                    on: corrupt_date(&on)?,
+                    until: corrupt_date(&until)?,
+                },
+            ))
+        })
+        .collect()
 }
 
 pub(crate) fn corrupt_date(text: &str) -> Result<Date> {
@@ -2038,6 +2066,7 @@ impl SqliteStore {
                 Ok(CarriedTicket {
                     item: tray_from_row(r)?,
                     entry: None,
+                    snoozed_until: None,
                 })
             })
             .collect::<Result<_>>()?;
@@ -2074,6 +2103,7 @@ impl SqliteStore {
                     TimeEntryId::from_uuid(parse_uuid(row.try_get("entry_id")?)?),
                     row.try_get("description")?,
                 )),
+                snoozed_until: None,
             });
         }
         let today: Vec<String> = tray_items(&mut conn, owner, date)
@@ -2085,10 +2115,60 @@ impl SqliteStore {
             .iter()
             .map(|c| (c.item.ticket_number.as_str(), c.item.date))
             .collect();
+        let snoozes = ticket_snoozes(&mut conn, owner).await?;
         Ok(carried_open(&pairs, &today, date)
             .into_iter()
-            .map(|i| open[i].clone())
+            .map(|i| {
+                let mut c = open[i].clone();
+                let snooze = snoozes
+                    .iter()
+                    .find(|(t, _)| t.eq_ignore_ascii_case(&c.item.ticket_number))
+                    .map(|(_, s)| *s);
+                c.snoozed_until = snoozed_until(snooze, c.item.date, date);
+                c
+            })
             .collect())
+    }
+
+    /// Snooze a still-open ticket (round 21): made on `on`, it stays out of "Still open from
+    /// before" until `until`. `None` wakes it now. One snooze per ticket: a new one replaces
+    /// the old.
+    pub async fn snooze_ticket(
+        &self,
+        owner: OwnerId,
+        ticket: &str,
+        on: Date,
+        until: Option<Date>,
+    ) -> Result<()> {
+        let ticket = ticket.trim();
+        let snooze = until.map(|u| check_snooze(on, u)).transpose()?;
+        let mut tx = self.write_tx().await?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE ticket_snoozes SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
+             AND UPPER(ticket_number) = UPPER($3) AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .bind(ticket)
+        .execute(&mut *tx)
+        .await?;
+        if let Some(s) = snooze {
+            sqlx::query(
+                "INSERT INTO ticket_snoozes (id, owner_id, ticket_number, snoozed_on, wake_on, \
+                 created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $6, NULL)",
+            )
+            .bind(Uuid::now_v7().to_string())
+            .bind(owner.to_string())
+            .bind(ticket)
+            .bind(format_date(s.on))
+            .bind(format_date(s.until))
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Carry a still-open ticket into `date`'s tray: a new open row with 15 minutes, its

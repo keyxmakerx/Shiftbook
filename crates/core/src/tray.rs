@@ -227,6 +227,41 @@ pub fn open_since<S: AsRef<str>>(open: &[(S, Date)], ticket: &str) -> Option<Dat
         .min()
 }
 
+/// A snooze on a still-open ticket (round 21, idea approved 26 October): made on `on`, the
+/// ticket stays out of the tray's "Still open from before" until `until`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Snooze {
+    /// The day the snooze was made.
+    pub on: Date,
+    /// The day the ticket comes back.
+    pub until: Date,
+}
+
+/// The longest a ticket can be snoozed, in days.
+pub const MAX_SNOOZE_DAYS: i64 = 366;
+
+/// Check a snooze made on `on`: it ends on a later day, at most a year on.
+pub fn check_snooze(on: Date, until: Date) -> Result<Snooze, CoreError> {
+    let days = (until - on).whole_days();
+    if !(1..=MAX_SNOOZE_DAYS).contains(&days) {
+        return Err(CoreError::OutOfRange {
+            field: "Days to snooze",
+            min: 1,
+            max: MAX_SNOOZE_DAYS,
+        });
+    }
+    Ok(Snooze { on, until })
+}
+
+/// The day a snoozed ticket comes back, while it is still snoozed on `day`. It is awake once
+/// `day` reaches the snooze's end, and also when it was worked on after the snooze was made
+/// (`last_worked` later than the snooze's day): picking a ticket up again wakes it.
+pub fn snoozed_until(snooze: Option<Snooze>, last_worked: Date, day: Date) -> Option<Date> {
+    snooze
+        .filter(|s| day < s.until && last_worked <= s.on)
+        .map(|s| s.until)
+}
+
 /// How long a still-open ticket has been open (round 21, idea approved 26 October).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -452,5 +487,24 @@ mod tests {
         let earlier = [("REQ2", d(16)), ("INC1", d(10)), ("INC1", d(17))];
         let none: [&str; 0] = [];
         assert_eq!(carried_open(&earlier, &none, d(18)), [2, 0]);
+    }
+
+    #[test]
+    fn a_snoozed_ticket_comes_back_on_its_day_or_when_worked_on() {
+        let d = |day: u8| Date::from_calendar_date(2026, time::Month::November, day).unwrap();
+        let snooze = check_snooze(d(18), d(23)).unwrap();
+        // Last worked the 17th, snoozed the 18th until Monday the 23rd.
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(19)), Some(d(23)));
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(22)), Some(d(23)));
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(23)), None);
+        // Worked on again on the 20th: awake from then on.
+        assert_eq!(snoozed_until(Some(snooze), d(20), d(21)), None);
+        // Worked on the day it was snoozed (before snoozing): still snoozed.
+        assert_eq!(snoozed_until(Some(snooze), d(18), d(19)), Some(d(23)));
+        assert_eq!(snoozed_until(None, d(17), d(19)), None);
+        // A snooze ends on a later day, within a year.
+        assert!(check_snooze(d(18), d(18)).is_err());
+        assert!(check_snooze(d(18), d(17)).is_err());
+        assert!(check_snooze(d(18), d(18) + time::Duration::days(367)).is_err());
     }
 }
