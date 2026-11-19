@@ -131,6 +131,7 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },
   { keys: 'Ctrl +  Ctrl −', what: 'Bigger or smaller text (Ctrl 0 for normal)' },
   { keys: 'T', what: 'On the Desk: just today (other days fade)' },
+  { keys: 'Ctrl Tab', what: 'Jump back to what you just had open (Tab again for the one before)' },
   { keys: 'Ctrl Z', what: 'Undo the last change (type "undo" in Find for the list)' },
   { keys: 'Ctrl Shift Z', what: 'Redo it' },
   { keys: 'Ctrl F', what: 'Find a word in the open notepad or MOP' },

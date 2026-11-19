@@ -107,6 +107,17 @@ owner approved nine and changed one:
     (`notes.daily_meetings`, `notes.daily_brought`, both on unless changed); the mock's
     editable template was left out, the two switches cover it. The Daily board's "Today's
     note" starts the same way. Rule in `shiftbook_core::notes::daily_start`.
+  - *Ctrl+Tab jumps back:* a list of the last 8 things that were in front of you, newest
+    first: a view you went to for itself, an entry (its details or slide-out), a ticket (its
+    slide-out or window), a note in Notes or in a window, a wiki page. Holding Ctrl and
+    pressing Tab shows it without the thing in front now, Tab and Shift+Tab move, letting
+    go of Ctrl opens the marked one the way Find would (an entry comes back on its day with
+    its slide-out open; something that still has a window gets its window back). Notes and
+    the Wiki are stood for by the note or page open in them. Find's "Jump back to something
+    you had open…" opens the same list to pick from without holding a key. Kept in memory
+    only, emptied at each unlock, nothing stored. The shortcut sheet stays away while the
+    list shows. Screen-side only (`web/src/lib/recent.ts`, `recent.svelte.ts`): no rule in
+    core, since it is about what is on screen.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

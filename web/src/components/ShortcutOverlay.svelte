@@ -1,6 +1,8 @@
 <script lang="ts">
   // Hold Ctrl (⌘ on a Mac) on its own for a moment to see every shortcut; let go to hide it.
+  // It stays away while Ctrl is held for "Jump back" (Ctrl+Tab).
   import { HOLD_MS, shortcutList, startsHold } from '../lib/keys';
+  import { recent } from '../lib/recent.svelte';
   import { shownTabs } from '../lib/store.svelte';
 
   const list = $derived(shortcutList(shownTabs()));
@@ -32,7 +34,7 @@
 
 <svelte:window onkeydown={down} onkeyup={up} onblur={cancel} onpointerdown={cancel} />
 
-<div class="paper keys" class:on={shown} aria-hidden={!shown}>
+<div class="paper keys" class:on={shown && !recent.open} aria-hidden={!shown || recent.open}>
   <h2>Shortcuts</h2>
   <dl>
     {#each list as s, i (i)}

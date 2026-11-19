@@ -38,6 +38,7 @@
   import { pickMopFiles } from '../lib/mopbook.svelte';
   import { mopFor, mops, openMop, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
+  import { openRecent } from '../lib/recent.svelte';
   import { askTimeOff, bookDayOff } from '../lib/timeOffPrompt.svelte';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -176,6 +177,15 @@
     ...(app.prefs?.timer
       ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
       : []),
+    {
+      label: 'Jump back to something you had open…',
+      group: 'Go to',
+      keys: 'Ctrl Tab',
+      words: 'recent last previous switch',
+      run: () => {
+        if (!openRecent(false)) toast('Nothing to jump back to yet.');
+      },
+    },
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book a holiday (8 h)', group: 'Do', words: 'today leave vacation', run: () => holiday() },
     { label: 'Book several days off…', group: 'Do', words: 'holiday leave vacation time off week', run: () => askTimeOff(firstDayOff()) },

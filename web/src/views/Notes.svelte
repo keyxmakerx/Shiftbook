@@ -27,6 +27,7 @@
   import Icon from '../components/Icon.svelte';
   import WikiLinks from '../components/WikiLinks.svelte';
   import MopRun from '../components/MopRun.svelte';
+  import { sawNote } from '../lib/recent.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -113,6 +114,7 @@
       return;
     }
     current = n;
+    sawNote(n);
     draft = toInput(n);
     editing = true;
     saveState = '';
@@ -121,6 +123,7 @@
   async function newNote() {
     await flush();
     current = null;
+    sawNote(null);
     draft = blank(kind ?? 'jot');
     editing = true;
     saveState = '';

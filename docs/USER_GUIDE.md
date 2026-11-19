@@ -184,6 +184,12 @@ works the way it does is in `DECISIONS.md`.
 - **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Wiki), 6 opens **Organise** (Tickets, Projects, Repeating, Lists) and Ctrl+, opens Settings (at home the Timesheet is hidden, so the numbers move down one), Ctrl+L lock, Ctrl+F find in the open notepad or MOP, Ctrl+; the time into a notepad, Ctrl + / − / 0
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
+- **Jump back:** hold Ctrl and press Tab to see what you had open lately (views, entries,
+  tickets, notes and wiki pages, newest first, without the one in front of you). Tab again
+  moves down the list, Shift+Tab up, and letting go of Ctrl opens the one that's marked;
+  Esc stays put. Press it once and let go to flip between two things. Find has it too
+  (**Jump back to something you had open…**), where the list waits for ↑ ↓ and Enter or a
+  click. The list is kept in memory only and starts again each time you unlock.
 
 Not in the alpha yet: Planner, pictures in notes, the meeting canvas, Word (.docx) MOP import, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.

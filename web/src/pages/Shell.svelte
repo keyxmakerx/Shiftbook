@@ -29,6 +29,8 @@
   import DayPrompt from '../components/DayPrompt.svelte';
   import SplitPrompt from '../components/SplitPrompt.svelte';
   import TimeOffPrompt from '../components/TimeOffPrompt.svelte';
+  import RecentSwitch from '../components/RecentSwitch.svelte';
+  import { watchRecent } from '../lib/recent.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
   import Day from '../views/Day.svelte';
@@ -45,6 +47,7 @@
 
   onMount(() => startShell((message) => (problem = message)));
   followDay();
+  watchRecent();
 
   // At home the Timesheet is hidden: leave it if the mode changes while it's open.
   $effect(() => {
@@ -207,6 +210,7 @@
 <DayPrompt />
 <SplitPrompt />
 <TimeOffPrompt />
+<RecentSwitch />
 <AskText />
 <FindBar />
 <ShortcutOverlay />
