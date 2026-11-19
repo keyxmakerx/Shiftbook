@@ -7,20 +7,11 @@
   import { fmtMinutes, weekdayLong } from '../lib/format';
   import { app, attempt, ribbonDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { clockLabel, insertLine, isWrapupTime, MAX_LINES, removeLine } from '../lib/wrapup';
-
-  let now = $state(new Date());
-  $effect(() => {
-    const t = setInterval(() => (now = new Date()), 30_000);
-    return () => clearInterval(t);
-  });
+  import { clockLabel, insertLine, MAX_LINES, removeLine } from '../lib/wrapup';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
 
   const at = $derived(app.prefs?.wrapupAt ?? null);
-  const show = $derived(
-    app.selected === app.today &&
-      app.wrapupClosed !== app.today &&
-      (app.wrapupNow === app.today || (!!at && isWrapupTime(now, at))),
-  );
+  const show = $derived(app.selected === app.today && wrapupDue());
 
   let lines = $state(['']);
   let uncoded = $state(0);

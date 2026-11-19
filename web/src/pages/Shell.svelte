@@ -18,6 +18,7 @@
   import WindowLayer from '../components/WindowLayer.svelte';
   import Drawer from '../components/Drawer.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
+  import OtherDayBar from '../components/OtherDayBar.svelte';
   import Ribbon from '../components/Ribbon.svelte';
   import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
@@ -155,6 +156,7 @@
 <div class="app">
   <Ribbon {onLock} onCapture={() => (app.captureOpen = true)} />
   <TimerBar />
+  <OtherDayBar />
   <main class="stage">
     {#if problem}
       <p class="error pad" role="alert">{problem}</p>

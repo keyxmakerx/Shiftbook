@@ -429,9 +429,8 @@
     if (!entry) return;
     close();
     setView('desk');
-    await selectDay(entry.date);
     await refresh();
-    flashEntry(entry.id);
+    if (entry.date === app.selected) flashEntry(entry.id);
     if (entry.date === app.today) await startTimer(entry);
   }
 
@@ -457,13 +456,29 @@
     if (!entry) return;
     close();
     if (app.view !== 'desk' && app.view !== 'day') setView('desk');
-    await selectDay(entry.date);
+    // Logging to another day leaves you on the day you were looking at (round 21): the toast
+    // says where it went, and "Show it" goes there.
     await refresh();
-    flashEntry(entry.id);
+    const here = entry.date === app.selected;
+    if (here) flashEntry(entry.id);
     const when = entry.date === app.today ? 'today' : `on ${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
-    toast(`Logged ${fmtMinutes(parsed.minutes)} ${when}`, 'Undo', () => {
-      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
+    toast(
+      `Logged ${fmtMinutes(parsed.minutes)} ${when}`,
+      'Undo',
+      () => {
+        void attempt(() => api.deleteEntry(entry.id)).then(refresh);
+      },
+      () => void attempt(() => api.restoreEntry(entry.id)).then(refresh),
+      here
+        ? null
+        : {
+            label: 'Show it',
+            run: () => {
+              setView('day');
+              void selectDay(entry.date).then(() => flashEntry(entry.id));
+            },
+          },
+    );
   }
 
   function move(step: number) {

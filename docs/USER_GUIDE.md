@@ -15,7 +15,8 @@ works the way it does is in `DECISIONS.md`.
   templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
   card). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
-  open, more time and More. Double-click a card to open it; double-click empty paper to jot.
+  open, more time and More. Double-click a card to open it; double-click empty paper to jot. Enter keeps
+  the jot, and so does Esc when it has words in it (with Undo); Esc on an empty one closes it.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
   Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
   Fit and **View** (Timeline, Show all link lines, Boards, Tidy into stacks, Clear old cards…).
@@ -86,7 +87,10 @@ works the way it does is in `DECISIONS.md`.
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as
   `1.5h firewall cleanup CHG0012345 #network yesterday`. Enter logs it; Ctrl+Enter (or a line
   without hours) saves it to the Inbox. Type without a time to **Find**: the same box searches
-  your entries, Inbox scraps, notes and commands.
+  your entries, Inbox scraps, notes and commands. Logging to another day leaves you on the day
+  you were looking at; the message says where it went, with **Show it** and Undo. Whenever the
+  Desk or Day shows a day that isn't today, a strip under the ribbon says so, with **Back to
+  today**.
 - **Notes:** Jot, Daily, Meeting, Page and MOP notes, each with an optional project and tags,
   saved as you type. Search every note with the match highlighted, filter by kind, and
   **Archive** notes to get them out of the way (Include archived, or Find, still shows them).
@@ -111,7 +115,9 @@ works the way it does is in `DECISIONS.md`.
   the ticket filled in.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
-  entries that need a code, the tray and a short “Tomorrow I start with…” list.
+  entries that need a code, the tray and a short “Tomorrow I start with…” list. At that time
+  it sits at the top of the Desk's panel with Log work and Tickets folded under it (Show them
+  brings them back) and a dot on the bell, until Done for the day or Not today.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
   with nothing logged gets a dot, and clicking it opens Log work for that day (days before your
   first entry never get one, and the Timesheet doesn't warn about them).

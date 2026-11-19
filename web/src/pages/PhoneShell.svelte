@@ -111,6 +111,7 @@
       <span class="sum">
         {#if app.view === 'day' && app.selected !== app.today}
           {dayDistance(app.selected, app.today)} · <b>{fmtMinutes(ribbonDay(app.selected)?.minutes ?? 0)}</b>
+          <button class="back" type="button" onclick={() => void selectDay(app.today)}>Back to today</button>
         {:else}
           Today <b>{fmtMinutes(todayMinutes)}</b> · Week <b>{fmtMinutes(weekMinutes)}</b>
         {/if}
@@ -259,6 +260,17 @@
 
   .sum b {
     color: var(--ink);
+  }
+
+  .back {
+    margin-left: 6px;
+    border: 1px solid var(--rule);
+    background: var(--warn-wash);
+    color: var(--ink);
+    border-radius: 99px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 12.5px;
   }
 
   .round {

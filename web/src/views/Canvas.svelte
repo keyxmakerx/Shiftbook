@@ -95,6 +95,7 @@
   import TrayCard from '../components/TrayCard.svelte';
   import WhereWasI from '../components/WhereWasI.svelte';
   import WrapUp from '../components/WrapUp.svelte';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
 
   let cards = $state<Card[]>([]);
   let areas = $state<CanvasArea[]>([]);
@@ -139,6 +140,17 @@
   let loaded = $state(false);
   let view = $state<CanvasView>(lastView);
   let panel = $state(panelOpen);
+  // The wrap-up on top (round 21): the rest of the panel folds while it waits, unless you are
+  // typing in it at that moment (nothing folds away under your fingers) or you show it again.
+  const wrapping = $derived(app.selected === app.today && wrapupDue());
+  let unfolded = $state(false);
+  let restEl: HTMLElement | undefined = $state();
+  $effect(() => {
+    const on = wrapping;
+    untrack(() => {
+      unfolded = on && !!restEl?.contains(document.activeElement);
+    });
+  });
   let board: HTMLElement | undefined = $state();
   let menuAnchor: HTMLElement | undefined = $state();
   let anchorAt = $state({ x: 0, y: 0 });
@@ -1257,7 +1269,13 @@
     if (!note) return;
     await attempt(() => api.canvasMove('note' as CardKind, note.id, draft.x, draft.y));
     await load();
-    toast('Jotted down. It’s in Notes too.');
+    // Undo takes it away again (round 21: Esc keeps a jot that has words in it).
+    toast(
+      'Kept your jot. It’s in Notes too.',
+      'Undo',
+      () => void attempt(() => api.setNoteDeleted(note.id, true)).then(load),
+      () => void attempt(() => api.setNoteDeleted(note.id, false)).then(load),
+    );
   }
 
   // ----- paste anywhere on the Desk (round 15) -----
@@ -1541,7 +1559,7 @@
           style:top="{jot.y}px"
           bind:value={jot.text}
           rows="3"
-          placeholder="Jot something. Enter keeps it, Esc lets it go."
+          placeholder="Jot something. Enter keeps it."
           aria-label="New jot"
           autofocus
           onpointerdown={(e) => e.stopPropagation()}
@@ -1552,8 +1570,11 @@
               e.preventDefault();
               (e.currentTarget as HTMLTextAreaElement).blur();
             } else if (e.key === 'Escape') {
+              // Esc closes an empty jot; one with words in it is kept (leaving the box
+              // keeps it, and the toast has Undo). Typed words are never thrown away.
               e.stopPropagation();
-              jot = null;
+              if (jot?.text.trim()) (e.currentTarget as HTMLTextAreaElement).blur();
+              else jot = null;
             }
           }}
         ></textarea>
@@ -1765,11 +1786,21 @@
         </div>
         <!-- Log work comes first: it must be on screen when the app opens (1100 by 760), and
              Due soon and Where was I? above it pushed it below the fold. -->
-        <LogWork />
-        <DueSoonCard />
-        <WhereWasI />
-        <TrayCard />
+        <!-- At wrap-up time the wrap-up goes on top and the rest folds away, until Done for
+             the day or Not today (round 21: it used to turn up below the fold). -->
         <WrapUp />
+        {#if wrapping}
+          <button type="button" class="folded" aria-expanded={unfolded} onclick={() => (unfolded = !unfolded)}>
+            <span>{unfolded ? 'Log work and Tickets' : 'Log work and Tickets are folded while you wrap up'}</span>
+            <b>{unfolded ? 'Fold away' : 'Show them'}</b>
+          </button>
+        {/if}
+        <div class="rest" bind:this={restEl} hidden={wrapping && !unfolded}>
+          <LogWork />
+          <DueSoonCard />
+          <WhereWasI />
+          <TrayCard />
+        </div>
       </div>
     {/if}
   </aside>
@@ -2431,6 +2462,42 @@
     flex-direction: column;
     gap: 12px;
     padding-left: 34px;
+  }
+
+  .rest {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rest[hidden] {
+    display: none;
+  }
+
+  .folded {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border: 1px dashed var(--rule);
+    border-radius: 10px;
+    background: none;
+    color: var(--mut);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .folded b {
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .folded:hover,
+  .folded:focus-visible {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
 
   .hours {

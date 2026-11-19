@@ -16,6 +16,7 @@
   import { markDone, openRepeating } from '../lib/repeating.svelte';
   import { app, attempt, flashEntry, projectName, refresh, selectDay, setView, timeButtons, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import { openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
@@ -121,6 +122,13 @@
 
   const clockText = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00`;
 
+  /** The wrap-up shows on today's Desk (or Day, if that's where you are). */
+  function openWrapup() {
+    if (app.view !== 'day') setView('desk');
+    void selectDay(app.today);
+    close();
+  }
+
   function showDay() {
     setView('day');
     close();
@@ -184,6 +192,12 @@
       <p class="since">
         Things that came due since you last opened Shiftbook{away.since ? `, ${onDay(away.since, app.today)}` : ''}.
       </p>
+    {/if}
+    {#if wrapupDue() && !away}
+      <div class="wrapup">
+        <span class="txt"><b>Wrap-up time</b><small>What you did today, and what you start with tomorrow.</small></span>
+        <button type="button" class="btn primary" onclick={openWrapup}>Open the wrap-up</button>
+      </div>
     {/if}
     {#each [['Now', now], [away ? 'Since then' : 'Today', today]] as [head, list] (head)}
       {#if (list as BellItem[]).length}
@@ -346,6 +360,17 @@
 
   .item.late {
     border-left-color: var(--bad);
+  }
+
+  .wrapup {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--accent) 7%, var(--paper));
   }
 
   .since {
