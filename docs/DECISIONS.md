@@ -118,6 +118,19 @@ owner approved nine and changed one:
     only, emptied at each unlock, nothing stored. The shortcut sheet stays away while the
     list shows. Screen-side only (`web/src/lib/recent.ts`, `recent.svelte.ts`): no rule in
     core, since it is about what is on screen.
+  - *The wrap-up is offered on the way out:* pressing Lock (the button, Ctrl+L or "Lock now")
+    or closing the window after the wrap-up time asks "Wrap up before you go?" with today's
+    hours against the day's target: Wrap up (stay, the card is on the Desk), Just lock or
+    Just close, or Not today (puts the wrap-up away, then goes). Only with a wrap-up time
+    set and passed, something on the day, not on a day off, not once the wrap-up is done or
+    put off, and once a day (`shiftbook_core::nudge::leave_offer`). The idle and sleep
+    locks never ask. Two new settings remember the day it was last closed and last offered
+    (`day.wrapup_closed`, `day.wrapup_offered`), so both hold through the page reload a
+    lock does and through a restart; before this, a finished wrap-up came back after
+    unlocking. For the window: the page arms a one-shot guard while an offer is due, a held
+    close uses it up (a second close always closes), locking clears it, and a close that
+    can't reach the page goes through. macOS's Quit (⌘Q) is not held, only the window's
+    close.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

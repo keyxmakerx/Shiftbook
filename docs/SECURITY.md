@@ -237,6 +237,12 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   feature, which Shiftbook does not use and the page cannot reach).
 - **New commands** each have their own permission; errors stay short codes. The capability still
   grants no plugin permissions.
+- **Closing the window** can be held back once to offer the wrap-up (`set_leave_guard`,
+  `close_window`, round 21). The page can only arm that for the next close; a close uses the
+  guard up and locking clears it, so the window can never be kept open twice in a row, and
+  if the page can't be told the close simply goes through. The app tells the page with a
+  fixed script that raises a DOM event (`shiftbook:leave-asked`); no event permission is
+  granted to the page and nothing from the vault is in that script.
 - **Delete all data** (`delete_all_data`, Settings → Security and the unlock screen's recovery-key
   mode): needs the typed word `DELETE`, checked in `shiftbook_core::wipe` (the page only uses it to
   enable the button). It needs no password, so it works for someone who lost both the password

@@ -1,7 +1,7 @@
 // Whether today's wrap-up is waiting, shared by the card, the Desk's panel (which puts it on
 // top and folds the rest) and the bell's dot (round 21).
 
-import { app } from './store.svelte';
+import { app, savePref } from './store.svelte';
 import { isWrapupTime } from './wrapup';
 
 const clock = $state({ now: new Date() });
@@ -21,5 +21,25 @@ function tick(): void {
 export function wrapupDue(): boolean {
   tick();
   const at = app.prefs?.wrapupAt ?? null;
-  return !!at && app.wrapupClosed !== app.today && (app.wrapupNow === app.today || isWrapupTime(clock.now, at));
+  return !!at && !wrapupClosedToday() && (app.wrapupNow === app.today || isWrapupTime(clock.now, at));
+}
+
+/** True once today's wrap-up was finished or put off, here or before a lock or restart. */
+export function wrapupClosedToday(): boolean {
+  return app.wrapupClosed === app.today || (app.wrapupClosed !== REOPENED && app.prefs?.wrapupClosed === app.today);
+}
+
+// "Wrap up the day" was asked for again after it was closed today.
+const REOPENED = 'reopened';
+
+/** The wrap-up is finished or put off for today. It stays away through a lock or a restart. */
+export function closeWrapup(): void {
+  app.wrapupClosed = app.today;
+  void savePref('day.wrapup_closed', app.today);
+}
+
+/** Bring today's wrap-up back (Undo of "put away", or "Wrap up the day" in Find). */
+export function reopenWrapup(): void {
+  app.wrapupClosed = REOPENED;
+  if (app.prefs?.wrapupClosed) void savePref('day.wrapup_closed', '');
 }

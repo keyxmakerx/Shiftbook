@@ -8,7 +8,7 @@
   import { app, attempt, ribbonDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { clockLabel, insertLine, MAX_LINES, removeLine } from '../lib/wrapup';
-  import { wrapupDue } from '../lib/wrapupState.svelte';
+  import { closeWrapup, reopenWrapup, wrapupDue } from '../lib/wrapupState.svelte';
   import { hasTimesheet } from '../lib/words';
 
   const at = $derived(app.prefs?.wrapupAt ?? null);
@@ -68,7 +68,7 @@
     const saved = await attempt(() => api.setNextUp(lines));
     saving = false;
     if (!saved) return;
-    app.wrapupClosed = app.today;
+    closeWrapup();
     toast(
       saved.length
         ? `Saved ${saved.length === 1 ? 'one thing' : `${saved.length} things`} for tomorrow. Good work today.`
@@ -77,8 +77,8 @@
   }
 
   function later() {
-    app.wrapupClosed = app.today;
-    toast('Wrap-up put away until tomorrow', 'Undo', () => (app.wrapupClosed = ''));
+    closeWrapup();
+    toast('Wrap-up put away until tomorrow', 'Undo', reopenWrapup);
   }
 </script>
 

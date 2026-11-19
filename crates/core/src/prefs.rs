@@ -56,6 +56,11 @@ pub const MAX_TICKET_STALE_DAYS: u32 = 60;
 pub const KEY_REMIND_AT: &str = "phone.remind_at";
 /// Phone: a wrap-up nudge at the wrap-up time, `true` or `false` (off by default).
 pub const KEY_WRAPUP_NUDGE: &str = "phone.wrapup_nudge";
+/// The day the wrap-up was last finished or put off (`YYYY-MM-DD`, or empty), so it stays
+/// away for the rest of that day, through a lock or a restart too (round 21).
+pub const KEY_WRAPUP_CLOSED: &str = "day.wrapup_closed";
+/// The day the wrap-up was last offered on the way out (`YYYY-MM-DD`, or empty): once a day.
+pub const KEY_WRAPUP_OFFERED: &str = "day.wrapup_offered";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
 /// Open windows and where they are (see [`crate::windows`]), or blank.
@@ -254,6 +259,10 @@ pub struct Prefs {
     pub remind_at: Option<String>,
     /// Phone: a wrap-up nudge at the wrap-up time.
     pub wrapup_nudge: bool,
+    /// The day the wrap-up was last finished or put off (`YYYY-MM-DD`).
+    pub wrapup_closed: Option<String>,
+    /// The day the wrap-up was last offered on the way out (`YYYY-MM-DD`).
+    pub wrapup_offered: Option<String>,
     /// Quick unlock with a PIN is turned on.
     pub quick_unlock: bool,
     /// Copying text out is blocked until allowed (the Protected button).
@@ -323,6 +332,8 @@ impl Default for Prefs {
             wrapup_at: None,
             remind_at: None,
             wrapup_nudge: false,
+            wrapup_closed: None,
+            wrapup_offered: None,
             timer: false,
             use_timesheet: true,
             quick_unlock: false,
@@ -506,7 +517,8 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_USE_MODE => UseMode::parse(v)
             .map(|m| m.as_str().to_string())
             .ok_or_else(|| invalid(value)),
-        KEY_LAST_OPEN => crate::dates::parse_date(v)
+        KEY_WRAPUP_CLOSED | KEY_WRAPUP_OFFERED if v.is_empty() => Ok(String::new()),
+        KEY_LAST_OPEN | KEY_WRAPUP_CLOSED | KEY_WRAPUP_OFFERED => crate::dates::parse_date(v)
             .map(crate::dates::format_date)
             .map_err(|_| invalid(value)),
         KEY_STANDUP_WORDS => parse_standup_words(v)
@@ -587,6 +599,8 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_DAILY_BROUGHT => prefs.daily_brought = v != "false",
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
+            KEY_WRAPUP_CLOSED => prefs.wrapup_closed = Some(v).filter(|d| !d.is_empty()),
+            KEY_WRAPUP_OFFERED => prefs.wrapup_offered = Some(v).filter(|d| !d.is_empty()),
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
             KEY_BLOCK_COPY => prefs.block_copy = v == "true",
             KEY_HIDE_SCREENSHOTS => prefs.hide_screenshots = v == "true",
@@ -649,6 +663,20 @@ mod tests {
         let json = serde_json::to_value(Prefs::default()).unwrap();
         assert_eq!(json["blockCopy"], true);
         assert_eq!(json["hideScreenshots"], true);
+    }
+
+    #[test]
+    fn wrap_up_days() {
+        assert_eq!(
+            validate_pref(KEY_WRAPUP_CLOSED, "2026-11-18"),
+            Ok("2026-11-18".into())
+        );
+        assert_eq!(validate_pref(KEY_WRAPUP_OFFERED, " "), Ok(String::new()));
+        assert!(validate_pref(KEY_WRAPUP_CLOSED, "today").is_err());
+        let p = prefs_from_settings(&[(KEY_WRAPUP_CLOSED, "2026-11-18"), (KEY_WRAPUP_OFFERED, "")]);
+        assert_eq!(p.wrapup_closed.as_deref(), Some("2026-11-18"));
+        assert_eq!(p.wrapup_offered, None);
+        assert_eq!(Prefs::default().wrapup_closed, None);
     }
 
     #[test]

@@ -119,6 +119,10 @@ export interface Prefs {
   textSize: number;
   /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
   wrapupAt: string | null;
+  /** The day the wrap-up was last finished or put off. */
+  wrapupClosed: IsoDate | null;
+  /** The day the wrap-up was last offered on the way out. */
+  wrapupOffered: IsoDate | null;
   /** The optional "Now doing" timer is turned on (off by default). */
   timer: boolean;
   /** "I fill in a timesheet" (on by default): off hides the Timesheet and its reminders. */
@@ -495,6 +499,8 @@ export type PrefKey =
   | 'day.targets'
   | 'ui.text_size'
   | 'day.wrapup_at'
+  | 'day.wrapup_closed'
+  | 'day.wrapup_offered'
   | 'day.timer'
   | 'timesheet.use'
   | 'tickets.stale_days'
@@ -691,6 +697,12 @@ export interface RibbonDay {
   gap: boolean;
   /** Booked as a day off. */
   off: boolean;
+}
+
+/** The wrap-up offer on the way out: today's hours against the day's target. */
+export interface LeaveOffer {
+  logged: number;
+  target: number;
 }
 
 /** One day of a time-off range: booked with `minutes`, or skipped (`free`: no target that
@@ -1346,6 +1358,16 @@ export interface DataApi {
   getEntry(id: string): Promise<Entry>;
   /** One entry becomes two that share its time (round 21). Tauri: `split_entry`. */
   splitEntry(id: string, split: SplitInput): Promise<SplitResult>;
+  /** Whether to offer the wrap-up when locking or closing now: after the wrap-up time, with
+   * something logged, once a day, and not once it's finished or put off. Tauri: `leave_offer`. */
+  leaveOffer(today: IsoDate, now: number): Promise<LeaveOffer | null>;
+  /** Make the next close of the window ask first (or not). A close uses it up.
+   * Tauri: `set_leave_guard`. */
+  setLeaveGuard(armed: boolean): Promise<void>;
+  /** Close the window for good. Tauri: `close_window`. */
+  closeWindow(): Promise<void>;
+  /** Hear when a close was held back to offer the wrap-up. Returns how to stop listening. */
+  onLeaveAsked(handler: () => void): () => void;
   /** What booking `from` to `to` off would do: work days with nothing logged get a
    * "Holiday" entry, weekends and logged days are skipped. Tauri: `time_off_plan`. */
   timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan>;

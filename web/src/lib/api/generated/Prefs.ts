@@ -74,6 +74,14 @@ remindAt: string | null,
  */
 wrapupNudge: boolean, 
 /**
+ * The day the wrap-up was last finished or put off (`YYYY-MM-DD`).
+ */
+wrapupClosed: string | null, 
+/**
+ * The day the wrap-up was last offered on the way out (`YYYY-MM-DD`).
+ */
+wrapupOffered: string | null, 
+/**
  * Quick unlock with a PIN is turned on.
  */
 quickUnlock: boolean, 

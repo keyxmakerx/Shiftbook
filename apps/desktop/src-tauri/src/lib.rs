@@ -153,6 +153,49 @@ async fn fingerprint_unlock(
     }
 }
 
+/// Whether the next close of the window should ask first (round 21: the wrap-up is offered
+/// when closing late in the day). The page arms it while an offer is due; a close uses it
+/// up, so the window can never be held open twice in a row, and locking disarms it.
+#[derive(Default)]
+struct LeaveGuard(std::sync::atomic::AtomicBool);
+
+/// The DOM event the page hears when a close was held back to offer the wrap-up.
+const LEAVE_ASKED_EVENT: &str = "shiftbook:leave-asked";
+
+/// Arm or disarm the wrap-up offer for the next close. Maps to `DataApi.setLeaveGuard()`.
+#[tauri::command]
+fn set_leave_guard(guard: State<'_, LeaveGuard>, armed: bool) {
+    guard.0.store(armed, std::sync::atomic::Ordering::SeqCst);
+}
+
+/// Close the window for good ("Just close" on the wrap-up offer). Maps to
+/// `DataApi.closeWindow()`.
+#[tauri::command]
+fn close_window(window: tauri::WebviewWindow, guard: State<'_, LeaveGuard>) {
+    guard.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    let _ = window.close();
+}
+
+/// A close was asked for: if the offer is armed, hold the window open this once and tell
+/// the page. Nothing else can stop a close.
+fn on_close_requested(window: &tauri::Window, api: &tauri::CloseRequestApi) {
+    let armed = window
+        .state::<LeaveGuard>()
+        .0
+        .swap(false, std::sync::atomic::Ordering::SeqCst);
+    if !armed {
+        return;
+    }
+    let Some(view) = window.app_handle().get_webview_window(window.label()) else {
+        return;
+    };
+    let script = format!("window.dispatchEvent(new CustomEvent('{LEAVE_ASKED_EVENT}'))");
+    // Only hold the window when the page could be told; otherwise it just closes.
+    if view.eval(&script).is_ok() {
+        api.prevent_close();
+    }
+}
+
 /// Close the database and wipe the key, and turn screenshot protection back on.
 /// The frontend reloads the WebView next.
 #[tauri::command]
@@ -160,7 +203,9 @@ async fn lock(
     state: State<'_, VaultSession>,
     window: tauri::WebviewWindow,
     guard: State<'_, protect::CaptureGuard>,
+    leave: State<'_, LeaveGuard>,
 ) -> Result<(), CommandError> {
+    leave.0.store(false, std::sync::atomic::Ordering::SeqCst);
     guard.end_allow();
     let _ = phone::set_protected(&window, true);
     state.lock().await
@@ -706,7 +751,13 @@ pub fn run() {
                 .filter(|dir| shiftbook_storage::create_private_dir(dir).is_ok());
             app.manage(VaultSession::new(data_dir));
             app.manage(protect::CaptureGuard::default());
+            app.manage(LeaveGuard::default());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                on_close_requested(window, api);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
@@ -758,6 +809,9 @@ pub fn run() {
             api::time_off_plan,
             api::book_time_off,
             api::book_day_off,
+            api::leave_offer,
+            set_leave_guard,
+            close_window,
             api::unbook_day_off,
             api::restore_entry,
             api::add_entry_tickets,

@@ -8,6 +8,7 @@ import type {
   Frequency,
   CaptureLines,
   FollowUp,
+  LeaveOffer,
   MergeResult,
   TimeOffBooked,
   TimeOffPlan,
@@ -223,6 +224,21 @@ export class TauriApi implements DataApi {
 
   splitEntry(id: string, split: SplitInput): Promise<SplitResult> {
     return call('split_entry', { id, split });
+  }
+  leaveOffer(today: IsoDate, now: number): Promise<LeaveOffer | null> {
+    return call('leave_offer', { today, now });
+  }
+  setLeaveGuard(armed: boolean): Promise<void> {
+    return call('set_leave_guard', { armed });
+  }
+  closeWindow(): Promise<void> {
+    return call('close_window');
+  }
+  onLeaveAsked(handler: () => void): () => void {
+    // The app raises this on the window when it holds a close back (see lib.rs).
+    const heard = () => handler();
+    window.addEventListener('shiftbook:leave-asked', heard);
+    return () => window.removeEventListener('shiftbook:leave-asked', heard);
   }
   timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan> {
     return call('time_off_plan', { from, to });

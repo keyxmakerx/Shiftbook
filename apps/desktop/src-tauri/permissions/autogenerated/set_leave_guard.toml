@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-leave-guard"
+description = "Enables the set_leave_guard command without any pre-configured scope."
+commands.allow = ["set_leave_guard"]
+
+[[permission]]
+identifier = "deny-set-leave-guard"
+description = "Denies the set_leave_guard command without any pre-configured scope."
+commands.deny = ["set_leave_guard"]

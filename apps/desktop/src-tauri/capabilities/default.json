@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "The main window may only call the app's own commands: app info, the vault (status, setup, confirm recovery key saved, unlock, lock, change password, new password after a recovery unlock, new recovery key, delete all data), screenshot protection (allow for 10 minutes, protect now), the alpha's data commands and backups (save, list, pick, check, restore), and round 15's repeating things, lists, Work / Home / Both and While you were away. No plugin permissions: the dialog and opener plugins are only called from Rust (the opener only for a ticket's own link, see open_ticket_link), and the page has no shell, fs, http or opener access.",
+  "description": "The main window may only call the app's own commands: app info, the vault (status, setup, confirm recovery key saved, unlock, lock, change password, new password after a recovery unlock, new recovery key, delete all data), screenshot protection (allow for 10 minutes, protect now), the alpha's data commands and backups (save, list, pick, check, restore), and round 15's repeating things, lists, Work / Home / Both and While you were away, and round 21's wrap-up offer on the way out (arm it for the next close, close the window). No plugin permissions: the dialog and opener plugins are only called from Rust (the opener only for a ticket's own link, see open_ticket_link), and the page has no shell, fs, http or opener access.",
   "windows": [
     "main"
   ],
@@ -55,6 +55,9 @@
     "allow-time-off-plan",
     "allow-book-time-off",
     "allow-book-day-off",
+    "allow-leave-offer",
+    "allow-set-leave-guard",
+    "allow-close-window",
     "allow-unbook-day-off",
     "allow-restore-entry",
     "allow-add-entry-tickets",

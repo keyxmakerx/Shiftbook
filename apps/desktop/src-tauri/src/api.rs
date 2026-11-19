@@ -20,6 +20,7 @@ use shiftbook_core::model::{
     CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode,
 };
 use shiftbook_core::nextup::{bring_up_on, next_work_day};
+use shiftbook_core::nudge::LeaveOffer;
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
@@ -1103,6 +1104,33 @@ pub async fn tray_restore(s: State<'_, VaultSession>, id: String) -> Res<TrayDay
     let (store, owner) = s.data().await?;
     let day = store.tray_restore(owner, id_arg(&id)?).await?;
     tray_result(&store, owner, day).await
+}
+
+// ---------- the wrap-up on the way out ----------
+
+/// Maps to `DataApi.leaveOffer()`: whether to offer the wrap-up when locking or closing at
+/// `now` (minutes after local midnight on `today`), with today's hours to say (round 21).
+#[tauri::command]
+pub async fn leave_offer(
+    s: State<'_, VaultSession>,
+    today: String,
+    now: u32,
+) -> Res<Option<LeaveOffer>> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let prefs = store.prefs(owner).await?;
+    let entries = store.list_entries(owner, today, today).await?;
+    let logged = entries.iter().map(|r| r.entry.minutes).sum();
+    let has_work = !entries.is_empty() || !store.tray_day(owner, today).await?.items.is_empty();
+    let day_off = !store.days_off(owner, today, today).await?.is_empty();
+    Ok(shiftbook_core::nudge::leave_offer(
+        &prefs,
+        today,
+        now.min(24 * 60 - 1),
+        logged,
+        has_work,
+        day_off,
+    ))
 }
 
 // ---------- time off ----------

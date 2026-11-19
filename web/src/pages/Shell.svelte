@@ -30,6 +30,8 @@
   import SplitPrompt from '../components/SplitPrompt.svelte';
   import TimeOffPrompt from '../components/TimeOffPrompt.svelte';
   import RecentSwitch from '../components/RecentSwitch.svelte';
+  import LeavePrompt from '../components/LeavePrompt.svelte';
+  import { lockOrOffer, watchLeave } from '../lib/leave.svelte';
   import { watchRecent } from '../lib/recent.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
@@ -48,6 +50,11 @@
   onMount(() => startShell((message) => (problem = message)));
   followDay();
   watchRecent();
+  watchLeave();
+
+  // Locking by hand offers the wrap-up first when it's late and not done (round 21). The
+  // idle and sleep locks never ask.
+  const lockByHand = () => void lockOrOffer(onLock);
 
   // At home the Timesheet is hidden: leave it if the mode changes while it's open.
   $effect(() => {
@@ -92,7 +99,7 @@
         break;
       case 'lock':
         event.preventDefault();
-        onLock();
+        lockByHand();
         break;
       case 'undo':
         event.preventDefault();
@@ -159,7 +166,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="app">
-  <Ribbon {onLock} onCapture={() => (app.captureOpen = true)} />
+  <Ribbon onLock={lockByHand} onCapture={() => (app.captureOpen = true)} />
   <TimerBar />
   <OtherDayBar />
   <main class="stage">
@@ -203,7 +210,7 @@
   {#if app.ready}<BottomBar />{/if}
 </div>
 
-<Capture {onLock} />
+<Capture onLock={lockByHand} />
 <Drawer />
 <PaperMenu />
 <Toast />
@@ -211,6 +218,7 @@
 <SplitPrompt />
 <TimeOffPrompt />
 <RecentSwitch />
+<LeavePrompt />
 <AskText />
 <FindBar />
 <ShortcutOverlay />

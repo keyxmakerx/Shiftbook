@@ -39,6 +39,7 @@
   import { mopFor, mops, openMop, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
   import { openRecent } from '../lib/recent.svelte';
+  import { reopenWrapup } from '../lib/wrapupState.svelte';
   import { askTimeOff, bookDayOff } from '../lib/timeOffPrompt.svelte';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
@@ -116,7 +117,7 @@
   }
 
   function wrapUp() {
-    app.wrapupClosed = '';
+    reopenWrapup();
     app.wrapupNow = app.today;
     if (app.view !== 'desk' && app.view !== 'day') setView('desk');
     void selectDay(app.today);

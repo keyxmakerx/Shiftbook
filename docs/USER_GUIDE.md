@@ -134,7 +134,12 @@ works the way it does is in `DECISIONS.md`.
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list. At that time
   it sits at the top of the Desk's panel with Log work and Tickets folded under it (Show them
-  brings them back) and a dot on the bell, until Done for the day or Not today.
+  brings them back) and a dot on the bell, until Done for the day or Not today. If you press
+  Lock (or Ctrl+L), or close the window, after that time with the wrap-up still waiting,
+  Shiftbook asks once: **Wrap up** takes you to it, **Just lock** (or **Just close**) carries
+  on, and **Not today** puts the wrap-up away and carries on. It asks once a day; closing a
+  second time always closes, and the lock that happens by itself never asks. Done for the
+  day and Not today now hold through a lock or a restart too.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
   with nothing logged gets a dot, and clicking it opens Log work for that day (days before your
   first entry never get one, and the Timesheet doesn't warn about them).
