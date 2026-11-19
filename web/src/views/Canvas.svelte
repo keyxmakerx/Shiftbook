@@ -67,7 +67,7 @@
     type Guide,
     type Rect,
   } from '../lib/canvasView';
-  import { input as entryInput, moveEntryTo } from '../lib/entryActions';
+  import { canMerge, input as entryInput, mergeEntries, moveEntryTo } from '../lib/entryActions';
   import { sameWork } from '../lib/sameWork';
   import { dayMonth, fmtMinutes, fromIso, weekdayShort } from '../lib/format';
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
@@ -292,6 +292,24 @@
       items.length === 1 ? responseButton(items[0]!.ticket) : null,
     );
   }
+  /** The two entries picked, when they can be merged (the same day, neither the Tickets entry). */
+  const pickedPair = $derived.by(() => {
+    if (selected.size !== 2) return null;
+    const two = cards.filter((c) => selected.has(keyOf(c)));
+    const [a, b] = [two[0]?.entry, two[1]?.entry];
+    if (!a || !b || two.length !== 2 || !canMerge(a, b)) return null;
+    // The one logged first keeps its name.
+    return a.id < b.id ? ([a, b] as const) : ([b, a] as const);
+  });
+
+  /** "Merge these two": the pair is read before the selection clears (it is worked out from it). */
+  function mergePicked() {
+    const pair = pickedPair;
+    if (!pair) return;
+    selected = new Set();
+    void mergeEntries(pair[0], pair[1]);
+  }
+
   /** The open tickets among the selected cards. */
   const pickedOpen = $derived(cards.filter((c) => selected.has(keyOf(c)) && c.tray && !c.tray.item.done));
 
@@ -1690,6 +1708,17 @@
           <button type="button" class="btn" onclick={() => void closeTickets(pickedOpen)}>
             <Icon name="check" size={13} />
             {pickedOpen.length === 1 ? 'Tick the ticket done' : `Tick ${pickedOpen.length} tickets done`}
+          </button>
+        {/if}
+        {#if pickedPair}
+          {@const [keep, other] = pickedPair}
+          <button
+            type="button"
+            class="btn"
+            title="“{other.description}” goes into “{keep.description}”: its time, notes and tickets"
+            onclick={mergePicked}
+          >
+            <Icon name="list" size={13} /> Merge these two
           </button>
         {/if}
         {#if selected.size > 1}

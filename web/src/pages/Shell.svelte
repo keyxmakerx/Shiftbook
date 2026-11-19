@@ -27,6 +27,7 @@
   import FindBar from '../components/FindBar.svelte';
   import { closeFind, finder, openFind, stampTime } from '../lib/finder.svelte';
   import DayPrompt from '../components/DayPrompt.svelte';
+  import SplitPrompt from '../components/SplitPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
   import Day from '../views/Day.svelte';
@@ -203,6 +204,7 @@
 <PaperMenu />
 <Toast />
 <DayPrompt />
+<SplitPrompt />
 <AskText />
 <FindBar />
 <ShortcutOverlay />

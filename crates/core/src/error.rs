@@ -34,6 +34,18 @@ pub enum CoreError {
     #[error("One entry can't be more than 24 hours.")]
     HoursTooLarge,
 
+    /// Split or merge asked of the day's Tickets entry (round 21).
+    #[error("The Tickets entry comes from the Tickets tray, so it can't be split or merged.")]
+    ReshapeTray,
+
+    /// Merge asked of entries on different days.
+    #[error("Only entries from the same day can be merged.")]
+    MergeDays,
+
+    /// Merge asked of an entry with itself.
+    #[error("Pick two different entries to merge.")]
+    MergeSame,
+
     /// A required text field was empty.
     #[error("{field} can't be empty.")]
     Required {

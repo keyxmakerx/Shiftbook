@@ -56,7 +56,11 @@ works the way it does is in `DECISIONS.md`.
   day you pick: it waits under **Snoozed (2)**, still counts as open, and comes back on its
   day, or sooner if you work on it or press Wake; give a ticket a project and its minutes count under
   that project instead); the entries list with +15m/+30m/+1h and ticket chips you click to copy
-  (click an entry for the same slide-out as on the Desk). +15m/+30m/+1h on an entry from an
+  (click an entry for the same slide-out as on the Desk). Right-click an entry, then More:
+  **Split in two…** shares its time between it and a new entry (name both, use − and + for the
+  time; the first keeps the tickets and the notepad), and **Merge with** puts another entry
+  from the same day into it (its time, notes and tickets come over). On the Desk, select two
+  entries from the same day and press **Merge these two**. Both have Undo. +15m/+30m/+1h on an entry from an
   earlier day adds the time today (to today's entry with the same title and project, or a copy
   of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as

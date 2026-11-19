@@ -558,6 +558,31 @@ export interface Entry {
   todos: number;
 }
 
+/** How to split an entry in two (round 21). */
+export interface SplitInput {
+  firstMinutes: number;
+  firstDescription: string;
+  secondDescription: string;
+  /** True keeps the first part's project (or repeating thing); false uses `secondProject`. */
+  sameHome: boolean;
+  secondProject: string | null;
+}
+
+/** A split's two entries. */
+export interface SplitResult {
+  first: Entry;
+  second: Entry;
+}
+
+/** A merge that was made, with what Undo needs. */
+export interface MergeResult {
+  entry: Entry;
+  /** The tickets that moved over from the other entry. */
+  moved: string[];
+  minutesBefore: number;
+  notesBefore: string | null;
+}
+
 export interface EntryInput {
   date: IsoDate;
   minutes: number;
@@ -1285,6 +1310,12 @@ export interface DataApi {
   setEntryCodes(ids: string[], codeId: string | null): Promise<void>;
   /** One entry (for a window showing its notepad). */
   getEntry(id: string): Promise<Entry>;
+  /** One entry becomes two that share its time (round 21). Tauri: `split_entry`. */
+  splitEntry(id: string, split: SplitInput): Promise<SplitResult>;
+  /** `other` goes into `keep`: time, notepad and tickets (same day only). Tauri: `merge_entries`. */
+  mergeEntries(keep: string, other: string): Promise<MergeResult>;
+  /** Undo a merge with what it returned. Tauri: `unmerge_entries`. */
+  unmergeEntries(keep: string, other: string, minutes: number, notes: string | null, moved: string[]): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;

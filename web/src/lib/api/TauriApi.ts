@@ -8,6 +8,9 @@ import type {
   Frequency,
   CaptureLines,
   FollowUp,
+  MergeResult,
+  SplitInput,
+  SplitResult,
   OpenAge,
   ItemSummary,
   SameWork,
@@ -216,6 +219,15 @@ export class TauriApi implements DataApi {
   }
 
 
+  splitEntry(id: string, split: SplitInput): Promise<SplitResult> {
+    return call('split_entry', { id, split });
+  }
+  mergeEntries(keep: string, other: string): Promise<MergeResult> {
+    return call('merge_entries', { keep, other });
+  }
+  unmergeEntries(keep: string, other: string, minutes: number, notes: string | null, moved: string[]): Promise<Entry> {
+    return call('unmerge_entries', { keep, other, minutes, notes, moved });
+  }
   deleteEntry(id: string): Promise<void> {
     return call('delete_entry', { id });
   }

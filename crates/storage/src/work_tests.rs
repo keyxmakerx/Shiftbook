@@ -1615,3 +1615,96 @@ fn known_tickets_carry_their_time_so_far() {
         assert!(s.item_summaries(me, None).await.unwrap()[0].done);
     });
 }
+
+#[test]
+fn an_entry_splits_in_two_and_two_merge_into_one() {
+    let dir = TestDir::new("reshape");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let p = s.create_project(me, "Network", None).await.unwrap();
+        let mut first = input(DAY, 90, "Firewall cleanup and vendor call");
+        first.project = Some(p.id);
+        first.next_step = Some("rules 12 to 40 gone".into());
+        let rec = s.create_entry(me, &first, "CHG0012345").await.unwrap();
+
+        // Split: the first keeps its tickets and notepad, the second takes the rest.
+        let second = crate::work::SplitSecond {
+            description: "Vendor call".into(),
+            home: crate::work::SplitHome::Project(None),
+        };
+        let (a, b) = s
+            .split_entry(me, rec.entry.id, Minutes(60), "Firewall cleanup", &second)
+            .await
+            .unwrap();
+        assert_eq!(
+            (a.entry.minutes, b.entry.minutes),
+            (Minutes(60), Minutes(30))
+        );
+        assert_eq!(a.entry.description, "Firewall cleanup");
+        assert_eq!(numbers(&a), ["CHG0012345"]);
+        assert_eq!(a.entry.next_step.as_deref(), Some("rules 12 to 40 gone"));
+        assert_eq!(b.entry.description, "Vendor call");
+        assert_eq!(b.entry.target, EntryTarget::None);
+        assert_eq!(b.entry.date, DAY);
+        assert!(b.tickets.is_empty() && b.entry.next_step.is_none());
+        // Both parts need time, and it has to be mine.
+        assert!(s
+            .split_entry(me, a.entry.id, Minutes(60), "x", &second)
+            .await
+            .is_err());
+        assert!(s
+            .split_entry(other, a.entry.id, Minutes(10), "x", &second)
+            .await
+            .is_err());
+
+        // Merge the second back in, with a ticket and a note of its own.
+        let b = s
+            .add_entry_tickets(me, b.entry.id, "INC7 chg0012345")
+            .await
+            .unwrap();
+        s.set_entry_notes(me, b.entry.id, "they call back Friday")
+            .await
+            .unwrap();
+        let done = s.merge_entries(me, a.entry.id, b.entry.id).await.unwrap();
+        assert_eq!(done.entry.entry.minutes, Minutes(90));
+        assert_eq!(
+            done.entry.entry.next_step.as_deref(),
+            Some("rules 12 to 40 gone\n\nthey call back Friday")
+        );
+        assert_eq!(numbers(&done.entry), ["CHG0012345", "INC7"]);
+        assert_eq!(done.moved.len(), 1);
+        assert_eq!(done.minutes_before, Minutes(60));
+        assert!(s.get_entry(me, b.entry.id).await.is_err());
+        assert_eq!(s.list_entries(me, DAY, DAY).await.unwrap().len(), 1);
+        assert!(s.merge_entries(me, a.entry.id, a.entry.id).await.is_err());
+
+        // Undo puts both back as they were.
+        let back = s
+            .unmerge_entries(
+                me,
+                a.entry.id,
+                b.entry.id,
+                done.minutes_before,
+                done.notes_before.as_deref(),
+                &done.moved,
+            )
+            .await
+            .unwrap();
+        assert_eq!(back.entry.minutes, Minutes(60));
+        assert_eq!(back.entry.next_step.as_deref(), Some("rules 12 to 40 gone"));
+        assert_eq!(numbers(&back), ["CHG0012345"]);
+        let again = s.get_entry(me, b.entry.id).await.unwrap();
+        assert_eq!(again.entry.minutes, Minutes(30));
+        assert_eq!(numbers(&again), ["INC7", "chg0012345"]);
+
+        // Another day's entry doesn't merge.
+        let late = s
+            .create_entry(me, &input(date!(2026 - 10 - 16), 30, "Later"), "")
+            .await
+            .unwrap();
+        assert!(s
+            .merge_entries(me, a.entry.id, late.entry.id)
+            .await
+            .is_err());
+    });
+}

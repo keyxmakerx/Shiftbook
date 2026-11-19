@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-split-entry"
+description = "Enables the split_entry command without any pre-configured scope."
+commands.allow = ["split_entry"]
+
+[[permission]]
+identifier = "deny-split-entry"
+description = "Denies the split_entry command without any pre-configured scope."
+commands.deny = ["split_entry"]

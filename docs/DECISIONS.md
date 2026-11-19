@@ -75,6 +75,15 @@ owner approved nine and changed one:
     and a Wake button. They still count as open everywhere else (the bell's count, the Desk
     card, the wrap-up). A ticket comes back on its day, and working on it after the snooze
     was made wakes it early (`shiftbook_core::tray::snoozed_until`).
+  - *Split and merge:* Split in two… (an entry's menu, under More) asks for two names and
+    how the time is shared; the first part keeps the tickets and the notepad, the second is a
+    new entry on the same day under the same project unless another is picked. Merge puts
+    one entry into another from the same day: the times add up, the notepads join with a
+    blank line between, tickets the kept entry lacks move over, and the other entry goes.
+    From the menu (Merge with, listing the day's other entries) or on the Desk with two
+    entries selected (Merge these two; the one logged first keeps its name). The day's
+    Tickets entry can do neither, since it comes from the tray. Rules in
+    `shiftbook_core::reshape`; Undo restores both entries exactly (`unmerge_entries`).
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

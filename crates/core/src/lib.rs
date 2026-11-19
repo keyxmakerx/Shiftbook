@@ -33,6 +33,7 @@ pub mod quicklog;
 pub mod quickunlock;
 pub mod recurring;
 pub mod reminder;
+pub mod reshape;
 pub mod responses;
 pub mod resume;
 pub mod ribbon;

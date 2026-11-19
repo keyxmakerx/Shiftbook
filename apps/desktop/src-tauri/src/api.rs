@@ -34,7 +34,9 @@ use shiftbook_core::tray::{open_ages, OpenAge};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
-use shiftbook_storage::work::{CarriedTicket, EntryInput, EntryRecord, ProjectInput, TrayDay};
+use shiftbook_storage::work::{
+    CarriedTicket, EntryInput, EntryRecord, ProjectInput, SplitHome, SplitSecond, TrayDay,
+};
 use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::Date;
@@ -573,6 +575,116 @@ pub async fn set_entry_notes(
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let rec = store.set_entry_notes(owner, id_arg(&id)?, &notes).await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// A split's two entries (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct SplitView {
+    first: EntryView,
+    second: EntryView,
+}
+
+/// The second part of a split, as the dialog sends it.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SplitArgs {
+    first_minutes: u32,
+    first_description: String,
+    second_description: String,
+    /// True keeps the first part's project (or repeating thing); false uses `second_project`.
+    same_home: bool,
+    second_project: Option<String>,
+}
+
+/// Maps to `DataApi.splitEntry()`: one entry becomes two that share its time (round 21).
+#[tauri::command]
+pub async fn split_entry(
+    s: State<'_, VaultSession>,
+    id: String,
+    split: SplitArgs,
+) -> Res<SplitView> {
+    let (store, owner) = s.data().await?;
+    let home = if split.same_home {
+        SplitHome::Same
+    } else {
+        SplitHome::Project(opt_id(&split.second_project)?)
+    };
+    let second = SplitSecond {
+        description: split.second_description,
+        home,
+    };
+    let (a, b) = store
+        .split_entry(
+            owner,
+            id_arg(&id)?,
+            Minutes(split.first_minutes),
+            &split.first_description,
+            &second,
+        )
+        .await?;
+    let links = links_for(&store, owner).await?;
+    Ok(SplitView {
+        first: entry_view(a, &links),
+        second: entry_view(b, &links),
+    })
+}
+
+/// A merge that was made, with what Undo needs (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct MergeView {
+    entry: EntryView,
+    /// The tickets that moved over from the other entry.
+    moved: Vec<String>,
+    minutes_before: u32,
+    notes_before: Option<String>,
+}
+
+/// Maps to `DataApi.mergeEntries()`: `other` goes into `keep` (same day only).
+#[tauri::command]
+pub async fn merge_entries(
+    s: State<'_, VaultSession>,
+    keep: String,
+    other: String,
+) -> Res<MergeView> {
+    let (store, owner) = s.data().await?;
+    let done = store
+        .merge_entries(owner, id_arg(&keep)?, id_arg(&other)?)
+        .await?;
+    Ok(MergeView {
+        moved: done.moved.iter().map(ToString::to_string).collect(),
+        minutes_before: done.minutes_before.get(),
+        notes_before: done.notes_before,
+        entry: one_entry(&store, owner, done.entry).await?,
+    })
+}
+
+/// Maps to `DataApi.unmergeEntries()`: undo a merge.
+#[tauri::command]
+pub async fn unmerge_entries(
+    s: State<'_, VaultSession>,
+    keep: String,
+    other: String,
+    minutes: u32,
+    notes: Option<String>,
+    moved: Vec<String>,
+) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let moved: Vec<TicketId> = moved.iter().map(|t| id_arg(t)).collect::<Res<_>>()?;
+    let rec = store
+        .unmerge_entries(
+            owner,
+            id_arg(&keep)?,
+            id_arg(&other)?,
+            Minutes(minutes),
+            notes.as_deref(),
+            &moved,
+        )
+        .await?;
     one_entry(&store, owner, rec).await
 }
 
