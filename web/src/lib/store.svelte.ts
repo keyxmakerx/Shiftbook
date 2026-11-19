@@ -6,6 +6,7 @@ import type {
   CustomField,
   Entry,
   InboxItem,
+  OpenAge,
   PrefKey,
   ResumeCard,
   ResumeTrigger,
@@ -95,6 +96,8 @@ export const app = $state({
   bringUpDays: [] as string[],
   /** Each card's follow-up day, keyed `kind:id` (round 15). */
   followUps: {} as Record<string, string>,
+  /** How long each still-open ticket has been open, by its number in lower case. */
+  ages: {} as Record<string, OpenAge>,
 });
 
 /** The time buttons everyone starts with (core's `DEFAULT_TIME_BUTTONS`). */

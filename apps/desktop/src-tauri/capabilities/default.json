@@ -36,6 +36,7 @@
     "allow-usual-code",
     "allow-get-entry",
     "allow-tray-item",
+    "allow-ticket-ages",
     "allow-meeting-series",
     "allow-save-meeting-series",
     "allow-set-meeting-series-deleted",

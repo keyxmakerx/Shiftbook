@@ -48,7 +48,8 @@ works the way it does is in `DECISIONS.md`.
   you've spent so far (15 minutes if you skip it), which you can step up or down later, and
   they roll up into one “Tickets” entry for the day; a box beside each ticket takes a few
   words, and its slide-out holds a full notepad; a new ticket starts **Still open** and comes
-  back each day until you **tick** it done; give a ticket a project and its minutes count under
+  back each day until you **tick** it done, saying how long it has been open ("open 6 days",
+  the longest first, in amber from 3 days; **Settings → Your day** changes the number); give a ticket a project and its minutes count under
   that project instead); the entries list with +15m/+30m/+1h and ticket chips you click to copy
   (click an entry for the same slide-out as on the Desk). +15m/+30m/+1h on an entry from an
   earlier day adds the time today (to today's entry with the same title and project, or a copy

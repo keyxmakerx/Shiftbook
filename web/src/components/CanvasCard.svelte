@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ageOf, ageWords } from '../lib/age';
   // One card on the Desk (the Canvas): an entry, a ticket, a note or an Inbox scrap.
   // Drag to move it (saved when you let go); click an entry or a ticket for its notepad and
   // options underneath (round 12); double-click to open it; right-click for its paper menu.
@@ -7,7 +8,7 @@
   import type { CanvasCard } from '../lib/api';
   import { followUpItem } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
-  import { fmtMinutes, relativeDay } from '../lib/format';
+  import { dayMonth, fmtMinutes, relativeDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
   import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
@@ -432,7 +433,10 @@
   {:else if card.tray}
     {@const t = card.tray}
     <span class="kind">
-      {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
+      {#if t.item.done}Ticket{:else}
+        {@const age = ageOf(app.ages, t.item.ticket)}
+        <span class="open" class:stale={age?.stale} title={age && age.days > 0 ? `Open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : null}>{ageWords(age) || 'Still open'}</span>
+      {/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
       {@render todoCount(t.item.todos)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
@@ -698,6 +702,14 @@
 
   .open {
     color: var(--warn);
+  }
+
+  /* Open long enough to stand out (Settings → Your day sets the days). */
+  .open.stale {
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--paper);
+    background: var(--warn);
   }
 
   @media (prefers-reduced-motion: reduce) {

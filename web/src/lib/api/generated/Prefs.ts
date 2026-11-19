@@ -90,6 +90,10 @@ hideScreenshots: boolean,
  */
 rightDrag: boolean, 
 /**
+ * Days a ticket can be still open before its age shows in amber.
+ */
+ticketStaleDays: number, 
+/**
  * Days an entry card stays on the Desk by itself (today counts as one).
  */
 deskDays: number, 

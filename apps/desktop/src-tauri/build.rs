@@ -33,6 +33,7 @@ fn main() {
             "usual_code",
             "get_entry",
             "tray_item",
+            "ticket_ages",
             "meeting_series",
             "save_meeting_series",
             "set_meeting_series_deleted",

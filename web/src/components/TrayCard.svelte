@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ageOf, ageWords } from '../lib/age';
   // The Tickets tray: paste tickets as you work on them through the day. Each one adds its
   // minutes (15 by default; a little box asks how long so far, and the stepper changes it).
   // A ticket starts still open and comes back each day until it is ticked done (round 14). Tickets without a project roll up
@@ -212,7 +213,12 @@
           </button>
           {#if !item.done || project || thing}
             <span class="tags">
-              {#if !item.done}<span class="tag open">Still open</span>{/if}
+              {#if !item.done}
+                {@const age = ageOf(app.ages, item.ticket)}
+                <span class="tag open" class:stale={age?.stale} title={age && age.days > 0 ? `Open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : null}>
+                  {ageWords(age) || 'Still open'}
+                </span>
+              {/if}
               {#if project}<span class="tag" style:--c={projectColor(item.projectId)}>{project.name}</span>{/if}
               {#if thing}<span class="tag rep">⟳ {thing.name}</span>{/if}
             </span>
@@ -233,6 +239,7 @@
       <span class="lbl">Still open from before</span>
       <ul class="items">
         {#each app.tray.carried as item (item.id)}
+          {@const age = ageOf(app.ages, item.ticket)}
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
           <li
             class="item still"
@@ -254,7 +261,12 @@
             ></button>
             <TicketChip number={item.ticket} links={item.links} color="var(--warn)" />
             <span class="note faint" title={item.note ?? item.entryTitle ?? ''}>{carriedNote(item)}</span>
-            <span class="since">{weekdayShort(item.date)} {dayMonth(item.date)}</span>
+            <span
+              class="since"
+              class:aged={(age?.days ?? 0) > 0}
+              class:stale={age?.stale}
+              title="Last worked on {weekdayShort(item.date)} {dayMonth(item.date)}{age ? ` · open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : ''}"
+            >{#if ageWords(age)}<span class="long">open&nbsp;</span>{ageWords(age).replace('open ', '')}{:else}{weekdayShort(item.date)} {dayMonth(item.date)}{/if}</span>
             <button type="button" class="today" title="Worked on it again: add it to this day with 15 minutes" onclick={() => void carryCarried(item)}>
               <Icon name="plus" size={12} /> {app.selected === app.today ? 'Today' : 'This day'}
             </button>
@@ -485,6 +497,12 @@
     background: var(--warn-wash);
   }
 
+  /* Open long enough to stand out (Settings → Your day sets the days). */
+  .tag.open.stale {
+    color: var(--paper);
+    background: var(--warn);
+  }
+
   .note.more {
     text-align: left;
     white-space: nowrap;
@@ -525,10 +543,19 @@
     white-space: nowrap;
   }
 
+  .since.stale {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    color: var(--paper);
+    background: var(--warn);
+  }
+
   /* In the Desk's side panel: tick, ticket, stepper and options on one line, the note under them. */
   @container (max-width: 380px) {
     .added,
-    .since {
+    .since:not(.aged),
+    .since .long {
       display: none;
     }
 

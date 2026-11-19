@@ -33,6 +33,7 @@ import type { EntryView as GenEntry } from './generated/EntryView';
 import type { FieldKind as GenFieldKind } from './generated/FieldKind';
 import type { FingerprintStatus as GenFingerprintStatus } from './generated/FingerprintStatus';
 import type { FollowUpView as GenFollowUp } from './generated/FollowUpView';
+import type { OpenAge as GenOpenAge } from './generated/OpenAge';
 import type { FrequencyView as GenFrequency } from './generated/FrequencyView';
 import type { GroupBy as GenGroupBy } from './generated/GroupBy';
 import type { InboxView as GenInboxItem } from './generated/InboxView';
@@ -134,6 +135,7 @@ export type Checks = [
   Assert<Same<Ui.FieldKind, GenFieldKind>>,
   Assert<Same<Ui.FingerprintStatus, GenFingerprintStatus>>,
   Assert<Same<Ui.FollowUp, GenFollowUp>>,
+  Assert<Same<Ui.OpenAge, GenOpenAge>>,
   Assert<Same<Ui.Frequency, GenFrequency>>,
   Assert<Same<Ui.GroupBy, GenGroupBy>>,
   Assert<Same<Ui.InboxItem, GenInboxItem>>,

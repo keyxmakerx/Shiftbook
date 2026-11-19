@@ -1972,6 +1972,50 @@ impl SqliteStore {
         Ok(day)
     }
 
+    /// Every still-open ticket with each day it is open on, up to and including `date`
+    /// (tray rows and tickets on the user's entries), for how long each has been open
+    /// (`shiftbook_core::tray::open_ages`).
+    pub async fn open_ticket_days(
+        &self,
+        owner: OwnerId,
+        date: Date,
+    ) -> Result<Vec<(String, Date)>> {
+        let mut conn = self.pool.acquire().await?;
+        let mut open: Vec<(String, Date)> = Vec::new();
+        let rows = sqlx::query(
+            "SELECT ticket_number, date FROM ticket_tray WHERE owner_id = $1 AND done = FALSE \
+             AND date <= $2 AND deleted_at IS NULL ORDER BY date, id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &rows {
+            open.push((
+                row.try_get("ticket_number")?,
+                corrupt_date(row.try_get("date")?)?,
+            ));
+        }
+        let rows = sqlx::query(
+            "SELECT t.ticket_number, e.date FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.done = FALSE AND e.date <= $2 \
+             AND t.deleted_at IS NULL AND e.deleted_at IS NULL AND e.source IS NULL \
+             ORDER BY e.date, t.created_at, t.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &rows {
+            open.push((
+                row.try_get("ticket_number")?,
+                corrupt_date(row.try_get("date")?)?,
+            ));
+        }
+        Ok(open)
+    }
+
     /// Still-open tickets from before `date` that come back in its tray (latest day per
     /// ticket, oldest first), leaving out tickets already in that day's tray. Tray rows and
     /// tickets on the user's entries both count (round 14: an entry's ticket starts still

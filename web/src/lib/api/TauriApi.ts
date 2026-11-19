@@ -7,6 +7,7 @@ import type {
   AwayList,
   Frequency,
   FollowUp,
+  OpenAge,
   ItemSummary,
   SameWork,
   MarkedDone,
@@ -484,6 +485,9 @@ export class TauriApi implements DataApi {
   }
   followUps(): Promise<FollowUp[]> {
     return call('follow_ups');
+  }
+  ticketAges(today: IsoDate): Promise<OpenAge[]> {
+    return call('ticket_ages', { today });
   }
   clearFollowUp(kind: CardKind, id: string): Promise<void> {
     return call('clear_follow_up', { kind, id });

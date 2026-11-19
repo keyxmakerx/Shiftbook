@@ -55,6 +55,12 @@ owner approved nine and changed one:
     the bell has one line per card, for the entries the Desk shows and the tickets still open.
     Notes show the count on their card but are not in the bell: a note is somewhere to keep
     things, not a thing to finish.
+  - *Ticket age:* a still-open ticket has been open since the earliest day it has an open
+    row (ticking it done finishes every row, so a reopened ticket counts from the reopen).
+    It says "open 6 days" in the tray and on its Desk card, nothing on its first day, and
+    stands out in amber once the days reach the number in Settings → Your day
+    (`tickets.stale_days`, 3 unless changed, 1 to 60). Tickets carried from earlier days are
+    listed longest open first (`shiftbook_core::tray::open_ages`, `carried_open`).
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

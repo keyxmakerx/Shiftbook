@@ -123,6 +123,8 @@ export interface Prefs {
   timer: boolean;
   /** "I fill in a timesheet" (on by default): off hides the Timesheet and its reminders. */
   useTimesheet: boolean;
+  /** Days a ticket can be still open before its age shows in amber (3 by default). */
+  ticketStaleDays: number;
   /** Phone: the due reminder's time `HH:MM` on work days, or null when it's off. */
   remindAt: string | null;
   /** Phone: a wrap-up nudge at the wrap-up time (off by default). */
@@ -317,6 +319,17 @@ export interface FollowUp {
   on: IsoDate;
 }
 
+/** How long a still-open ticket has been open. Mirrors `shiftbook_core::tray::OpenAge`. */
+export interface OpenAge {
+  ticket: string;
+  /** The day it has been open since. */
+  since: IsoDate;
+  /** Whole days since then; 0 for a ticket opened today. */
+  days: number;
+  /** Open long enough to stand out (Settings → Your day sets the number). */
+  stale: boolean;
+}
+
 /** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
 export interface BellItem {
   when: 'now' | 'today';
@@ -478,6 +491,7 @@ export type PrefKey =
   | 'day.wrapup_at'
   | 'day.timer'
   | 'timesheet.use'
+  | 'tickets.stale_days'
   | 'phone.remind_at'
   | 'phone.wrapup_nudge'
   | 'timer.paused'
@@ -1437,6 +1451,8 @@ export interface DataApi {
   bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Every card with a follow-up day (round 15). Tauri: `follow_ups`. */
   followUps(): Promise<FollowUp[]>;
+  /** How long each still-open ticket has been open, longest first (round 21). Tauri: `ticket_ages`. */
+  ticketAges(today: IsoDate): Promise<OpenAge[]>;
   /** "No follow-up" on a card. Tauri: `clear_follow_up`. */
   clearFollowUp(kind: CardKind, id: string): Promise<void>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */

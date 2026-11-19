@@ -739,6 +739,7 @@ pub fn run() {
             api::usual_code,
             api::get_entry,
             api::tray_item,
+            api::ticket_ages,
             meetings::meeting_series,
             meetings::save_meeting_series,
             meetings::set_meeting_series_deleted,

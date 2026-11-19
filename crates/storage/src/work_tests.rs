@@ -480,6 +480,19 @@ fn open_entry_tickets_come_back_in_the_tray() {
 
         // Working on it again puts it in that day's tray, and it stops showing as carried.
         s.tray_add(me, next, "TASK1601564").await.unwrap();
+        // Each open day is listed (for how long a ticket has been open), up to the day asked.
+        let days = s.open_ticket_days(me, next).await.unwrap();
+        let of = |n: &str| -> Vec<Date> {
+            days.iter()
+                .filter(|(t, _)| t == n)
+                .map(|(_, d)| *d)
+                .collect()
+        };
+        assert_eq!(of("TASK1601564"), [next, DAY]);
+        // In the tray and on the entry the same day: both rows, the same day.
+        assert_eq!(of("TASK1601562"), [DAY, DAY]);
+        assert_eq!(s.open_ticket_days(me, DAY).await.unwrap().len(), 5);
+        assert!(s.open_ticket_days(other, next).await.unwrap().is_empty());
         let later = date!(2026 - 10 - 17);
         assert_eq!(s.tray_carried(me, next).await.unwrap().len(), 2);
         // Ticking it on the entry finishes it everywhere.

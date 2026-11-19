@@ -28,6 +28,7 @@ use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
 use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
+use shiftbook_core::tray::{open_ages, OpenAge};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
@@ -537,6 +538,17 @@ pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView>
     let (store, owner) = s.data().await?;
     let rec = store.get_entry(owner, id_arg(&id)?).await?;
     one_entry(&store, owner, rec).await
+}
+
+/// Maps to `DataApi.ticketAges()`: how long each still-open ticket has been open on `today`,
+/// the longest first (round 21).
+#[tauri::command]
+pub async fn ticket_ages(s: State<'_, VaultSession>, today: String) -> Res<Vec<OpenAge>> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let after = store.prefs(owner).await?.ticket_stale_days;
+    let open = store.open_ticket_days(owner, today).await?;
+    Ok(open_ages(&open, today, after))
 }
 
 /// Maps to `DataApi.trayItem()`: one tray ticket, for a window showing its notepad.

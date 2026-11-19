@@ -45,6 +45,12 @@ pub const KEY_TIMER: &str = "day.timer";
 /// "I fill in a timesheet": `true` or `false` (on by default; round 21). Off hides the
 /// Timesheet, its codes and the "needs a code" reminders for someone who only wants a log.
 pub const KEY_USE_TIMESHEET: &str = "timesheet.use";
+/// Days a ticket can be still open before its age shows in amber (round 21).
+pub const KEY_TICKET_STALE_DAYS: &str = "tickets.stale_days";
+/// The default for [`KEY_TICKET_STALE_DAYS`].
+pub const DEFAULT_TICKET_STALE_DAYS: u32 = 3;
+/// The most [`KEY_TICKET_STALE_DAYS`] can be.
+pub const MAX_TICKET_STALE_DAYS: u32 = 60;
 /// Phone: the quiet due reminder's time `HH:MM` on work days, or blank when it's off
 /// (off by default). See [`crate::nudge`].
 pub const KEY_REMIND_AT: &str = "phone.remind_at";
@@ -250,6 +256,8 @@ pub struct Prefs {
     pub hide_screenshots: bool,
     /// The right mouse button drags too.
     pub right_drag: bool,
+    /// Days a ticket can be still open before its age shows in amber.
+    pub ticket_stale_days: u32,
     /// Days an entry card stays on the Desk by itself (today counts as one).
     pub desk_days: u32,
     /// Cards the owner moved stay until put away (otherwise they leave after `desk_days`).
@@ -309,6 +317,7 @@ impl Default for Prefs {
             block_copy: true,
             hide_screenshots: true,
             right_drag: false,
+            ticket_stale_days: DEFAULT_TICKET_STALE_DAYS,
             desk_days: crate::canvas::RECENT_DAYS as u32,
             moved_stay: false,
             paused_timer: None,
@@ -411,6 +420,10 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_COMMENT_TICKETS | KEY_TIMER | KEY_USE_TIMESHEET | KEY_WRAPUP_NUDGE
         | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG
         | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
+        KEY_TICKET_STALE_DAYS => match v.parse::<u32>() {
+            Ok(n) if (1..=MAX_TICKET_STALE_DAYS).contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_DESK_DAYS => match v.parse::<u32>() {
             Ok(n) if DESK_DAYS_CHOICES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
@@ -561,6 +574,15 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_BLOCK_COPY => prefs.block_copy = v == "true",
             KEY_HIDE_SCREENSHOTS => prefs.hide_screenshots = v == "true",
             KEY_RIGHT_DRAG => prefs.right_drag = v == "true",
+            KEY_TICKET_STALE_DAYS => {
+                if let Some(n) = v
+                    .parse()
+                    .ok()
+                    .filter(|n| (1..=MAX_TICKET_STALE_DAYS).contains(n))
+                {
+                    prefs.ticket_stale_days = n;
+                }
+            }
             KEY_DESK_DAYS => {
                 if let Some(n) = v.parse().ok().filter(|n| DESK_DAYS_CHOICES.contains(n)) {
                     prefs.desk_days = n;
@@ -885,6 +907,14 @@ mod tests {
         let p = Prefs::default();
         assert_eq!((p.desk_days, p.moved_stay), (7, false));
         assert_eq!(validate_pref(KEY_DESK_DAYS, " 3 "), Ok("3".into()));
+        assert_eq!(p.ticket_stale_days, 3);
+        assert_eq!(validate_pref(KEY_TICKET_STALE_DAYS, " 5 "), Ok("5".into()));
+        assert!(validate_pref(KEY_TICKET_STALE_DAYS, "0").is_err());
+        assert!(validate_pref(KEY_TICKET_STALE_DAYS, "61").is_err());
+        assert_eq!(
+            prefs_from_settings(&[(KEY_TICKET_STALE_DAYS, "5")]).ticket_stale_days,
+            5
+        );
         assert!(validate_pref(KEY_DESK_DAYS, "5").is_err());
         assert_eq!(prefs_from_settings(&[(KEY_DESK_DAYS, "14")]).desk_days, 14);
         assert_eq!(
