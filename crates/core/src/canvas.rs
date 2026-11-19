@@ -2,8 +2,8 @@
 //!
 //! Cards are time entries, Done tickets, notes and Inbox scraps. The Canvas adds only layout:
 //! where a card sits. A card the owner has never moved has no saved spot; it gets one from
-//! [`auto_place`] each time, in rows from the top left, skipping the spots taken by moved
-//! cards. Entries and Done tickets older than [`RECENT_DAYS`] leave the Canvas unless the owner
+//! [`auto_place`] each time, in rows from the top left no wider than the Desk is showing,
+//! skipping the spots taken by moved cards. Entries and Done tickets older than [`RECENT_DAYS`] leave the Canvas unless the owner
 //! moved them; notes and scraps stay until they are archived or removed (see docs/CANVAS.md).
 
 use std::str::FromStr;
@@ -22,7 +22,7 @@ pub const CARD_W: i32 = 220;
 pub const CARD_H: i32 = 120;
 /// Space between auto-placed cards.
 pub const GAP: i32 = 24;
-/// Auto-placed cards fill rows this many cards wide.
+/// Auto-placed cards fill rows at most this many cards wide (see [`row_cards`]).
 pub const ROW_CARDS: i32 = 5;
 /// Where auto-placing starts.
 pub const ORIGIN: (i32, i32) = (40, 40);
@@ -166,16 +166,31 @@ fn overlaps(a: (i32, i32), b: (i32, i32)) -> bool {
     (a.0 - b.0).abs() < CARD_W + GAP / 2 && (a.1 - b.1).abs() < CARD_H + GAP / 2
 }
 
-/// Spots for `count` cards that haven't been moved, in reading order, skipping any spot that
-/// would overlap a moved card in `taken`. The first card (newest, as the caller orders them)
-/// gets the top-left free spot.
-pub fn auto_place(count: usize, taken: &[(i32, i32)]) -> Vec<(i32, i32)> {
+/// How many auto-placed cards go in a row when the Desk is showing `view_w` canvas units
+/// across (its width on screen at 100%): as many as fit whole, from one up to [`ROW_CARDS`],
+/// so a card nobody has moved starts where it can be seen (round 19). Rows are [`ROW_CARDS`]
+/// wide when the width isn't known.
+pub fn row_cards(view_w: Option<i32>) -> i32 {
+    match view_w {
+        // n cards fit when ORIGIN.0 + n * CARD_W + (n - 1) * GAP <= view_w.
+        Some(w) => {
+            (w.saturating_sub(ORIGIN.0).saturating_add(GAP) / (CARD_W + GAP)).clamp(1, ROW_CARDS)
+        }
+        None => ROW_CARDS,
+    }
+}
+
+/// Spots for `count` cards that haven't been moved, in reading order in rows `row` cards wide
+/// (see [`row_cards`]), skipping any spot that would overlap a moved card in `taken`. The
+/// first card (newest, as the caller orders them) gets the top-left free spot.
+pub fn auto_place(count: usize, taken: &[(i32, i32)], row: i32) -> Vec<(i32, i32)> {
+    let row = row.clamp(1, ROW_CARDS);
     let mut out = Vec::with_capacity(count);
     let mut slot: i32 = 0;
     while out.len() < count {
         let spot = (
-            ORIGIN.0 + (slot % ROW_CARDS) * (CARD_W + GAP),
-            ORIGIN.1 + (slot / ROW_CARDS) * (CARD_H + GAP),
+            ORIGIN.0 + (slot % row) * (CARD_W + GAP),
+            ORIGIN.1 + (slot / row) * (CARD_H + GAP),
         );
         slot = slot.saturating_add(1);
         if !taken.iter().any(|t| overlaps(*t, spot)) {
@@ -249,7 +264,7 @@ pub fn new_area(x: i32, y: i32) -> Area {
 pub enum LinkReason {
     /// Both mention this ticket.
     Ticket(String),
-    /// Both use this uncommon word.
+    /// Both use these uncommon words (a few of them, comma-separated).
     Word(String),
 }
 
@@ -262,73 +277,64 @@ pub struct LinkText {
     pub text: String,
 }
 
-/// A word worth linking on: long enough and not an everyday word.
-fn link_words(text: &str) -> Vec<String> {
-    const COMMON: &[&str] = &[
-        "about",
-        "after",
-        "again",
-        "before",
-        "being",
-        "check",
-        "could",
-        "daily",
-        "doing",
-        "done",
-        "every",
-        "first",
-        "follow",
-        "from",
-        "have",
-        "here",
-        "into",
-        "jot",
-        "just",
-        "later",
-        "meeting",
-        "might",
-        "minutes",
-        "need",
-        "next",
-        "note",
-        "notes",
-        "other",
-        "should",
-        "some",
-        "still",
-        "that",
-        "their",
-        "them",
-        "then",
-        "there",
-        "these",
-        "they",
-        "thing",
-        "things",
-        "this",
-        "those",
-        "ticket",
-        "tickets",
-        "today",
-        "tomorrow",
-        "update",
-        "what",
-        "when",
-        "where",
-        "which",
-        "while",
-        "with",
-        "work",
-        "worked",
-        "would",
-        "yesterday",
-        "your",
-    ];
+/// Everyday words. They never count as a key word, however few cards use them: a word line is
+/// for two cards about the same specific thing, not two that both say "because" and "really".
+/// Lower case, separated by spaces. Words under [`MIN_WORD_LETTERS`] letters are out anyway; the
+/// short ones here ("and", "but") are listed so the rule reads whole.
+const EVERYDAY_WORDS: &str = "
+    about above across actually added adding after afternoon again against ahead all almost
+    along already alright although always among and another answer answers any anybody
+    anyone anything anyway anywhere apparently april are around asked asking august
+    available basic basically became because become becomes before began begin begins behind
+    being believe below beside besides better between beyond bigger bring brings brought
+    bunch but called calling can cannot certain certainly change changed changes changing
+    check checked checking checks clear clearly close closed comes coming common completely
+    continue continued could couldn couple create created current currently daily december
+    definitely despite detail details didn different directly doesn doing done during
+    earlier early easily eight either eleven email emailed emails ended ending enough entire
+    entirely entries entry evening every everybody everyone everything everywhere exactly
+    example except expect expected extra fairly february feels fifth fifty final finally
+    finish finished first fixed fixing follow followed following follows for forty found
+    fourth friday from fully general generally getting given gives giving going gonna gotten
+    great had hadn happen happened happens happy has hasn have haven having heard hello
+    hence here herself higher himself hoping hours however hundred important incident
+    incidents indeed info information inside instead into issue issues its itself january
+    jot just keeping keeps known knows large larger later latest learn least leave leaves
+    letting likely likes little longer looked looking looks lower mainly major makes making
+    march maybe means meant meeting meetings message messages might minor minute minutes
+    monday month months morning mostly moved moving myself nearly need needed needing needs
+    neither never next night nights nobody nor normal normally not note notes nothing
+    november nowhere number numbers obviously october off often older opened opening other
+    others otherwise our ourselves out outside people per perhaps person phone picked place
+    placed planned plans please point possible possibly pretty previous previously probably
+    problem problems project projects proper properly putting question questions quick
+    quickly quite rather reach reached ready really reason recent recently remember remind
+    replied reply request requested requests right running saturday saying second seeing
+    seemed seems sending september seven several shall short should shouldn showed showing
+    shown shows similar simple simply since small smaller some somebody somehow someone
+    something sometimes somewhat somewhere sorry speak spoke start started starting starts
+    status stays still stopped stuff sunday taken takes taking talked talking tasks tells
+    thank thanks that the their theirs them themselves then there therefore these they thing
+    things think thinking thinks third thirty this those though thought thousand three
+    through throughout thursday ticket tickets times today together tomorrow tonight too
+    total totally toward towards tried tries trying tuesday turned turns twelve twenty under
+    underneath unless until update updated updates updating upon using usual usually various
+    via wait waited waiting wanted wants was wasn wednesday weekend weekly weeks welcome
+    weren what whatever when whenever where whereas wherever whether which while whoever
+    whole whose with within without work worked working works would wouldn write writes
+    writing written wrong wrote years yesterday yet you young your yours yourself
+";
+
+/// Fewest letters in a word worth linking on.
+const MIN_WORD_LETTERS: usize = 5;
+
+/// The words in `text` worth linking on: long enough, not a number and not an everyday word.
+fn link_words(text: &str, everyday: &std::collections::BTreeSet<&str>) -> Vec<String> {
     let mut out: Vec<String> = text
         .split(|c: char| !c.is_alphanumeric())
         .map(str::to_lowercase)
-        .filter(|w| w.chars().count() >= 5 && !w.chars().all(|c| c.is_ascii_digit()))
-        .filter(|w| !COMMON.contains(&w.as_str()))
+        .filter(|w| w.chars().count() >= MIN_WORD_LETTERS && !w.chars().all(|c| c.is_ascii_digit()))
+        .filter(|w| !everyday.contains(w.as_str()))
         .collect();
     out.sort();
     out.dedup();
@@ -336,12 +342,16 @@ fn link_words(text: &str) -> Vec<String> {
 }
 
 /// Links drawn automatically between cards: cards that share a ticket (also one written in a
-/// note's text), and any two that are the only cards using the same uncommon word. A pair is
-/// linked once, by its first reason.
+/// note's text), and two cards that share key words. A pair is linked once, by its first reason.
 ///
 /// Cards sharing a ticket are linked in a chain, in the order given (the Desk passes them oldest
-/// first), not every one to every other: five days on one ticket is four lines, not ten. A card
-/// gets at most [`MAX_WORD_LINKS`] word links.
+/// first), not every one to every other: five days on one ticket is four lines, not ten.
+///
+/// A key word is a specific word only two cards use: five letters or more and not one of the
+/// everyday words (`EVERYDAY_WORDS`). Two cards get a word line when they share at least
+/// [`MIN_SHARED_WORDS`] of them: one shared word is too often a coincidence ("board" the display
+/// in the lobby, "board" the task list). A card gets at most [`MAX_WORD_LINKS`] word links, and
+/// the pair sharing the most words gets its line first.
 pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
     use std::collections::{BTreeMap, BTreeSet};
     let mut holders: BTreeMap<String, Vec<usize>> = BTreeMap::new();
@@ -364,32 +374,46 @@ pub fn auto_links(cards: &[LinkText]) -> Vec<(usize, usize, LinkReason)> {
         }
     }
     out.sort_by_key(|l| (l.0, l.1));
+    let everyday: BTreeSet<&str> = EVERYDAY_WORDS.split_ascii_whitespace().collect();
     let mut users: BTreeMap<String, Vec<usize>> = BTreeMap::new();
     for (i, c) in cards.iter().enumerate() {
-        for w in link_words(&c.text) {
+        for w in link_words(&c.text, &everyday) {
             users.entry(w).or_default().push(i);
         }
     }
-    let mut per_card = vec![0usize; cards.len()];
+    // The key words each pair shares, in alphabetical order.
+    let mut shared: BTreeMap<(usize, usize), Vec<String>> = BTreeMap::new();
     for (word, who) in users {
         if let [a, b] = who[..] {
-            if linked.contains(&(a, b))
-                || per_card[a] >= MAX_WORD_LINKS
-                || per_card[b] >= MAX_WORD_LINKS
-            {
-                continue;
-            }
-            linked.insert((a, b));
-            per_card[a] += 1;
-            per_card[b] += 1;
-            out.push((a, b, LinkReason::Word(word)));
+            shared.entry((a, b)).or_default().push(word);
         }
+    }
+    let mut pairs: Vec<((usize, usize), Vec<String>)> = shared
+        .into_iter()
+        .filter(|(pair, words)| words.len() >= MIN_SHARED_WORDS && !linked.contains(pair))
+        .collect();
+    pairs.sort_by(|x, y| y.1.len().cmp(&x.1.len()).then(x.0.cmp(&y.0)));
+    let mut per_card = vec![0usize; cards.len()];
+    for ((a, b), words) in pairs {
+        if per_card[a] >= MAX_WORD_LINKS || per_card[b] >= MAX_WORD_LINKS {
+            continue;
+        }
+        per_card[a] += 1;
+        per_card[b] += 1;
+        let said = words[..words.len().min(SHOWN_SHARED_WORDS)].join(", ");
+        out.push((a, b, LinkReason::Word(said)));
     }
     out
 }
 
 /// Most word links one card gets, so the Desk doesn't turn into a web.
 pub const MAX_WORD_LINKS: usize = 1;
+
+/// Fewest key words two cards must share before a line joins them.
+pub const MIN_SHARED_WORDS: usize = 2;
+
+/// Most shared words a line names when asked why it is there.
+const SHOWN_SHARED_WORDS: usize = 3;
 
 // ---------- timeline (step 2) ----------
 
@@ -674,7 +698,7 @@ mod tests {
 
     #[test]
     fn auto_places_in_rows_from_the_top_left() {
-        let spots = auto_place(6, &[]);
+        let spots = auto_place(6, &[], ROW_CARDS);
         assert_eq!(spots[0], ORIGIN);
         assert_eq!(spots[1], (ORIGIN.0 + CARD_W + GAP, ORIGIN.1));
         assert_eq!(
@@ -688,11 +712,48 @@ mod tests {
     fn auto_place_steps_around_moved_cards() {
         // A moved card sitting on the first two slots pushes new cards along.
         let taken = [(ORIGIN.0 + 100, ORIGIN.1)];
-        let spots = auto_place(2, &taken);
+        let spots = auto_place(2, &taken, ROW_CARDS);
         assert_eq!(spots[0], (ORIGIN.0 + 2 * (CARD_W + GAP), ORIGIN.1));
         assert!(spots.iter().all(|s| !overlaps(*s, taken[0])));
         // Far-away cards don't matter.
-        assert_eq!(auto_place(1, &[(5_000, 5_000)])[0], ORIGIN);
+        assert_eq!(auto_place(1, &[(5_000, 5_000)], ROW_CARDS)[0], ORIGIN);
+    }
+
+    #[test]
+    fn a_row_is_only_as_wide_as_the_desk_is_showing() {
+        // The window at the size it first opens shows about 700 across: two cards fit whole.
+        assert_eq!(row_cards(Some(704)), 2);
+        // Exactly room for three, and one unit short of it.
+        let three = ORIGIN.0 + 3 * CARD_W + 2 * GAP;
+        assert_eq!(row_cards(Some(three)), 3);
+        assert_eq!(row_cards(Some(three - 1)), 2);
+        // Never wider than before, never no cards at all, and five when nobody says.
+        assert_eq!(row_cards(Some(4_000)), ROW_CARDS);
+        assert_eq!(row_cards(Some(120)), 1);
+        assert_eq!(row_cards(Some(-50)), 1);
+        assert_eq!(row_cards(Some(i32::MAX)), ROW_CARDS);
+        assert_eq!(row_cards(None), ROW_CARDS);
+
+        // Two to a row: the third card starts the second row, inside the same width.
+        let spots = auto_place(5, &[], 2);
+        assert_eq!(spots[1], (ORIGIN.0 + CARD_W + GAP, ORIGIN.1));
+        assert_eq!(spots[2], (ORIGIN.0, ORIGIN.1 + CARD_H + GAP));
+        assert!(spots.iter().all(|s| s.0 + CARD_W <= 704));
+        // A moved card in the way is still stepped around.
+        let taken = [ORIGIN];
+        assert_eq!(
+            auto_place(1, &taken, 2)[0],
+            (ORIGIN.0 + CARD_W + GAP, ORIGIN.1)
+        );
+        // A row count that makes no sense is treated as one card or the most allowed.
+        assert_eq!(
+            auto_place(2, &[], 0)[1],
+            (ORIGIN.0, ORIGIN.1 + CARD_H + GAP)
+        );
+        assert_eq!(
+            auto_place(6, &[], 99)[5],
+            (ORIGIN.0, ORIGIN.1 + CARD_H + GAP)
+        );
     }
 
     #[test]
@@ -763,27 +824,110 @@ mod tests {
     }
 
     #[test]
-    fn links_uncommon_words_used_by_exactly_two_cards() {
+    fn links_two_cards_that_share_two_key_words() {
         let cards = [
             lt(&[], "Core switch cutover plan"),
-            lt(&[], "cutover went fine"),
+            lt(&[], "The cutover of the core went fine"),
             lt(&[], "optics arrived"),
             lt(&[], "spare optics for the switch"),
             lt(&[], "optics again"),
         ];
-        let links = auto_links(&cards);
-        assert!(links.contains(&(0, 1, LinkReason::Word("cutover".into()))));
-        assert!(
-            !links
-                .iter()
-                .any(|l| l.2 == LinkReason::Word("switch".into())),
-            "card 0 already has its word link"
+        // "cutover" joins cards 0 and 1 and "switch" joins 0 and 3, but each pair shares only that
+        // one word. "optics" is used by three cards, so it is nobody's key word.
+        assert!(auto_links(&cards).is_empty());
+        let cards = [
+            lt(&[], "Core switch cutover plan"),
+            lt(&[], "The switch cutover went fine"),
+            lt(&[], "optics arrived"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("cutover, switch".into()))]
         );
-        assert!(
-            !links
-                .iter()
-                .any(|l| l.2 == LinkReason::Word("optics".into())),
-            "three cards use it"
+    }
+
+    #[test]
+    fn one_shared_word_is_not_enough_for_a_line() {
+        let cards = [
+            lt(&["INC0045001"], "Status board in the lobby is blank"),
+            lt(&[], "Need to get the board updated before Friday"),
+        ];
+        assert!(auto_links(&cards).is_empty());
+    }
+
+    #[test]
+    fn a_line_names_at_most_three_shared_words() {
+        let cards = [
+            lt(&[], "alpha bravo charlie delta echoes"),
+            lt(&[], "echoes delta charlie bravo alpha"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("alpha, bravo, charlie".into()))]
+        );
+    }
+
+    #[test]
+    fn everyday_words_never_count_toward_a_word_line() {
+        // Each of these is used by these two cards only, and none of them says what a card is
+        // about.
+        let cards = [
+            lt(
+                &[],
+                "Because people really keep asking, probably start looking through everything",
+            ),
+            lt(
+                &[],
+                "I really think people are probably looking through everything because of it",
+            ),
+            lt(&[], "optics arrived"),
+        ];
+        assert!(auto_links(&cards).is_empty());
+        // One specific word and any number of everyday ones is still one shared word.
+        let cards = [
+            lt(&[], "Because people really keep asking about the cutsheet"),
+            lt(
+                &[],
+                "People are really asking because the cutsheet is wrong",
+            ),
+        ];
+        assert!(auto_links(&cards).is_empty());
+        // Two specific words make the line, and only they are named.
+        let cards = [
+            lt(
+                &[],
+                "Because people really keep asking about the inventory cutsheet",
+            ),
+            lt(
+                &[],
+                "People are really asking because the cutsheet and the inventory differ",
+            ),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Word("cutsheet, inventory".into()))]
+        );
+    }
+
+    #[test]
+    fn the_everyday_list_is_lower_case_words() {
+        let mut seen = std::collections::BTreeSet::new();
+        for w in EVERYDAY_WORDS.split_ascii_whitespace() {
+            assert!(w.chars().all(|c| c.is_ascii_lowercase()), "{w}");
+            assert!(seen.insert(w), "{w} is listed twice");
+        }
+        assert!(seen.contains("and") && seen.contains("but") && seen.contains("because"));
+    }
+
+    #[test]
+    fn a_pair_already_joined_by_a_ticket_gets_no_word_line() {
+        let cards = [
+            lt(&["CHG0012345"], "Firewall client upgrade"),
+            lt(&[], "chg0012345: firewall client upgrade went fine"),
+        ];
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 1, LinkReason::Ticket("CHG0012345".into()))]
         );
     }
 
@@ -811,17 +955,17 @@ mod tests {
     }
 
     #[test]
-    fn word_links_are_capped_per_card() {
-        let hub = lt(&[], "alpha bravo charlie delta");
+    fn word_links_are_capped_per_card_and_the_most_shared_pair_wins() {
         let cards = [
-            hub,
-            lt(&[], "alpha"),
-            lt(&[], "bravo"),
-            lt(&[], "charlie"),
-            lt(&[], "delta"),
+            lt(&[], "alpha bravo charlie delta echoes foxtrot golfing"),
+            lt(&[], "alpha bravo"),
+            lt(&[], "charlie delta echoes"),
+            lt(&[], "foxtrot golfing"),
         ];
-        let links = auto_links(&cards);
-        assert_eq!(links.iter().filter(|l| l.0 == 0).count(), MAX_WORD_LINKS);
+        assert_eq!(
+            auto_links(&cards),
+            vec![(0, 2, LinkReason::Word("charlie, delta, echoes".into()))]
+        );
     }
 
     #[test]

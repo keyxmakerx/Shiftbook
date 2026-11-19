@@ -21,10 +21,16 @@ type Res<T> = Result<T, CommandError>;
 /// Maps to `DataApi.canvas()`: everything on the Desk. Entries and Done tickets from the last
 /// week show on their own; older ones only if the owner moved them. Live notes and Inbox
 /// scraps always show. The day's "Tickets" roll-up entry doesn't: its tickets are cards.
+/// `width` is how wide the Desk is showing: cards nobody has moved are laid out to fit it
+/// (rule in `shiftbook_core::canvas::row_cards`).
 #[tauri::command]
-pub async fn canvas(s: State<'_, VaultSession>, today: String) -> Res<DeskView> {
+pub async fn canvas(
+    s: State<'_, VaultSession>,
+    today: String,
+    width: Option<i32>,
+) -> Res<DeskView> {
     let (store, owner) = s.data().await?;
-    Ok(desk(&store, owner, date_arg(&today)?).await?.0)
+    Ok(desk(&store, owner, date_arg(&today)?, width).await?.0)
 }
 
 /// Maps to `DataApi.canvasArea()`: put a project's area here (making it the first time).
@@ -309,10 +315,15 @@ pub struct TidyView {
 
 /// Maps to `DataApi.canvasTidy()`: pile loose cards by project (rule in
 /// `shiftbook_core::canvas::tidy_groups`). Cards in a box or a pile stay as they are.
+/// `width` is the same as for [`canvas`], so a pile forms where its first card is showing.
 #[tauri::command]
-pub async fn canvas_tidy(s: State<'_, VaultSession>, today: String) -> Res<TidyView> {
+pub async fn canvas_tidy(
+    s: State<'_, VaultSession>,
+    today: String,
+    width: Option<i32>,
+) -> Res<TidyView> {
     let (store, owner) = s.data().await?;
-    let (view, projects) = desk(&store, owner, date_arg(&today)?).await?;
+    let (view, projects) = desk(&store, owner, date_arg(&today)?, width).await?;
     let loose: Vec<usize> = (0..view.cards.len())
         .filter(|&i| view.cards[i].in_box.is_none() && view.cards[i].stack.is_none())
         .collect();
@@ -479,7 +490,7 @@ mod tests {
                 .await
                 .unwrap();
 
-            let (desk, _) = desk(&store, me, today).await.unwrap();
+            let (desk, _) = desk(&store, me, today, None).await.unwrap();
             let work: Vec<&CardView> = desk
                 .cards
                 .iter()

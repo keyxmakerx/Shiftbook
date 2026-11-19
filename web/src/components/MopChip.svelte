@@ -1,23 +1,27 @@
 <script lang="ts">
   // A ticket's MOP (round 18): "MOP · Ready" opens it; with `offer`, a ticket without one gets
-  // "+ MOP" to pick a template. On cards, in the tickets box and on the Tickets page.
+  // "+ MOP" to pick a template. In the tickets box, the slide-out and on the Tickets page; a
+  // Desk card's front shows only a MOP the ticket has (round 19).
   import { attachMop, mopFor, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
+  import { ownName } from '../lib/mop';
 
   let { ticket, title = '', offer = false }: { ticket: string; title?: string; offer?: boolean } = $props();
   const run = $derived(mopFor(ticket));
+  // The name the owner gave it shows on the chip, so a ticket's card says which MOP it has.
+  const name = $derived(run ? ownName(run.title, ticket) : '');
 </script>
 
 {#if run}
   <button
     type="button"
     class="chip {run.status}"
-    title="Open the MOP for {ticket}"
+    title={name ? `Open “${name}”, the MOP for ${ticket}` : `Open the MOP for ${ticket}`}
     onpointerdown={(e) => e.stopPropagation()}
     onclick={(e) => {
       e.stopPropagation();
       openMopWindow(run.mopId);
     }}
-  >MOP · {STATUS_WORD[run.status]}</button>
+  ><span class="st">MOP · {STATUS_WORD[run.status]}</span>{#if name}<span class="nm">· {name}</span>{/if}</button>
 {:else if offer}
   <button
     type="button"
@@ -40,9 +44,25 @@
     font: 600 11px/18px var(--ui);
     cursor: pointer;
     white-space: nowrap;
+    gap: 4px;
+    max-width: 100%;
+    min-width: 0;
     border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
     background: color-mix(in srgb, var(--ok) 10%, transparent);
     color: var(--ok);
+  }
+
+  .st {
+    flex: none;
+  }
+
+  /* The MOP's name, cut short with … where the chip has no more room. */
+  .nm {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+    opacity: 0.85;
   }
 
   .chip.draft {

@@ -845,6 +845,20 @@ pub async fn tray_set_note(
     tray_result(&store, owner, day).await
 }
 
+/// Maps to `DataApi.noteToTicket()`: put a note's words in a tray ticket's notepad and move
+/// the note to the archive, so the ticket is one card on the Desk.
+#[tauri::command]
+pub async fn note_to_ticket(
+    s: State<'_, VaultSession>,
+    note: String,
+    id: String,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let note = note.parse().map_err(|_| CommandError::InvalidInput)?;
+    let day = store.note_to_ticket(owner, note, id_arg(&id)?).await?;
+    tray_result(&store, owner, day).await
+}
+
 /// Maps to `DataApi.traySetDone()`: tick a ticket done, or untick it to keep it open.
 #[tauri::command]
 pub async fn tray_set_done(s: State<'_, VaultSession>, id: String, done: bool) -> Res<TrayDayView> {

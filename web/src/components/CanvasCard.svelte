@@ -10,13 +10,13 @@
   import { fmtMinutes, relativeDay } from '../lib/format';
   import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
-  import { closePanel, openNotepad, panel } from '../lib/panel.svelte';
+  import { closePanel, openNotepad, panel, panelOpenAt } from '../lib/panel.svelte';
   import { app, attempt, focusLog, openNote, openWiki, projectById, projectColor, refreshInbox } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { logNoteItem, moveToWikiItem, noteKindItem } from '../lib/noteActions';
   import { pinMenuItem } from '../lib/pins.svelte';
   import { trayMenu } from '../lib/trayActions';
-  import { openFullWindow, openWindow } from '../lib/windows.svelte';
+  import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import TicketGroup from './TicketGroup.svelte';
@@ -25,6 +25,7 @@
   import RenameBox from './RenameBox.svelte';
   import { renaming, startRename } from '../lib/rename.svelte';
   import { workTickets } from '../lib/workTickets';
+  import { moreLines } from '../lib/putOnTicket';
   import { dragButton } from '../lib/rightDrag';
 
   let {
@@ -101,7 +102,8 @@
   });
 
   const key = $derived(`${card.kind}:${card.id}`);
-  const open = $derived(panel.open === key);
+  // 'card': the same ticket's row in the Tickets tray beside the Desk has this key too.
+  const open = $derived(panelOpenAt(key, 'card'));
   // Entries and tickets have the slide-out; notes open in Notes, scraps get logged.
   const hasPanel = $derived(!!card.entry || !!card.tray);
   let openedAt = 0;
@@ -111,6 +113,7 @@
     if (!hasPanel) return;
     if (!open) {
       panel.focusPad = false;
+      panel.from = 'card';
       panel.open = key;
       openedAt = Date.now();
     } else if (Date.now() - openedAt > 400) {
@@ -231,9 +234,10 @@
     }
     else if (card.inbox) void logScrap();
     else if (card.tray) {
-      // A ticket has no details screen: its notepad opens on a screen of its own.
+      // A ticket has no details screen: its notepad opens in a window that can be moved about
+      // (round 19; it used to fill the screen). Full screen is one button away on the window.
       closePanel();
-      openFullWindow('tray', card.tray.item.id);
+      openWindow('tray', card.tray.item.id);
     }
   }
 
@@ -264,7 +268,7 @@
 
   function cardMenu(): MenuSpec | null {
     if (card.entry) return entryMenu(card.entry, card.work);
-    if (card.tray) return trayMenu(card.tray.item, () => openNotepad(key));
+    if (card.tray) return trayMenu(card.tray.item, () => openNotepad(key, 'card'));
     if (card.note) {
       // About a dozen rows (the daily-use review, 10 Nov): times, days and kinds open in place,
       // the rarer things are under More.
@@ -430,10 +434,14 @@
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
-    <MopChip ticket={t.item.ticket} offer={!t.item.done} />
-    <span class="sub" class:muted={!t.item.note}>
+    <!-- A ticket's MOP shows here; "+ MOP" stays off the card's front (round 19): it's in the
+         slide-out, the right-click menu and Ctrl+Space. -->
+    <MopChip ticket={t.item.ticket} />
+    {@const more = moreLines(t.item.note)}
+    <span class="sub" class:one={more > 0} class:muted={!t.item.note}>
       {t.item.note?.split('\n')[0] ?? (t.item.projectId ? projectById(t.item.projectId)?.name : 'Click for its notepad')}
     </span>
+    {#if more > 0}<span class="more">✎ {more} more {more === 1 ? 'line' : 'lines'} in its notepad</span>{/if}
   {:else if card.note}
     {@const n = card.note}
     <span class="kind">{KIND_LABEL[n.kind]} note</span>
@@ -610,6 +618,20 @@
   .sub.muted {
     color: var(--mut);
     font-style: italic;
+  }
+
+  /* A ticket whose notepad says more: its first line on one line, then how much more. */
+  .sub.one {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .more {
+    font-size: 11.5px;
+    color: var(--mut);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .card.dropping {

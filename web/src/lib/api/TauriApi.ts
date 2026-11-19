@@ -263,6 +263,9 @@ export class TauriApi implements DataApi {
   traySetNote(id: string, note: string): Promise<TrayDay> {
     return call('tray_set_note', { id, note });
   }
+  noteToTicket(note: string, id: string): Promise<TrayDay> {
+    return call('note_to_ticket', { note, id });
+  }
   traySetDone(id: string, done: boolean): Promise<TrayDay> {
     return call('tray_set_done', { id, done });
   }
@@ -377,8 +380,8 @@ export class TauriApi implements DataApi {
     return call('set_inbox_deleted', { id, deleted });
   }
 
-  canvas(today: IsoDate): Promise<DeskData> {
-    return call('canvas', { today });
+  canvas(today: IsoDate, width: number | null): Promise<DeskData> {
+    return call('canvas', { today, width });
   }
   canvasMove(kind: CardKind, id: string, x: number, y: number): Promise<void> {
     return call('canvas_move', { kind, id, x, y });
@@ -431,8 +434,8 @@ export class TauriApi implements DataApi {
   canvasFolderRemove(id: string, removed: boolean): Promise<void> {
     return call('canvas_folder_remove', { id, removed });
   }
-  canvasTidy(today: IsoDate): Promise<TidyResult> {
-    return call('canvas_tidy', { today });
+  canvasTidy(today: IsoDate, width: number | null): Promise<TidyResult> {
+    return call('canvas_tidy', { today, width });
   }
   board(today: IsoDate, key: string): Promise<BoardData> {
     return call('board', { today, key });

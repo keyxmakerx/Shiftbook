@@ -11,18 +11,23 @@ works the way it does is in `DECISIONS.md`.
 - **Desk (the Canvas, home):** your entries, tickets, notes and Inbox scraps as paper cards
   you arrange. It opens at 100% on today's cards. Drag to move (it's remembered), drag empty
   paper or Shift + scroll to pan, scroll to zoom, **Fit** (it stops at 80% so the cards stay
-  readable). New cards take the next free spot; the others stay where they are. Wiki pages,
+  readable). New cards take the next free spot inside the part of the Desk you can see (when
+  that is full they go underneath and the Desk slides to show them); cards you have placed stay
+  where they are. Wiki pages,
   templates and a MOP on a ticket have no card of their own (a ticket's MOP is the chip on its
-  card). Click an entry or a ticket and its **slide-out** opens underneath:
+  card; give the MOP a name in the **Name** box at the top of its window and the chip shows
+  it). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
-  open, more time and More. Double-click a card to open it; double-click empty paper to jot.
+  open, more time and More. Double-click a card to open it (a ticket's notepad opens as a window
+  you can move; full screen is a button on it); double-click empty paper to jot.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
   Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
   Fit and **View** (Timeline, Show all link lines, Boards, Tidy into stacks, Clear old cards…).
   The side panel has today's hours,
   Log work, Due soon, Where was I?, the Tickets tray and the wrap-up. **Project areas**
   (right-click empty paper) give cards dropped into them that project; **links** join cards
-  that share a ticket or an uncommon word, and you can draw your own (a card's lines show while
+  that share a ticket, or two or more specific words no other card uses (everyday words such
+  as "because" or "really" never count), and you can draw your own (a card's lines show while
   you point at it; View → Show all link lines shows them all); **Timeline** lays the Desk out
   by day and Back to my layout puts it back. The **toolbox** on the left has Move,
   Select (drag around cards to move them together) and Box: draw a box (or Shift + drag on
@@ -53,7 +58,9 @@ works the way it does is in `DECISIONS.md`.
   earlier day adds the time today (to today's entry with the same title and project, or a copy
   of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
-  an entry**: its title becomes what you did and the jot is archived); the Inbox.
+  an entry**: its title becomes what you did and the jot is archived; on the Desk, right-click
+  a note card and **Put on a ticket** to move its words into that ticket's notepad, so the
+  ticket is one card instead of two); the Inbox.
 - **Windows, the bottom bar and the bell:** **Pop out** in a slide-out (or Open in a window on
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
@@ -99,7 +106,8 @@ works the way it does is in `DECISIONS.md`.
   each blank once and fills it in everywhere (empty ones stay highlighted). Drop text files
   (.txt, .md…) anywhere on Shiftbook, or use Add MOP files…, to copy them in as encrypted
   MOPs or templates; the files themselves are untouched. Word files need saving as plain text
-  first. Save as a text file writes an unencrypted copy, after a warning.
+  first. **Save as a file**, at the bottom of a MOP's window, writes an unencrypted text copy
+  named after the MOP, after a warning.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list.

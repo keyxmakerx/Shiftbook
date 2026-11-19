@@ -59,6 +59,7 @@
     MIN_AREA,
     NEW_AREA,
     openingView,
+    panToShow,
     rectFrom,
     toCanvas,
     zoomAt,
@@ -72,12 +73,13 @@
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
-  import { closePanel } from '../lib/panel.svelte';
+  import { closePanel, openNotepad } from '../lib/panel.svelte';
   import { easeOut, scale as motion } from '../lib/motion';
   import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
+  import { ticketChoices } from '../lib/putOnTicket';
   import BoxPrompt from '../components/BoxPrompt.svelte';
   import PastePrompt from '../components/PastePrompt.svelte';
   import Cabinet from '../components/Cabinet.svelte';
@@ -176,9 +178,27 @@
   const countDone = $derived(hasHome(app.prefs?.useMode) && !app.prefs?.dayTargets[(fromIso(app.selected).getDay() + 6) % 7]);
   const doneToday = $derived(app.entries.filter((e) => !e.isTray).length);
 
+  /** How wide the Desk is showing. Cards nobody has moved are laid out to fit it (the rule is
+   *  core's `row_cards`), so a new card starts where it can be seen. */
+  function deskWidth(): number | null {
+    const w = board ? Math.round(board.clientWidth) : 0;
+    return w > 0 ? w : null;
+  }
+
+  /** The width the cards on screen were laid out for. */
+  let laidOutFor: number | null = null;
+  /** The cards the Desk has shown so far, to tell when one is new. */
+  let seen: Set<string> | null = null;
+
   async function load() {
-    const desk = await attempt(() => api.canvas(app.today));
+    const width = deskWidth();
+    const desk = await attempt(() => api.canvas(app.today, width));
     if (desk) {
+      // A card that has just appeared and that nobody has placed: the newest is the last.
+      const had = seen;
+      const fresh = had ? desk.cards.filter((c) => !c.placed && !c.stack && !had.has(`${c.kind}:${c.id}`)) : [];
+      seen = new Set(desk.cards.map((c) => `${c.kind}:${c.id}`));
+      laidOutFor = width;
       cards = desk.cards;
       areas = desk.areas;
       labels = desk.labels;
@@ -193,6 +213,12 @@
         // (the daily-use review, 10 Nov) rather than wherever the paper's corner happens to be.
         opened = true;
         view = openingView(todaysSpots(), everything(), board.clientWidth, board.clientHeight);
+      } else if (fresh.length && board && mode === 'free') {
+        // A new card that landed outside what the Desk is showing: slide just far enough to
+        // show it (round 19: new cards start where you can see them).
+        const card = fresh[fresh.length - 1]!;
+        const to = panToShow(view, { x: card.x, y: card.y }, board.clientWidth, board.clientHeight);
+        if (to !== view) glide(to);
       }
     }
     loaded = true;
@@ -502,11 +528,66 @@
     const archive = archiveItem(card);
     const list = selected.has(keyOf(card)) ? cards.filter((c) => selected.has(keyOf(c))) : [card];
     const ownArchive = archive.length > 0 || card.kind === 'note';
-    return [...fileItem((key) => void fileThese(list, key), ownArchive ? ARCHIVE : undefined), ...archive];
+    return [
+      ...putOnTicketItem(card),
+      ...fileItem((key) => void fileThese(list, key), ownArchive ? ARCHIVE : undefined),
+      ...archive,
+    ];
   };
 
+  /** "Put on a ticket ▸" for a jot, daily or meeting note (one card per ticket, 18 Nov): its
+   *  words go into the ticket's notepad and the note card leaves the Desk. */
+  function putOnTicketItem(card: Card): MenuItem[] {
+    const note = card.note;
+    if (!note || note.kind === 'page' || note.kind === 'mop') return [];
+    const choices = ticketChoices(card, cards, links);
+    if (!choices.length) return [];
+    return [
+      {
+        label: 'Put on a ticket',
+        icon: 'ticket',
+        sub: [
+          {
+            choices: choices.map((c) => ({
+              label: c.tray!.item.ticket,
+              color: null,
+              checked: false,
+              act: () => void putOnTicket(note, c.tray!.item, keyOf(c)),
+            })),
+          },
+        ],
+      },
+    ];
+  }
+
+  async function putOnTicket(note: NonNullable<Card['note']>, item: TrayItem, ticketKey: string) {
+    const had = item.note ?? '';
+    closePanel();
+    const day = await attempt(() => api.noteToTicket(note.id, item.id));
+    if (!day) return;
+    await refresh();
+    await load();
+    // The ticket's notepad opens under its card, so it's plain where the words went.
+    openNotepad(ticketKey, 'card');
+    toast(
+      `Put “${note.title}” in ${item.ticket}'s notepad`,
+      'Undo',
+      () => {
+        // An open notepad keeps its own draft: fold it away so it can't save the words back.
+        closePanel();
+        void attempt(async () => {
+          await api.traySetNote(item.id, had);
+          await api.setNoteArchived(note.id, false);
+        })
+          .then(refresh)
+          .then(load);
+      },
+      () => void attempt(() => api.noteToTicket(note.id, item.id)).then(refresh).then(load),
+    );
+  }
+
   async function tidy() {
-    const done = await attempt(() => api.canvasTidy(app.today));
+    const done = await attempt(() => api.canvasTidy(app.today, deskWidth()));
     if (!done) return;
     await load();
     if (!done.stacks.length) {
@@ -530,6 +611,20 @@
   // in a window counts too, so its links show straight away rather than all at once later).
   onMount(() => {
     if (app.selected !== app.today) void selectDay(app.today);
+    // Cards nobody has moved fit the Desk's width, so they are laid out again when it changes
+    // (the window resized, the side panel folded away), once the resizing has settled.
+    let settle: ReturnType<typeof setTimeout> | null = null;
+    const watch = new ResizeObserver(() => {
+      if (settle) clearTimeout(settle);
+      settle = setTimeout(() => {
+        if (loaded && deskWidth() !== laidOutFor) void load();
+      }, 250);
+    });
+    if (board) watch.observe(board);
+    return () => {
+      watch.disconnect();
+      if (settle) clearTimeout(settle);
+    };
   });
   $effect(() => {
     void app.changed;

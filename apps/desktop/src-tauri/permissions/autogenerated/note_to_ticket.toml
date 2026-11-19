@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-note-to-ticket"
+description = "Enables the note_to_ticket command without any pre-configured scope."
+commands.allow = ["note_to_ticket"]
+
+[[permission]]
+identifier = "deny-note-to-ticket"
+description = "Denies the note_to_ticket command without any pre-configured scope."
+commands.deny = ["note_to_ticket"]

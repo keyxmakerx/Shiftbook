@@ -56,6 +56,7 @@
 
   onMount(() => {
     draft = saved = (entry ? entry.notes : tray?.note) ?? '';
+    requestAnimationFrame(fit);
     if (focusPad) requestAnimationFrame(() => pad?.focus());
     return () => {
       if (saving) {
@@ -96,7 +97,19 @@
     onsaved?.();
   }
 
+  /** The notepad is never taller than this on its own (it scrolls, or drag its corner). */
+  const PAD_MAX_PX = 240;
+
+  /** Grow the notepad to show what's in it, up to `PAD_MAX_PX`. It only grows, so a size the
+   *  owner dragged it to is kept. */
+  function fit() {
+    if (!pad) return;
+    const want = Math.min(pad.scrollHeight + 2, PAD_MAX_PX);
+    if (want > pad.offsetHeight) pad.style.height = `${want}px`;
+  }
+
   function typed() {
+    fit();
     if (saving) clearTimeout(saving);
     saving = setTimeout(() => void save(), SAVE_AFTER_MS);
   }

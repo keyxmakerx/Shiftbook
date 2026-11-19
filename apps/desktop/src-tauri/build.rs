@@ -59,6 +59,7 @@ fn main() {
             "tray_add",
             "tray_set_minutes",
             "tray_set_note",
+            "note_to_ticket",
             "tray_set_done",
             "tray_set_project",
             "tray_set_recurring",

@@ -11,6 +11,13 @@ Round 18 (`rounds/r18.json`) went on the rounds 8 to 14 sheet
 reach the round 15 sheet. The owner chose to keep using that sheet from round 18 on. Another session's round 18 for the round 15 sheet,
 "Three quick calls", is `rounds/r18-quick.json`.
 
+Round 19 (`rounds/r19.json`) is on the round 15 sheet, the one this project can reach. Its
+pictures are screenshots of the real app with made-up tickets, uploaded to the sheet (Artifact
+publish with `asset: true`) and not kept in the repo.
+
+Round 20 (`rounds/r20.json`) is on the same sheet, with its pictures stored the same way: what
+the owner's round 19 answers and notes asked for, built, and one question about word lines.
+
 The page (`index.html`) is a fixed shell. All content lives in the artifact's database, so new
 rounds arrive live and the page never needs a reload or republish to show them.
 
@@ -25,6 +32,8 @@ rounds arrive live and the page never needs a reload or republish to show them.
 ## Adding a round
 1. Write `rounds/rNN.json` (cards + meta). Mockups go in `mocks/` and are referenced as
    `"figures": [{"html_file": "mocks/x.html", "caption": "..."}]`; images as `{"src": "<asset url>"}`.
+   Give an image its width in the app as `"w"` (half the pixel width of a 2x screenshot): it never
+   shows bigger than that, and a tap opens it full size.
 2. `python3 tools/signoff/build_round.py tools/signoff/rounds/rNN.json OUT_DIR`
 3. Write each output file with an ArtifactData `batch` (`set` on `cards/<id>`, `meta/board`).
 4. Archive the previous round: `update` its cards with `{"archived": true}`.

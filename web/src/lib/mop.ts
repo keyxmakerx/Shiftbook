@@ -116,3 +116,10 @@ export async function readFiles(files: Iterable<File>, max = 50): Promise<MopFil
 export function hasFiles(e: DragEvent): boolean {
   return [...(e.dataTransfer?.types ?? [])].includes('Files');
 }
+
+/** A MOP's name as shown beside its ticket: nothing for one still called "MOP for <ticket>"
+ *  (what a blank MOP starts as), which only repeats the ticket. */
+export function ownName(title: string, ticket: string): string {
+  const t = title.replace(/\s+/g, ' ').trim();
+  return t.toLowerCase() === `mop for ${ticket.trim().toLowerCase()}` ? '' : t;
+}

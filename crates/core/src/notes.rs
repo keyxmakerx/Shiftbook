@@ -308,8 +308,67 @@ pub fn jot_to_entry(title: &str, body: &str) -> JotEntry {
     }
 }
 
+/// True when a note's words can go into a ticket's notepad ([`note_into_notepad`]): jots, Daily
+/// and meeting notes. A wiki page lives in the wiki, and a MOP belongs to its ticket already.
+pub fn goes_on_ticket(kind: NoteKind) -> bool {
+    matches!(kind, NoteKind::Jot | NoteKind::Daily | NoteKind::Meeting)
+}
+
+/// What a ticket's notepad says once a note is put on that ticket (one card per ticket, 18 Nov):
+/// the note's words go under what the notepad already says, after a blank line. A note whose
+/// body doesn't start with its title keeps the title as its first line, so nothing is lost.
+pub fn note_into_notepad(notepad: Option<&str>, title: &str, body: &str) -> String {
+    let title = title.trim();
+    let body = body.trim();
+    let first = body.lines().next().unwrap_or("").trim();
+    let words = if body.is_empty() {
+        title.to_string()
+    } else if title.is_empty() || first == title {
+        body.to_string()
+    } else {
+        format!("{title}\n{body}")
+    };
+    match notepad.map(str::trim_end).filter(|n| !n.trim().is_empty()) {
+        Some(had) => format!("{had}\n\n{words}"),
+        None => words,
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_note_goes_under_what_the_notepad_says() {
+        use super::{goes_on_ticket, note_into_notepad, NoteKind};
+        assert!(goes_on_ticket(NoteKind::Jot));
+        assert!(goes_on_ticket(NoteKind::Meeting));
+        assert!(!goes_on_ticket(NoteKind::Mop));
+        assert!(!goes_on_ticket(NoteKind::Page));
+        // An empty notepad takes the note as it is.
+        assert_eq!(
+            note_into_notepad(
+                None,
+                "Summary of work",
+                "Summary of work\nGOAL upgrade the VPN"
+            ),
+            "Summary of work\nGOAL upgrade the VPN"
+        );
+        assert_eq!(note_into_notepad(Some("  \n"), "Call Sam", ""), "Call Sam");
+        // A body that doesn't start with the title keeps the title on top.
+        assert_eq!(
+            note_into_notepad(None, "Summary of work", "GOAL upgrade the VPN"),
+            "Summary of work\nGOAL upgrade the VPN"
+        );
+        // Words already in the notepad stay first, then a blank line.
+        assert_eq!(
+            note_into_notepad(
+                Some("Waiting on the window\n"),
+                "Call Sam",
+                "Call Sam\nabout PSUs"
+            ),
+            "Waiting on the window\n\nCall Sam\nabout PSUs"
+        );
+    }
+
     #[test]
     fn only_work_in_progress_gets_a_desk_card() {
         use super::{shows_on_desk, NoteKind};

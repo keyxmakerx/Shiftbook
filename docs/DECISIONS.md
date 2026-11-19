@@ -2,6 +2,69 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 20 — 18 Nov 2026 (round 19's answers and notes, built)
+Round 19's answers and notes (listed under round 19 below) were built and put on the sign-off
+sheet as round 20 (`tools/signoff/rounds/r20.json`), five cards with before and after pictures
+of the real app. The owner approved all five on 18 Nov:
+- **+ MOP is off the front of Desk cards.** It stays in the ticket's slide-out, in right-click →
+  More → Attach a MOP…, in Ctrl+Space, and everywhere else it showed. This changes round 18's
+  "every open ticket shows + MOP" for Desk cards.
+- **New cards start in view.** A row of cards nobody has moved is only as wide as the Desk is
+  showing (`row_cards` in core: two across in the first window, five at most). When that is full
+  the next card goes underneath and the Desk slides to it. Cards nobody has moved are laid out
+  again when the Desk's width changes; a card the owner has moved never moves.
+- **A ticket's notepad opens as a window you can move** on a double-click, not full screen (full
+  screen is a button on the window). One click still opens it under the card. This replaces the
+  30 Oct choice below.
+- **Save as a file** is back at the bottom of the MOP window (it went with the MOP notebook in
+  round 18). The file is offered under the MOP's name, and the app warns that it isn't locked.
+- **A word line needs two shared words** (yes to "two words", then in chat: "auto connect on two
+  shared words that are specific words, not like and but, etc"). Two cards get a word line when
+  they share two or more specific words that no other card uses (`MIN_SHARED_WORDS` in core). A
+  specific word has five letters or more and is not on core's list of everyday words
+  (`EVERYDAY_WORDS`: because, really, looking, people, issue, request, day and month names…).
+  One shared word no longer makes a line. Ticket lines and drawn lines are unchanged, and a
+  card still gets one word line at most. This tightens the 30 Oct "word links stay on" below.
+
+## Round 19 — 18 Nov 2026 (one card for a ticket and what's written about it)
+The owner showed a Desk where one MOP had turned into a ticket card, a MOP card and a note
+card, joined by lines. The MOP card was already gone (10 Nov, below). The rest was built in pull
+request #78 and put on the sign-off sheet as round 19 (`tools/signoff/rounds/r19.json`), four
+cards with before and after pictures. The owner approved all four on 18 Nov:
+- **Put on a ticket:** right-click a jot, Daily or meeting note on the Desk and pick a ticket
+  (the ones a line joins it to come first). The note's words go into that ticket's notepad,
+  under what's there, the note moves to the archive, and the notepad opens under the ticket's
+  card to show where they went. Undo puts both back. The rule is `note_into_notepad` in core.
+- **A ticket card says when its notepad has more:** its first line, then "✎ 4 more lines in
+  its notepad". The slide-out's notepad grows to show what's in it (up to about ten lines).
+- **One notepad at a time on the Desk:** clicking a ticket's card used to open its notepad
+  under the card and again under its row in the Tickets tray beside the Desk; typing in one
+  could be saved over by the other. Now only the one you clicked opens.
+- **A note card never says its title twice:** a jot's title is its first line, cut at 80
+  letters; the line under it carries on from there instead of starting the same sentence again
+  (Desk cards, boards and the Notes list).
+- **Naming a MOP:** the MOP window has a **Name** box in view in Read, Edit and Run (it was an
+  unmarked box that only Edit showed). A MOP that has been given a name shows it on its
+  ticket's chip ("MOP · Ready · VPN client upgrade"); one still called "MOP for CHG…" doesn't
+  repeat the ticket.
+
+The owner's notes on those cards, and answers to the round's three questions. These were built
+next and signed off as round 20, above:
+- **A ticket's notepad opens as a movable window** ("make the default notepad the movable kind,
+  not the full screen"): double-clicking a ticket's card opens its notepad as a window you can
+  move, not one filling the screen. This replaces the 30 Oct choice below.
+- **A downloaded MOP keeps its name** ("if I download it, it needs to keep that name too"): a
+  MOP saved as a file is named after the MOP.
+- **+ MOP comes off the front of Desk cards** (yes). It stays in the ticket's slide-out (Use a
+  template), in right-click → More → Attach a MOP…, and in Ctrl+Space. A ticket with a MOP keeps
+  its chip. This changes round 18's "every open ticket shows + MOP" for Desk cards.
+- **New cards land inside the part of the Desk in view** (yes): a row of new cards is only as
+  wide as the Desk is showing (rows were five wide; the first window shows fewer than three).
+  Cards already placed don't move.
+- **Lines from shared words** (yes to "tickets only", with the note "some shared stuff makes
+  sense, like shared ticket, shared key word(s), but not every single one"): ticket lines stay.
+  What should count as a shared keyword was asked again in round 20.
+
 ## Asked in chat — 12 Nov 2026 (review fixes)
 No mockup needed:
 - **A MOP put on a new ticket keeps a place on the Desk:** the 6 Nov promise below didn't

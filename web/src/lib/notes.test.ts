@@ -35,6 +35,22 @@ describe('snippet', () => {
   it('shortens long text', () => {
     expect(snippet('a'.repeat(200), 'x', '', 10)).toBe('aaaaaaaaaa…');
   });
+
+  it('carries on after a title that was cut short, instead of repeating it', () => {
+    const line = 'Do we need to look at the upgrades again since it is the start of the month?';
+    expect(snippet(`${line}\nAsk Sam`, 'Do we need to look at the upgrades again…', '')).toBe(
+      '… since it is the start of the month? Ask Sam',
+    );
+    // Nothing after the cut, or only its full stop: no taste at all rather than "…?".
+    expect(snippet('Do we need to look', 'Do we need to look…', '')).toBe('');
+    expect(snippet('Do we need to look?', 'Do we need to look…', '')).toBe('');
+  });
+
+  it('skips a first line that repeats the title with other spacing', () => {
+    expect(snippet('(GOAL)  work on the\tswitch\nfor the heartbeat', '(GOAL) work on the switch', '')).toBe(
+      'for the heartbeat',
+    );
+  });
 });
 
 describe('archiveWarning', () => {
