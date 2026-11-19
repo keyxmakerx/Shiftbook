@@ -490,7 +490,8 @@ pub struct ItemSummary {
     pub done: bool,
     /// Its notepad.
     pub note: Option<String>,
-    /// The project it was last given.
+    /// The project it shows under: the one it was last given, else the project of the latest
+    /// work it was logged on (`shiftbook_core::items::shown_project`).
     pub project: Option<ProjectId>,
     /// The repeating thing it was last filed under, when it has no project.
     pub recurring: Option<RecurringTaskId>,
@@ -542,13 +543,14 @@ impl crate::SqliteStore {
         if items.is_empty() {
             return Ok(items);
         }
-        // (item, date, minutes, title, card): tray rows, then entries (not the roll-ups,
-        // which only mirror the tray).
-        let worked: Vec<(String, String, i64, String, String)> = sqlx::query_as(
-            "SELECT item_id, date, minutes, '', 'tray:' || id FROM ticket_tray \
+        // (item, date, minutes, title, card, the entry's project): tray rows, then entries
+        // (not the roll-ups, which only mirror the tray).
+        let worked: Vec<(String, String, i64, String, String, String)> = sqlx::query_as(
+            "SELECT item_id, date, minutes, '', 'tray:' || id, '' FROM ticket_tray \
              WHERE owner_id = $1 AND item_id IS NOT NULL AND deleted_at IS NULL \
              UNION ALL \
-             SELECT t.item_id, e.date, e.minutes, e.description, 'entry:' || e.id FROM tickets t \
+             SELECT t.item_id, e.date, e.minutes, e.description, 'entry:' || e.id, \
+             CASE WHEN e.target_type = 'project' THEN e.target_id ELSE '' END FROM tickets t \
              JOIN time_entries e ON e.id = t.time_entry_id \
              WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.item_id IS NOT NULL \
              AND t.deleted_at IS NULL AND e.deleted_at IS NULL \
@@ -557,18 +559,24 @@ impl crate::SqliteStore {
         .bind(owner.to_string())
         .fetch_all(&mut *conn)
         .await?;
-        // Per item: (day, minutes) worked, the latest (day, title), and (day, card).
+        // Per item: (day, minutes) worked, the latest (day, title), (day, card), and each
+        // entry's (day, project).
         type Worked = (
             Vec<(Date, Minutes)>,
             Option<(Date, String)>,
             Vec<(Date, String)>,
+            Vec<(Date, Option<ProjectId>)>,
         );
         let mut by_item: HashMap<String, Worked> = HashMap::new();
-        for (item, date, minutes, title, card) in worked {
+        for (item, date, minutes, title, card, project) in worked {
             let date = corrupt_date(&date)?;
             let slot = by_item.entry(item).or_default();
             slot.0
                 .push((date, Minutes(u32::try_from(minutes).unwrap_or(0))));
+            if card.starts_with("entry:") {
+                let project = opt_uuid(Some(project).filter(|p| !p.is_empty()))?;
+                slot.3.push((date, project.map(ProjectId::from_uuid)));
+            }
             slot.2.push((date, card));
             if !title.trim().is_empty() && slot.1.as_ref().is_none_or(|(d, _)| date >= *d) {
                 slot.1 = Some((date, title));
@@ -577,7 +585,13 @@ impl crate::SqliteStore {
         // A ticket with nothing left on any day (taken out, or a typo) isn't shown.
         items.retain(|i| by_item.contains_key(&i.id.to_string()));
         for item in &mut items {
-            if let Some((rows, title, cards)) = by_item.get_mut(&item.id.to_string()) {
+            if let Some((rows, title, cards, projects)) = by_item.get_mut(&item.id.to_string()) {
+                // A ticket with no project of its own shows under its latest work's (round 21).
+                item.project = shiftbook_core::items::shown_project(
+                    item.project,
+                    item.recurring.is_some(),
+                    projects,
+                );
                 item.so_far = ticket_so_far(rows);
                 cards.sort_by_key(|c| std::cmp::Reverse(c.0));
                 item.cards = cards.iter().map(|(_, c)| c.clone()).collect();

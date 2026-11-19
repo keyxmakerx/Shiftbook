@@ -9,7 +9,7 @@
 
   $effect(() => {
     void textPrompt.serial;
-    text = '';
+    text = textPrompt.value;
   });
 
   // The box can open a moment after a menu choice, while the menu is still folding away and
@@ -17,7 +17,11 @@
   $effect(() => {
     if (!textPrompt.open || !box) return;
     const el = box;
-    const t = setTimeout(() => el.isConnected && el.focus(), 320);
+    const t = setTimeout(() => {
+      if (!el.isConnected || document.activeElement === el) return;
+      el.focus();
+      el.select();
+    }, 320);
     return () => clearTimeout(t);
   });
 

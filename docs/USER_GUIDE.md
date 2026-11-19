@@ -116,6 +116,9 @@ works the way it does is in `DECISIONS.md`.
 - **Repeating:** bills, bins, renewals and birthdays. Each one repeats or expires on a date;
   **Done** marks it for today (with Undo), and overdue or due-soon things show on the Desk and in
   the bell. After a break, the bell opens on **While you were away**.
+- **Projects (under Organise):** a card for each project with its hours and open tickets.
+  **Edit** (or a right-click) renames it, changes its colour or archives it. A ticket with no
+  project of its own shows under the project of the work it was last logged on.
 - **Lists:** shopping, packing or "before we go away" lists. Paste several lines at once; **Reset
   for next time** unticks everything and keeps the items.
 - **Settings:** Look (theme, motion, accent, text size, project colours), Your day (targets,

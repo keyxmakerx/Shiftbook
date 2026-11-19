@@ -152,10 +152,52 @@ pub fn done_from(occurrences: &[(Date, bool)]) -> Option<bool> {
     )
 }
 
+/// The project a ticket shows under on the Tickets and Projects pages (round 21). The one it
+/// was given by hand wins. A ticket filed under a repeating thing has its home already.
+/// Otherwise it takes the project of the latest work it was logged on (`worked`: each entry's
+/// day and project), so a ticket logged against a project's entries is listed with that
+/// project instead of "No project". On the same day the entry listed last wins.
+pub fn shown_project(
+    own: Option<ProjectId>,
+    filed_under_repeating: bool,
+    worked: &[(Date, Option<ProjectId>)],
+) -> Option<ProjectId> {
+    if own.is_some() || filed_under_repeating {
+        return own;
+    }
+    worked
+        .iter()
+        .filter_map(|(day, project)| project.map(|p| (*day, p)))
+        .max_by_key(|(day, _)| *day)
+        .map(|(_, project)| project)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use time::macros::{date, datetime};
+
+    #[test]
+    fn a_ticket_shows_under_the_project_of_its_latest_work() {
+        let a = ProjectId::new();
+        let b = ProjectId::new();
+        let mon = date!(2026 - 11 - 16);
+        let tue = date!(2026 - 11 - 17);
+        // Nothing set by hand: the latest entry with a project decides.
+        assert_eq!(
+            shown_project(None, false, &[(mon, Some(a)), (tue, Some(b))]),
+            Some(b)
+        );
+        assert_eq!(
+            shown_project(None, false, &[(tue, None), (mon, Some(a))]),
+            Some(a)
+        );
+        assert_eq!(shown_project(None, false, &[(mon, None)]), None);
+        assert_eq!(shown_project(None, false, &[]), None);
+        // A project given by hand wins, and so does being filed under a repeating thing.
+        assert_eq!(shown_project(Some(a), false, &[(tue, Some(b))]), Some(a));
+        assert_eq!(shown_project(None, true, &[(tue, Some(b))]), None);
+    }
 
     fn occ<'a>(date: Date, done: bool, note: Option<&'a str>) -> Occurrence<'a> {
         Occurrence {
