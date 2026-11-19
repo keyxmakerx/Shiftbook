@@ -1,6 +1,12 @@
 //! Saved responses: short messages kept for pasting into tickets. The Done tickets tray has a
 //! button that lists them, and picking one copies it. Nothing is matched to a ticket; the user
 //! picks.
+//!
+//! Round 21: a response can hold blanks. `{ticket}` and `{date}` fill themselves in when the
+//! response is copied for a ticket (ticking one done offers "Copy a response"), and `{name}`
+//! takes a name the user is asked for.
+
+use time::Date;
 
 use crate::error::CoreError;
 use crate::validate::validate_required;
@@ -58,9 +64,98 @@ pub fn clean_responses(drafts: &[ResponseDraft]) -> Result<Vec<ResponseDraft>, C
     Ok(items)
 }
 
+/// A day as a response says it: "Wed 18 Nov".
+fn response_day(date: Date) -> String {
+    const DAYS: [&str; 7] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const MONTHS: [&str; 12] = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    ];
+    let day = DAYS[usize::from(date.weekday().number_days_from_monday())];
+    let month = MONTHS[usize::from(u8::from(date.month()) - 1)];
+    format!("{day} {} {month}", date.day())
+}
+
+/// True when the message has a `{name}` blank, so the user is asked for a name first.
+pub fn asks_name(text: &str) -> bool {
+    text.to_lowercase().contains("{name}")
+}
+
+/// `text` with its blanks filled in: `{ticket}` with the ticket number, `{date}` with today
+/// ("Wed 18 Nov") and `{name}` with the name given. Capitals in a blank don't matter. A blank
+/// with nothing to put in it (no ticket, no name) stays as it was typed, and so does
+/// anything else in braces.
+pub fn fill_response(text: &str, ticket: Option<&str>, today: Date, name: Option<&str>) -> String {
+    let ticket = ticket.map(str::trim).filter(|t| !t.is_empty());
+    let name = name.map(str::trim).filter(|n| !n.is_empty());
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(open) = rest.find('{') {
+        out.push_str(&rest[..open]);
+        let after = &rest[open..];
+        let Some(close) = after.find('}') else {
+            rest = after;
+            break;
+        };
+        let blank = &after[..=close];
+        let filled = match blank[1..close].to_lowercase().as_str() {
+            "ticket" => ticket.map(str::to_string),
+            "date" => Some(response_day(today)),
+            "name" => name.map(str::to_string),
+            _ => None,
+        };
+        match filled {
+            Some(value) => {
+                out.push_str(&value);
+                rest = &after[close + 1..];
+            }
+            // Not a blank we know: keep the brace and look again after it.
+            None => {
+                out.push('{');
+                rest = &after[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::macros::date;
+
+    #[test]
+    fn fills_the_ticket_the_date_and_the_name() {
+        let text = "Hi {name}, {ticket} is fixed. Confirmed on {date}. Closing {TICKET}.";
+        assert_eq!(
+            fill_response(
+                text,
+                Some("INC0041240"),
+                date!(2026 - 11 - 18),
+                Some(" Sam ")
+            ),
+            "Hi Sam, INC0041240 is fixed. Confirmed on Wed 18 Nov. Closing INC0041240."
+        );
+    }
+
+    #[test]
+    fn leaves_a_blank_with_nothing_to_fill_it() {
+        let text = "Hi {name}, {ticket} is fixed on {date}. See {runbook} and {.";
+        assert_eq!(
+            fill_response(text, None, date!(2026 - 11 - 2), Some("  ")),
+            "Hi {name}, {ticket} is fixed on Mon 2 Nov. See {runbook} and {."
+        );
+        assert_eq!(
+            fill_response("No blanks here.", Some("X-1"), date!(2026 - 11 - 2), None),
+            "No blanks here."
+        );
+    }
+
+    #[test]
+    fn knows_when_to_ask_for_a_name() {
+        assert!(asks_name("Hi {Name},"));
+        assert!(!asks_name("Hi there, {ticket} is done."));
+    }
 
     fn d(name: &str, text: &str) -> ResponseDraft {
         ResponseDraft {

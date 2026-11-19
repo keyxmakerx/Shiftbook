@@ -73,6 +73,7 @@ import type { RibbonDay as GenRibbonDay } from './generated/RibbonDay';
 import type { RibbonWeek as GenRibbonWeek } from './generated/RibbonWeek';
 import type { SameWorkView as GenSameWork } from './generated/SameWorkView';
 import type { ResponseView as GenSavedResponse } from './generated/ResponseView';
+import type { FilledResponseView as GenFilledResponse } from './generated/FilledResponseView';
 import type { SearchView as GenSearchResult } from './generated/SearchView';
 import type { SheetDay as GenSheetDay } from './generated/SheetDay';
 import type { SheetItem as GenSheetItem } from './generated/SheetItem';
@@ -173,6 +174,7 @@ export type Checks = [
   Assert<Same<Ui.RibbonWeek, GenRibbonWeek>>,
   Assert<Same<Ui.SameWork, GenSameWork>>,
   Assert<Same<Ui.SavedResponse, GenSavedResponse>>,
+  Assert<Same<Ui.FilledResponse, GenFilledResponse>>,
   Assert<Same<Ui.SearchResult, GenSearchResult>>,
   Assert<Same<Ui.SheetDay, GenSheetDay>>,
   Assert<Same<Ui.SheetItem, GenSheetItem>>,

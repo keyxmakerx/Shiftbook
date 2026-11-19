@@ -17,6 +17,7 @@
   import Icon from '../components/Icon.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import TimerBar from '../components/TimerBar.svelte';
+  import AskText from '../components/AskText.svelte';
   import Toast from '../components/Toast.svelte';
   import WindowLayer from '../components/WindowLayer.svelte';
   import Day from '../views/Day.svelte';
@@ -219,6 +220,7 @@
 <PaperMenu />
 <ShareSheet />
 <Toast />
+<AskText />
 
 <style>
   .phone {

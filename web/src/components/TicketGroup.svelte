@@ -11,6 +11,7 @@
   import { dayMonth, weekdayShort } from '../lib/format';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
@@ -33,16 +34,21 @@
   // A ticket is one item (round 15): ticking or writing on its newest place changes it
   // everywhere it appears, so the Tickets list reloads too (applyTray does it for the tray).
   async function tick(w: WorkTicket) {
-    const done = !w.done;
     const s = w.sources[0]!;
-    const ok = await attempt(async () => {
-      if (s.kind === 'entry') {
-        await api.ticketSetDone(s.id, done);
-        await refresh();
-      } else applyTray(await api.traySetDone(s.id, done));
-      return true;
-    });
-    if (ok) onchanged();
+    const set = async (done: boolean) => {
+      const ok = await attempt(async () => {
+        if (s.kind === 'entry') {
+          await api.ticketSetDone(s.id, done);
+          await refresh();
+        } else applyTray(await api.traySetDone(s.id, done));
+        return true;
+      });
+      if (ok) onchanged();
+      return !!ok;
+    };
+    const done = !w.done;
+    // Round 21: done offers a saved response for the ticket, with Undo as elsewhere.
+    if ((await set(done)) && done) toast(`${w.number} is done`, 'Undo', () => void set(false), null, responseButton(w.number));
   }
 
   function openNote(w: WorkTicket) {

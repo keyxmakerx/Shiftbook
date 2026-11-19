@@ -65,7 +65,10 @@ works the way it does is in `DECISIONS.md`.
   early to remind); the bell opens that day's meeting note. All of it stays inside Shiftbook.
 - **Saved responses:** the copy button on the Tickets tray lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
-  them in Settings → Responses.
+  them in Settings → Responses. A response can hold blanks: `{ticket}`, `{date}` and `{name}`.
+  When you tick a ticket done, the message at the bottom offers **Copy a response** beside
+  Undo: the ticket's number and today's date fill themselves in, and a response with `{name}`
+  asks who it is to first.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
   day starts, the Desk shows what to pick up: things you brought up for today (**Bring up
   tomorrow** in any slide-out or right-click menu picks the next work day), then the list from

@@ -797,6 +797,7 @@ pub fn run() {
             api::pasted_tickets,
             api::find_day,
             api::list_responses,
+            api::responses_for,
             api::save_responses,
             api::where_was_i,
             api::timer_offer,

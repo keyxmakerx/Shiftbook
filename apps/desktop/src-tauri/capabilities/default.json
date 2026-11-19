@@ -96,6 +96,7 @@
     "allow-pasted-tickets",
     "allow-find-day",
     "allow-list-responses",
+    "allow-responses-for",
     "allow-save-responses",
     "allow-where-was-i",
     "allow-timer-offer",

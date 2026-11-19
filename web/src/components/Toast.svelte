@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { holdToast, releaseToast, runToastAction, toastState } from '../lib/toast.svelte';
+  import { holdToast, releaseToast, runToastAction, runToastAlso, toastState } from '../lib/toast.svelte';
 </script>
 
 <div
@@ -13,6 +13,9 @@
   onfocusout={releaseToast}
 >
   <span>{toastState.text}</span>
+  {#if toastState.also}
+    <button type="button" tabindex={toastState.on ? 0 : -1} aria-hidden={!toastState.on} onclick={(e) => runToastAlso(e.currentTarget)}>{toastState.also}</button>
+  {/if}
   {#if toastState.action}
     <!-- Out of the tab order while hidden, so a faded-out Undo can't be reached. -->
     <button type="button" tabindex={toastState.on ? 0 : -1} aria-hidden={!toastState.on} onclick={runToastAction}>{toastState.action}</button>

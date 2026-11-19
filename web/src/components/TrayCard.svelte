@@ -7,12 +7,12 @@
   import { api } from '../lib/api';
   import type { CarriedItem, TrayItem } from '../lib/api';
   import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
-  import { openMenu, paperMenu } from '../lib/menu.svelte';
+  import { paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, togglePanel } from '../lib/panel.svelte';
-  import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, projectById, projectColor, setView, ticketTimes, words } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, ticketTimes, words } from '../lib/store.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { openResponses } from '../lib/responses';
   import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, trayMenu } from '../lib/trayActions';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
@@ -80,30 +80,9 @@
     toggle(item);
   }
 
-  // Saved responses: a quick menu of messages to paste into tickets. Picking one copies it;
-  // nothing is matched to a ticket (owner's call, round 8).
-  function editResponses() {
-    app.settingsSection = 'responses';
-    setView('settings');
-  }
-
-  async function openResponses(anchor: HTMLElement) {
-    const list = await attempt(() => api.listResponses());
-    if (!list) return;
-    const copy = (name: string, text: string) =>
-      void copyText(text).then((ok) => toast(ok ? `Copied “${name}”` : "Couldn't copy here."));
-    openMenu(anchor, {
-      sections: [
-        list.length > 0
-          ? {
-              head: 'Copy a response',
-              items: list.map((r) => ({ label: r.name, icon: 'copy' as const, act: () => copy(r.name, r.text) })),
-            }
-          : { head: 'No saved responses yet', items: [{ label: 'Add your first response', icon: 'plus', act: editResponses }] },
-        { items: [{ label: 'Edit responses', icon: 'edit', act: editResponses }] },
-      ],
-    });
-  }
+  // Saved responses: a quick menu of messages to paste into tickets (lib/responses.ts).
+  // From this button nothing is matched to a ticket (owner's call, round 8); ticking a ticket
+  // done offers the same menu for that ticket (round 21).
 
   const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item)));
   const carriedMenuFor = (item: CarriedItem) => carriedMenu(item, () => openNotepad(keyOf(item)));

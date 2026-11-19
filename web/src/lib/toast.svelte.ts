@@ -5,7 +5,15 @@
 
 import { remember, undoFrom, type Change } from './undoHistory';
 
-export const toastState = $state({ text: '', action: '', on: false, serial: 0 });
+export const toastState = $state({ text: '', action: '', also: '', on: false, serial: 0 });
+
+/** A second button on a toast (round 21: "Copy a response" beside Undo when a ticket is
+ *  ticked done). It gets the button itself, to hang a menu from, and leaves the toast up. */
+export interface ToastAlso {
+  label: string;
+  run: (button: HTMLElement) => void;
+}
+let alsoHandler: ((button: HTMLElement) => void) | null = null;
 
 /** How long a plain toast stays. */
 export const PLAIN_MS = 4800;
@@ -35,6 +43,7 @@ function schedule(ms: number): void {
     toastState.on = false;
     // A hidden toast's Undo must not run later (it stays in the page while it fades).
     handler = null;
+    alsoHandler = null;
   }, ms);
 }
 
@@ -47,8 +56,9 @@ export function toast(
   action = '',
   run: (() => void) | null = null,
   redo: (() => void) | null = null,
+  also: ToastAlso | null = null,
 ): void {
-  show(text, run ? action : '', run);
+  show(text, run ? action : '', run, also);
   if (run && action === 'Undo') {
     const change: Change = { id: nextChange++, text, at: Date.now(), undo: run, redo };
     changes.list = remember(changes.list, change);
@@ -56,9 +66,11 @@ export function toast(
   }
 }
 
-function show(text: string, action: string, run: (() => void) | null): void {
+function show(text: string, action: string, run: (() => void) | null, also: ToastAlso | null = null): void {
   toastState.text = text;
   toastState.action = action;
+  toastState.also = also?.label ?? '';
+  alsoHandler = also?.run ?? null;
   toastState.on = true;
   toastState.serial += 1;
   handler = run;
@@ -80,6 +92,13 @@ export function releaseToast(): void {
   if (!toastState.on || !held) return;
   held = false;
   schedule(Math.max(endsAt - Date.now(), AFTER_HOLD_MS));
+}
+
+/** The toast's second button: run it, and give the toast a little longer to be read. */
+export function runToastAlso(button: HTMLElement): void {
+  if (!toastState.on) return;
+  alsoHandler?.(button);
+  if (!held) schedule(Math.max(endsAt - Date.now(), AFTER_HOLD_MS));
 }
 
 export function runToastAction(): void {

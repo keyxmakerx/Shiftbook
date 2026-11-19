@@ -61,6 +61,7 @@ import type {
   NoteKind,
   NoteList,
   ResponseInput,
+  FilledResponse,
   SavedResponse,
   ResumeCard,
   ResumeTrigger,
@@ -449,6 +450,9 @@ export class TauriApi implements DataApi {
 
   listResponses(): Promise<SavedResponse[]> {
     return call('list_responses');
+  }
+  responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]> {
+    return call('responses_for', { ticket, today, name });
   }
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]> {
     return call('save_responses', { items });

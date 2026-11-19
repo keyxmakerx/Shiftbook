@@ -75,6 +75,7 @@
   import { closePanel } from '../lib/panel.svelte';
   import { easeOut, scale as motion } from '../lib/motion';
   import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay, setView } from '../lib/store.svelte';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
@@ -266,7 +267,13 @@
     };
     if (!(await set(true))) return;
     selected = new Set();
-    toast(items.length === 1 ? `${items[0]!.ticket} is done` : `${items.length} tickets done`, 'Undo', () => void set(false));
+    toast(
+      items.length === 1 ? `${items[0]!.ticket} is done` : `${items.length} tickets done`,
+      'Undo',
+      () => void set(false),
+      null,
+      items.length === 1 ? responseButton(items[0]!.ticket) : null,
+    );
   }
   /** The open tickets among the selected cards. */
   const pickedOpen = $derived(cards.filter((c) => selected.has(keyOf(c)) && c.tray && !c.tray.item.done));

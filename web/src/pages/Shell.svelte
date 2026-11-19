@@ -22,6 +22,7 @@
   import TimerBar from '../components/TimerBar.svelte';
   import ShortcutOverlay from '../components/ShortcutOverlay.svelte';
   import Toast from '../components/Toast.svelte';
+  import AskText from '../components/AskText.svelte';
   import DayPrompt from '../components/DayPrompt.svelte';
   import Settings from '../views/Settings.svelte';
   import Canvas from '../views/Canvas.svelte';
@@ -186,6 +187,7 @@
 <PaperMenu />
 <Toast />
 <DayPrompt />
+<AskText />
 <ShortcutOverlay />
 
 <style>

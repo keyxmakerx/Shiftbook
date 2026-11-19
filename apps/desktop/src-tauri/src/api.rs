@@ -1598,6 +1598,19 @@ pub struct ResponseView {
     text: String,
 }
 
+/// A saved response ready to copy: its blanks filled in (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct FilledResponseView {
+    id: shiftbook_core::ids::SavedResponseId,
+    name: String,
+    /// The message with `{ticket}`, `{date}` and (when a name was given) `{name}` filled in.
+    text: String,
+    /// It has a `{name}` blank and no name was given yet, so ask for one first.
+    asks_name: bool,
+}
+
 /// One saved response as typed in Settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1622,6 +1635,33 @@ fn response_views(items: Vec<shiftbook_core::model::SavedResponse>) -> Vec<Respo
 pub async fn list_responses(s: State<'_, VaultSession>) -> Res<Vec<ResponseView>> {
     let (store, owner) = s.data().await?;
     Ok(response_views(store.responses(owner).await?))
+}
+
+/// Maps to `DataApi.responsesFor()`: the saved responses ready to copy, with `{ticket}`,
+/// `{date}` and `{name}` filled in by `shiftbook_core::responses::fill_response`. With no
+/// ticket (the tray's Responses button) `{ticket}` stays as typed.
+#[tauri::command]
+pub async fn responses_for(
+    s: State<'_, VaultSession>,
+    ticket: Option<String>,
+    today: String,
+    name: Option<String>,
+) -> Res<Vec<FilledResponseView>> {
+    use shiftbook_core::responses::{asks_name, fill_response};
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let named = name.as_deref().is_some_and(|n| !n.trim().is_empty());
+    Ok(store
+        .responses(owner)
+        .await?
+        .into_iter()
+        .map(|r| FilledResponseView {
+            id: r.id,
+            name: r.name,
+            asks_name: !named && asks_name(&r.text),
+            text: fill_response(&r.text, ticket.as_deref(), today, name.as_deref()),
+        })
+        .collect())
 }
 
 /// Maps to `DataApi.saveResponses()`: replace the list (an empty list clears it).

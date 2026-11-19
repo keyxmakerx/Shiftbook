@@ -775,6 +775,16 @@ export interface SavedResponse {
   text: string;
 }
 
+/** A saved response ready to copy, its blanks filled in (round 21). */
+export interface FilledResponse {
+  id: string;
+  name: string;
+  /** The message with {ticket}, {date} and (once a name is given) {name} filled in. */
+  text: string;
+  /** It has a {name} blank and no name was given: ask for one, then ask again with it. */
+  asksName: boolean;
+}
+
 /** A saved response as typed in Settings (a blank name uses the message's first line). */
 export interface ResponseInput {
   name: string;
@@ -1379,6 +1389,11 @@ export interface DataApi {
   // ----- saved responses -----
   /** Saved responses, in order. Tauri: `list_responses`. */
   listResponses(): Promise<SavedResponse[]>;
+  /**
+   * The saved responses ready to copy: {ticket} (when one is given), {date} and {name} (when
+   * one is given) filled in. Tauri: `responses_for`.
+   */
+  responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]>;
   /** Replace the list (rows with no message dropped, at most 30). Tauri: `save_responses`. */
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 

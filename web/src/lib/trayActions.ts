@@ -10,6 +10,7 @@ import type { MenuItem, MenuSpec } from './menu.svelte';
 import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
+import { responseButton } from './responses';
 import { toast } from './toast.svelte';
 import { repeating, repeatingChoices } from './repeating.svelte';
 import { openWindow } from './windows.svelte';
@@ -29,6 +30,7 @@ export async function setTrayDone(item: TrayItem, done: boolean): Promise<void> 
     'Undo',
     () => void attempt(() => api.traySetDone(item.id, !done)).then(applyTray),
     () => void attempt(() => api.traySetDone(item.id, done)).then(applyTray),
+    done ? responseButton(item.ticket) : null,
   );
 }
 
@@ -73,6 +75,7 @@ export async function setCarriedDone(item: CarriedItem, done: boolean): Promise<
     'Undo',
     () => void set(!done),
     () => void set(done),
+    done ? responseButton(item.ticket) : null,
   );
 }
 

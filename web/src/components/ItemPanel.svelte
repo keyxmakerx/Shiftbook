@@ -15,6 +15,7 @@
   import { setTrayDone, setTrayProject, setTrayRepeating } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
@@ -140,13 +141,15 @@
     void refresh();
   }
 
-  async function tickTicket(ticketId: string, done: boolean) {
+  async function tickTicket(ticketId: string, number: string, done: boolean, say = true) {
     const updated = await attempt(() => api.ticketSetDone(ticketId, done));
     if (!updated) return;
     putEntry(updated);
     // The ticket is one item: its rows in the Tickets list change too, so reload them.
     await refresh();
     onsaved?.();
+    // Round 21: done offers a saved response for the ticket, with Undo as elsewhere.
+    if (say && done) toast(`${number} is done`, 'Undo', () => void tickTicket(ticketId, number, false, false), null, responseButton(number));
   }
 
   async function detach(ticketId: string, number: string) {
@@ -218,7 +221,7 @@
             aria-pressed={t.done}
             title={t.done ? 'Done. Click if it is still open.' : 'Still open. Click when it is done.'}
             aria-label={t.done ? `${t.number} is done; mark it still open` : `${t.number} is still open; mark it done`}
-            onclick={() => void tickTicket(t.id, !t.done)}
+            onclick={() => void tickTicket(t.id, t.number, !t.done)}
           >
             {#if t.done}<Icon name="check" size={10} />{/if}
           </button>
