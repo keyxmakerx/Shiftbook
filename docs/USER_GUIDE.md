@@ -113,7 +113,8 @@ works the way it does is in `DECISIONS.md`.
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
   entries that need a code, the tray and a short “Tomorrow I start with…” list.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
-  with nothing logged gets a dot, and clicking it opens Log work for that day.
+  with nothing logged gets a dot, and clicking it opens Log work for that day (days before your
+  first entry never get one, and the Timesheet doesn't warn about them).
 - **Time is written as 45m and 1h 30m** everywhere except the Timesheet, which keeps decimal
   hours (0.75, 1.5) because that is what a timesheet tool takes.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code
@@ -126,7 +127,8 @@ works the way it does is in `DECISIONS.md`.
 - **Repeating:** bills, bins, renewals and birthdays. Each one repeats or expires on a date;
   **Done** marks it for today (with Undo), and overdue or due-soon things show on the Desk and in
   the bell. After a break, the bell opens on **While you were away**.
-- **Projects (under Organise):** a card for each project with its hours and open tickets.
+- **Projects (under Organise):** a card for each project with its hours and open tickets. Anywhere
+  you pick a project there is also **+ New project…**: type a name and it is made and chosen.
   **Edit** (or a right-click) renames it, changes its colour or archives it. A ticket with no
   project of its own shows under the project of the work it was last logged on.
 - **Lists:** shopping, packing or "before we go away" lists. Paste several lines at once; **Reset

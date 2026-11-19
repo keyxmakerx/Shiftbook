@@ -163,17 +163,27 @@ fn entries_and_tickets() {
         let mut first = input(DAY, 90, " Firewall cleanup ");
         first.project = Some(p.id);
         first.next_step = Some("Remove the old rule Friday".into());
+        assert_eq!(s.first_entry_date(me).await.unwrap(), None);
         let rec = s
             .create_entry(me, &first, "CHG0012345\nINC1, inc1; INC2")
             .await
             .unwrap();
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(DAY));
+        assert_eq!(s.first_entry_date(other).await.unwrap(), None);
         assert_eq!(rec.entry.description, "Firewall cleanup");
         assert_eq!(rec.entry.target, EntryTarget::Project(p.id));
         assert_eq!(numbers(&rec), ["CHG0012345", "INC1", "INC2"]);
         assert!(!rec.is_tray);
-        s.create_entry(me, &input(date!(2026 - 10 - 14), 30, "Yesterday"), "")
+        let yesterday = s
+            .create_entry(me, &input(date!(2026 - 10 - 14), 30, "Yesterday"), "")
             .await
             .unwrap();
+        // The earliest entry that is still there counts.
+        let earliest = date!(2026 - 10 - 14);
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(earliest));
+        s.delete_entry(me, yesterday.entry.id).await.unwrap();
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(DAY));
+        s.restore_entry(me, yesterday.entry.id).await.unwrap();
         s.create_entry(me, &input(date!(2026 - 10 - 20), 30, "Later"), "")
             .await
             .unwrap();

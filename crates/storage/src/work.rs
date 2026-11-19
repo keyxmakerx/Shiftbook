@@ -1049,6 +1049,19 @@ impl SqliteStore {
         entry_record(&mut conn, owner, id).await
     }
 
+    /// The day of the earliest live entry, if there is one (so nothing before it counts as
+    /// a missed day).
+    pub async fn first_entry_date(&self, owner: OwnerId) -> Result<Option<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let first: Option<String> = sqlx::query_scalar(
+            "SELECT MIN(date) FROM time_entries WHERE owner_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .fetch_one(&mut *conn)
+        .await?;
+        first.as_deref().map(corrupt_date).transpose()
+    }
+
     /// Live entries from `from` to `to` (inclusive), by date then creation.
     pub async fn list_entries(
         &self,

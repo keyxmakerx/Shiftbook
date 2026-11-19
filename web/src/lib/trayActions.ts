@@ -7,6 +7,7 @@ import { followUpItem } from './bringUp';
 import { attachMop, mopFor, openMop } from './mops.svelte';
 import { fmtMinutes } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { newProjectChoice } from './newProject';
 import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
@@ -177,6 +178,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
       act: () => void setTrayProject(item, null),
     },
     ...repeatingChoices(item.recurringId, (id) => void setTrayRepeating(item, id)),
+    newProjectChoice((id) => void setTrayProject(item, id)),
   ];
   const under = choices.find((c) => c.checked)?.label;
   items.push({ label: 'Counts under', icon: 'folder', ...(under ? { value: under } : {}), sub: [{ choices }] });

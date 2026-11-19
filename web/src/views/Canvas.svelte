@@ -70,6 +70,7 @@
   import { sameWork } from '../lib/sameWork';
   import { dayMonth, fmtMinutes, fromIso, weekdayShort } from '../lib/format';
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
+  import { newProjectChoice } from '../lib/newProject';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel } from '../lib/panel.svelte';
@@ -1351,10 +1352,11 @@
         ],
       },
     ];
-    if (mode === 'free' && without.length > 0) {
+    if (mode === 'free') {
+      const here = (id: string) => void addArea(id, Math.round(at.x), Math.round(at.y));
       sections.push({
         head: 'Project area here',
-        choices: without.map((p) => ({ label: p.name, color: p.color, checked: false, act: () => void addArea(p.id, Math.round(at.x), Math.round(at.y)) })),
+        choices: [...without.map((p) => ({ label: p.name, color: p.color, checked: false, act: () => here(p.id) })), newProjectChoice(here)],
       });
     }
     openMenu(menuAnchor, { sections });

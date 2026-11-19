@@ -6,6 +6,7 @@ import type { Entry } from './api';
 import { followUpItem } from './bringUp';
 import { sameWork } from './sameWork';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { newProjectChoice } from './newProject';
 import { openNotepad } from './panel.svelte';
 import { pinMenuItem } from './pins.svelte';
 import { openWindow } from './windows.svelte';
@@ -200,6 +201,7 @@ export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
       .filter((p) => !p.archived)
       .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveEntryTo(entry, p.id, also) })),
     { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveEntryTo(entry, null, also) },
+    newProjectChoice((id) => void moveEntryTo(entry, id, also)),
   ];
   items.push({
     label: 'Project',

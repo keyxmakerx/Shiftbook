@@ -10,6 +10,7 @@
   import { bringUpSection, followWords } from '../lib/bringUp';
   import { addEntryTime, canTime, moveEntryTo, moveEntryToRepeating } from '../lib/entryActions';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { newProjectChoice } from '../lib/newProject';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { repeating, repeatingChoices } from '../lib/repeating.svelte';
   import { setTrayDone, setTrayProject, setTrayRepeating } from '../lib/trayActions';
@@ -126,6 +127,7 @@
               checked: projectId === null && recurringId === null,
               act: () => pick(null),
             },
+            newProjectChoice(pick),
           ],
         },
       ],

@@ -8,6 +8,7 @@
   import type { MeetingSeries, SeriesInput } from '../../lib/api';
   import { refreshBell } from '../../lib/bell.svelte';
   import { app, attempt, words } from '../../lib/store.svelte';
+  import { NEW_PROJECT, NEW_PROJECT_VALUE, newProject } from '../../lib/newProject';
   import { toast } from '../../lib/toast.svelte';
 
   const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -35,6 +36,19 @@
   }
 
   /** Save a row once it has a name and a day; a new one is added the first time. */
+  /** The "log to" box: a project, none, or "+ New project…" (made, then chosen). */
+  async function pickProject(r: Row, box: HTMLSelectElement) {
+    if (box.value === NEW_PROJECT_VALUE) {
+      box.value = r.projectId ?? '';
+      const made = await newProject();
+      if (!made) return;
+      r.projectId = made.id;
+    } else {
+      r.projectId = box.value || null;
+    }
+    await save(r);
+  }
+
   async function save(r: Row) {
     if (!r.name.trim() || !r.days.some(Boolean)) return;
     const input: SeriesInput = {
@@ -146,13 +160,11 @@
           class="text-in"
           value={r.projectId ?? ''}
           aria-label="Log its time to"
-          onchange={(e) => {
-            r.projectId = (e.currentTarget as HTMLSelectElement).value || null;
-            void save(r);
-          }}
+          onchange={(e) => void pickProject(r, e.currentTarget)}
         >
           <option value="">No project</option>
           {#each app.projects.filter((p) => !p.archived || p.id === r.projectId) as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+          <option value={NEW_PROJECT_VALUE}>{NEW_PROJECT}</option>
         </select>
       </label>
       <button type="button" class="ib" aria-label="Remove {r.name || 'this meeting'}" onclick={() => void remove(r)}>

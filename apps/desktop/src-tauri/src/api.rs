@@ -925,7 +925,11 @@ pub async fn ribbon(s: State<'_, VaultSession>, today: String) -> Res<Vec<Ribbon
         .map(|r| r.entry)
         .collect();
     let mut weeks = build_ribbon(today, start, RIBBON_WEEKS, &entries);
-    mark_gaps(&mut weeks, &store.prefs(owner).await?.day_targets);
+    mark_gaps(
+        &mut weeks,
+        &store.prefs(owner).await?.day_targets,
+        store.first_entry_date(owner).await?,
+    );
     Ok(weeks)
 }
 
@@ -1026,6 +1030,7 @@ pub(crate) async fn week_sheet_for(
     let ctx = SheetContext {
         week_start: start,
         today,
+        first_logged: store.first_entry_date(owner).await?,
         group_by: group_by.unwrap_or(prefs.group_by),
         format: &prefs.comment,
         codes: &codes,

@@ -9,6 +9,7 @@
   import { copyText } from '../lib/protection.svelte';
   import { countTo } from '../lib/motion';
   import { app, attempt, flashEntry, projectColor, putEntry, refresh } from '../lib/store.svelte';
+  import { NEW_PROJECT, newProject } from '../lib/newProject';
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
@@ -165,6 +166,18 @@
     return true;
   }
 
+  /** "+ New project…": make one and file this entry under it. */
+  async function addProject() {
+    const e = entry;
+    if (!e) return;
+    const made = await newProject();
+    if (!made) return;
+    const updated = await attempt(() => api.updateEntry(e.id, inputOf(e, { projectId: made.id, recurringId: null })));
+    if (!updated) return;
+    put(updated);
+    void refresh();
+  }
+
   async function step(delta: number) {
     const e = entry;
     if (!e) return;
@@ -283,6 +296,7 @@
           >
             No project
           </button>
+          <button type="button" class="new-proj" style:--c="var(--none)" onclick={() => void addProject()}>{NEW_PROJECT}</button>
         </div>
         {#if homes.length}
           <span class="grp rep-grp">Repeating</span>
@@ -566,6 +580,11 @@
     transition:
       background 0.25s,
       color 0.25s;
+  }
+
+  .pills button.new-proj {
+    border-style: dashed;
+    color: var(--mut);
   }
 
   .pills button.rep {

@@ -16,6 +16,7 @@
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
   import { openMenu } from '../lib/menu.svelte';
+  import { NEW_PROJECT, NEW_PROJECT_VALUE, newProject } from '../lib/newProject';
   import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, openWiki, projectColor, projectName, words } from '../lib/store.svelte';
   import { mops, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
@@ -123,6 +124,21 @@
     editing = true;
     saveState = '';
     queueMicrotask(() => titleEl?.focus());
+  }
+
+  /** The project box: a project, none, or "+ New project…" (made, then chosen). */
+  async function pickProject(box: HTMLSelectElement) {
+    const d = draft;
+    if (box.value !== NEW_PROJECT_VALUE) {
+      d.projectId = box.value || null;
+      edited();
+      return;
+    }
+    box.value = d.projectId ?? '';
+    const made = await newProject();
+    if (!made || d !== draft) return;
+    d.projectId = made.id;
+    edited();
   }
 
   function edited() {
@@ -372,9 +388,10 @@
         </label>
         <label class="field">
           <span class="lbl">Project</span>
-          <select class="text-in" bind:value={draft.projectId} onchange={edited}>
-            <option value={null}>No project</option>
+          <select class="text-in" value={draft.projectId ?? ''} onchange={(e) => void pickProject(e.currentTarget)}>
+            <option value="">No project</option>
             {#each projects as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+            <option value={NEW_PROJECT_VALUE}>{NEW_PROJECT}</option>
           </select>
         </label>
         <label class="field grow">
