@@ -4,23 +4,15 @@
   // tomorrow. "Where was I?" shows that list the next morning.
   import { tick } from 'svelte';
   import { api } from '../lib/api';
-  import { fmtHours, weekdayLong } from '../lib/format';
+  import { fmtMinutes, weekdayLong } from '../lib/format';
   import { app, attempt, ribbonDay, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { clockLabel, insertLine, isWrapupTime, MAX_LINES, removeLine } from '../lib/wrapup';
-
-  let now = $state(new Date());
-  $effect(() => {
-    const t = setInterval(() => (now = new Date()), 30_000);
-    return () => clearInterval(t);
-  });
+  import { clockLabel, insertLine, MAX_LINES, removeLine } from '../lib/wrapup';
+  import { closeWrapup, reopenWrapup, wrapupDue } from '../lib/wrapupState.svelte';
+  import { hasTimesheet } from '../lib/words';
 
   const at = $derived(app.prefs?.wrapupAt ?? null);
-  const show = $derived(
-    app.selected === app.today &&
-      app.wrapupClosed !== app.today &&
-      (app.wrapupNow === app.today || (!!at && isWrapupTime(now, at))),
-  );
+  const show = $derived(app.selected === app.today && wrapupDue());
 
   let lines = $state(['']);
   let uncoded = $state(0);
@@ -76,7 +68,7 @@
     const saved = await attempt(() => api.setNextUp(lines));
     saving = false;
     if (!saved) return;
-    app.wrapupClosed = app.today;
+    closeWrapup();
     toast(
       saved.length
         ? `Saved ${saved.length === 1 ? 'one thing' : `${saved.length} things`} for tomorrow. Good work today.`
@@ -85,8 +77,8 @@
   }
 
   function later() {
-    app.wrapupClosed = app.today;
-    toast('Wrap-up put away until tomorrow', 'Undo', () => (app.wrapupClosed = ''));
+    closeWrapup();
+    toast('Wrap-up put away until tomorrow', 'Undo', reopenWrapup);
   }
 </script>
 
@@ -98,16 +90,18 @@
     </div>
 
     <div class="stats">
-      <div><b>{fmtHours(dayMinutes)} h</b><span class="lbl">logged today</span></div>
-      <button
-        type="button"
-        class="stat"
-        class:warn={uncoded > 0}
-        title="Open the Timesheet to pick codes"
-        onclick={() => setView('timesheet')}
-      >
-        <b>{uncoded}</b><span class="lbl">{uncoded === 1 ? 'needs a code' : 'need a code'}</span>
-      </button>
+      <div><b>{fmtMinutes(dayMinutes)}</b><span class="lbl">logged today</span></div>
+      {#if hasTimesheet(app.prefs)}
+        <button
+          type="button"
+          class="stat"
+          class:warn={uncoded > 0}
+          title="Open the Timesheet to pick codes"
+          onclick={() => setView('timesheet')}
+        >
+          <b>{uncoded}</b><span class="lbl">{uncoded === 1 ? 'needs a code' : 'need a code'}</span>
+        </button>
+      {/if}
       <div><b>{trayCount}</b><span class="lbl">{trayCount === 1 ? 'ticket in tray' : 'tickets in tray'}</span></div>
     </div>
 
@@ -175,7 +169,7 @@
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
     gap: 8px;
   }
 

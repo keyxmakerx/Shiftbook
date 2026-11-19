@@ -5,7 +5,9 @@
 //! Every command maps 1:1 to a `DataApi` method in `web/src/lib/api/`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::capture::{parse_capture, Capture, CaptureProject};
+use shiftbook_core::capture::{
+    capture_lines, parse_capture, without_time, Capture, CaptureProject,
+};
 use shiftbook_core::dates::{add_days, format_date, format_timestamp, parse_date};
 use shiftbook_core::fields::{build_link, AppliesTo, FieldKind};
 use shiftbook_core::hours::format_hours;
@@ -18,6 +20,7 @@ use shiftbook_core::model::{
     CustomField, EntryTarget, ListName, Project, RecurringTask, TimesheetCode,
 };
 use shiftbook_core::nextup::{bring_up_on, next_work_day};
+use shiftbook_core::nudge::LeaveOffer;
 use shiftbook_core::prefs::Prefs;
 use shiftbook_core::resume::{
     resume_due, resume_start, ResumeStart, ResumeTrigger, LOOK_BACK_DAYS,
@@ -26,12 +29,16 @@ use shiftbook_core::ribbon::{build_ribbon, mark_gaps, ribbon_range, RibbonWeek, 
 use shiftbook_core::samework::should_ask;
 use shiftbook_core::search::rank;
 use shiftbook_core::sheet::{build_week_sheet, EntryWithTickets, GroupBy, SheetContext, WeekSheet};
+use shiftbook_core::timeoff::{mark_off, one_day_off, plan_time_off, TimeOffPlan};
 use shiftbook_core::timer::{TimerOffer, MAX_QUIET_STRETCHES};
 use shiftbook_core::timesheet::{CodeDefaults, ResolvedCode};
+use shiftbook_core::tray::{open_ages, OpenAge};
 use shiftbook_core::week::{week_of, WeekStart};
 use shiftbook_storage::extras::{CodeInput, FieldInput};
 use shiftbook_storage::repo::ListOptionRepository;
-use shiftbook_storage::work::{CarriedTicket, EntryInput, EntryRecord, ProjectInput, TrayDay};
+use shiftbook_storage::work::{
+    CarriedTicket, EntryInput, EntryRecord, ProjectInput, SplitHome, SplitSecond, TrayDay,
+};
 use shiftbook_storage::SqliteStore;
 use tauri::State;
 use time::Date;
@@ -539,6 +546,17 @@ pub async fn get_entry(s: State<'_, VaultSession>, id: String) -> Res<EntryView>
     one_entry(&store, owner, rec).await
 }
 
+/// Maps to `DataApi.ticketAges()`: how long each still-open ticket has been open on `today`,
+/// the longest first (round 21).
+#[tauri::command]
+pub async fn ticket_ages(s: State<'_, VaultSession>, today: String) -> Res<Vec<OpenAge>> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let after = store.prefs(owner).await?.ticket_stale_days;
+    let open = store.open_ticket_days(owner, today).await?;
+    Ok(open_ages(&open, today, after))
+}
+
 /// Maps to `DataApi.trayItem()`: one tray ticket, for a window showing its notepad.
 #[tauri::command]
 pub async fn tray_item(s: State<'_, VaultSession>, id: String) -> Res<Option<TrayItemView>> {
@@ -559,6 +577,116 @@ pub async fn set_entry_notes(
 ) -> Res<EntryView> {
     let (store, owner) = s.data().await?;
     let rec = store.set_entry_notes(owner, id_arg(&id)?, &notes).await?;
+    one_entry(&store, owner, rec).await
+}
+
+/// A split's two entries (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct SplitView {
+    first: EntryView,
+    second: EntryView,
+}
+
+/// The second part of a split, as the dialog sends it.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SplitArgs {
+    first_minutes: u32,
+    first_description: String,
+    second_description: String,
+    /// True keeps the first part's project (or repeating thing); false uses `second_project`.
+    same_home: bool,
+    second_project: Option<String>,
+}
+
+/// Maps to `DataApi.splitEntry()`: one entry becomes two that share its time (round 21).
+#[tauri::command]
+pub async fn split_entry(
+    s: State<'_, VaultSession>,
+    id: String,
+    split: SplitArgs,
+) -> Res<SplitView> {
+    let (store, owner) = s.data().await?;
+    let home = if split.same_home {
+        SplitHome::Same
+    } else {
+        SplitHome::Project(opt_id(&split.second_project)?)
+    };
+    let second = SplitSecond {
+        description: split.second_description,
+        home,
+    };
+    let (a, b) = store
+        .split_entry(
+            owner,
+            id_arg(&id)?,
+            Minutes(split.first_minutes),
+            &split.first_description,
+            &second,
+        )
+        .await?;
+    let links = links_for(&store, owner).await?;
+    Ok(SplitView {
+        first: entry_view(a, &links),
+        second: entry_view(b, &links),
+    })
+}
+
+/// A merge that was made, with what Undo needs (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct MergeView {
+    entry: EntryView,
+    /// The tickets that moved over from the other entry.
+    moved: Vec<String>,
+    minutes_before: u32,
+    notes_before: Option<String>,
+}
+
+/// Maps to `DataApi.mergeEntries()`: `other` goes into `keep` (same day only).
+#[tauri::command]
+pub async fn merge_entries(
+    s: State<'_, VaultSession>,
+    keep: String,
+    other: String,
+) -> Res<MergeView> {
+    let (store, owner) = s.data().await?;
+    let done = store
+        .merge_entries(owner, id_arg(&keep)?, id_arg(&other)?)
+        .await?;
+    Ok(MergeView {
+        moved: done.moved.iter().map(ToString::to_string).collect(),
+        minutes_before: done.minutes_before.get(),
+        notes_before: done.notes_before,
+        entry: one_entry(&store, owner, done.entry).await?,
+    })
+}
+
+/// Maps to `DataApi.unmergeEntries()`: undo a merge.
+#[tauri::command]
+pub async fn unmerge_entries(
+    s: State<'_, VaultSession>,
+    keep: String,
+    other: String,
+    minutes: u32,
+    notes: Option<String>,
+    moved: Vec<String>,
+) -> Res<EntryView> {
+    let (store, owner) = s.data().await?;
+    let moved: Vec<TicketId> = moved.iter().map(|t| id_arg(t)).collect::<Res<_>>()?;
+    let rec = store
+        .unmerge_entries(
+            owner,
+            id_arg(&keep)?,
+            id_arg(&other)?,
+            Minutes(minutes),
+            notes.as_deref(),
+            &moved,
+        )
+        .await?;
     one_entry(&store, owner, rec).await
 }
 
@@ -779,6 +907,55 @@ pub async fn parse_capture_line(
     ))
 }
 
+/// One of several lines pasted into Log work (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureLineView {
+    /// The line to log: its words without the list marker or the time.
+    text: String,
+    /// What it means; `minutes` is set when the line had a time in it.
+    capture: Capture,
+}
+
+/// Several lines pasted into Log work, read one by one.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct CaptureLinesView {
+    lines: Vec<CaptureLineView>,
+    /// Lines past the most taken at once.
+    left_out: u32,
+}
+
+/// Maps to `DataApi.captureLines()`: pasted text as Log work lines, one entry each.
+#[tauri::command]
+pub async fn capture_lines_of(
+    s: State<'_, VaultSession>,
+    text: String,
+    today: String,
+) -> Res<CaptureLinesView> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let projects = store.list_projects(owner).await?;
+    let repeating = store.recurring_all(owner).await?;
+    let start = week_start(&store, owner).await?;
+    let (lines, more) = capture_lines(&text);
+    Ok(CaptureLinesView {
+        lines: lines
+            .into_iter()
+            .map(|line| {
+                let capture = capture_with(&line, today, start, &projects, &repeating);
+                CaptureLineView {
+                    text: without_time(&line, &capture),
+                    capture,
+                }
+            })
+            .collect(),
+        left_out: u32::try_from(more).unwrap_or(u32::MAX),
+    })
+}
+
 /// Maps to `DataApi.captureLog()`: log a capture line (it must have hours).
 #[tauri::command]
 pub async fn capture_log(
@@ -907,6 +1084,26 @@ pub async fn tray_carry(s: State<'_, VaultSession>, id: String, date: String) ->
     tray_result(&store, owner, day).await
 }
 
+/// Maps to `DataApi.traySnooze()`: keep a still-open ticket out of "Still open from before"
+/// until `until` (round 21), or wake it now with no day. `today` is the day it is done on and
+/// `date` the tray that is showing, which comes back.
+#[tauri::command]
+pub async fn tray_snooze(
+    s: State<'_, VaultSession>,
+    ticket: String,
+    today: String,
+    until: Option<String>,
+    date: String,
+) -> Res<TrayDayView> {
+    let (store, owner) = s.data().await?;
+    let until = until.as_deref().map(date_arg).transpose()?;
+    store
+        .snooze_ticket(owner, &ticket, date_arg(&today)?, until)
+        .await?;
+    let day = store.tray_day(owner, date_arg(&date)?).await?;
+    tray_result(&store, owner, day).await
+}
+
 /// Maps to `DataApi.trayRemove()`.
 #[tauri::command]
 pub async fn tray_remove(s: State<'_, VaultSession>, id: String) -> Res<TrayDayView> {
@@ -921,6 +1118,116 @@ pub async fn tray_restore(s: State<'_, VaultSession>, id: String) -> Res<TrayDay
     let (store, owner) = s.data().await?;
     let day = store.tray_restore(owner, id_arg(&id)?).await?;
     tray_result(&store, owner, day).await
+}
+
+// ---------- the wrap-up on the way out ----------
+
+/// Maps to `DataApi.leaveOffer()`: whether to offer the wrap-up when locking or closing at
+/// `now` (minutes after local midnight on `today`), with today's hours to say (round 21).
+#[tauri::command]
+pub async fn leave_offer(
+    s: State<'_, VaultSession>,
+    today: String,
+    now: u32,
+) -> Res<Option<LeaveOffer>> {
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let prefs = store.prefs(owner).await?;
+    let entries = store.list_entries(owner, today, today).await?;
+    let logged = entries.iter().map(|r| r.entry.minutes).sum();
+    let has_work = !entries.is_empty() || !store.tray_day(owner, today).await?.items.is_empty();
+    let day_off = !store.days_off(owner, today, today).await?.is_empty();
+    Ok(shiftbook_core::nudge::leave_offer(
+        &prefs,
+        today,
+        now.min(24 * 60 - 1),
+        logged,
+        has_work,
+        day_off,
+    ))
+}
+
+// ---------- time off ----------
+
+/// Time off that was booked (round 21): the new entries, for Undo.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct TimeOffBooked {
+    /// The "Holiday" entries, one per day booked, in day order.
+    entries: Vec<String>,
+    /// Their time together, as decimal hours.
+    hours: String,
+}
+
+async fn time_off_plan_for(
+    store: &shiftbook_storage::SqliteStore,
+    owner: shiftbook_core::ids::OwnerId,
+    from: &str,
+    to: &str,
+) -> Res<TimeOffPlan> {
+    let (from, to) = (date_arg(from)?, date_arg(to)?);
+    let targets = store.prefs(owner).await?.day_targets;
+    let logged = store.logged_days(owner, from, to).await?;
+    Ok(
+        plan_time_off(from, to, &targets, &logged)
+            .map_err(shiftbook_storage::StorageError::from)?,
+    )
+}
+
+/// Maps to `DataApi.timeOffPlan()`: what booking `from` to `to` off would do. Work days
+/// with nothing logged get booked; weekends and days already logged are skipped.
+#[tauri::command]
+pub async fn time_off_plan(
+    s: State<'_, VaultSession>,
+    from: String,
+    to: String,
+) -> Res<TimeOffPlan> {
+    let (store, owner) = s.data().await?;
+    time_off_plan_for(&store, owner, &from, &to).await
+}
+
+/// Maps to `DataApi.bookTimeOff()`: book the plan for `from` to `to`.
+#[tauri::command]
+pub async fn book_time_off(
+    s: State<'_, VaultSession>,
+    from: String,
+    to: String,
+) -> Res<TimeOffBooked> {
+    let (store, owner) = s.data().await?;
+    let plan = time_off_plan_for(&store, owner, &from, &to).await?;
+    let days: Vec<_> = plan.to_book().collect();
+    let entries = store.book_days_off(owner, &days).await?;
+    Ok(TimeOffBooked {
+        entries: entries.iter().map(ToString::to_string).collect(),
+        hours: plan.hours,
+    })
+}
+
+/// Maps to `DataApi.bookDayOff()`: book one day off, whatever is on it already. It gets
+/// the weekday's usual hours, or 8 h on a day that has none.
+#[tauri::command]
+pub async fn book_day_off(s: State<'_, VaultSession>, date: String) -> Res<TimeOffBooked> {
+    let (store, owner) = s.data().await?;
+    let date = date_arg(&date)?;
+    let minutes = one_day_off(date, &store.prefs(owner).await?.day_targets);
+    let entries = store.book_days_off(owner, &[(date, minutes)]).await?;
+    Ok(TimeOffBooked {
+        entries: entries.iter().map(ToString::to_string).collect(),
+        hours: shiftbook_core::hours::format_hours(minutes),
+    })
+}
+
+/// Maps to `DataApi.unbookDayOff()`: the day's "Holiday" entries are deleted (they can be
+/// restored). Returns their ids.
+#[tauri::command]
+pub async fn unbook_day_off(s: State<'_, VaultSession>, date: String) -> Res<Vec<String>> {
+    let (store, owner) = s.data().await?;
+    let ids = store.day_off_entries(owner, date_arg(&date)?).await?;
+    for id in &ids {
+        store.delete_entry(owner, *id).await?;
+    }
+    Ok(ids.iter().map(ToString::to_string).collect())
 }
 
 // ---------- ribbon and timesheet ----------
@@ -939,7 +1246,12 @@ pub async fn ribbon(s: State<'_, VaultSession>, today: String) -> Res<Vec<Ribbon
         .map(|r| r.entry)
         .collect();
     let mut weeks = build_ribbon(today, start, RIBBON_WEEKS, &entries);
-    mark_gaps(&mut weeks, &store.prefs(owner).await?.day_targets);
+    mark_gaps(
+        &mut weeks,
+        &store.prefs(owner).await?.day_targets,
+        store.first_entry_date(owner).await?,
+    );
+    mark_off(&mut weeks, &store.days_off(owner, from, to).await?);
     Ok(weeks)
 }
 
@@ -1040,6 +1352,7 @@ pub(crate) async fn week_sheet_for(
     let ctx = SheetContext {
         week_start: start,
         today,
+        first_logged: store.first_entry_date(owner).await?,
         group_by: group_by.unwrap_or(prefs.group_by),
         format: &prefs.comment,
         codes: &codes,
@@ -1612,6 +1925,19 @@ pub struct ResponseView {
     text: String,
 }
 
+/// A saved response ready to copy: its blanks filled in (round 21).
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct FilledResponseView {
+    id: shiftbook_core::ids::SavedResponseId,
+    name: String,
+    /// The message with `{ticket}`, `{date}` and (when a name was given) `{name}` filled in.
+    text: String,
+    /// It has a `{name}` blank and no name was given yet, so ask for one first.
+    asks_name: bool,
+}
+
 /// One saved response as typed in Settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -1636,6 +1962,55 @@ fn response_views(items: Vec<shiftbook_core::model::SavedResponse>) -> Vec<Respo
 pub async fn list_responses(s: State<'_, VaultSession>) -> Res<Vec<ResponseView>> {
     let (store, owner) = s.data().await?;
     Ok(response_views(store.responses(owner).await?))
+}
+
+/// Maps to `DataApi.openTicketLink()`: hand one of `ticket`'s links to the user's own browser
+/// (round 21, card r21-open-links). The page can't open an address of its choosing: `url`
+/// has to be one of the links the user's own link fields build for that ticket, and a web
+/// address (`shiftbook_core::fields::may_open`). Shiftbook itself still never goes online.
+#[tauri::command]
+pub async fn open_ticket_link(
+    app: tauri::AppHandle,
+    s: State<'_, VaultSession>,
+    ticket: String,
+    url: String,
+) -> Res<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let (store, owner) = s.data().await?;
+    let fields = links_for(&store, owner).await?;
+    if !shiftbook_app::views::ticket_link_allowed(&fields, &ticket, &url) {
+        return Err(CommandError::InvalidInput);
+    }
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|_| CommandError::StorageError)
+}
+
+/// Maps to `DataApi.responsesFor()`: the saved responses ready to copy, with `{ticket}`,
+/// `{date}` and `{name}` filled in by `shiftbook_core::responses::fill_response`. With no
+/// ticket (the tray's Responses button) `{ticket}` stays as typed.
+#[tauri::command]
+pub async fn responses_for(
+    s: State<'_, VaultSession>,
+    ticket: Option<String>,
+    today: String,
+    name: Option<String>,
+) -> Res<Vec<FilledResponseView>> {
+    use shiftbook_core::responses::{asks_name, fill_response};
+    let (store, owner) = s.data().await?;
+    let today = date_arg(&today)?;
+    let named = name.as_deref().is_some_and(|n| !n.trim().is_empty());
+    Ok(store
+        .responses(owner)
+        .await?
+        .into_iter()
+        .map(|r| FilledResponseView {
+            id: r.id,
+            name: r.name,
+            asks_name: !named && asks_name(&r.text),
+            text: fill_response(&r.text, ticket.as_deref(), today, name.as_deref()),
+        })
+        .collect())
 }
 
 /// Maps to `DataApi.saveResponses()`: replace the list (an empty list clears it).

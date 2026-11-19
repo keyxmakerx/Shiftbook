@@ -19,6 +19,7 @@ import type { LabelView as GenCanvasLabel } from './generated/LabelView';
 import type { DeskLinkView as GenCanvasLink } from './generated/DeskLinkView';
 import type { StackView as GenCanvasStack } from './generated/StackView';
 import type { Capture as GenCapture } from './generated/Capture';
+import type { CaptureLinesView as GenCaptureLines } from './generated/CaptureLinesView';
 import type { CardKind as GenCardKind } from './generated/CardKind';
 import type { CardRefView as GenCardRef } from './generated/CardRefView';
 import type { CarriedView as GenCarriedItem } from './generated/CarriedView';
@@ -33,6 +34,13 @@ import type { EntryView as GenEntry } from './generated/EntryView';
 import type { FieldKind as GenFieldKind } from './generated/FieldKind';
 import type { FingerprintStatus as GenFingerprintStatus } from './generated/FingerprintStatus';
 import type { FollowUpView as GenFollowUp } from './generated/FollowUpView';
+import type { LeaveOffer as GenLeaveOffer } from './generated/LeaveOffer';
+import type { MergeView as GenMerge } from './generated/MergeView';
+import type { OffDay as GenOffDay } from './generated/OffDay';
+import type { TimeOffBooked as GenTimeOffBooked } from './generated/TimeOffBooked';
+import type { TimeOffPlan as GenTimeOffPlan } from './generated/TimeOffPlan';
+import type { SplitView as GenSplit } from './generated/SplitView';
+import type { OpenAge as GenOpenAge } from './generated/OpenAge';
 import type { FrequencyView as GenFrequency } from './generated/FrequencyView';
 import type { GroupBy as GenGroupBy } from './generated/GroupBy';
 import type { InboxView as GenInboxItem } from './generated/InboxView';
@@ -73,6 +81,7 @@ import type { RibbonDay as GenRibbonDay } from './generated/RibbonDay';
 import type { RibbonWeek as GenRibbonWeek } from './generated/RibbonWeek';
 import type { SameWorkView as GenSameWork } from './generated/SameWorkView';
 import type { ResponseView as GenSavedResponse } from './generated/ResponseView';
+import type { FilledResponseView as GenFilledResponse } from './generated/FilledResponseView';
 import type { SearchView as GenSearchResult } from './generated/SearchView';
 import type { SheetDay as GenSheetDay } from './generated/SheetDay';
 import type { SheetItem as GenSheetItem } from './generated/SheetItem';
@@ -119,6 +128,7 @@ export type Checks = [
   Assert<Same<Ui.CanvasLink, GenCanvasLink>>,
   Assert<Same<Ui.CanvasStack, GenCanvasStack>>,
   Assert<Same<Ui.Capture, GenCapture>>,
+  Assert<Same<Ui.CaptureLines, GenCaptureLines>>,
   Assert<Same<Ui.CardKind, GenCardKind>>,
   Assert<Same<Ui.CardRef, GenCardRef>>,
   Assert<Same<Ui.CarriedItem, GenCarriedItem>>,
@@ -133,6 +143,13 @@ export type Checks = [
   Assert<Same<Ui.FieldKind, GenFieldKind>>,
   Assert<Same<Ui.FingerprintStatus, GenFingerprintStatus>>,
   Assert<Same<Ui.FollowUp, GenFollowUp>>,
+  Assert<Same<Ui.LeaveOffer, GenLeaveOffer>>,
+  Assert<Same<Ui.MergeResult, GenMerge>>,
+  Assert<Same<Ui.OffDay, GenOffDay>>,
+  Assert<Same<Ui.TimeOffBooked, GenTimeOffBooked>>,
+  Assert<Same<Ui.TimeOffPlan, GenTimeOffPlan>>,
+  Assert<Same<Ui.SplitResult, GenSplit>>,
+  Assert<Same<Ui.OpenAge, GenOpenAge>>,
   Assert<Same<Ui.Frequency, GenFrequency>>,
   Assert<Same<Ui.GroupBy, GenGroupBy>>,
   Assert<Same<Ui.InboxItem, GenInboxItem>>,
@@ -173,6 +190,7 @@ export type Checks = [
   Assert<Same<Ui.RibbonWeek, GenRibbonWeek>>,
   Assert<Same<Ui.SameWork, GenSameWork>>,
   Assert<Same<Ui.SavedResponse, GenSavedResponse>>,
+  Assert<Same<Ui.FilledResponse, GenFilledResponse>>,
   Assert<Same<Ui.SearchResult, GenSearchResult>>,
   Assert<Same<Ui.SheetDay, GenSheetDay>>,
   Assert<Same<Ui.SheetItem, GenSheetItem>>,

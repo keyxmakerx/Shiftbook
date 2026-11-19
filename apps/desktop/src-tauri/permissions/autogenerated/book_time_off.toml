@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-book-time-off"
+description = "Enables the book_time_off command without any pre-configured scope."
+commands.allow = ["book_time_off"]
+
+[[permission]]
+identifier = "deny-book-time-off"
+description = "Denies the book_time_off command without any pre-configured scope."
+commands.deny = ["book_time_off"]

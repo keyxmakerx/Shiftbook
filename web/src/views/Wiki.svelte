@@ -19,6 +19,7 @@
   import { goToTicket } from '../lib/ticketFind';
   import { saveAsTemplate } from '../lib/noteActions';
   import WikiText from '../components/WikiText.svelte';
+  import { sawPage } from '../lib/recent.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -48,6 +49,7 @@
     const p = await attempt(() => api.wikiPage(id));
     if (!p) return;
     page = p;
+    sawPage(p.note);
     title = p.note.title;
     body = p.note.body;
     editing = edit;

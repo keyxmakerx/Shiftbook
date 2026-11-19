@@ -14,7 +14,8 @@
 //!   (sort order, then area, then code). By project, projects are in name order
 //!   and "No project" is last.
 //! - Warnings: unassigned minutes in the week; a weekday (Monday to Friday)
-//!   before today with nothing logged; a day over 12 hours.
+//!   before today with nothing logged (never before the first entry there is); a day over
+//!   12 hours.
 //! - The week's ticket count counts each ticket number once (ignoring case).
 //! - "Copy whole week" is tab-separated: weekday, date, code, hours, comment.
 
@@ -99,6 +100,9 @@ pub struct SheetContext<'a> {
     pub week_start: Date,
     /// The user's local date (for "nothing logged" warnings).
     pub today: Date,
+    /// The day of the earliest entry there is, if any: days before it never warn
+    /// "nothing logged".
+    pub first_logged: Option<Date>,
     /// Grouping.
     pub group_by: GroupBy,
     /// Comment style.
@@ -512,7 +516,8 @@ pub fn build_week_sheet(ctx: &SheetContext<'_>, entries: &[EntryWithTickets]) ->
             .filter(|e| e.entry.date == date)
             .collect();
         let minutes: Minutes = todays.iter().map(|e| e.entry.minutes).sum();
-        if todays.is_empty() && is_weekday(date) && date < ctx.today {
+        let started = ctx.first_logged.is_some_and(|first| date >= first);
+        if todays.is_empty() && is_weekday(date) && date < ctx.today && started {
             warnings.push(SheetWarning::NothingLogged { date });
         }
         if minutes.get() > LONG_DAY_MINUTES {
@@ -703,6 +708,7 @@ mod tests {
         SheetContext {
             week_start: MON,
             today: THU,
+            first_logged: Some(MON),
             group_by,
             format,
             codes: &f.codes,
@@ -861,6 +867,19 @@ mod tests {
                 },
             ]
         );
+        // Wednesday's was the first entry ever: Monday and Tuesday aren't missed days.
+        let late_start = SheetContext {
+            first_logged: Some(date!(2026 - 10 - 14)),
+            ..ctx(&f, GroupBy::Code, &format)
+        };
+        let first = vec![entry(date!(2026 - 10 - 14), 30, "Plan", Some(&f.net), &[])];
+        assert_eq!(build_week_sheet(&late_start, &first).warnings, vec![]);
+        // And with nothing logged at all there is nothing to warn about.
+        let unused = SheetContext {
+            first_logged: None,
+            ..ctx(&f, GroupBy::Code, &format)
+        };
+        assert_eq!(build_week_sheet(&unused, &[]).warnings, vec![]);
         let exactly_twelve = vec![entry(MON, 720, "Long", Some(&f.net), &[])];
         let sheet = build_week_sheet(&ctx(&f, GroupBy::Code, &format), &exactly_twelve);
         assert!(!sheet

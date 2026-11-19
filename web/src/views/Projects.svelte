@@ -1,15 +1,18 @@
 <script lang="ts">
   // Projects (round 18, card r18-tabs): every project at a glance, from the Organise menu.
   // Its hours this week and in all, its tickets still open and the last day it was worked
-  // (sums from crates/core/src/project.rs). Open its board, or look at its tickets. Renaming,
-  // colours and timesheet codes stay in Settings → Projects.
+  // (sums from crates/core/src/project.rs). Open its board, or look at its tickets. Round 21:
+  // rename, colour and archive are here too (Edit, or right-click a project), because having
+  // them only in Settings made projects hard to look after. Timesheet codes stay in Settings.
   import Icon from '../components/Icon.svelte';
   import { api } from '../lib/api';
   import type { ProjectGlance } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
-  import { relativeDay } from '../lib/format';
+  import { fmtMinutes, onDay } from '../lib/format';
   import { phone } from '../lib/phone.svelte';
-  import { app, attempt, refreshProjects, setView } from '../lib/store.svelte';
+  import { askText } from '../lib/askText.svelte';
+  import { openMenu, paperMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { app, attempt, projectById, refreshProjects, setView } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
 
   let glances = $state<ProjectGlance[]>([]);
@@ -52,6 +55,48 @@
     app.settingsSection = 'projects';
     setView('settings');
   }
+
+  // ----- looking after a project here (round 21) -----
+  type Change = { name?: string; color?: string | null; archived?: boolean };
+
+  async function save(id: string, change: Change): Promise<boolean> {
+    const p = projectById(id);
+    if (!p) return false;
+    const input = { name: p.name, color: p.color, defaultTimesheetCodeId: p.defaultTimesheetCodeId, archived: p.archived, ...change };
+    const saved = await attempt(() => api.updateProject(id, input));
+    if (!saved) return false;
+    await attempt(refreshProjects);
+    await load();
+    return true;
+  }
+
+  async function rename(g: ProjectGlance) {
+    const next = await askText({ title: 'Rename the project', label: 'Project name', ok: 'Rename', value: g.name });
+    if (next === null || next === g.name) return;
+    if (await save(g.projectId, { name: next })) {
+      toast(`${g.name} is now ${next}`, 'Undo', () => void save(g.projectId, { name: g.name }));
+    }
+  }
+
+  async function archive(g: ProjectGlance, archived: boolean) {
+    if (!(await save(g.projectId, { archived }))) return;
+    toast(archived ? `${g.name} is archived. Its history stays.` : `${g.name} is back`, 'Undo', () => void save(g.projectId, { archived: !archived }));
+  }
+
+  function menu(g: ProjectGlance): MenuSpec {
+    return {
+      sections: [
+        {
+          items: [
+            { label: 'Rename…', icon: 'edit', act: () => void rename(g) },
+            { label: g.archived ? 'Bring back' : 'Archive', icon: 'archive', act: () => void archive(g, !g.archived) },
+          ],
+        },
+        { head: 'Colour', swatches: { current: g.color, pick: (c) => void save(g.projectId, { color: c }) } },
+        { items: [{ label: 'Timesheet code…', icon: 'sliders', act: settings }] },
+      ],
+    };
+  }
 </script>
 
 <section class="paper projects" aria-label="Projects">
@@ -61,7 +106,7 @@
     {#if archivedCount}
       <label class="arch"><input type="checkbox" bind:checked={showArchived} /> Show archived ({archivedCount})</label>
     {/if}
-    <button type="button" class="btn" onclick={settings}><Icon name="sliders" size={14} /> Colours and codes</button>
+    <button type="button" class="btn" onclick={settings}><Icon name="sliders" size={14} /> Timesheet codes</button>
   </header>
 
   <form
@@ -78,14 +123,20 @@
   {#if shown.length}
     <div class="grid">
       {#each shown as g (g.projectId)}
-        <article class="card" class:archived={g.archived} style:--c={g.color ?? 'var(--accent)'}>
-          <h2>{g.name}{#if g.archived}<span class="tag">Archived</span>{/if}</h2>
+        <article class="card" class:archived={g.archived} style:--c={g.color ?? 'var(--accent)'} use:paperMenu={() => menu(g)}>
+          <h2>
+            <span class="nm">{g.name}</span>{#if g.archived}<span class="tag">Archived</span>{/if}
+            <span class="grow"></span>
+            <button type="button" class="btn slim" aria-label="Edit {g.name}" title="Rename, colour or archive" onclick={(e) => openMenu(e.currentTarget, menu(g))}>
+              <Icon name="edit" size={13} /> Edit
+            </button>
+          </h2>
           <div class="nums">
-            <span><b>{g.hoursWeek}</b> h this week</span>
-            <span><b>{g.hoursAll}</b> h in all</span>
+            <span><b>{fmtMinutes(g.minutesWeek)}</b> this week</span>
+            <span><b>{fmtMinutes(g.minutesAll)}</b> in all</span>
           </div>
           <p class="sub">
-            {g.lastWorked ? `Last worked ${relativeDay(g.lastWorked, app.today).toLowerCase()}` : 'Not worked on yet'}
+            {g.lastWorked ? `Last worked ${onDay(g.lastWorked, app.today)}` : 'Not worked on yet'}
           </p>
           <div class="acts">
             {#if !phone.on}
@@ -177,6 +228,16 @@
     display: flex;
     gap: 8px;
     align-items: center;
+  }
+
+  .nm {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  h2 .btn {
+    padding: 3px 9px;
+    font: 500 12.5px var(--ui);
   }
 
   .tag {

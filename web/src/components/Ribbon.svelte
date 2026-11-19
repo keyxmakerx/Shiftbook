@@ -1,17 +1,17 @@
 <script lang="ts">
   // The frosted time ribbon: brand, capture box, protection pill, Lock, the view switcher
   // and the last four weeks as days of coloured hours (click a day to open it).
-  import { api } from '../lib/api';
   import type { RibbonDay } from '../lib/api';
-  import { dayOfMonth, longDay, weekdayShort } from '../lib/format';
+  import { dayOfMonth, fmtMinutes, longDay } from '../lib/format';
   import { paperMenu, type MenuSpec } from '../lib/menu.svelte';
   import { allowCapture, countdown, guardedWords, guards, protection, protectNow } from '../lib/protection.svelte';
   import { bell } from '../lib/bell.svelte';
-  import { app, attempt, flashEntry, focusLog, projectColor, refresh, selectDay, setView, shownTabs } from '../lib/store.svelte';
+  import { app, attempt, flashEntry, focusLog, projectColor, selectDay, setView, shownTabs } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { askTimeOff, bookDayOff, unbookDayOff } from '../lib/timeOffPrompt.svelte';
   import { ORGANISE, VIEW_NAMES, type View } from '../lib/keys';
   import type { IconName } from '../lib/icons';
-  import { hasWork } from '../lib/words';
+  import { hasTimesheet, hasWork } from '../lib/words';
   import Icon from './Icon.svelte';
 
   let { onLock, onCapture }: { onLock: () => void; onCapture: () => void } = $props();
@@ -87,6 +87,7 @@
 
   let viewsEl: HTMLElement | undefined = $state();
   let pill = $state({ left: 0, width: 0 });
+  let lastLeft = 0;
   let grown = $state(false);
 
   $effect(() => {
@@ -95,7 +96,9 @@
     void VIEW_LIST;
     const place = () => {
       const b = viewsEl?.querySelector<HTMLElement>('button[aria-pressed="true"]');
-      if (b) pill = { left: b.offsetLeft, width: b.offsetWidth };
+      // No tab is lit in Settings; the pill used to stay on the last one (round 21).
+      if (b) lastLeft = b.offsetLeft;
+      pill = { left: lastLeft, width: b ? b.offsetWidth : 0 };
     };
     place();
     window.addEventListener('resize', place);
@@ -113,12 +116,30 @@
     return Math.min(36, (minutes / MAX_BAR_MINUTES) * 36);
   }
 
+  const canBookOff = $derived(hasWork(app.prefs?.useMode));
+
+  // Days off: one day straight away, or several from the box (round 21).
+  function offItems(day: RibbonDay) {
+    if (!canBookOff) return [];
+    if (day.off) {
+      return [{ label: 'Not a day off after all', icon: 'sun' as const, act: () => void unbookDayOff(day.date) }];
+    }
+    return [
+      { label: 'Book a holiday (8 h)', icon: 'sun' as const, act: () => void holiday(day.date) },
+      { label: 'Book several days off…', icon: 'sun' as const, act: () => askTimeOff(day.date) },
+    ];
+  }
+
   function dayMenu(day: RibbonDay): MenuSpec | null {
-    if (day.future) return null;
+    // A day still to come can only be booked off.
+    if (day.future) {
+      const items = offItems(day);
+      return items.length > 0 ? { sections: [{ head: longDay(day.date), items }] } : null;
+    }
     return {
       sections: [
         {
-          head: `${longDay(day.date)} · ${day.hours} h`,
+          head: `${longDay(day.date)} · ${fmtMinutes(day.minutes)}`,
           items: [
             { label: 'Open this day', icon: 'desk', act: () => openDay(day.date) },
             {
@@ -128,7 +149,7 @@
                 void selectDay(day.date).then(onCapture);
               },
             },
-            ...(hasWork(app.prefs?.useMode)
+            ...(hasTimesheet(app.prefs)
               ? [
                   {
                     label: 'Open the Timesheet for this week',
@@ -137,13 +158,9 @@
                       void selectDay(day.date).then(() => setView('timesheet'));
                     },
                   },
-                  {
-                    label: 'Book a holiday (8 h)',
-                    icon: 'sun' as const,
-                    act: () => void holiday(day.date),
-                  },
                 ]
               : []),
+            ...offItems(day),
           ],
         },
       ],
@@ -151,27 +168,8 @@
   }
 
   async function holiday(date: string) {
-    const entry = await attempt(() =>
-      api.createEntry(
-        {
-          date,
-          minutes: 480,
-          description: 'Holiday',
-          projectId: null,
-          recurringId: null,
-          category: null,
-          notes: null,
-          timesheetCodeId: null,
-        },
-        '',
-      ),
-    );
-    if (!entry) return;
-    await refresh();
-    flashEntry(entry.id);
-    toast(`${weekdayShort(date)} ${dayOfMonth(date)} booked as holiday`, 'Undo', () => {
-      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
+    const id = await bookDayOff(date);
+    if (id) flashEntry(id);
   }
 
   function openDay(date: string, gap = false) {
@@ -229,7 +227,7 @@
     </button>
   </div>
   <nav class="views" aria-label="Views" bind:this={viewsEl}>
-    <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px"></span>
+    <span class="pill" style:left="{pill.left}px" style:width="{pill.width}px" style:opacity={pill.width ? 1 : 0}></span>
     {#each VIEW_LIST as v (v.id)}
       <button type="button" aria-pressed={app.view === v.id} title="{v.label} ({v.key})" onclick={() => setView(v.id)}>
         {v.label}
@@ -272,10 +270,11 @@
             class:on={day.date === app.selected}
             class:future={day.future}
             class:gap={day.gap}
-            disabled={day.future}
-            title="{longDay(day.date)} · {day.gap ? 'nothing logged yet, click to log' : `${day.hours} h`}{day.future ? '' : ' · right-click for options'}"
-            aria-label="{longDay(day.date)}, {day.gap ? 'nothing logged' : `${day.hours} hours`}"
-            onclick={() => openDay(day.date, day.gap)}
+            class:off={day.off}
+            aria-disabled={day.future}
+            title="{longDay(day.date)} · {day.off ? 'day off · ' : ''}{day.gap ? 'nothing logged yet, click to log' : fmtMinutes(day.minutes)}{day.future && !canBookOff ? '' : ' · right-click for options'}"
+            aria-label="{longDay(day.date)}, {day.off ? 'day off, ' : ''}{day.gap ? 'nothing logged' : fmtMinutes(day.minutes)}"
+            onclick={() => !day.future && openDay(day.date, day.gap)}
             use:paperMenu={() => dayMenu(day)}
           >
             <span class="bar" style:--k={w * 7 + i}>
@@ -484,9 +483,14 @@
     border-radius: 5px;
   }
 
-  .d:disabled {
+  /* Days still to come can't be opened, only booked off from their menu. */
+  .d.future {
     cursor: default;
     opacity: 0.55;
+  }
+
+  .d.future.off {
+    opacity: 0.8;
   }
 
   .bar {
@@ -501,7 +505,7 @@
     transform-origin: bottom;
   }
 
-  .d:hover:not(:disabled) .bar {
+  .d:hover:not(.future) .bar {
     transform: scaleY(1.08);
   }
 
@@ -538,6 +542,15 @@
   .d.gap .bar {
     background: color-mix(in srgb, var(--warn) 14%, transparent);
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--warn) 45%, transparent);
+  }
+
+  /* A day off: its hours in grey, whatever they'd be coloured otherwise. */
+  .d.off .bar i {
+    background-color: color-mix(in srgb, var(--ink) 30%, transparent) !important;
+  }
+
+  .d.off .bar {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 22%, transparent);
   }
 
   .d small {

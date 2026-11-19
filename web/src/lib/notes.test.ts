@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { archiveWarning, changedOn, highlight, snippet } from './notes';
+import { archiveWarning, changedOn, highlight, matchingLine, snippet } from './notes';
 
 describe('highlight', () => {
   it('marks every typed word, ignoring case', () => {
@@ -57,6 +57,29 @@ describe('archiveWarning', () => {
   it('says when', () => {
     expect(archiveWarning(1)).toBe('This note moves to the archive tomorrow');
     expect(archiveWarning(5)).toBe('This note moves to the archive in 5 days');
+  });
+});
+
+describe('matchingLine', () => {
+  const body = 'Pre-checks\nshow ip bgp summary on edge-rtr-02\nRollback: reload in 10';
+
+  it('gives the line a searched word is on', () => {
+    expect(matchingLine(body, 'bgp')).toBe('show ip bgp summary on edge-rtr-02');
+    expect(matchingLine(body, 'ROLLBACK')).toBe('Rollback: reload in 10');
+  });
+
+  it('is empty when no line has the word, or nothing was asked', () => {
+    expect(matchingLine(body, 'ospf')).toBe('');
+    expect(matchingLine(body, '  ')).toBe('');
+  });
+
+  it('cuts a long line around the word', () => {
+    const long = 'x '.repeat(60) + 'needle ' + 'y '.repeat(60);
+    const line = matchingLine(long, 'needle', 40);
+    expect(line).toContain('needle');
+    expect(line.startsWith('…')).toBe(true);
+    expect(line.endsWith('…')).toBe(true);
+    expect(line.length).toBeLessThanOrEqual(42);
   });
 });
 

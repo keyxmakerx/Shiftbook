@@ -16,6 +16,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // The Desk: the Canvas where the day happens (round 9). Your entries, Done tickets, notes
   // and Inbox scraps as cards you arrange; only where they sit is new. The panel holds what
   // Day has for logging: today's hours, "Where was I?", Log work, Done tickets and the wrap-up.
@@ -67,15 +68,17 @@
     type Guide,
     type Rect,
   } from '../lib/canvasView';
-  import { input as entryInput, moveEntryTo } from '../lib/entryActions';
+  import { canMerge, input as entryInput, mergeEntries, moveEntryTo } from '../lib/entryActions';
   import { sameWork } from '../lib/sameWork';
-  import { dayMonth, fmtHours, fromIso, weekdayShort } from '../lib/format';
+  import { dayMonth, fmtMinutes, fromIso, weekdayShort } from '../lib/format';
   import { menuOpen, openMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
+  import { newProjectChoice } from '../lib/newProject';
   import { applyTray } from '../lib/trayActions';
   import { openBoard } from '../lib/boards.svelte';
   import { closePanel, openNotepad } from '../lib/panel.svelte';
   import { easeOut, scale as motion } from '../lib/motion';
   import { app, attempt, projectById, projectColor, refresh, refreshProjects, ribbonDay, ribbonWeekOf, savePref, selectDay, setView } from '../lib/store.svelte';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import { pins } from '../lib/pins.svelte';
   import { ARCHIVE, canPutAway, refsOf, tidyCandidates } from '../lib/putAway';
@@ -95,6 +98,7 @@
   import TrayCard from '../components/TrayCard.svelte';
   import WhereWasI from '../components/WhereWasI.svelte';
   import WrapUp from '../components/WrapUp.svelte';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
 
   let cards = $state<Card[]>([]);
   let areas = $state<CanvasArea[]>([]);
@@ -139,6 +143,20 @@
   let loaded = $state(false);
   let view = $state<CanvasView>(lastView);
   let panel = $state(panelOpen);
+  // The wrap-up on top (round 21): the rest of the panel folds while it waits, unless you are
+  // typing in it at that moment (nothing folds away under your fingers) or you show it again.
+  // An empty day folds nothing: Log work has to be there to have something to wrap up.
+  const wrapping = $derived(
+    app.selected === app.today && wrapupDue() && (app.entries.length > 0 || (app.tray?.items.length ?? 0) > 0),
+  );
+  let unfolded = $state(false);
+  let restEl: HTMLElement | undefined = $state();
+  $effect(() => {
+    const on = wrapping;
+    untrack(() => {
+      unfolded = on && !!restEl?.contains(document.activeElement);
+    });
+  });
   let board: HTMLElement | undefined = $state();
   let menuAnchor: HTMLElement | undefined = $state();
   let anchorAt = $state({ x: 0, y: 0 });
@@ -292,8 +310,32 @@
     };
     if (!(await set(true))) return;
     selected = new Set();
-    toast(items.length === 1 ? `${items[0]!.ticket} is done` : `${items.length} tickets done`, 'Undo', () => void set(false));
+    toast(
+      items.length === 1 ? `${items[0]!.ticket} is done` : `${items.length} tickets done`,
+      'Undo',
+      () => void set(false),
+      null,
+      items.length === 1 ? responseButton(items[0]!.ticket) : null,
+    );
   }
+  /** The two entries picked, when they can be merged (the same day, neither the Tickets entry). */
+  const pickedPair = $derived.by(() => {
+    if (selected.size !== 2) return null;
+    const two = cards.filter((c) => selected.has(keyOf(c)));
+    const [a, b] = [two[0]?.entry, two[1]?.entry];
+    if (!a || !b || two.length !== 2 || !canMerge(a, b)) return null;
+    // The one logged first keeps its name.
+    return a.id < b.id ? ([a, b] as const) : ([b, a] as const);
+  });
+
+  /** "Merge these two": the pair is read before the selection clears (it is worked out from it). */
+  function mergePicked() {
+    const pair = pickedPair;
+    if (!pair) return;
+    selected = new Set();
+    void mergeEntries(pair[0], pair[1]);
+  }
+
   /** The open tickets among the selected cards. */
   const pickedOpen = $derived(cards.filter((c) => selected.has(keyOf(c)) && c.tray && !c.tray.item.done));
 
@@ -1290,7 +1332,7 @@
   /** Fit: everything in view, but no smaller than 80% so the cards stay readable. */
   function fit() {
     if (!board) return;
-    glide(fitReadable(everything(), board.clientWidth, board.clientHeight));
+    glide(fitReadable(everything(), board.clientWidth, board.clientHeight, START.x));
   }
 
   /** Move the view smoothly to `to` (straight there when motion is off). */
@@ -1319,7 +1361,7 @@
   function goToBox(b: DeskBox) {
     goingTo = false;
     if (!board) return;
-    glide(fitReadable([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight));
+    glide(fitReadable([{ x: b.x, y: b.y }, { x: b.x + b.w - CARD_W, y: b.y + b.h - CARD_H }], board.clientWidth, board.clientHeight, START.x));
   }
 
   // Find asks for Fit, Tidy or the timeline; do it once the cards are in.
@@ -1344,7 +1386,13 @@
     if (!note) return;
     await attempt(() => api.canvasMove('note' as CardKind, note.id, draft.x, draft.y));
     await load();
-    toast('Jotted down. It’s in Notes too.');
+    // Undo takes it away again (round 21: Esc keeps a jot that has words in it).
+    toast(
+      'Kept your jot. It’s in Notes too.',
+      'Undo',
+      () => void attempt(() => api.setNoteDeleted(note.id, true)).then(load),
+      () => void attempt(() => api.setNoteDeleted(note.id, false)).then(load),
+    );
   }
 
   // ----- paste anywhere on the Desk (round 15) -----
@@ -1439,10 +1487,11 @@
         ],
       },
     ];
-    if (mode === 'free' && without.length > 0) {
+    if (mode === 'free') {
+      const here = (id: string) => void addArea(id, Math.round(at.x), Math.round(at.y));
       sections.push({
         head: 'Project area here',
-        choices: without.map((p) => ({ label: p.name, color: p.color, checked: false, act: () => void addArea(p.id, Math.round(at.x), Math.round(at.y)) })),
+        choices: [...without.map((p) => ({ label: p.name, color: p.color, checked: false, act: () => here(p.id) })), newProjectChoice(here)],
       });
     }
     openMenu(menuAnchor, { sections });
@@ -1623,11 +1672,12 @@
         <!-- svelte-ignore a11y_autofocus -->
         <textarea
           class="text-in jot"
+          use:todoBoxes={{ lines: false }}
           style:left="{jot.x}px"
           style:top="{jot.y}px"
           bind:value={jot.text}
           rows="3"
-          placeholder="Jot something. Enter keeps it, Esc lets it go."
+          placeholder="Jot something. Enter keeps it."
           aria-label="New jot"
           autofocus
           onpointerdown={(e) => e.stopPropagation()}
@@ -1638,8 +1688,11 @@
               e.preventDefault();
               (e.currentTarget as HTMLTextAreaElement).blur();
             } else if (e.key === 'Escape') {
+              // Esc closes an empty jot; one with words in it is kept (leaving the box
+              // keeps it, and the toast has Undo). Typed words are never thrown away.
               e.stopPropagation();
-              jot = null;
+              if (jot?.text.trim()) (e.currentTarget as HTMLTextAreaElement).blur();
+              else jot = null;
             }
           }}
         ></textarea>
@@ -1752,6 +1805,17 @@
             {pickedOpen.length === 1 ? 'Tick the ticket done' : `Tick ${pickedOpen.length} tickets done`}
           </button>
         {/if}
+        {#if pickedPair}
+          {@const [keep, other] = pickedPair}
+          <button
+            type="button"
+            class="btn"
+            title="“{other.description}” goes into “{keep.description}”: its time, notes and tickets"
+            onclick={mergePicked}
+          >
+            <Icon name="list" size={13} /> Merge these two
+          </button>
+        {/if}
         {#if selected.size > 1}
           <span class="lineup" role="group" aria-label="Line up">
             <span class="lbl">Line up</span>
@@ -1845,17 +1909,27 @@
           {#if countDone}
             <div><span class="big mono">{doneToday}</span><span class="lbl">{doneToday === 1 ? 'thing' : 'things'} done {app.selected === app.today ? 'today' : weekdayShort(app.selected)}</span></div>
           {:else}
-            <div><span class="big mono">{fmtHours(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
-            <div><span class="big mono">{fmtHours(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
+            <div><span class="big mono">{fmtMinutes(today?.minutes ?? 0)}</span><span class="lbl">today</span></div>
+            <div><span class="big mono">{fmtMinutes(week?.minutes ?? 0)}</span><span class="lbl">this week</span></div>
           {/if}
         </div>
         <!-- Log work comes first: it must be on screen when the app opens (1100 by 760), and
              Due soon and Where was I? above it pushed it below the fold. -->
-        <LogWork />
-        <DueSoonCard />
-        <WhereWasI />
-        <TrayCard />
+        <!-- At wrap-up time the wrap-up goes on top and the rest folds away, until Done for
+             the day or Not today (round 21: it used to turn up below the fold). -->
         <WrapUp />
+        {#if wrapping}
+          <button type="button" class="folded" aria-expanded={unfolded} onclick={() => (unfolded = !unfolded)}>
+            <span>{unfolded ? 'Log work and Tickets' : 'Log work and Tickets are folded while you wrap up'}</span>
+            <b>{unfolded ? 'Fold away' : 'Show them'}</b>
+          </button>
+        {/if}
+        <div class="rest" bind:this={restEl} hidden={wrapping && !unfolded}>
+          <LogWork />
+          <DueSoonCard />
+          <WhereWasI />
+          <TrayCard />
+        </div>
       </div>
     {/if}
   </aside>
@@ -2517,6 +2591,42 @@
     flex-direction: column;
     gap: 12px;
     padding-left: 34px;
+  }
+
+  .rest {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .rest[hidden] {
+    display: none;
+  }
+
+  .folded {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 14px;
+    border: 1px dashed var(--rule);
+    border-radius: 10px;
+    background: none;
+    color: var(--mut);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .folded b {
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  .folded:hover,
+  .folded:focus-visible {
+    background: color-mix(in srgb, var(--accent) 8%, transparent);
   }
 
   .hours {

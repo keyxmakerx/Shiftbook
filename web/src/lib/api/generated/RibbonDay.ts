@@ -29,4 +29,8 @@ future: boolean,
 /**
  * Nothing logged on a day that has a target (see [`mark_gaps`]).
  */
-gap: boolean, };
+gap: boolean, 
+/**
+ * Booked as a day off (see [`crate::timeoff::mark_off`]).
+ */
+off: boolean, };

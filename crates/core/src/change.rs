@@ -12,6 +12,8 @@ use uuid::Uuid;
 use crate::bell::{BellAbout, BellItem, BellWhen};
 use crate::dates::{format_date, format_timestamp};
 use crate::error::CoreError;
+use crate::minutes::Minutes;
+use crate::timer::round_timer;
 
 /// Where a MOP stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
@@ -120,6 +122,58 @@ pub fn parse_tick_times(text: &str) -> TickTimes {
             Some((key.to_string(), at))
         })
         .collect()
+}
+
+/// When a run started and finished after its MOP's status changes to `to` at `now`. Going
+/// back to Draft or Ready clears both, so the next Running starts a fresh clock (round 21:
+/// a run started by mistake kept its first start time). Running keeps its start and is not
+/// finished. Done or Backed out keeps the first finish.
+pub fn run_times(
+    to: MopStatus,
+    started: Option<OffsetDateTime>,
+    finished: Option<OffsetDateTime>,
+    now: OffsetDateTime,
+) -> (Option<OffsetDateTime>, Option<OffsetDateTime>) {
+    match to {
+        MopStatus::Draft | MopStatus::Ready => (None, None),
+        MopStatus::Running => (started.or(Some(now)), None),
+        MopStatus::Done | MopStatus::BackedOut => (started, finished.or(Some(now))),
+    }
+}
+
+/// How long a finished run took, rounded like the timer (to a quarter hour), to offer as
+/// the time to log. Nothing for a run that never went Running or isn't finished.
+pub fn ran_minutes(
+    started: Option<OffsetDateTime>,
+    finished: Option<OffsetDateTime>,
+) -> Option<Minutes> {
+    let seconds = (finished? - started?).whole_seconds();
+    let rounded = round_timer(u64::try_from(seconds).ok()?);
+    (rounded.0 > 0).then_some(rounded)
+}
+
+/// Longest "what I saw" under one step (a screen or two of pasted output).
+pub const MAX_SEEN_CHARS: usize = 4000;
+
+/// What was seen at each step that has something written: (tick key, text).
+pub type Seen = Vec<(String, String)>;
+
+/// Write `text` under the step `key` (blank takes it away). Line ends are made plain,
+/// trailing space goes, and anything past [`MAX_SEEN_CHARS`] is refused.
+pub fn set_seen(before: &[(String, String)], key: &str, text: &str) -> Result<Seen, CoreError> {
+    let text = text.replace("\r\n", "\n").replace('\r', "\n");
+    let text = text.trim_end();
+    if text.chars().count() > MAX_SEEN_CHARS {
+        return Err(CoreError::TooLong {
+            field: "What you saw",
+            max: MAX_SEEN_CHARS,
+        });
+    }
+    let mut out: Seen = before.iter().filter(|(k, _)| k != key).cloned().collect();
+    if !text.trim().is_empty() {
+        out.push((key.to_string(), text.to_string()));
+    }
+    Ok(out)
 }
 
 /// A template offered when attaching a MOP: id, title, its project.
@@ -253,6 +307,65 @@ mod tests {
         let stored = join_tick_times(&after);
         assert_eq!(parse_tick_times(&stored), after);
         assert!(parse_tick_times("junk\nalso junk").is_empty());
+    }
+
+    #[test]
+    fn going_back_to_ready_clears_the_start() {
+        let t1 = datetime!(2026-11-18 17:22 UTC);
+        let t2 = datetime!(2026-11-18 22:04 UTC);
+        let t3 = datetime!(2026-11-18 23:31 UTC);
+        // Running by mistake, Undo back to Ready, Running again at the window.
+        let (start, end) = run_times(MopStatus::Running, None, None, t1);
+        assert_eq!((start, end), (Some(t1), None));
+        assert_eq!(run_times(MopStatus::Ready, start, end, t1), (None, None));
+        let (start, end) = run_times(MopStatus::Running, None, None, t2);
+        assert_eq!(start, Some(t2));
+        // Running again keeps the start; Done keeps the first finish.
+        assert_eq!(run_times(MopStatus::Running, start, end, t3).0, Some(t2));
+        let (start, end) = run_times(MopStatus::Done, start, end, t3);
+        assert_eq!((start, end), (Some(t2), Some(t3)));
+        let later = datetime!(2026-11-19 00:10 UTC);
+        assert_eq!(
+            run_times(MopStatus::BackedOut, start, end, later),
+            (Some(t2), Some(t3))
+        );
+        // Undo of Done: running again, not finished.
+        assert_eq!(
+            run_times(MopStatus::Running, start, end, later),
+            (Some(t2), None)
+        );
+        // Straight to Done without Running: a finish, no start, no time to offer.
+        assert_eq!(run_times(MopStatus::Done, None, None, t3), (None, Some(t3)));
+        assert_eq!(ran_minutes(None, Some(t3)), None);
+        // 1 h 27 m rounds to 1 h 30 m; a few seconds is nothing; backwards is nothing.
+        assert_eq!(ran_minutes(Some(t2), Some(t3)), Some(Minutes(90)));
+        assert_eq!(
+            ran_minutes(Some(t2), Some(t2 + time::Duration::seconds(20))),
+            None
+        );
+        assert_eq!(ran_minutes(Some(t3), Some(t2)), None);
+        assert_eq!(ran_minutes(Some(t2), None), None);
+    }
+
+    #[test]
+    fn what_was_seen_is_kept_per_step() {
+        let seen = set_seen(&[], "1|a", "Gi0/1 up up\r\nGi0/2 down down  \n").unwrap();
+        assert_eq!(
+            seen,
+            [(
+                "1|a".to_string(),
+                "Gi0/1 up up\nGi0/2 down down".to_string()
+            )]
+        );
+        let seen = set_seen(&seen, "1|b", "  looks fine").unwrap();
+        assert_eq!(seen.len(), 2);
+        // Writing again replaces; blank takes it away.
+        let seen = set_seen(&seen, "1|a", "rolled back").unwrap();
+        assert_eq!(seen.len(), 2);
+        assert!(seen.contains(&("1|a".to_string(), "rolled back".to_string())));
+        let seen = set_seen(&seen, "1|a", "  \n").unwrap();
+        assert_eq!(seen, [("1|b".to_string(), "  looks fine".to_string())]);
+        assert!(set_seen(&[], "k", &"x".repeat(MAX_SEEN_CHARS + 1)).is_err());
     }
 
     #[test]

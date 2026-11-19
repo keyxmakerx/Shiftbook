@@ -34,6 +34,26 @@ pub enum CoreError {
     #[error("One entry can't be more than 24 hours.")]
     HoursTooLarge,
 
+    /// Split or merge asked of the day's Tickets entry (round 21).
+    #[error("The Tickets entry comes from the Tickets tray, so it can't be split or merged.")]
+    ReshapeTray,
+
+    /// Merge asked of entries on different days.
+    #[error("Only entries from the same day can be merged.")]
+    MergeDays,
+
+    /// Merge asked of an entry with itself.
+    #[error("Pick two different entries to merge.")]
+    MergeSame,
+
+    /// Time off asked for a range whose last day is before its first (round 21).
+    #[error("The last day off is before the first.")]
+    TimeOffBackwards,
+
+    /// Time off asked for more days than one booking takes.
+    #[error("That's more than two months. Book it in two parts.")]
+    TimeOffTooLong,
+
     /// A required text field was empty.
     #[error("{field} can't be empty.")]
     Required {
@@ -148,8 +168,8 @@ pub enum CoreError {
         input: String,
     },
 
-    /// A link template must start with http:// or https:// and contain {ticket}.
-    #[error("A link needs to start with https:// and contain {{ticket}} where the ticket goes.")]
+    /// A link template must be a web address: http:// or https://, no spaces.
+    #[error("A link needs to start with https:// and have no spaces. Put {{ticket}} where the ticket number goes.")]
     LinkTemplateInvalid,
 
     /// Log work needs a ticket or a few words.

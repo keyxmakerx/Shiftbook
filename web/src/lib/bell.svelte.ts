@@ -2,6 +2,7 @@
 // while unlocked and whenever the day's data changes; the panel slides in from the right.
 import { api } from './api';
 import type { BellItem } from './api';
+import { agesByTicket } from './age';
 import { app } from './store.svelte';
 
 export const bell = $state<{ items: BellItem[]; open: boolean; away: { since: string | null; items: BellItem[] } | null }>({
@@ -39,6 +40,7 @@ export async function refreshBell(): Promise<void> {
     const snoozed = sheetSnooze?.day === app.today && now < sheetSnooze.until;
     bell.items = snoozed ? items.filter((i) => i.about.kind !== 'timesheet') : items;
     app.followUps = Object.fromEntries((await api.followUps()).map((f) => [`${f.kind}:${f.id}`, f.on]));
+    app.ages = agesByTicket(await api.ticketAges(app.today));
   } catch {
     // The next tick tries again.
   }

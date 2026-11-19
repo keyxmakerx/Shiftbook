@@ -1,10 +1,12 @@
 <script lang="ts">
   // Log work: paste a ticket or say what you did, then press a time button. The app
   // reuses today's entry for a ticket it already has (see crates/core/src/quicklog.rs).
+  import { tick, untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { Capture, SameWork } from '../lib/api';
   import type { Entry } from '../lib/api';
   import { addDays, fmtMinutes, weekdayLong } from '../lib/format';
+  import { fillTimes, isManyLines, manyRows, missingTimes, oneLine, totalMinutes, type ManyRow } from '../lib/manyLines';
   import { repeatCandidates } from '../lib/repeat';
   import { app, attempt, flashEntry, projectById, projectColor, refresh, timeButtons, words } from '../lib/store.svelte';
   import { hasHome, hasWork } from '../lib/words';
@@ -59,15 +61,30 @@
   // The repeats come from the last day with work, which on a Monday is usually Friday.
   const repeatDay = $derived(repeats[0] && repeats[0].date !== addDays(app.selected, -1) ? weekdayLong(repeats[0].date) : 'yesterday');
 
+  /** What to do once a line handed over with its time (the Now card) has been logged. */
+  let afterLog: (() => void) | null = null;
+
   $effect(() => {
     const serial = app.logFocus.serial;
     if (serial === 0) return;
-    spot = app.logFocus.spot;
-    if (app.logFocus.text) {
-      text = app.logFocus.text;
-      recognise();
-    }
-    queueMicrotask(() => input?.focus());
+    untrack(() => {
+      spot = app.logFocus.spot;
+      if (app.logFocus.text) {
+        text = app.logFocus.text;
+        recognise();
+      }
+      // A line that comes with its time is logged straight away, once (the request is used
+      // up, so opening Day or the Desk later doesn't log it again).
+      const minutes = app.logFocus.minutes;
+      afterLog = app.logFocus.text ? app.logFocus.then : null;
+      app.logFocus.then = null;
+      if (minutes !== null && app.logFocus.text) {
+        app.logFocus.minutes = null;
+        void log(minutes, app.logFocus.text);
+        return;
+      }
+      queueMicrotask(() => input?.focus());
+    });
   });
 
   function recognise() {
@@ -77,12 +94,96 @@
     if (!now.trim()) {
       seen = null;
       spot = null;
+      // The line that was handed over is gone, so nothing waits on it any more.
+      afterLog = null;
       return;
     }
     timer = setTimeout(async () => {
       const c = await api.parseCapture(now, app.selected).catch(() => null);
       if (text === now) seen = c;
     }, 120);
+  }
+
+  // Several lines pasted at once (round 21): a preview, one entry per line.
+  let many = $state<{ rows: ManyRow[]; leftOut: number; pasted: string } | null>(null);
+  let manyEl: HTMLElement | undefined = $state();
+
+  /** A paste of several lines opens the preview; one line pastes as it always did. */
+  async function pasted(e: ClipboardEvent) {
+    const got = e.clipboardData?.getData('text/plain') ?? '';
+    if (!isManyLines(got)) return;
+    e.preventDefault();
+    const read = await attempt(() => api.captureLines(got, app.selected));
+    if (!read) return;
+    if (read.lines.length < 2) {
+      asOne(got);
+      return;
+    }
+    ask = null;
+    many = { rows: manyRows(read.lines), leftOut: read.leftOut, pasted: got };
+    await tick();
+    manyEl?.querySelector<HTMLElement>('select.need, .logall')?.focus();
+  }
+
+  /** "One entry instead": the pasted text as the one line the box used to make of it. */
+  function asOne(got: string) {
+    many = null;
+    text = oneLine(got);
+    recognise();
+    input?.focus();
+  }
+
+  function setRow(i: number, minutes: number | null) {
+    if (!many) return;
+    many = { ...many, rows: many.rows.map((r, n) => (n === i ? { ...r, minutes } : r)) };
+  }
+
+  function dropRow(i: number) {
+    if (!many) return;
+    const rows = many.rows.filter((_, n) => n !== i);
+    many = rows.length ? { ...many, rows } : null;
+    if (!many) input?.focus();
+  }
+
+  /** The times a row can pick: the time buttons, and the time its own line had. */
+  function rowTimes(row: ManyRow): number[] {
+    const all = new Set(TIMES);
+    if (row.minutes !== null && row.minutes > 0) all.add(row.minutes);
+    return [...all].sort((a, b) => a - b);
+  }
+
+  /** Log every line in the preview, in order. A line that fails stays, with the ones after it. */
+  async function logMany() {
+    const m = many;
+    if (!m) return;
+    working = true;
+    const before = new Set(app.entries.map((e) => e.id));
+    const done: { id: string; existed: boolean; minutes: number }[] = [];
+    for (const row of m.rows) {
+      const minutes = row.minutes ?? 0;
+      const entry = await attempt(() => api.quickLog(app.selected, row.text, minutes, null));
+      if (!entry) break;
+      done.push({ id: entry.id, existed: before.has(entry.id), minutes });
+      before.add(entry.id);
+    }
+    working = false;
+    const left = m.rows.slice(done.length);
+    many = left.length ? { ...m, rows: left } : null;
+    if (done.length === 0) return;
+    await refresh();
+    flashEntry(done[done.length - 1]!.id);
+    if (!many) input?.focus();
+    const total = done.reduce((sum, d) => sum + d.minutes, 0);
+    toast(`Logged ${done.length} ${done.length === 1 ? 'entry' : 'entries'}${total ? ` · ${fmtMinutes(total)}` : ''}`, 'Undo', () => {
+      void attempt(async () => {
+        // Newest first, so time added to an entry made here comes off before the entry goes.
+        for (const d of [...done].reverse()) {
+          if (!d.existed) await api.deleteEntry(d.id);
+          else if (d.minutes) await api.addEntryMinutes(d.id, -d.minutes);
+        }
+        return true;
+      }).then(refresh);
+    });
   }
 
   /** Enter: log the line when it has a time in it, otherwise move to the time buttons. */
@@ -169,8 +270,11 @@
     spot = null;
     text = '';
     seen = null;
+    const after = afterLog;
+    afterLog = null;
     await refresh();
     flashEntry(entry.id);
+    after?.();
     toast(
       minutes === 0
         ? existed
@@ -205,6 +309,7 @@
       bind:this={input}
       bind:value={text}
       oninput={recognise}
+      onpaste={(e) => void pasted(e)}
       onkeydown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -250,6 +355,87 @@
   </div>
   {#if seen && text.trim() && seen.tickets.length > 0}
     <KnownTickets numbers={seen.tickets} />
+  {/if}
+  {#if many}
+    {@const m = many}
+    {@const missing = missingTimes(m.rows)}
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+    <div
+      class="many"
+      role="group"
+      aria-label="Several lines to log"
+      bind:this={manyEl}
+      onkeydown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          many = null;
+          input?.focus();
+        }
+      }}
+    >
+      <div class="mhead">
+        <b>{m.rows.length} {m.rows.length === 1 ? 'entry' : 'entries'} from {m.rows.length} {m.rows.length === 1 ? 'line' : 'lines'}</b>
+        <small>
+          {[
+            totalMinutes(m.rows) ? `${fmtMinutes(totalMinutes(m.rows))} in all` : '',
+            missing ? `${missing} ${missing === 1 ? 'line has' : 'lines have'} no time yet` : '',
+            m.leftOut ? `${m.leftOut} more ${m.leftOut === 1 ? 'line was' : 'lines were'} left out (20 at a time)` : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </small>
+      </div>
+      <ul>
+        {#each m.rows as row, i (i)}
+          <li>
+            <span class="what" title={row.text}>
+              {row.text}
+              {#if row.projectId}<small style:--c={projectColor(row.projectId)}>{projectById(row.projectId)?.name}</small>{/if}
+            </span>
+            <select
+              class="text-in"
+              class:need={row.minutes === null}
+              aria-label="Time for {row.text}"
+              value={row.minutes === null ? '' : String(row.minutes)}
+              onchange={(e) => {
+                const v = (e.currentTarget as HTMLSelectElement).value;
+                setRow(i, v === '' ? null : Number(v));
+              }}
+            >
+              <option value="">{home ? 'no time' : 'pick a time'}</option>
+              {#each rowTimes(row) as t (t)}
+                <option value={String(t)}>{fmtMinutes(t)}</option>
+              {/each}
+            </select>
+            <button type="button" class="drop" aria-label="Leave out: {row.text}" title="Leave this line out" onclick={() => dropRow(i)}>
+              <Icon name="x" size={13} />
+            </button>
+          </li>
+        {/each}
+      </ul>
+      {#if missing}
+        <div class="fill">
+          <span class="lbl">Lines with no time</span>
+          {#each TIMES as t (t)}
+            <button type="button" class="hbtn" onclick={() => (many = { ...m, rows: fillTimes(m.rows, t) })}>{fmtMinutes(t)}</button>
+          {/each}
+        </div>
+      {/if}
+      <div class="mbtns">
+        <button type="button" class="btn primary logall" disabled={working || (missing > 0 && !home)} onclick={() => void logMany()}>
+          Log {m.rows.length === 1 ? 'it' : `all ${m.rows.length}`}
+        </button>
+        <button type="button" class="btn" onclick={() => asOne(m.pasted)}>One entry instead</button>
+        <button
+          type="button"
+          class="btn"
+          onclick={() => {
+            many = null;
+            input?.focus();
+          }}>Cancel</button
+        >
+      </div>
+    </div>
   {/if}
   {#if ask}
     {@const a = ask}
@@ -298,6 +484,94 @@
 </div>
 
 <style>
+  .many {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--paper);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+
+  .mhead {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    align-items: baseline;
+  }
+
+  .mhead small {
+    color: var(--ink-2);
+  }
+
+  .many ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 260px;
+    overflow: auto;
+  }
+
+  .many li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .what {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13.5px;
+  }
+
+  .what small {
+    margin-left: 6px;
+    color: var(--c, var(--ink-2));
+    font-weight: 600;
+  }
+
+  .many select {
+    min-width: 128px;
+    padding: 4px 6px;
+    font: 600 12.5px var(--mono);
+  }
+
+  .many select.need {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+
+  .drop {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--mut);
+    cursor: pointer;
+  }
+
+  .drop:hover {
+    color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+
+  .fill,
+  .mbtns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
   .ask {
     display: flex;
     flex-wrap: wrap;

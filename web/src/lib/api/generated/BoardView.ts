@@ -28,9 +28,9 @@ children: Array<ChildView>,
  */
 cards: Array<CardView>, 
 /**
- * For a project: every minute logged against it, as hours.
+ * For a project: every minute logged against it.
  */
-hours: string | null, 
+minutes: number | null, 
 /**
  * For a project: its tickets still open.
  */

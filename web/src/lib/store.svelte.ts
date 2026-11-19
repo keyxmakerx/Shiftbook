@@ -6,6 +6,7 @@ import type {
   CustomField,
   Entry,
   InboxItem,
+  OpenAge,
   PrefKey,
   ResumeCard,
   ResumeTrigger,
@@ -22,7 +23,7 @@ import { errorMessage } from './messages';
 import { useMopWord } from './notes';
 import { setMotion } from './motion';
 import { toast } from './toast.svelte';
-import { hasWork, wordsFor, type Words } from './words';
+import { hasTimesheet, wordsFor, type Words } from './words';
 import { DEFAULT_TIME_BUTTONS } from './api/generated/constants';
 
 export const app = $state({
@@ -55,7 +56,15 @@ export const app = $state({
   wikiOpen: { id: null as string | null, edit: false, serial: 0 },
   /** Bumped to ask Log work to take focus, with optional text to put in it, and the Desk spot
    * of the card it came from (an Inbox scrap), so the entry it makes shows there. */
-  logFocus: { serial: 0, text: '', spot: null as { x: number; y: number } | null },
+  logFocus: {
+    serial: 0,
+    text: '',
+    spot: null as { x: number; y: number } | null,
+    /** Log the text with this many minutes straight away (the Now card's time buttons). */
+    minutes: null as number | null,
+    /** Called once the text has been logged (straight away, or after a time is picked). */
+    then: null as (() => void) | null,
+  },
   /** The date the wrap-up was finished or put off, so it stays away until tomorrow. */
   wrapupClosed: '',
   /** The date "Wrap up the day" was asked for in Find, so the wrap-up shows before its time. */
@@ -74,6 +83,9 @@ export const app = $state({
   changed: 0,
   /** The "Where was I?" card on the Desk, while it's showing. */
   resume: null as ResumeCard | null,
+  /** The "Now" card (round 21): what Carry on started, and when, until it is logged or
+   *  switched away from. It keeps the rest of the list. */
+  now: null as { card: ResumeCard; startedAt: number } | null,
   /** "Later" was pressed: no more "Where was I?" until the next unlock. */
   resumeLater: false,
   /** A note for the Notes view to open (from Find or New note), bumped by `openNote`. */
@@ -84,6 +96,8 @@ export const app = $state({
   bringUpDays: [] as string[],
   /** Each card's follow-up day, keyed `kind:id` (round 15). */
   followUps: {} as Record<string, string>,
+  /** How long each still-open ticket has been open, by its number in lower case. */
+  ages: {} as Record<string, OpenAge>,
 });
 
 /** The time buttons everyone starts with (core's `DEFAULT_TIME_BUTTONS`). */
@@ -229,12 +243,12 @@ export function openWiki(id: string | null, edit = false): void {
 
 /** Every view in this mode (tabs, the Organise menu, Settings). */
 export function shownViews(): readonly View[] {
-  return viewsFor(hasWork(app.prefs?.useMode));
+  return viewsFor(hasTimesheet(app.prefs));
 }
 
 /** The tabs in this mode (round 18: where you work). */
 export function shownTabs(): readonly View[] {
-  return tabsFor(hasWork(app.prefs?.useMode));
+  return tabsFor(hasTimesheet(app.prefs));
 }
 
 /** The words for what Shiftbook is for (round 15). */
@@ -264,17 +278,27 @@ export function putEntry(entry: Entry): void {
   else app.entries.push(entry);
 }
 
-export function focusLog(text = '', spot: { x: number; y: number } | null = null): void {
+export function focusLog(text = '', spot: { x: number; y: number } | null = null, then: (() => void) | null = null): void {
   // Log work is on the Desk (the Canvas) and on Day; stay on whichever is open.
   if (app.view !== 'desk' && app.view !== 'day') setView('desk');
-  app.logFocus = { serial: app.logFocus.serial + 1, text, spot };
+  app.logFocus = { serial: app.logFocus.serial + 1, text, spot, minutes: null, then };
+}
+
+/**
+ * Have Log work log `text` with `minutes` now, as if it was typed there and the time button
+ * pressed (so "Add to …?" is still asked); `then` runs once it is logged.
+ */
+export function logNow(text: string, minutes: number, then: () => void): void {
+  if (app.view !== 'desk' && app.view !== 'day') setView('desk');
+  app.logFocus = { serial: app.logFocus.serial + 1, text, spot: null, minutes, then };
 }
 
 /** Ask whether "Where was I?" should show for this return, and show it. */
 export async function checkResume(trigger: ResumeTrigger, awayMinutes = 0): Promise<void> {
-  if (app.resumeLater) return;
+  // Not while the Now card is up: it already says what you're on.
+  if (app.resumeLater || app.now) return;
   const card = await api.whereWasI(app.today, trigger, awayMinutes).catch(() => null);
-  if (card && !app.resumeLater) app.resume = card;
+  if (card && !app.resumeLater && !app.now) app.resume = card;
 }
 
 /** Move to the new date when the day changes while Shiftbook is open. True if it changed. */

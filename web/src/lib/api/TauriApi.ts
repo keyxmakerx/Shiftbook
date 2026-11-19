@@ -6,7 +6,15 @@ import { toApiError } from './DataApi';
 import type {
   AwayList,
   Frequency,
+  CaptureLines,
   FollowUp,
+  LeaveOffer,
+  MergeResult,
+  TimeOffBooked,
+  TimeOffPlan,
+  SplitInput,
+  SplitResult,
+  OpenAge,
   ItemSummary,
   SameWork,
   MarkedDone,
@@ -61,6 +69,7 @@ import type {
   NoteKind,
   NoteList,
   ResponseInput,
+  FilledResponse,
   SavedResponse,
   ResumeCard,
   ResumeTrigger,
@@ -213,6 +222,42 @@ export class TauriApi implements DataApi {
   }
 
 
+  splitEntry(id: string, split: SplitInput): Promise<SplitResult> {
+    return call('split_entry', { id, split });
+  }
+  leaveOffer(today: IsoDate, now: number): Promise<LeaveOffer | null> {
+    return call('leave_offer', { today, now });
+  }
+  setLeaveGuard(armed: boolean): Promise<void> {
+    return call('set_leave_guard', { armed });
+  }
+  closeWindow(): Promise<void> {
+    return call('close_window');
+  }
+  onLeaveAsked(handler: () => void): () => void {
+    // The app raises this on the window when it holds a close back (see lib.rs).
+    const heard = () => handler();
+    window.addEventListener('shiftbook:leave-asked', heard);
+    return () => window.removeEventListener('shiftbook:leave-asked', heard);
+  }
+  timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan> {
+    return call('time_off_plan', { from, to });
+  }
+  bookTimeOff(from: IsoDate, to: IsoDate): Promise<TimeOffBooked> {
+    return call('book_time_off', { from, to });
+  }
+  bookDayOff(date: IsoDate): Promise<TimeOffBooked> {
+    return call('book_day_off', { date });
+  }
+  unbookDayOff(date: IsoDate): Promise<string[]> {
+    return call('unbook_day_off', { date });
+  }
+  mergeEntries(keep: string, other: string): Promise<MergeResult> {
+    return call('merge_entries', { keep, other });
+  }
+  unmergeEntries(keep: string, other: string, minutes: number, notes: string | null, moved: string[]): Promise<Entry> {
+    return call('unmerge_entries', { keep, other, minutes, notes, moved });
+  }
   deleteEntry(id: string): Promise<void> {
     return call('delete_entry', { id });
   }
@@ -244,6 +289,9 @@ export class TauriApi implements DataApi {
     return call('item_set_done', { id, done, today });
   }
 
+  captureLines(text: string, today: IsoDate): Promise<CaptureLines> {
+    return call('capture_lines_of', { text, today });
+  }
   parseCapture(text: string, today: IsoDate): Promise<Capture> {
     return call('parse_capture_line', { text, today });
   }
@@ -274,6 +322,9 @@ export class TauriApi implements DataApi {
   }
   traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay> {
     return call('tray_set_recurring', { id, recurringId });
+  }
+  traySnooze(ticket: string, today: IsoDate, until: IsoDate | null, date: IsoDate): Promise<TrayDay> {
+    return call('tray_snooze', { ticket, today, until, date });
   }
   trayCarry(id: string, date: IsoDate): Promise<TrayDay> {
     return call('tray_carry', { id, date });
@@ -453,6 +504,12 @@ export class TauriApi implements DataApi {
   listResponses(): Promise<SavedResponse[]> {
     return call('list_responses');
   }
+  responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]> {
+    return call('responses_for', { ticket, today, name });
+  }
+  openTicketLink(ticket: string, url: string): Promise<void> {
+    return call('open_ticket_link', { ticket, url });
+  }
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]> {
     return call('save_responses', { items });
   }
@@ -480,6 +537,9 @@ export class TauriApi implements DataApi {
   }
   followUps(): Promise<FollowUp[]> {
     return call('follow_ups');
+  }
+  ticketAges(today: IsoDate): Promise<OpenAge[]> {
+    return call('ticket_ages', { today });
   }
   clearFollowUp(kind: CardKind, id: string): Promise<void> {
     return call('clear_follow_up', { kind, id });
@@ -549,6 +609,9 @@ export class TauriApi implements DataApi {
   createNote(note: NoteInput): Promise<Note> {
     return call('create_note', { note });
   }
+  dailyNoteStart(today: IsoDate): Promise<string> {
+    return call('daily_note_start', { today });
+  }
   dailyNote(date: IsoDate): Promise<Note | null> {
     return call('daily_note', { date });
   }
@@ -610,6 +673,9 @@ export class TauriApi implements DataApi {
   }
   mopTick(id: string, ticks: string[]): Promise<Note> {
     return call('mop_tick', { id, ticks });
+  }
+  mopSetSeen(id: string, key: string, text: string): Promise<void> {
+    return call('mop_set_seen', { id, key, text });
   }
   wiki(): Promise<WikiList> {
     return call('wiki');

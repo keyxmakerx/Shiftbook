@@ -40,17 +40,19 @@ pub struct AppInfo {
 }
 
 /// Builds the `AppInfo` for this build.
-fn current_app_info() -> AppInfo {
+fn current_app_info(version: &str) -> AppInfo {
     AppInfo {
         name: shiftbook_core::app_name().to_string(),
-        version: env!("CARGO_PKG_VERSION").to_string(),
+        version: version.to_string(),
     }
 }
 
-/// Returns the app name and version. Maps to `DataApi.appInfo()`.
+/// Returns the app name and version. Maps to `DataApi.appInfo()`. The version is the one the
+/// app was packaged with: a release takes it from its tag (see release.yml), which the crate
+/// version doesn't follow, so Settings shows what the user actually installed (round 21).
 #[tauri::command]
-fn app_info() -> AppInfo {
-    current_app_info()
+fn app_info(app: tauri::AppHandle) -> AppInfo {
+    current_app_info(&app.package_info().version.to_string())
 }
 
 /// `needs_setup`, `locked` or `unlocked`. Maps to `DataApi.vaultStatus()`.
@@ -151,6 +153,49 @@ async fn fingerprint_unlock(
     }
 }
 
+/// Whether the next close of the window should ask first (round 21: the wrap-up is offered
+/// when closing late in the day). The page arms it while an offer is due; a close uses it
+/// up, so the window can never be held open twice in a row, and locking disarms it.
+#[derive(Default)]
+struct LeaveGuard(std::sync::atomic::AtomicBool);
+
+/// The DOM event the page hears when a close was held back to offer the wrap-up.
+const LEAVE_ASKED_EVENT: &str = "shiftbook:leave-asked";
+
+/// Arm or disarm the wrap-up offer for the next close. Maps to `DataApi.setLeaveGuard()`.
+#[tauri::command]
+fn set_leave_guard(guard: State<'_, LeaveGuard>, armed: bool) {
+    guard.0.store(armed, std::sync::atomic::Ordering::SeqCst);
+}
+
+/// Close the window for good ("Just close" on the wrap-up offer). Maps to
+/// `DataApi.closeWindow()`.
+#[tauri::command]
+fn close_window(window: tauri::WebviewWindow, guard: State<'_, LeaveGuard>) {
+    guard.0.store(false, std::sync::atomic::Ordering::SeqCst);
+    let _ = window.close();
+}
+
+/// A close was asked for: if the offer is armed, hold the window open this once and tell
+/// the page. Nothing else can stop a close.
+fn on_close_requested(window: &tauri::Window, api: &tauri::CloseRequestApi) {
+    let armed = window
+        .state::<LeaveGuard>()
+        .0
+        .swap(false, std::sync::atomic::Ordering::SeqCst);
+    if !armed {
+        return;
+    }
+    let Some(view) = window.app_handle().get_webview_window(window.label()) else {
+        return;
+    };
+    let script = format!("window.dispatchEvent(new CustomEvent('{LEAVE_ASKED_EVENT}'))");
+    // Only hold the window when the page could be told; otherwise it just closes.
+    if view.eval(&script).is_ok() {
+        api.prevent_close();
+    }
+}
+
 /// Close the database and wipe the key, and turn screenshot protection back on.
 /// The frontend reloads the WebView next.
 #[tauri::command]
@@ -158,7 +203,9 @@ async fn lock(
     state: State<'_, VaultSession>,
     window: tauri::WebviewWindow,
     guard: State<'_, protect::CaptureGuard>,
+    leave: State<'_, LeaveGuard>,
 ) -> Result<(), CommandError> {
+    leave.0.store(false, std::sync::atomic::Ordering::SeqCst);
     guard.end_allow();
     let _ = phone::set_protected(&window, true);
     state.lock().await
@@ -692,6 +739,8 @@ async fn bring_in_sync_file(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        // Called from Rust only (open_ticket_link); the page has no opener permission.
+        .plugin(tauri_plugin_opener::init())
         .plugin(phone::init())
         .setup(|app| {
             // Tauri's per-user app data folder; never a hard-coded path.
@@ -702,7 +751,13 @@ pub fn run() {
                 .filter(|dir| shiftbook_storage::create_private_dir(dir).is_ok());
             app.manage(VaultSession::new(data_dir));
             app.manage(protect::CaptureGuard::default());
+            app.manage(LeaveGuard::default());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                on_close_requested(window, api);
+            }
         })
         .invoke_handler(tauri::generate_handler![
             app_info,
@@ -735,6 +790,7 @@ pub fn run() {
             api::usual_code,
             api::get_entry,
             api::tray_item,
+            api::ticket_ages,
             meetings::meeting_series,
             meetings::save_meeting_series,
             meetings::set_meeting_series_deleted,
@@ -742,10 +798,21 @@ pub fn run() {
             meetings::log_meeting,
             meetings::skip_meeting,
             meetings::bell,
+            meetings::daily_note_start,
             api::add_entry_minutes,
             api::add_entry_time,
             api::log_note,
             api::delete_entry,
+            api::split_entry,
+            api::merge_entries,
+            api::unmerge_entries,
+            api::time_off_plan,
+            api::book_time_off,
+            api::book_day_off,
+            api::leave_offer,
+            set_leave_guard,
+            close_window,
+            api::unbook_day_off,
             api::restore_entry,
             api::add_entry_tickets,
             api::remove_ticket,
@@ -756,6 +823,7 @@ pub fn run() {
             api::items,
             api::item_set_done,
             api::parse_capture_line,
+            api::capture_lines_of,
             api::capture_log,
             api::tray_day,
             api::tray_add,
@@ -766,6 +834,7 @@ pub fn run() {
             api::tray_set_project,
             api::tray_set_recurring,
             api::tray_carry,
+            api::tray_snooze,
             api::tray_remove,
             api::tray_restore,
             api::ribbon,
@@ -796,6 +865,8 @@ pub fn run() {
             api::pasted_tickets,
             api::find_day,
             api::list_responses,
+            api::responses_for,
+            api::open_ticket_link,
             api::save_responses,
             api::where_was_i,
             api::timer_offer,
@@ -848,6 +919,7 @@ pub fn run() {
             change::mop_set_status,
             change::mop_set_window,
             change::mop_tick,
+            change::mop_set_seen,
             wiki::wiki,
             wiki::wiki_page,
             wiki::wiki_page_by_title,
@@ -919,14 +991,14 @@ mod tests {
 
     #[test]
     fn app_info_has_name_and_version() {
-        let info = current_app_info();
+        let info = current_app_info("0.8.2");
         assert_eq!(info.name, "Shiftbook");
-        assert_eq!(info.version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(info.version, "0.8.2");
     }
 
     #[test]
     fn app_info_serializes_with_expected_keys() {
-        let json = serde_json::to_value(current_app_info()).unwrap();
+        let json = serde_json::to_value(current_app_info("0.8.2")).unwrap();
         assert_eq!(json["name"], "Shiftbook");
         assert!(json["version"].is_string());
     }

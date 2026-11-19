@@ -54,6 +54,8 @@ export function followDay(): void {
   $effect(() => {
     void app.tray;
     void app.entries;
+    // A notepad saved from a window: its to-dos are in the bell.
+    void app.changed;
     if (app.ready) untrack(() => void Promise.all([refreshBell(), refreshPins(), refreshMops()]));
   });
 }

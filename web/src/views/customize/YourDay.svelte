@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { refreshBell } from '../../lib/bell.svelte';
   // Settings → Your day: the Day ring's target for each weekday, the optional
   // end-of-day wrap-up (round 7), the optional timer (off by default) and the headings of
   // "Copy for stand-up" and your own time buttons (round 15).
@@ -6,6 +7,7 @@
   import { MAX_TIME_BUTTONS } from '../../lib/api/generated/constants';
   import { fmtMinutes } from '../../lib/format';
   import { app, DEFAULT_TIMES, savePref, timeButtons } from '../../lib/store.svelte';
+  import { hasWork } from '../../lib/words';
   import { toast } from '../../lib/toast.svelte';
 
   /** Most time buttons (core's `MAX_TIME_BUTTONS`). */
@@ -26,6 +28,17 @@
     const targets = [...prefs.dayTargets];
     targets[day] = Math.round(hours * 60);
     await savePref('day.targets', targets.join(','));
+  }
+
+  /** Days open before a ticket shows in amber: 1 to 60, or the box goes back. */
+  async function setStaleDays(box: HTMLInputElement) {
+    const days = Number(box.value);
+    if (!Number.isInteger(days) || days < 1 || days > 60) {
+      box.value = String(prefs?.ticketStaleDays ?? 3);
+      return;
+    }
+    await savePref('tickets.stale_days', String(days));
+    void refreshBell();
   }
 
   async function setWords(done: string, next: string) {
@@ -143,6 +156,46 @@
     </div>
   </article>
 
+  {#if hasWork(prefs.useMode)}
+  <article class="paper cz-card">
+    <h3>Timesheet</h3>
+    <p class="sub">
+      Shows the Timesheet, its codes and the “needs a code” reminders. Leave it off if you just
+      want a log of what you did; your entries stay as they are either way.
+    </p>
+    <label class="check-row">
+      <input
+        type="checkbox"
+        checked={prefs.useTimesheet}
+        onchange={(e) => savePref('timesheet.use', (e.currentTarget as HTMLInputElement).checked ? 'true' : 'false')}
+      />
+      I fill in a timesheet
+    </label>
+  </article>
+  {/if}
+
+  <article class="paper cz-card">
+    <h3>Tickets still open</h3>
+    <p class="sub">
+      A ticket that is still open says how long it has been (“open 6 days”), and the ones open
+      longest come first. From this many days it shows in amber.
+    </p>
+    <label class="check-row">
+      Amber from
+      <input
+        class="text-in mono stale-days"
+        type="number"
+        min="1"
+        max="60"
+        step="1"
+        value={prefs.ticketStaleDays}
+        aria-label="Days open before a ticket shows in amber"
+        onchange={(e) => void setStaleDays(e.currentTarget as HTMLInputElement)}
+      />
+      days open
+    </label>
+  </article>
+
   <article class="paper cz-card">
     <h3>Timer</h3>
     <p class="sub">
@@ -190,6 +243,11 @@
 {/if}
 
 <style>
+  .stale-days {
+    width: 64px;
+    margin: 0 6px;
+  }
+
   .days {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

@@ -2,7 +2,7 @@
 //! `shiftbook_core::meetings` and `shiftbook_core::bell`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::bell::{bell_items, timesheet_item, with_due, BellItem};
+use shiftbook_core::bell::{bell_items, timesheet_item, with_due, with_todos, BellItem, Notepad};
 use shiftbook_core::canvas::CardKind;
 use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{MeetingSeriesId, OwnerId, ProjectId};
@@ -248,6 +248,10 @@ pub async fn bell_for(
     today: time::Date,
     now: u32,
 ) -> Res<Vec<BellItem>> {
+    // A day off is quiet (round 21): nothing reminds you of work.
+    if !store.days_off(owner, today, today).await?.is_empty() {
+        return Ok(Vec::new());
+    }
     let meetings = store.meeting_series(owner).await?;
     let next_up = store.next_up_all(owner).await?;
     let mut open: Vec<String> = store
@@ -271,16 +275,10 @@ pub async fn bell_for(
             open.push(t);
         }
     }
-    let chase: Vec<(String, String, time::Date)> = crate::pins::pinned(store, owner, today)
-        .await?
-        .into_iter()
-        .filter_map(|(p, title)| {
-            p.chase_on
-                .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
-        })
-        .collect();
+    let chase = chase_pins(store, owner, today).await?;
     let now = now.min(24 * 60 - 1);
     let mut items = bell_items(&meetings, &next_up, &chase, &open, today, now);
+    items = with_todos(items, &notepads(store, owner, today).await?);
     if let Some(item) = timesheet_reminder(store, owner, today, now).await? {
         items.insert(0, item);
     }
@@ -295,6 +293,105 @@ pub async fn bell_for(
     Ok(with_due(items, &due, today))
 }
 
+/// The pins with a day to chase them on, as the bell wants them.
+async fn chase_pins(
+    store: &SqliteStore,
+    owner: OwnerId,
+    today: time::Date,
+) -> Res<Vec<shiftbook_core::bell::ChasePin>> {
+    Ok(crate::pins::pinned(store, owner, today)
+        .await?
+        .into_iter()
+        .filter_map(|(p, title)| {
+            p.chase_on
+                .map(|on| (title, format!("{}:{}", p.kind.as_str(), p.record_id), on))
+        })
+        .collect())
+}
+
+/// Maps to `DataApi.dailyNoteStart()`: what today's note starts with before anything is
+/// typed (round 21): the day's meetings and what was brought up for it, each unless switched
+/// off in Settings → Notes. Empty when there is neither, and on a day off.
+#[tauri::command]
+pub async fn daily_note_start(s: State<'_, VaultSession>, today: String) -> Res<String> {
+    let (store, owner) = s.data().await?;
+    let today = parse_date(&today).map_err(|_| CommandError::InvalidInput)?;
+    let prefs = store.prefs(owner).await?;
+    if !store.days_off(owner, today, today).await?.is_empty() {
+        return Ok(String::new());
+    }
+    let series = if prefs.daily_meetings {
+        store.meeting_series(owner).await?
+    } else {
+        Vec::new()
+    };
+    let brought = if prefs.daily_brought {
+        shiftbook_core::bell::brought_up(
+            &store.next_up_all(owner).await?,
+            &chase_pins(&store, owner, today).await?,
+            today,
+        )
+    } else {
+        Vec::new()
+    };
+    let titles: Vec<&str> = brought.iter().map(|b| b.1.as_str()).collect();
+    Ok(shiftbook_core::notes::daily_start(
+        &shiftbook_core::meetings::meetings_on(&series, today),
+        &titles,
+    ))
+}
+
+/// The notepads the bell looks in for open to-dos (round 21): the entries the Desk shows by
+/// itself (with their tickets' notepads) and the tickets still open, each once.
+async fn notepads(store: &SqliteStore, owner: OwnerId, today: time::Date) -> Res<Vec<Notepad>> {
+    let prefs = store.prefs(owner).await?;
+    let from = shiftbook_core::dates::add_days(today, 1 - i64::from(prefs.desk_days.max(1)));
+    let mut out: Vec<Notepad> = Vec::new();
+    for rec in store.list_entries(owner, from, today).await? {
+        if rec.is_tray {
+            continue;
+        }
+        let mut text = rec.entry.next_step.clone().unwrap_or_default();
+        for t in &rec.tickets {
+            text.push('\n');
+            text.push_str(t.note.as_deref().unwrap_or(""));
+        }
+        let title = if rec.entry.description.trim().is_empty() {
+            rec.tickets
+                .iter()
+                .map(|t| t.ticket_number.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        } else {
+            rec.entry.description.clone()
+        };
+        out.push((format!("entry:{}", rec.entry.id), title, text));
+    }
+    let mut rows = store.tray_day(owner, today).await?.items;
+    rows.retain(|i| !i.done);
+    let carried = store.tray_carried(owner, today).await?;
+    for c in carried {
+        match c.entry {
+            // A ticket on an older entry: the entry's card opens it.
+            Some((id, title)) => {
+                let key = format!("entry:{id}");
+                if !out.iter().any(|(k, _, _)| *k == key) {
+                    out.push((key, title, c.item.note.unwrap_or_default()));
+                }
+            }
+            None => rows.push(c.item),
+        }
+    }
+    for item in rows {
+        out.push((
+            format!("tray:{}", item.id),
+            item.ticket_number,
+            item.note.unwrap_or_default(),
+        ));
+    }
+    Ok(out)
+}
+
 /// The timesheet reminder (round 15), when it's due: see `shiftbook_core::reminder`.
 async fn timesheet_reminder(
     store: &SqliteStore,
@@ -303,7 +400,7 @@ async fn timesheet_reminder(
     now: u32,
 ) -> Res<Option<BellItem>> {
     let prefs = store.prefs(owner).await?;
-    if !prefs.use_mode.has_work() {
+    if !prefs.shows_timesheet() {
         return Ok(None);
     }
     let start = week_of(today, prefs.week_start);

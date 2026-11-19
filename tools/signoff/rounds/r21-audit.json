@@ -1,0 +1,316 @@
+{
+ "meta": {
+  "round": 21,
+  "heading": "What I found using Shiftbook for a day",
+  "intro": "Round 21 is new: ten cards from a full run through the real app (version 0.8.2, made-up tickets) looking for rough edges and unfinished things. Nothing on them is built yet; each asks whether to build it. The five built cards from round 20 are still waiting underneath, unchanged. Each card asks one thing. Press one of the two buttons; a note is optional."
+ },
+ "cards": {
+  "r21-find": {
+   "area": "Bug · Find",
+   "round": 21,
+   "order": 1,
+   "version": 1,
+   "title": "Find throws away what you type",
+   "body": [
+    "In the version you have, the Find box (Ctrl+Space, or the box at the top) wipes each letter as you type it. So nothing can be typed there: no quick logging, no searching, no commands.",
+    "The cause is one line that slipped in on 25 October. I tried the fix in the real app and typing works again (second picture). It is not in your copy until you say so."
+   ],
+   "ask": "Fix this first?",
+   "yes": "Yes, fix it",
+   "no": "It works for me",
+   "note_hint": "What happens when you type in Find",
+   "where": [
+    "Open Shiftbook and unlock it.",
+    "Press **Ctrl+Space**, or click the **Log or note something…** box at the top.",
+    "Type any word, like **bgp**. If the box stays empty while you type, this is the bug.",
+    "If your letters do stay, press **It works for me** and tell me what you typed."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/40335ec22c95d08ef0d413bcf5ffe46f",
+     "caption": "Now: after typing \"bgp\", the box is still empty.",
+     "w": 700
+    },
+    {
+     "src": "/_blob/db1aad417567c11b62b2fbc5f9adfd98",
+     "caption": "With the fix: the letters stay and Find finds things.",
+     "w": 700
+    }
+   ]
+  },
+  "r21-october": {
+   "area": "Approved 26 October · never built",
+   "round": 21,
+   "order": 2,
+   "version": 1,
+   "title": "Three cards you said yes to in October were never built",
+   "body": [
+    "On 26 October you approved **Nothing should move or vanish on its own**, **A friendlier first day** and ten of the **Eleven more ideas**. I checked the app and the code: none of it went in, and it was never written down as decided. The main pieces:"
+   ],
+   "bullets": [
+    "Logging to another day keeps you on today, with a **Back to today** banner. New Desk cards land in a Today row.",
+    "No orange \"nothing logged\" dots before your first entry. A brand-new install shows 18 of them today (first picture).",
+    "Hours read as **45m** and **1h 30m**. The app still shows 1.92, 0.67 and 10.17 (second picture).",
+    "**+ New project…** in every project picker.",
+    "From the ideas: `[]` tick boxes in notepads, several lines at once in Log work, split and merge entries, time off for several days, Ctrl+Tab to jump back, and responses that fill in the ticket number."
+   ],
+   "ask": "Build these next, everyday ones first?",
+   "yes": "Yes, build them",
+   "no": "Let me re-pick",
+   "note_hint": "Anything you no longer want, or want first",
+   "where": [
+    "On this sheet, open the **Done** tab and find the three cards named above, from round 15. Your ticks from 26 October are on them.",
+    "In Shiftbook, open **Day**. The big number at the top right reads like **1.92**, not **1h 55m**.",
+    "Open any ticket's notepad and type **[] call the vendor**. It stays as plain text; no tick box appears."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/83b842fd35815e90fabb7375364dd87b",
+     "caption": "A brand-new install, before anything is logged: an orange dot under every past work day.",
+     "w": 830
+    },
+    {
+     "src": "/_blob/c42161d941f986e568301800057fd05d",
+     "caption": "Day view: hours still show as 1.92, 10.17, 0.75 and 0.67.",
+     "w": 800
+    }
+   ]
+  },
+  "r21-mop-finish": {
+   "area": "MOPs · running one",
+   "round": 21,
+   "order": 3,
+   "version": 1,
+   "title": "Finishing a MOP run should close the loop",
+   "body": [
+    "I ran a 20-step MOP on a change ticket from start to Done. Five things got in the way. None of them overlaps the MOP tidy-up already waiting in round 20."
+   ],
+   "bullets": [
+    "The start time sticks from the first press of **Running**, even after Undo. My 22:00 window shows \"started 05:22 PM\" (picture). Going back to Ready should clear it.",
+    "**Done** went through with 3 of 20 steps ticked. It should ask first: \"17 steps aren't ticked. Mark it done anyway?\"",
+    "The run log has no date and no finish time. Both belong in what you paste into the change ticket.",
+    "Marking it Done leaves the ticket open and logs no time. I'd offer three buttons at that moment: tick the ticket done, log the time, copy the run log.",
+    "A small **what I saw** line under any step, for pasted output or a note. It goes into the run log."
+   ],
+   "ask": "Build these five?",
+   "yes": "Yes, build them",
+   "no": "Not like this",
+   "note_hint": "Which to leave out, or what a run should do when it ends",
+   "where": [
+    "On the **Desk**, open a ticket that has a MOP and click its MOP chip.",
+    "Press **Running**, then press **Undo** on the message at the bottom. Press **Running** again later: the start time at the bottom left is still the first one.",
+    "Tick two or three steps, then press **Done**. Nothing asks about the steps left over.",
+    "Press **Copy run log** and paste it into a notepad: there is no date and no finish time."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/80539697f5dd57bba335773c4a968b82",
+     "caption": "Marked Done with 3 of 20 ticked, for a 22:00 window, \"started 05:22 PM\".",
+     "w": 660
+    }
+   ]
+  },
+  "r21-notepads": {
+   "area": "Notepads",
+   "round": 21,
+   "order": 4,
+   "version": 1,
+   "title": "Notepads that suit command output",
+   "body": [
+    "Pasted switch and router output doesn't line up in a notepad, because every notepad uses an ordinary font (picture). Three additions for the way you take notes:"
+   ],
+   "bullets": [
+    "A **Fixed-width** switch on each notepad and MOP, so columns line up. It remembers per notepad, and it turns spell-check underlines off for that notepad.",
+    "**Ctrl+F** finds a word inside the open notepad or MOP. The MOP notebook had this and it was lost when the notebook was retired.",
+    "**Ctrl+;** drops in the time, like **14:05**, for keeping a running log during an incident."
+   ],
+   "ask": "Add these three?",
+   "yes": "Yes, add them",
+   "no": "Not like this",
+   "note_hint": "Which to leave out, or a better key for the time",
+   "where": [
+    "Open any ticket's notepad (on the **Desk**, double-click a ticket card).",
+    "Paste a few lines of command output with columns, such as a **show ip interface brief**.",
+    "The columns drift, as in the picture. Press **Ctrl+F**: nothing in Shiftbook answers."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/b6846e1d8d49063c7c5b53bea88bd3d1",
+     "caption": "Now: the Status, Protocol and IP address columns don't sit under their headings.",
+     "w": 440
+    }
+   ]
+  },
+  "r21-ticket-project": {
+   "area": "Tickets · Projects",
+   "round": 21,
+   "order": 5,
+   "version": 1,
+   "title": "Tickets and projects don't know about each other",
+   "body": [
+    "I logged 9.5 hours and two change tickets on the project **Core switch upgrade**. The **Tickets** page still says \"No project\" for both, and the project's own Tickets tab says \"Nothing open matches\" (picture).",
+    "I'd make a ticket take the project of the work it's logged on, unless you've set one yourself. And because you said projects living in a different section makes them hard to add and edit, I'd put **Rename**, colour and **Archive** on the Projects page itself, not only in Settings."
+   ],
+   "ask": "Join tickets and projects up this way?",
+   "yes": "Yes, join them",
+   "no": "Not like this",
+   "note_hint": "How a ticket should get its project",
+   "where": [
+    "On **Day**, log work with a ticket number in it, like **1h cutover prep CHG0012345**, and give that entry a project.",
+    "Open **Projects**, click that project, then its **Tickets** tab. The ticket isn't there.",
+    "Open **Tickets** and find the same ticket. It says **No project**."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/dcf897055cb1dc9f5a1a6a04b31cc97a",
+     "caption": "9.5 hours and two change tickets logged on this project, yet its Tickets tab is empty.",
+     "w": 1366
+    }
+   ]
+  },
+  "r21-close-response": {
+   "area": "Tickets · your question",
+   "round": 21,
+   "order": 6,
+   "version": 1,
+   "title": "Ticking a ticket done offers your saved responses",
+   "body": [
+    "On 26 October you asked: \"Did we ever find a way of when closing tickets to have a closet out option with saved responses?\" Not yet. Ticking a ticket done only says \"INC0041240 is done\" with Undo, and the **Responses** button sits apart at the top of the tray.",
+    "I'd add **Copy a response** next to Undo. It lists your saved responses with the ticket number already filled in, so the close-out note is ready to paste into the ticket."
+   ],
+   "ask": "Is that the close-out you meant?",
+   "yes": "Yes, that's it",
+   "no": "Not quite",
+   "note_hint": "What closing a ticket should offer",
+   "where": [
+    "Open **Day** and look at the **Tickets tray** on the right.",
+    "Tick the circle beside a ticket.",
+    "A dark message at the bottom says the ticket is done, with **Undo**. That is where **Copy a response** would sit."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/f323213d9fd1e5edfd9e7ee836c227fd",
+     "caption": "Now: two tickets ticked done. Responses is a separate button at the top and doesn't know which ticket you just closed.",
+     "w": 536
+    }
+   ]
+  },
+  "r21-open-links": {
+   "area": "Your call · links",
+   "round": 21,
+   "order": 7,
+   "version": 1,
+   "title": "Open a ticket in your browser with one click",
+   "body": [
+    "Today a ticket's link can only be copied, then pasted into a browser. Web addresses typed in notes aren't clickable either. This was left as a question for you in October and never asked.",
+    "It needs one small official add-on from the makers of Tauri (the \"opener\"), and the security notes currently say not to add it. Shiftbook itself would still never go online. It would only hand an address to your own browser, only when you click, and only for http and https links."
+   ],
+   "ask": "Add it so links open in your browser?",
+   "yes": "Yes, add it",
+   "no": "Keep copy only",
+   "note_hint": "Any worry about this, or where else a link should open",
+   "where": [
+    "Click an entry that has a ticket whose prefix has a link set up (Settings → **Fields**).",
+    "In the slide-out, the ticket offers **Copy link** and nothing else.",
+    "Type a web address into any notepad. It stays plain text."
+   ]
+  },
+  "r21-backups": {
+   "area": "Safety · backups",
+   "round": 21,
+   "order": 8,
+   "version": 1,
+   "title": "Keep a second copy of your backups somewhere else",
+   "body": [
+    "Shiftbook backs itself up once a day when you unlock, and keeps the last 14. But those sit on the same disk as your data, so a dead disk or a lost laptop takes both. A copy elsewhere only exists if you remember **Back up now**."
+   ],
+   "bullets": [
+    "Pick a second folder once, such as a USB stick or a network drive. Each automatic backup is copied there too, still locked with your password.",
+    "Back up when you lock or close as well, so the last backup holds today's work.",
+    "A **Save as a file** button on the recovery key screen. It only has Copy today, though the words there say to print it."
+   ],
+   "ask": "Add these three?",
+   "yes": "Yes, add them",
+   "no": "Not like this",
+   "note_hint": "Where you'd keep the second copy",
+   "where": [
+    "Open **Settings** (the sliders button at the top), then **Backups**.",
+    "**Backups on this computer** lists the automatic ones. There is nowhere to choose a second place for them."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/745643c775abb95a88802d1c788804c6",
+     "caption": "Settings → Backups today: automatic backups stay on this computer only.",
+     "w": 1100
+    }
+   ]
+  },
+  "r21-small": {
+   "area": "Small fixes",
+   "round": 21,
+   "order": 9,
+   "version": 1,
+   "title": "Eight small fixes in one go",
+   "body": [
+    "Small things I hit along the way. None of them changes how anything works."
+   ],
+   "bullets": [
+    "Real days in place of **Looking back** and **Ahead**, like \"Mon 16 Nov\" and \"due in 17 days\". The bell says \"due Looking back\" today (first picture).",
+    "The bell shows the 09:15 stand-up as \"Just finished\" at 5:30 PM, and offers **Done** on a renewal that is 17 days away.",
+    "**Fit** on the Desk hides the first column of cards under the toolbox (second picture).",
+    "Opening Settings lights up the **Organise** tab at the top.",
+    "Once Find is fixed, it matches too loosely: \"PSU\" brings back eight unrelated entries first. Exact words and ticket numbers should come first, with the matching line shown.",
+    "Show the version number in Settings. Nothing in the app says which version you have.",
+    "\"Wildcard cert renewal\" is cut down to \"W…\" in Due soon.",
+    "The user guide still describes the MOP notebook and the old number keys."
+   ],
+   "ask": "Fix all eight?",
+   "yes": "Yes, fix them",
+   "no": "Not all of them",
+   "note_hint": "Which ones to leave as they are",
+   "where": [
+    "Click the **bell** at the top right and read the small grey lines: \"due Looking back\", \"due Ahead\".",
+    "On the **Desk**, press **Fit** in the toolbox on the left. The leftmost cards slide under the toolbox.",
+    "Open **Settings**: the **Organise** tab at the top is lit, though you aren't in it."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/7f5d56d2840658b1381411f580f9dc4d",
+     "caption": "The bell at 5:30 PM: a morning meeting under NOW, \"due Looking back\" and \"due Ahead\".",
+     "w": 380
+    },
+    {
+     "src": "/_blob/db946105e09dcb0629605af11ab1d56a",
+     "caption": "After Fit: the first column of cards sits under the toolbox.",
+     "w": 600
+    }
+   ]
+  },
+  "r21-bigger": {
+   "area": "Your call · what's next",
+   "round": 21,
+   "order": 10,
+   "version": 1,
+   "title": "The bigger pieces still missing, in the order I'd build them",
+   "body": [
+    "These are on the roadmap but not in the app. The order is my guess at what helps your day most. Reports and the contact list are left out: they're waiting on your answers in their own threads."
+   ],
+   "bullets": [
+    "**1. Export and import.** Timesheet to Excel or CSV, everything to one file, and bringing old data in. Today nothing leaves the app except a locked backup or copy and paste.",
+    "**2. Pictures in notes.** Paste a screenshot into a notepad.",
+    "**3. Project due dates and estimates.** The rules exist underneath; no screen shows them.",
+    "**4. A shortcut that works from any app** to pop up Log work. This needs one more official Tauri add-on.",
+    "**5. Word MOP import.** Bring in a .docx MOP.",
+    "**6. Planner and the meeting canvas.**"
+   ],
+   "ask": "Is this the right order?",
+   "yes": "Yes, this order",
+   "no": "Change it",
+   "note_hint": "The order you'd like, or what to drop",
+   "where": [
+    "Nothing to look at in the app: these are the things that aren't there.",
+    "Each one gets its own card with a picture before it is built."
+   ]
+  }
+ }
+}

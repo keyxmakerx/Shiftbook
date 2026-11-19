@@ -119,8 +119,16 @@ export interface Prefs {
   textSize: number;
   /** End-of-day wrap-up time `HH:MM`, or null when it's off. */
   wrapupAt: string | null;
+  /** The day the wrap-up was last finished or put off. */
+  wrapupClosed: IsoDate | null;
+  /** The day the wrap-up was last offered on the way out. */
+  wrapupOffered: IsoDate | null;
   /** The optional "Now doing" timer is turned on (off by default). */
   timer: boolean;
+  /** "I fill in a timesheet" (on by default): off hides the Timesheet and its reminders. */
+  useTimesheet: boolean;
+  /** Days a ticket can be still open before its age shows in amber (3 by default). */
+  ticketStaleDays: number;
   /** Phone: the due reminder's time `HH:MM` on work days, or null when it's off. */
   remindAt: string | null;
   /** Phone: a wrap-up nudge at the wrap-up time (off by default). */
@@ -129,6 +137,10 @@ export interface Prefs {
   pausedTimer: PausedTimer | null;
   /** Days without a change before a Jot, Daily or Meeting note moves to the archive (0 = off). */
   notesAutoArchiveDays: number;
+  /** Today's note starts with the day's meetings. */
+  dailyMeetings: boolean;
+  /** Today's note starts with what was brought up for the day. */
+  dailyBrought: boolean;
   /** Open windows and where they are. */
   windows: WindowSpot[];
   /** The MOP notebook window. */
@@ -141,6 +153,8 @@ export interface Prefs {
   timeButtons: number[];
   /** The timesheet code for each day's "Tickets" entry, or null (Customize → Timesheet). */
   ticketsCode: string | null;
+  /** The timesheet code days off are booked on. */
+  timeOffCode: string | null;
   /** Quick unlock with a PIN is on (Settings → Security). */
   quickUnlock: boolean;
   /** Copying text out is blocked until allowed for 10 minutes (on by default). */
@@ -315,17 +329,29 @@ export interface FollowUp {
   on: IsoDate;
 }
 
+/** How long a still-open ticket has been open. Mirrors `shiftbook_core::tray::OpenAge`. */
+export interface OpenAge {
+  ticket: string;
+  /** The day it has been open since. */
+  since: IsoDate;
+  /** Whole days since then; 0 for a ticket opened today. */
+  days: number;
+  /** Open long enough to stand out (Settings → Your day sets the number). */
+  stale: boolean;
+}
+
 /** One thing in the bell's panel. Mirrors `shiftbook_core::bell::BellItem`. */
 export interface BellItem {
   when: 'now' | 'today';
   title: string;
   about:
     | { kind: 'meeting'; series: string; at: number; state: MeetingToday }
-    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null }
+    | { kind: 'meeting_done'; series: string; name: string; minutes: number; project: string | null; just: boolean }
     | { kind: 'timesheet'; weekStart: IsoDate; hours: string; uncoded: number }
     | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
     | { kind: 'change_window'; mop: string; ticket: string; on: IsoDate; at: number; status: MopStatus }
+    | { kind: 'todos'; card: string; count: number; words: string }
     | { kind: 'still_open'; tickets: string[] };
 }
 
@@ -409,8 +435,14 @@ export interface MopRun {
   windowAt: number | null;
   /** When each ticked line was ticked (UTC). */
   tickTimes: { key: string; at: string }[];
-  /** When it first went Running (UTC). */
+  /** When this run went Running (UTC); cleared when it goes back to Draft or Ready. */
   startedAt: string | null;
+  /** When it went Done or Backed out (UTC). */
+  finishedAt: string | null;
+  /** How long the finished run took, rounded to a quarter hour, to offer as time to log. */
+  ranMinutes: number | null;
+  /** What was seen at each step that has something written. */
+  seen: { key: string; text: string }[];
 }
 
 /** A MOP template offered for a ticket. */
@@ -427,10 +459,10 @@ export interface ProjectGlance {
   name: string;
   color: string | null;
   archived: boolean;
-  /** Hours this week, e.g. "4.5". */
-  hoursWeek: string;
-  /** Every hour logged against it. */
-  hoursAll: string;
+  /** Minutes this week. */
+  minutesWeek: number;
+  /** Every minute logged against it. */
+  minutesAll: number;
   /** The last day it was worked on. */
   lastWorked: IsoDate | null;
   /** Its tickets still open. */
@@ -467,17 +499,24 @@ export type PrefKey =
   | 'day.targets'
   | 'ui.text_size'
   | 'day.wrapup_at'
+  | 'day.wrapup_closed'
+  | 'day.wrapup_offered'
   | 'day.timer'
+  | 'timesheet.use'
+  | 'tickets.stale_days'
   | 'phone.remind_at'
   | 'phone.wrapup_nudge'
   | 'timer.paused'
   | 'notes.auto_archive_days'
+  | 'notes.daily_meetings'
+  | 'notes.daily_brought'
   | 'ui.windows'
   | 'ui.mopbook'
   | 'desk.done_pile'
   | 'day.standup_words'
   | 'day.time_buttons'
   | 'timesheet.tickets_code'
+  | 'timesheet.time_off_code'
   | 'security.quick_unlock'
   | 'security.block_copy'
   | 'security.hide_screenshots'
@@ -530,6 +569,33 @@ export interface Entry {
   tickets: Ticket[];
   /** A roll-up of the Tickets tray (the day's plain one, or a project's). */
   isTray: boolean;
+  /** To-dos in its notepad and its tickets' notepads that aren't ticked (round 21). */
+  todos: number;
+}
+
+/** How to split an entry in two (round 21). */
+export interface SplitInput {
+  firstMinutes: number;
+  firstDescription: string;
+  secondDescription: string;
+  /** True keeps the first part's project (or repeating thing); false uses `secondProject`. */
+  sameHome: boolean;
+  secondProject: string | null;
+}
+
+/** A split's two entries. */
+export interface SplitResult {
+  first: Entry;
+  second: Entry;
+}
+
+/** A merge that was made, with what Undo needs. */
+export interface MergeResult {
+  entry: Entry;
+  /** The tickets that moved over from the other entry. */
+  moved: string[];
+  minutesBefore: number;
+  notesBefore: string | null;
 }
 
 export interface EntryInput {
@@ -559,6 +625,8 @@ export interface TrayItem {
   /** The repeating thing its minutes count under, when it has no project. */
   recurringId: string | null;
   links: TicketLink[];
+  /** To-dos in its notepad that aren't ticked (round 21). */
+  todos: number;
 }
 
 /**
@@ -570,6 +638,8 @@ export interface CarriedItem extends TrayItem {
   entryId: string | null;
   /** That entry's title. */
   entryTitle: string | null;
+  /** The day it comes back, while it is snoozed on the tray's day (round 21). */
+  snoozedUntil: IsoDate | null;
 }
 
 export interface TrayDay {
@@ -581,6 +651,21 @@ export interface TrayDay {
   entryId: string | null;
   minutes: number;
   hours: string;
+}
+
+/** One of several lines pasted into Log work. */
+export interface CaptureLine {
+  /** The line to log: its words without the list marker or the time. */
+  text: string;
+  /** What it means; `minutes` is set when the line had a time in it. */
+  capture: Capture;
+}
+
+/** Several lines pasted into Log work, one entry each (round 21). */
+export interface CaptureLines {
+  lines: CaptureLine[];
+  /** Lines past the most taken at once. */
+  leftOut: number;
 }
 
 /** Mirrors `shiftbook_core::capture::Capture`. */
@@ -610,6 +695,37 @@ export interface RibbonDay {
   future: boolean;
   /** Nothing logged on a day that has a target. */
   gap: boolean;
+  /** Booked as a day off. */
+  off: boolean;
+}
+
+/** The wrap-up offer on the way out: today's hours against the day's target. */
+export interface LeaveOffer {
+  logged: number;
+  target: number;
+}
+
+/** One day of a time-off range: booked with `minutes`, or skipped (`free`: no target that
+ * weekday; `logged`: something is on it already). */
+export interface OffDay {
+  date: IsoDate;
+  minutes: number;
+  skip: 'free' | 'logged' | null;
+}
+
+/** What booking a range off does. */
+export interface TimeOffPlan {
+  days: OffDay[];
+  /** How many days get booked. */
+  booked: number;
+  minutes: number;
+  hours: string;
+}
+
+/** Time off that was booked: the new entries (for Undo) and their hours together. */
+export interface TimeOffBooked {
+  entries: string[];
+  hours: string;
 }
 
 export interface RibbonWeek {
@@ -747,7 +863,7 @@ export interface FieldInput {
 export interface CustomValue {
   fieldId: string;
   value: string;
-  /** For link fields: the value turned into a link (shown and copied, never opened). */
+  /** For link fields: the value turned into a link (shown and copied). */
   link: string | null;
 }
 
@@ -773,6 +889,16 @@ export interface SavedResponse {
   name: string;
   /** The message that gets copied. */
   text: string;
+}
+
+/** A saved response ready to copy, its blanks filled in (round 21). */
+export interface FilledResponse {
+  id: string;
+  name: string;
+  /** The message with {ticket}, {date} and (once a name is given) {name} filled in. */
+  text: string;
+  /** It has a {name} blank and no name was given: ask for one, then ask again with it. */
+  asksName: boolean;
 }
 
 /** A saved response as typed in Settings (a blank name uses the message's first line). */
@@ -806,8 +932,8 @@ export interface CanvasCard {
   inbox: InboxItem | null;
   /** For an entry: the same work on other days, folded into this card, newest first. */
   work: Entry[];
-  /** The time across this card and `work`, as hours (only when there is other work). */
-  workHours: string | null;
+  /** The minutes across this card and `work` (only when there is other work). */
+  workMinutes: number | null;
   /** Tickets-tray tickets with a number this work has, folded into this card. */
   folded: { item: TrayItem; date: IsoDate }[];
   /** Stays bright under "Just today": from today, still open, brought up for today or pinned. */
@@ -930,8 +1056,8 @@ export interface BoardData {
   children: BoardChild[];
   /** Newest first, each with its spot on this board. */
   cards: CanvasCard[];
-  /** For a project: every minute logged against it, as hours. */
-  hours: string | null;
+  /** For a project: every minute logged against it. */
+  minutes: number | null;
   /** For a project: its tickets still open. */
   openTickets: number;
   /** An archived project. */
@@ -975,6 +1101,8 @@ export interface Note {
   updatedAt: string;
   /** Web addresses written in it, in order. */
   links: string[];
+  /** To-dos in it that aren't ticked (round 21). */
+  todos: number;
 }
 
 export interface NoteInput {
@@ -1228,6 +1356,33 @@ export interface DataApi {
   setEntryCodes(ids: string[], codeId: string | null): Promise<void>;
   /** One entry (for a window showing its notepad). */
   getEntry(id: string): Promise<Entry>;
+  /** One entry becomes two that share its time (round 21). Tauri: `split_entry`. */
+  splitEntry(id: string, split: SplitInput): Promise<SplitResult>;
+  /** Whether to offer the wrap-up when locking or closing now: after the wrap-up time, with
+   * something logged, once a day, and not once it's finished or put off. Tauri: `leave_offer`. */
+  leaveOffer(today: IsoDate, now: number): Promise<LeaveOffer | null>;
+  /** Make the next close of the window ask first (or not). A close uses it up.
+   * Tauri: `set_leave_guard`. */
+  setLeaveGuard(armed: boolean): Promise<void>;
+  /** Close the window for good. Tauri: `close_window`. */
+  closeWindow(): Promise<void>;
+  /** Hear when a close was held back to offer the wrap-up. Returns how to stop listening. */
+  onLeaveAsked(handler: () => void): () => void;
+  /** What booking `from` to `to` off would do: work days with nothing logged get a
+   * "Holiday" entry, weekends and logged days are skipped. Tauri: `time_off_plan`. */
+  timeOffPlan(from: IsoDate, to: IsoDate): Promise<TimeOffPlan>;
+  /** Book that plan. Tauri: `book_time_off`. */
+  bookTimeOff(from: IsoDate, to: IsoDate): Promise<TimeOffBooked>;
+  /** Book one day off whatever is on it, with the weekday's usual hours (8 h on a day
+   * that has none). Tauri: `book_day_off`. */
+  bookDayOff(date: IsoDate): Promise<TimeOffBooked>;
+  /** Take a day off back: its "Holiday" entries are deleted. Returns their ids, for Undo.
+   * Tauri: `unbook_day_off`. */
+  unbookDayOff(date: IsoDate): Promise<string[]>;
+  /** `other` goes into `keep`: time, notepad and tickets (same day only). Tauri: `merge_entries`. */
+  mergeEntries(keep: string, other: string): Promise<MergeResult>;
+  /** Undo a merge with what it returned. Tauri: `unmerge_entries`. */
+  unmergeEntries(keep: string, other: string, minutes: number, notes: string | null, moved: string[]): Promise<Entry>;
   deleteEntry(id: string): Promise<void>;
   restoreEntry(id: string): Promise<Entry>;
   addEntryTickets(id: string, text: string): Promise<Entry>;
@@ -1251,6 +1406,8 @@ export interface DataApi {
   // ----- capture -----
   /** What a capture line means (for the live chips). */
   parseCapture(text: string, today: IsoDate): Promise<Capture>;
+  /** Several lines pasted into Log work, read one by one (round 21). Tauri: `capture_lines_of`. */
+  captureLines(text: string, today: IsoDate): Promise<CaptureLines>;
   /** Log a capture line; it must contain hours. */
   captureLog(text: string, today: IsoDate): Promise<Entry>;
 
@@ -1270,6 +1427,11 @@ export interface DataApi {
   traySetRecurring(id: string, recurringId: string | null): Promise<TrayDay>;
   /** Work on a still-open ticket again on `date`: it joins that day's tray. */
   trayCarry(id: string, date: IsoDate): Promise<TrayDay>;
+  /**
+   * Keep a still-open ticket out of "Still open from before" until `until` (round 21), or wake
+   * it now with null. `today` is the day it is done on; `date`'s tray comes back. Tauri: `tray_snooze`.
+   */
+  traySnooze(ticket: string, today: IsoDate, until: IsoDate | null, date: IsoDate): Promise<TrayDay>;
   /** One tray ticket, or null when it was taken out (for a window showing its notepad). */
   trayItem(id: string): Promise<TrayItem | null>;
 
@@ -1383,6 +1545,17 @@ export interface DataApi {
   // ----- saved responses -----
   /** Saved responses, in order. Tauri: `list_responses`. */
   listResponses(): Promise<SavedResponse[]>;
+  /**
+   * The saved responses ready to copy: {ticket} (when one is given), {date} and {name} (when
+   * one is given) filled in. Tauri: `responses_for`.
+   */
+  responsesFor(ticket: string | null, today: IsoDate, name: string | null): Promise<FilledResponse[]>;
+  /**
+   * Hand one of a ticket's links to the user's own browser (round 21). Only a link that the
+   * user's link fields build for that ticket is opened; anything else is refused. Tauri:
+   * `open_ticket_link`. (A web build can open the same link in a new tab.)
+   */
+  openTicketLink(ticket: string, url: string): Promise<void>;
   /** Replace the list (rows with no message dropped, at most 30). Tauri: `save_responses`. */
   saveResponses(items: ResponseInput[]): Promise<SavedResponse[]>;
 
@@ -1404,6 +1577,8 @@ export interface DataApi {
   bringUpDays(today: IsoDate): Promise<IsoDate[]>;
   /** Every card with a follow-up day (round 15). Tauri: `follow_ups`. */
   followUps(): Promise<FollowUp[]>;
+  /** How long each still-open ticket has been open, longest first (round 21). Tauri: `ticket_ages`. */
+  ticketAges(today: IsoDate): Promise<OpenAge[]>;
   /** "No follow-up" on a card. Tauri: `clear_follow_up`. */
   clearFollowUp(kind: CardKind, id: string): Promise<void>;
   /** Replace the list (blank lines dropped, at most 7); an empty list clears it. */
@@ -1471,6 +1646,9 @@ export interface DataApi {
   listNotes(query: string, kind: NoteKind | null, includeArchived: boolean): Promise<NoteList>;
   getNote(id: string): Promise<Note>;
   createNote(note: NoteInput): Promise<Note>;
+  /** What today's note starts with before anything is typed: the day's meetings and what
+   * was brought up for it (each can be switched off), or ''. Tauri: `daily_note_start`. */
+  dailyNoteStart(today: IsoDate): Promise<string>;
   /** The day's Daily note (titled "Daily · Mon 19 Oct 2026"), or null. Tauri: `daily_note`. */
   dailyNote(date: IsoDate): Promise<Note | null>;
   /** Write the day's Daily note, creating it once something is typed. Tauri: `save_daily_note`. */
@@ -1513,6 +1691,8 @@ export interface DataApi {
   mopSetWindow(id: string, on: IsoDate | null, at: number | null): Promise<void>;
   /** Tick lines off, keeping when each was ticked. Tauri: `mop_tick`. */
   mopTick(id: string, ticks: string[]): Promise<Note>;
+  /** Write what was seen at one step (blank takes it away), for the run log. Tauri: `mop_set_seen`. */
+  mopSetSeen(id: string, key: string, text: string): Promise<void>;
 
   // ----- the wiki (round 18) -----
   /** The side list: spaces with their pages, pages in no space, and templates. Tauri: `wiki`. */

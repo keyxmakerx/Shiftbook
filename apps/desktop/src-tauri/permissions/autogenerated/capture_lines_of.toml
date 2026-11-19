@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-capture-lines-of"
+description = "Enables the capture_lines_of command without any pre-configured scope."
+commands.allow = ["capture_lines_of"]
+
+[[permission]]
+identifier = "deny-capture-lines-of"
+description = "Denies the capture_lines_of command without any pre-configured scope."
+commands.deny = ["capture_lines_of"]

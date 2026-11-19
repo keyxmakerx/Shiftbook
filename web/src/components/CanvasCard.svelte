@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ageOf, ageWords } from '../lib/age';
   // One card on the Desk (the Canvas): an entry, a ticket, a note or an Inbox scrap.
   // Drag to move it (saved when you let go); click an entry or a ticket for its notepad and
   // options underneath (round 12); double-click to open it; right-click for its paper menu.
@@ -7,7 +8,7 @@
   import type { CanvasCard } from '../lib/api';
   import { followUpItem } from '../lib/bringUp';
   import { entryMenu } from '../lib/entryActions';
-  import { fmtMinutes, relativeDay } from '../lib/format';
+  import { dayMonth, fmtMinutes, relativeDay, weekdayShort } from '../lib/format';
   import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { KIND_LABEL, snippet } from '../lib/notes';
   import { closePanel, openNotepad, panel, panelOpenAt } from '../lib/panel.svelte';
@@ -336,6 +337,10 @@
   }
 </script>
 
+{#snippet todoCount(n: number)}
+  {#if n > 0}{' · '}<span class="todo" title="{n} {n === 1 ? 'to-do' : 'to-dos'} not ticked yet">☐ {n}</span>{/if}
+{/snippet}
+
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   data-card={key}
@@ -387,8 +392,9 @@
     <span class="kind">
       {#if card.work.length}
         {@const days = new Set([e.date, ...card.work.map((w) => w.date)]).size}
-        Entry · {card.workHours} h · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
-      {:else}Entry · {e.hours} h{dayWord(e.date)}{/if}
+        Entry · {fmtMinutes(card.workMinutes ?? e.minutes)} · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
+      {:else}Entry · {fmtMinutes(e.minutes)}{dayWord(e.date)}{/if}
+      {@render todoCount(e.todos + card.work.reduce((n, w) => n + w.todos, 0))}
     </span>
     {#if renaming.id === e.id}
       <RenameBox entry={e} also={card.work} />
@@ -431,7 +437,11 @@
   {:else if card.tray}
     {@const t = card.tray}
     <span class="kind">
-      {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
+      {#if t.item.done}Ticket{:else}
+        {@const age = ageOf(app.ages, t.item.ticket)}
+        <span class="open" class:stale={age?.stale} title={age && age.days > 0 ? `Open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : null}>{ageWords(age) || 'Still open'}</span>
+      {/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
+      {@render todoCount(t.item.todos)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
     <!-- A ticket's MOP shows here; "+ MOP" stays off the card's front (round 19): it's in the
@@ -444,7 +454,7 @@
     {#if more > 0}<span class="more">✎ {more} more {more === 1 ? 'line' : 'lines'} in its notepad</span>{/if}
   {:else if card.note}
     {@const n = card.note}
-    <span class="kind">{KIND_LABEL[n.kind]} note</span>
+    <span class="kind">{KIND_LABEL[n.kind]} note{@render todoCount(n.todos)}</span>
     <span class="title">{n.title}</span>
     {#if snippet(n.body, n.title, '', 90)}<span class="sub">{snippet(n.body, n.title, '', 90)}</span>{/if}
   {:else if card.inbox}
@@ -550,6 +560,11 @@
     text-transform: uppercase;
     font-weight: 700;
     color: var(--mut);
+  }
+
+  .todo {
+    color: var(--ink);
+    white-space: nowrap;
   }
 
   .named {
@@ -709,6 +724,14 @@
 
   .open {
     color: var(--warn);
+  }
+
+  /* Open long enough to stand out (Settings → Your day sets the days). */
+  .open.stale {
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--paper);
+    background: var(--warn);
   }
 
   @media (prefers-reduced-motion: reduce) {

@@ -42,11 +42,25 @@ pub const KEY_TEXT_SIZE: &str = "ui.text_size";
 pub const KEY_WRAPUP_AT: &str = "day.wrapup_at";
 /// The optional "Now doing" timer: `true` or `false` (off by default).
 pub const KEY_TIMER: &str = "day.timer";
+/// "I fill in a timesheet": `true` or `false` (on by default; round 21). Off hides the
+/// Timesheet, its codes and the "needs a code" reminders for someone who only wants a log.
+pub const KEY_USE_TIMESHEET: &str = "timesheet.use";
+/// Days a ticket can be still open before its age shows in amber (round 21).
+pub const KEY_TICKET_STALE_DAYS: &str = "tickets.stale_days";
+/// The default for [`KEY_TICKET_STALE_DAYS`].
+pub const DEFAULT_TICKET_STALE_DAYS: u32 = 3;
+/// The most [`KEY_TICKET_STALE_DAYS`] can be.
+pub const MAX_TICKET_STALE_DAYS: u32 = 60;
 /// Phone: the quiet due reminder's time `HH:MM` on work days, or blank when it's off
 /// (off by default). See [`crate::nudge`].
 pub const KEY_REMIND_AT: &str = "phone.remind_at";
 /// Phone: a wrap-up nudge at the wrap-up time, `true` or `false` (off by default).
 pub const KEY_WRAPUP_NUDGE: &str = "phone.wrapup_nudge";
+/// The day the wrap-up was last finished or put off (`YYYY-MM-DD`, or empty), so it stays
+/// away for the rest of that day, through a lock or a restart too (round 21).
+pub const KEY_WRAPUP_CLOSED: &str = "day.wrapup_closed";
+/// The day the wrap-up was last offered on the way out (`YYYY-MM-DD`, or empty): once a day.
+pub const KEY_WRAPUP_OFFERED: &str = "day.wrapup_offered";
 /// A timer paused by locking (see [`PausedTimer`]), or blank.
 pub const KEY_TIMER_PAUSED: &str = "timer.paused";
 /// Open windows and where they are (see [`crate::windows`]), or blank.
@@ -57,6 +71,10 @@ pub const KEY_MOPBOOK: &str = "ui.mopbook";
 /// Days without a change before a note moves to the archive, one of
 /// [`AUTO_ARCHIVE_CHOICES`] (`0` = off).
 pub const KEY_NOTES_AUTO_ARCHIVE: &str = "notes.auto_archive_days";
+/// Today's note starts with the day's meetings (round 21): `true` (default) or `false`.
+pub const KEY_DAILY_MEETINGS: &str = "notes.daily_meetings";
+/// Today's note starts with what was brought up for the day: `true` (default) or `false`.
+pub const KEY_DAILY_BROUGHT: &str = "notes.daily_brought";
 /// Where the Desk's "Done today" pile sits, `x y` in canvas units, or blank for automatic.
 pub const KEY_DONE_PILE: &str = "desk.done_pile";
 /// What Shiftbook is for: `work`, `home` or `both` (see [`crate::home`]).
@@ -90,6 +108,8 @@ pub const KEY_TIME_BUTTONS: &str = "day.time_buttons";
 /// The timesheet code for each day's "Tickets" roll-up entry (round 15): a code id, or
 /// blank for none.
 pub const KEY_TICKETS_CODE: &str = "timesheet.tickets_code";
+/// The timesheet code days off are booked on (a code id; empty for none).
+pub const KEY_TIME_OFF_CODE: &str = "timesheet.time_off_code";
 /// The time buttons everyone starts with.
 pub const DEFAULT_TIME_BUTTONS: [u32; 5] = [15, 30, 45, 60, 120];
 /// Most time buttons.
@@ -233,10 +253,16 @@ pub struct Prefs {
     pub wrapup_at: Option<String>,
     /// The "Now doing" timer is turned on.
     pub timer: bool,
+    /// "I fill in a timesheet" (see [`Prefs::shows_timesheet`]).
+    pub use_timesheet: bool,
     /// Phone: due reminder time `HH:MM`, `None` when off.
     pub remind_at: Option<String>,
     /// Phone: a wrap-up nudge at the wrap-up time.
     pub wrapup_nudge: bool,
+    /// The day the wrap-up was last finished or put off (`YYYY-MM-DD`).
+    pub wrapup_closed: Option<String>,
+    /// The day the wrap-up was last offered on the way out (`YYYY-MM-DD`).
+    pub wrapup_offered: Option<String>,
     /// Quick unlock with a PIN is turned on.
     pub quick_unlock: bool,
     /// Copying text out is blocked until allowed (the Protected button).
@@ -245,6 +271,12 @@ pub struct Prefs {
     pub hide_screenshots: bool,
     /// The right mouse button drags too.
     pub right_drag: bool,
+    /// Days a ticket can be still open before its age shows in amber.
+    pub ticket_stale_days: u32,
+    /// Today's note starts with the day's meetings.
+    pub daily_meetings: bool,
+    /// Today's note starts with what was brought up for the day.
+    pub daily_brought: bool,
     /// Days an entry card stays on the Desk by itself (today counts as one).
     pub desk_days: u32,
     /// Cards the owner moved stay until put away (otherwise they leave after `desk_days`).
@@ -267,12 +299,20 @@ pub struct Prefs {
     pub time_buttons: Vec<u32>,
     /// The timesheet code for each day's "Tickets" roll-up entry.
     pub tickets_code: Option<crate::ids::TimesheetCodeId>,
+    /// The timesheet code days off are booked on.
+    pub time_off_code: Option<crate::ids::TimesheetCodeId>,
 }
 
 impl Prefs {
     /// The target for a date's weekday.
     pub fn day_target(&self, date: time::Date) -> u32 {
         self.day_targets[usize::from(date.weekday().number_days_from_monday())]
+    }
+
+    /// True when the Timesheet, its codes and its reminders show: Shiftbook is used for work
+    /// (Work or Both) and "I fill in a timesheet" is on.
+    pub fn shows_timesheet(&self) -> bool {
+        self.use_mode.has_work() && self.use_timesheet
     }
 }
 
@@ -292,11 +332,17 @@ impl Default for Prefs {
             wrapup_at: None,
             remind_at: None,
             wrapup_nudge: false,
+            wrapup_closed: None,
+            wrapup_offered: None,
             timer: false,
+            use_timesheet: true,
             quick_unlock: false,
             block_copy: true,
             hide_screenshots: true,
             right_drag: false,
+            ticket_stale_days: DEFAULT_TICKET_STALE_DAYS,
+            daily_meetings: true,
+            daily_brought: true,
             desk_days: crate::canvas::RECENT_DAYS as u32,
             moved_stay: false,
             paused_timer: None,
@@ -311,6 +357,7 @@ impl Default for Prefs {
             ),
             time_buttons: DEFAULT_TIME_BUTTONS.to_vec(),
             tickets_code: None,
+            time_off_code: None,
         }
     }
 }
@@ -396,8 +443,13 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_THEME => ok(&["system", "light", "dark"]),
         KEY_MOTION => ok(&["still", "calm", "lively"]),
         KEY_GROUP_BY => ok(&["code", "project"]),
-        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_WRAPUP_NUDGE | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY
-        | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG | KEY_DESK_MOVED_STAY => ok(&["true", "false"]),
+        KEY_COMMENT_TICKETS | KEY_TIMER | KEY_USE_TIMESHEET | KEY_WRAPUP_NUDGE
+        | KEY_QUICK_UNLOCK | KEY_BLOCK_COPY | KEY_HIDE_SCREENSHOTS | KEY_RIGHT_DRAG
+        | KEY_DESK_MOVED_STAY | KEY_DAILY_MEETINGS | KEY_DAILY_BROUGHT => ok(&["true", "false"]),
+        KEY_TICKET_STALE_DAYS => match v.parse::<u32>() {
+            Ok(n) if (1..=MAX_TICKET_STALE_DAYS).contains(&n) => Ok(n.to_string()),
+            _ => Err(invalid(value)),
+        },
         KEY_DESK_DAYS => match v.parse::<u32>() {
             Ok(n) if DESK_DAYS_CHOICES.contains(&n) => Ok(n.to_string()),
             _ => Err(invalid(value)),
@@ -465,7 +517,8 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_USE_MODE => UseMode::parse(v)
             .map(|m| m.as_str().to_string())
             .ok_or_else(|| invalid(value)),
-        KEY_LAST_OPEN => crate::dates::parse_date(v)
+        KEY_WRAPUP_CLOSED | KEY_WRAPUP_OFFERED if v.is_empty() => Ok(String::new()),
+        KEY_LAST_OPEN | KEY_WRAPUP_CLOSED | KEY_WRAPUP_OFFERED => crate::dates::parse_date(v)
             .map(crate::dates::format_date)
             .map_err(|_| invalid(value)),
         KEY_STANDUP_WORDS => parse_standup_words(v)
@@ -475,8 +528,8 @@ pub fn validate_pref(key: &str, value: &str) -> Result<String, CoreError> {
         KEY_TIME_BUTTONS => parse_time_buttons(v)
             .map(|l| l.iter().map(u32::to_string).collect::<Vec<_>>().join(","))
             .ok_or_else(|| invalid(value)),
-        KEY_TICKETS_CODE if v.is_empty() => Ok(String::new()),
-        KEY_TICKETS_CODE => v
+        KEY_TICKETS_CODE | KEY_TIME_OFF_CODE if v.is_empty() => Ok(String::new()),
+        KEY_TICKETS_CODE | KEY_TIME_OFF_CODE => v
             .parse::<crate::ids::TimesheetCodeId>()
             .map(|c| c.to_string())
             .map_err(|_| invalid(value)),
@@ -541,12 +594,26 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
             KEY_TEXT_SIZE => prefs.text_size = v.parse().unwrap_or(DEFAULT_TEXT_SIZE),
             KEY_WRAPUP_AT => prefs.wrapup_at = Some(v).filter(|t| !t.is_empty()),
             KEY_TIMER => prefs.timer = v == "true",
+            KEY_USE_TIMESHEET => prefs.use_timesheet = v != "false",
+            KEY_DAILY_MEETINGS => prefs.daily_meetings = v != "false",
+            KEY_DAILY_BROUGHT => prefs.daily_brought = v != "false",
             KEY_REMIND_AT => prefs.remind_at = parse_clock(&v),
             KEY_WRAPUP_NUDGE => prefs.wrapup_nudge = v == "true",
+            KEY_WRAPUP_CLOSED => prefs.wrapup_closed = Some(v).filter(|d| !d.is_empty()),
+            KEY_WRAPUP_OFFERED => prefs.wrapup_offered = Some(v).filter(|d| !d.is_empty()),
             KEY_QUICK_UNLOCK => prefs.quick_unlock = v == "true",
             KEY_BLOCK_COPY => prefs.block_copy = v == "true",
             KEY_HIDE_SCREENSHOTS => prefs.hide_screenshots = v == "true",
             KEY_RIGHT_DRAG => prefs.right_drag = v == "true",
+            KEY_TICKET_STALE_DAYS => {
+                if let Some(n) = v
+                    .parse()
+                    .ok()
+                    .filter(|n| (1..=MAX_TICKET_STALE_DAYS).contains(n))
+                {
+                    prefs.ticket_stale_days = n;
+                }
+            }
             KEY_DESK_DAYS => {
                 if let Some(n) = v.parse().ok().filter(|n| DESK_DAYS_CHOICES.contains(n)) {
                     prefs.desk_days = n;
@@ -572,6 +639,7 @@ pub fn prefs_from_settings<K: AsRef<str>, V: AsRef<str>>(settings: &[(K, V)]) ->
                 }
             }
             KEY_TICKETS_CODE => prefs.tickets_code = v.parse().ok(),
+            KEY_TIME_OFF_CODE => prefs.time_off_code = v.parse().ok(),
             _ => {}
         }
     }
@@ -598,6 +666,44 @@ mod tests {
     }
 
     #[test]
+    fn wrap_up_days() {
+        assert_eq!(
+            validate_pref(KEY_WRAPUP_CLOSED, "2026-11-18"),
+            Ok("2026-11-18".into())
+        );
+        assert_eq!(validate_pref(KEY_WRAPUP_OFFERED, " "), Ok(String::new()));
+        assert!(validate_pref(KEY_WRAPUP_CLOSED, "today").is_err());
+        let p = prefs_from_settings(&[(KEY_WRAPUP_CLOSED, "2026-11-18"), (KEY_WRAPUP_OFFERED, "")]);
+        assert_eq!(p.wrapup_closed.as_deref(), Some("2026-11-18"));
+        assert_eq!(p.wrapup_offered, None);
+        assert_eq!(Prefs::default().wrapup_closed, None);
+    }
+
+    #[test]
+    fn daily_note_start_switches() {
+        let p = Prefs::default();
+        assert!(p.daily_meetings && p.daily_brought);
+        let p = prefs_from_settings(&[(KEY_DAILY_MEETINGS, "false")]);
+        assert!(!p.daily_meetings && p.daily_brought);
+        let p = prefs_from_settings(&[(KEY_DAILY_BROUGHT, "false")]);
+        assert!(p.daily_meetings && !p.daily_brought);
+        assert!(validate_pref(KEY_DAILY_MEETINGS, "sometimes").is_err());
+        assert_eq!(validate_pref(KEY_DAILY_BROUGHT, "true"), Ok("true".into()));
+    }
+
+    #[test]
+    fn time_off_code() {
+        let id = crate::ids::TimesheetCodeId::new();
+        let text = id.to_string();
+        assert_eq!(validate_pref(KEY_TIME_OFF_CODE, &text), Ok(text.clone()));
+        assert_eq!(validate_pref(KEY_TIME_OFF_CODE, ""), Ok(String::new()));
+        assert!(validate_pref(KEY_TIME_OFF_CODE, "Leave").is_err());
+        assert_eq!(Prefs::default().time_off_code, None);
+        let p = prefs_from_settings(&[(KEY_TIME_OFF_CODE, text.as_str())]);
+        assert_eq!(p.time_off_code, Some(id));
+    }
+
+    #[test]
     fn tickets_code() {
         let id = crate::ids::TimesheetCodeId::new();
         let text = id.to_string();
@@ -609,6 +715,18 @@ mod tests {
         assert_eq!(p.tickets_code, Some(id));
         let p = prefs_from_settings(&[(KEY_TICKETS_CODE, "")]);
         assert_eq!(p.tickets_code, None);
+    }
+
+    #[test]
+    fn the_timesheet_shows_for_work_unless_turned_off() {
+        // On unless it was turned off, and never in Home.
+        assert!(Prefs::default().shows_timesheet());
+        let off = prefs_from_settings(&[(KEY_USE_TIMESHEET, "false")]);
+        assert!(!off.use_timesheet && !off.shows_timesheet());
+        let home = prefs_from_settings(&[(KEY_USE_MODE, "home")]);
+        assert!(home.use_timesheet && !home.shows_timesheet());
+        let both = prefs_from_settings(&[(KEY_USE_MODE, "both"), (KEY_USE_TIMESHEET, "true")]);
+        assert!(both.shows_timesheet());
     }
 
     #[test]
@@ -859,6 +977,14 @@ mod tests {
         let p = Prefs::default();
         assert_eq!((p.desk_days, p.moved_stay), (7, false));
         assert_eq!(validate_pref(KEY_DESK_DAYS, " 3 "), Ok("3".into()));
+        assert_eq!(p.ticket_stale_days, 3);
+        assert_eq!(validate_pref(KEY_TICKET_STALE_DAYS, " 5 "), Ok("5".into()));
+        assert!(validate_pref(KEY_TICKET_STALE_DAYS, "0").is_err());
+        assert!(validate_pref(KEY_TICKET_STALE_DAYS, "61").is_err());
+        assert_eq!(
+            prefs_from_settings(&[(KEY_TICKET_STALE_DAYS, "5")]).ticket_stale_days,
+            5
+        );
         assert!(validate_pref(KEY_DESK_DAYS, "5").is_err());
         assert_eq!(prefs_from_settings(&[(KEY_DESK_DAYS, "14")]).desk_days, 14);
         assert_eq!(
@@ -874,6 +1000,11 @@ mod tests {
     fn timer_on_and_paused() {
         assert_eq!(validate_pref(KEY_TIMER, "true"), Ok("true".into()));
         assert!(validate_pref(KEY_TIMER, "yes").is_err());
+        assert_eq!(
+            validate_pref(KEY_USE_TIMESHEET, "false"),
+            Ok("false".into())
+        );
+        assert!(validate_pref(KEY_USE_TIMESHEET, "no").is_err());
         assert_eq!(validate_pref(KEY_REMIND_AT, "8:00"), Ok("08:00".into()));
         assert_eq!(validate_pref(KEY_REMIND_AT, ""), Ok(String::new()));
         assert!(validate_pref(KEY_REMIND_AT, "8am").is_err());

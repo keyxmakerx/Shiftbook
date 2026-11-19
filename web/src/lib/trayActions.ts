@@ -3,13 +3,17 @@
 // a project, carry it into today, take it out, plus the paper menu that offers all of them.
 import { api } from './api';
 import type { CarriedItem, TrayDay, TrayItem } from './api';
-import { followUpItem } from './bringUp';
+import { dayChoiceLabel, followUpItem, followWords } from './bringUp';
+import { askDay } from './dayPrompt.svelte';
 import { attachMop, mopFor, openMop } from './mops.svelte';
-import { fmtMinutes } from './format';
+import { addDays, fmtMinutes, longDay } from './format';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { newProjectChoice } from './newProject';
 import { pinMenuItem } from './pins.svelte';
 import { copyText } from './protection.svelte';
 import { app, attempt, flashEntry, projectById, refresh } from './store.svelte';
+import { responseButton } from './responses';
+import { openLinkItems } from './ticketLinks';
 import { toast } from './toast.svelte';
 import { repeating, repeatingChoices } from './repeating.svelte';
 import { openWindow } from './windows.svelte';
@@ -29,6 +33,7 @@ export async function setTrayDone(item: TrayItem, done: boolean): Promise<void> 
     'Undo',
     () => void attempt(() => api.traySetDone(item.id, !done)).then(applyTray),
     () => void attempt(() => api.traySetDone(item.id, done)).then(applyTray),
+    done ? responseButton(item.ticket) : null,
   );
 }
 
@@ -73,6 +78,7 @@ export async function setCarriedDone(item: CarriedItem, done: boolean): Promise<
     'Undo',
     () => void set(!done),
     () => void set(done),
+    done ? responseButton(item.ticket) : null,
   );
 }
 
@@ -80,6 +86,37 @@ export async function setCarriedDone(item: CarriedItem, done: boolean): Promise<
 export async function carryCarried(item: CarriedItem): Promise<void> {
   if (!item.entryId) return carryTray(item);
   await applyTray(await attempt(() => api.trayAdd(app.selected, item.ticket)));
+}
+
+/**
+ * Put time on a ticket today (round 21: a finished MOP run offers how long it took). A
+ * ticket on today's Tickets tray gets it added to its own row; any other is logged the way
+ * Log work would, onto today's entry with that ticket or a new one.
+ */
+export async function logTicketTime(ticket: string, minutes: number): Promise<void> {
+  const day = await attempt(() => api.trayDay(app.today));
+  if (!day) return;
+  const row = day.items.find((i) => i.ticket.toLowerCase() === ticket.toLowerCase());
+  if (row) {
+    const next = Math.min(480, row.minutes + minutes);
+    await applyTray(await attempt(() => api.traySetMinutes(row.id, next)));
+    toast(`Added ${fmtMinutes(next - row.minutes)} to ${row.ticket}: ${fmtMinutes(next)} today`, 'Undo', () => {
+      void attempt(() => api.traySetMinutes(row.id, row.minutes)).then(applyTray);
+    });
+    return;
+  }
+  const before = new Set((await attempt(() => api.listEntries(app.today, app.today)))?.map((e) => e.id));
+  // A ticket already ticked done stays done: the time is for work that is finished.
+  const item = (await attempt(() => api.items([ticket])))?.[0];
+  const entry = await attempt(() => api.quickLog(app.today, ticket, minutes, null));
+  if (!entry) return;
+  const existed = before.has(entry.id);
+  if (item?.done) await attempt(() => api.itemSetDone(item.id, true, app.today));
+  await refresh();
+  toast(existed ? `Added ${fmtMinutes(minutes)} to ${entry.description}` : `Logged ${fmtMinutes(minutes)} on ${ticket}`, 'Undo', () => {
+    const undo: Promise<unknown> = existed ? api.addEntryMinutes(entry.id, -minutes) : api.deleteEntry(entry.id);
+    void attempt(() => undo).then(refresh);
+  });
 }
 
 export async function removeTray(item: TrayItem): Promise<void> {
@@ -113,6 +150,8 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
   // Its MOP (round 18) when it has one; attaching one from a template is under More.
   const hasMop = !!mopFor(item.ticket);
   if (hasMop) items.push({ label: 'Open its MOP', icon: 'book', act: () => openMop(item.ticket) });
+  // Its link in the browser (round 21), when a link field matches; copying it is under More.
+  items.push(...openLinkItems(item.ticket, item.links));
   items.push(
     {
       label: 'Time',
@@ -129,6 +168,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
     },
     followUpItem('tray', item.id, item.ticket),
   );
+  if (!item.done) items.push(snoozeItem(item));
   const choices = [
     ...app.projects
       .filter((p) => !p.archived || p.id === item.projectId)
@@ -140,6 +180,7 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
       act: () => void setTrayProject(item, null),
     },
     ...repeatingChoices(item.recurringId, (id) => void setTrayRepeating(item, id)),
+    newProjectChoice((id) => void setTrayProject(item, id)),
   ];
   const under = choices.find((c) => c.checked)?.label;
   items.push({ label: 'Counts under', icon: 'folder', ...(under ? { value: under } : {}), sub: [{ choices }] });
@@ -164,6 +205,56 @@ export function trayMenu(item: TrayItem, notepad?: () => void): MenuSpec {
 }
 
 /**
+ * Snooze a still-open ticket (round 21): it stays out of "Still open from before" until
+ * `until`, still counted as open. Null wakes it now. `was` is the day it had, for Undo.
+ */
+export async function snoozeTicket(ticket: string, until: string | null, was: string | null = null): Promise<void> {
+  const shown = () => app.tray?.date ?? app.selected;
+  const show = (day: TrayDay | undefined) => {
+    if (day && app.tray?.date === day.date) app.tray = day;
+  };
+  const day = await attempt(() => api.traySnooze(ticket, app.today, until, shown()));
+  if (!day) return;
+  show(day);
+  // Undo goes back to the day it had, when that is still ahead.
+  const back = was && was > app.today ? was : null;
+  toast(
+    until ? `${ticket} is snoozed until ${longDay(until)}. It still counts as open.` : `${ticket} is back with your open tickets`,
+    'Undo',
+    () => void attempt(() => api.traySnooze(ticket, app.today, back, shown())).then(show),
+  );
+}
+
+/** "Snooze" in a still-open ticket's menu: the next work day, in 3 days, next week, or any day. */
+function snoozeItem(item: TrayItem | CarriedItem): MenuItem {
+  const until = 'snoozedUntil' in item ? item.snoozedUntil : null;
+  const tomorrow = addDays(app.today, 1);
+  const next = app.bringUpDays.find((d) => d > app.today) ?? tomorrow;
+  const days = new Map<string, string>([
+    [next, dayChoiceLabel(next, app.today)],
+    [addDays(app.today, 3), 'In 3 days'],
+    [addDays(app.today, 7), 'Next week'],
+  ]);
+  // The next work day can be three days off (a Friday): one row for it then.
+  days.set(next, dayChoiceLabel(next, app.today));
+  if (until && !days.has(until)) days.set(until, dayChoiceLabel(until, app.today));
+  const choices = [...days].map(([day, label]) => ({
+    label,
+    color: null,
+    checked: until === day,
+    act: () => void snoozeTicket(item.ticket, day, until),
+  }));
+  choices.push({
+    label: 'Pick a day…',
+    color: null,
+    checked: false,
+    act: () => void askDay('Snooze it until…', tomorrow).then((day) => (day && day > app.today ? snoozeTicket(item.ticket, day, until) : undefined)),
+  });
+  if (until) choices.push({ label: 'Wake it now', color: null, checked: false, act: () => void snoozeTicket(item.ticket, null, until) });
+  return { label: 'Snooze', icon: 'clock', ...(until ? { value: `back ${followWords(until, app.today)}` } : {}), sub: [{ head: 'Comes back', choices }] };
+}
+
+/**
  * The paper menu of a still-open ticket from before. One on an entry has no tray row to
  * change, so it gets the few things that apply: done, work on it again, copy.
  */
@@ -180,7 +271,9 @@ export function carriedMenu(item: CarriedItem, notepad?: () => void): MenuSpec {
             icon: 'plus',
             act: () => void carryCarried(item),
           },
+          snoozeItem(item),
           { label: 'Copy ticket number', icon: 'copy', act: () => void copy(item.ticket, item.ticket) },
+          ...openLinkItems(item.ticket, item.links),
           ...item.links.map((l) => ({
             label: `Copy ${l.fieldName} link`,
             icon: 'link' as const,

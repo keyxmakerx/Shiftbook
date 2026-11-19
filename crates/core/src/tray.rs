@@ -11,6 +11,7 @@
 //! A ticket can be **still open**: worked on but not finished. Its minutes count on the
 //! day they were spent, and it comes back in later trays until it is ticked done.
 
+use serde::Serialize;
 use time::Date;
 
 use crate::capture::ticket;
@@ -208,8 +209,101 @@ pub fn carried_open<S: AsRef<str>, T: AsRef<str>>(
             None => keep.push(i),
         }
     }
-    keep.sort_by_key(|&i| (earlier[i].1, i));
+    // Open the longest first (round 21): a ticket carried day after day keeps its place.
+    keep.sort_by_key(|&i| {
+        let since = open_since(earlier, earlier[i].0.as_ref()).unwrap_or(earlier[i].1);
+        (since, earlier[i].1, i)
+    });
     keep
+}
+
+/// The day `ticket` has been open since: the earliest of its open rows (`open` is every
+/// still-open ticket as (ticket, day), ignoring case). Ticking a ticket done finishes every
+/// row it has, so after a reopen only the days from then on count.
+pub fn open_since<S: AsRef<str>>(open: &[(S, Date)], ticket: &str) -> Option<Date> {
+    open.iter()
+        .filter(|(t, _)| t.as_ref().eq_ignore_ascii_case(ticket))
+        .map(|(_, day)| *day)
+        .min()
+}
+
+/// A snooze on a still-open ticket (round 21, idea approved 26 October): made on `on`, the
+/// ticket stays out of the tray's "Still open from before" until `until`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Snooze {
+    /// The day the snooze was made.
+    pub on: Date,
+    /// The day the ticket comes back.
+    pub until: Date,
+}
+
+/// The longest a ticket can be snoozed, in days.
+pub const MAX_SNOOZE_DAYS: i64 = 366;
+
+/// Check a snooze made on `on`: it ends on a later day, at most a year on.
+pub fn check_snooze(on: Date, until: Date) -> Result<Snooze, CoreError> {
+    let days = (until - on).whole_days();
+    if !(1..=MAX_SNOOZE_DAYS).contains(&days) {
+        return Err(CoreError::OutOfRange {
+            field: "Days to snooze",
+            min: 1,
+            max: MAX_SNOOZE_DAYS,
+        });
+    }
+    Ok(Snooze { on, until })
+}
+
+/// The day a snoozed ticket comes back, while it is still snoozed on `day`. It is awake once
+/// `day` reaches the snooze's end, and also when it was worked on after the snooze was made
+/// (`last_worked` later than the snooze's day): picking a ticket up again wakes it.
+pub fn snoozed_until(snooze: Option<Snooze>, last_worked: Date, day: Date) -> Option<Date> {
+    snooze
+        .filter(|s| day < s.until && last_worked <= s.on)
+        .map(|s| s.until)
+}
+
+/// How long a still-open ticket has been open (round 21, idea approved 26 October).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct OpenAge {
+    /// The ticket's number, as first written.
+    pub ticket: String,
+    /// The day it has been open since, `YYYY-MM-DD`.
+    pub since: String,
+    /// Whole days since then; 0 for a ticket opened today.
+    pub days: u32,
+    /// Open long enough to stand out (amber): `days` has reached the owner's number.
+    pub stale: bool,
+}
+
+/// Every still-open ticket's age on `today`, the longest open first. `open` is every open
+/// row as (ticket, day); a ticket counts once, from its earliest day. `stale_after` is the
+/// number of days from which a ticket stands out.
+pub fn open_ages<S: AsRef<str>>(open: &[(S, Date)], today: Date, stale_after: u32) -> Vec<OpenAge> {
+    let mut seen: Vec<(&str, Date)> = Vec::new();
+    for (ticket, day) in open {
+        let ticket = ticket.as_ref();
+        match seen
+            .iter_mut()
+            .find(|(t, _)| t.eq_ignore_ascii_case(ticket))
+        {
+            Some(found) => found.1 = found.1.min(*day),
+            None => seen.push((ticket, *day)),
+        }
+    }
+    seen.sort_by_key(|(_, day)| *day);
+    seen.into_iter()
+        .map(|(ticket, since)| {
+            let days = u32::try_from((today - since).whole_days()).unwrap_or(0);
+            OpenAge {
+                ticket: ticket.to_string(),
+                since: crate::dates::format_date(since),
+                days,
+                stale: days >= stale_after,
+            }
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -315,8 +409,9 @@ mod tests {
             ("INC3", today),
             ("INC4", time::macros::date!(2026 - 10 - 19)),
         ];
-        // INC4 is already in today's tray; INC3 is today's own; RITM1's latest day wins.
-        assert_eq!(carried_open(&earlier, &["inc4"], today), vec![1, 2]);
+        // INC4 is already in today's tray; INC3 is today's own; RITM1's latest day wins, and
+        // it comes first because it has been open the longest (since the 15th).
+        assert_eq!(carried_open(&earlier, &["inc4"], today), vec![2, 1]);
         assert!(carried_open::<&str, &str>(&[], &[], today).is_empty());
     }
 
@@ -353,5 +448,63 @@ mod tests {
         ));
         assert_eq!(plan_rollup::<&str>(&[], Some(id)), RollupAction::Remove(id));
         assert_eq!(plan_rollup::<&str>(&[], None), RollupAction::Nothing);
+    }
+
+    #[test]
+    fn a_ticket_has_been_open_since_its_earliest_open_day() {
+        let d = |day: u8| Date::from_calendar_date(2026, time::Month::November, day).unwrap();
+        let open = [
+            ("INC0041201", d(16)),
+            ("inc0041201", d(12)),
+            ("REQ0030455", d(17)),
+            ("INC0041255", d(18)),
+        ];
+        assert_eq!(open_since(&open, "INC0041201"), Some(d(12)));
+        assert_eq!(open_since(&open, "CHG1"), None);
+        let ages = open_ages(&open, d(18), 3);
+        let short: Vec<(&str, u32, bool)> = ages
+            .iter()
+            .map(|a| (a.ticket.as_str(), a.days, a.stale))
+            .collect();
+        assert_eq!(
+            short,
+            [
+                ("INC0041201", 6, true),
+                ("REQ0030455", 1, false),
+                ("INC0041255", 0, false)
+            ]
+        );
+        assert_eq!(ages[0].since, "2026-11-12");
+        // The number is the first day it stands out.
+        assert!(open_ages(&open, d(15), 3)[0].stale);
+        assert!(!open_ages(&open, d(14), 3)[0].stale);
+    }
+
+    #[test]
+    fn carried_tickets_come_back_longest_open_first() {
+        let d = |day: u8| Date::from_calendar_date(2026, time::Month::November, day).unwrap();
+        // INC1 was worked on the 10th and again on the 17th; REQ2 only on the 16th.
+        let earlier = [("REQ2", d(16)), ("INC1", d(10)), ("INC1", d(17))];
+        let none: [&str; 0] = [];
+        assert_eq!(carried_open(&earlier, &none, d(18)), [2, 0]);
+    }
+
+    #[test]
+    fn a_snoozed_ticket_comes_back_on_its_day_or_when_worked_on() {
+        let d = |day: u8| Date::from_calendar_date(2026, time::Month::November, day).unwrap();
+        let snooze = check_snooze(d(18), d(23)).unwrap();
+        // Last worked the 17th, snoozed the 18th until Monday the 23rd.
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(19)), Some(d(23)));
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(22)), Some(d(23)));
+        assert_eq!(snoozed_until(Some(snooze), d(17), d(23)), None);
+        // Worked on again on the 20th: awake from then on.
+        assert_eq!(snoozed_until(Some(snooze), d(20), d(21)), None);
+        // Worked on the day it was snoozed (before snoozing): still snoozed.
+        assert_eq!(snoozed_until(Some(snooze), d(18), d(19)), Some(d(23)));
+        assert_eq!(snoozed_until(None, d(17), d(19)), None);
+        // A snooze ends on a later day, within a year.
+        assert!(check_snooze(d(18), d(18)).is_err());
+        assert!(check_snooze(d(18), d(17)).is_err());
+        assert!(check_snooze(d(18), d(18) + time::Duration::days(367)).is_err());
     }
 }

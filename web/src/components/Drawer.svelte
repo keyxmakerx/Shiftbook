@@ -1,15 +1,16 @@
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // The slide-out details drawer for one entry: title, hours stepper, project pills,
   // category, timesheet code, tickets (multi-paste), notes and every custom field that
   // applies to entries.
   // Changes save as you go. Click outside, Esc or Done closes it.
   import { api } from '../lib/api';
   import type { CodeSource, CustomValue, Entry, EntryInput, ResolvedCode } from '../lib/api';
-  import { longDay } from '../lib/format';
+  import { fmtMinutes, longDay } from '../lib/format';
   import { copyText } from '../lib/protection.svelte';
   import { countTo } from '../lib/motion';
-  import { fmtHours } from '../lib/format';
   import { app, attempt, flashEntry, projectColor, putEntry, refresh } from '../lib/store.svelte';
+  import { NEW_PROJECT, newProject } from '../lib/newProject';
   import { toast } from '../lib/toast.svelte';
   import { trapTab } from '../lib/trap';
   import Icon from './Icon.svelte';
@@ -166,6 +167,18 @@
     return true;
   }
 
+  /** "+ New project…": make one and file this entry under it. */
+  async function addProject() {
+    const e = entry;
+    if (!e) return;
+    const made = await newProject();
+    if (!made) return;
+    const updated = await attempt(() => api.updateEntry(e.id, inputOf(e, { projectId: made.id, recurringId: null })));
+    if (!updated) return;
+    put(updated);
+    void refresh();
+  }
+
   async function step(delta: number) {
     const e = entry;
     if (!e) return;
@@ -252,10 +265,10 @@
       </div>
 
       <div class="field rise" style:--i={2}>
-        <span class="lbl">Hours</span>
+        <span class="lbl">Time</span>
         <div class="step">
           <button class="hbtn" type="button" disabled={entry.isTray || entry.minutes === 0} onclick={() => step(-15)}>−15m</button>
-          <span class="big mono" aria-live="polite">{fmtHours(shown)}</span>
+          <span class="big mono" aria-live="polite">{fmtMinutes(shown)}</span>
           <button class="hbtn" type="button" disabled={entry.isTray} onclick={() => step(15)}>+15m</button>
           <button class="hbtn" type="button" disabled={entry.isTray} onclick={() => step(60)}>+1h</button>
         </div>
@@ -284,6 +297,7 @@
           >
             No project
           </button>
+          <button type="button" class="new-proj" style:--c="var(--none)" onclick={() => void addProject()}>{NEW_PROJECT}</button>
         </div>
         {#if homes.length}
           <span class="grp rep-grp">Repeating</span>
@@ -371,6 +385,7 @@
         <label class="lbl" for="dr-notes">Notepad</label>
         <textarea
           id="dr-notes"
+          use:todoBoxes
           class="text-in"
           rows="3"
           bind:value={notes}
@@ -567,6 +582,11 @@
     transition:
       background 0.25s,
       color 0.25s;
+  }
+
+  .pills button.new-proj {
+    border-style: dashed;
+    color: var(--mut);
   }
 
   .pills button.rep {

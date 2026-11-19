@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // A board's full screen (rounds 8 and 12): step into a project, a meeting series, the Daily
   // notes or a folder from the Desk. The tree on the left shows every board; the trail on top
   // walks back up. Three views of the same things:
@@ -160,6 +161,8 @@
     }
     choose(null);
     fresh = true;
+    // Today's note starts with the day's meetings and what was brought up (round 21).
+    if (key === 'daily') body = (await attempt(() => api.dailyNoteStart(app.today))) ?? '';
     setTimeout(() => screen?.querySelector<HTMLTextAreaElement>('.body')?.focus(), 0);
   }
 
@@ -239,7 +242,7 @@
   // ----- what things say -----
   function line(c: Card): { kind: string; text: string; day: string } {
     const day = (iso: string) => (iso === app.today ? 'Today' : relativeDay(iso, app.today));
-    if (c.entry) return { kind: `Entry · ${c.entry.hours} h`, text: c.entry.description || 'Untitled', day: day(c.entry.date) };
+    if (c.entry) return { kind: `Entry · ${fmtMinutes(c.entry.minutes)}`, text: c.entry.description || 'Untitled', day: day(c.entry.date) };
     if (c.tray)
       return {
         kind: `${c.tray.item.done ? 'Ticket' : 'Still open'} · ${fmtMinutes(c.tray.item.minutes)}`,
@@ -462,7 +465,7 @@
                   aria-label="Note title"
                   disabled={data.key === 'daily' || data.key.startsWith('series:') || current?.kind === 'daily'}
                 />
-                <textarea use:tabIndent class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
+                <textarea use:tabIndent use:todoBoxes class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
                 <WikiLinks text={body} />
                 <div class="foot">
                   <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>
@@ -491,7 +494,7 @@
             </div>
             {#if data.key.startsWith('project:')}
               <aside class="side" aria-label="Time and tickets">
-                <div class="stat"><span class="big">{data.hours ?? '0'} h</span><span class="cap">logged in all</span></div>
+                <div class="stat"><span class="big">{fmtMinutes(data.minutes ?? 0)}</span><span class="cap">logged in all</span></div>
                 <div class="stat">
                   <span class="big" class:warn={data.openTickets > 0}>{data.openTickets}</span><span class="cap">tickets still open</span>
                 </div>

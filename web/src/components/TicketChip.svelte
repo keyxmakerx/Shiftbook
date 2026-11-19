@@ -1,10 +1,12 @@
 <script lang="ts">
-  // A ticket chip: click to copy the number; right-click for its paper menu (copy, copy as
-  // a link when a link field's prefix matches, log more time, remove).
+  // A ticket chip: click to copy the number; right-click for its paper menu (copy, open or
+  // copy its link when a link field's prefix matches, log more time, remove). A ticket with
+  // a link gets a small ↗ beside it that opens the link in the browser (round 21).
   import type { TicketLink } from '../lib/api';
   import { paperMenu, type MenuItem, type MenuSpec } from '../lib/menu.svelte';
   import { copyText } from '../lib/protection.svelte';
   import { focusLog } from '../lib/store.svelte';
+  import { openLinkItems, openLinks } from '../lib/ticketLinks';
   import { toast } from '../lib/toast.svelte';
 
   let {
@@ -31,6 +33,7 @@
   function menu(): MenuSpec {
     const items: MenuItem[] = [
       { label: 'Copy ticket number', icon: 'copy', act: () => void copy(number, number) },
+      ...openLinkItems(number, links),
       ...links.map((l) => ({
         label: `Copy ${l.fieldName} link`,
         icon: 'link' as const,
@@ -50,7 +53,7 @@
   }
 </script>
 
-{#if showRemove && onRemove}<span class="pair">{@render chip()}<button
+{#if links.length > 0 && !(showRemove && onRemove)}<span class="pair">{@render chip()}{@render go()}</span>{:else if showRemove && onRemove}<span class="pair">{@render chip()}{@render go()}<button
   type="button"
   class="off"
   title="{removeLabel} ({number})"
@@ -72,8 +75,20 @@
   }}
   use:paperMenu={menu}
 >
-  {number}{#if links.length > 0}<span class="linked" aria-label="has a link">↗</span>{/if}
+  {number}
 </button>
+{/snippet}
+
+{#snippet go()}
+{#if links.length > 0}<button
+  type="button"
+  class="off go"
+  title={links.length === 1 ? `Open the ${links[0]!.fieldName} link in your browser` : 'Open one of its links in your browser'}
+  aria-label="Open {number} in your browser"
+  onclick={(e) => {
+    e.stopPropagation();
+    openLinks(e.currentTarget, number, links);
+  }}>↗</button>{/if}
 {/snippet}
 
 <style>
@@ -102,8 +117,13 @@
     color: var(--bad);
   }
 
-  .linked {
-    font-size: 10px;
-    opacity: 0.7;
+  .off.go {
+    font-size: 12px;
+  }
+
+  .off.go:hover,
+  .off.go:focus-visible {
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
   }
 </style>

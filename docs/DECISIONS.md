@@ -2,6 +2,164 @@
 
 Decisions made on the sign-off sheet (`tools/signoff/`), newest first.
 
+## Round 22 — 18 Nov 2026 (waiting for an answer)
+One card, `r22-code-blocks` (`rounds/r22-code-blocks.json`): the owner's note on `r21-notepads`
+drawn as a plan. Pasted command output becomes a fixed-width block inside a notepad, labelled
+by itself with the kind of equipment (Cisco, Juniper, Linux, Windows); a notepad reads one way
+and is typed in another. Not built until it is answered.
+
+A second card, `r22-today-row` (`rounds/r22-today-row.json`): the Today row approved on
+26 October (`r15-human-vanish`) against the 10 November change ("New cards don't shove the
+rest", below). With a full Desk the next free spot is bottom right, often off the edge; a
+Today row puts today's cards on top, and yesterday's join Earlier each morning. The rest of
+`r15-human-vanish` is built; this piece waits for the answer.
+
+## Round 21 — 18 Nov 2026 (quality-of-life audit)
+Ten cards from running the real app (0.8.2) with made-up data (`rounds/r21-audit.json`). The
+owner approved nine and changed one:
+- **Find keeps what you type** (`r21-find`): the effect that resets the Find box when it opens
+  read the typed text, so every keystroke emptied the box. It now runs only when the box
+  opens (`web/src/lib/edge.ts`).
+- **The 26 October approvals get built** (`r21-october`): `r15-human-vanish`,
+  `r15-human-firstday` and the ten picks on `r15-qol-new` were approved then and never built
+  or written down here. Everyday pieces first: logging to another day keeps you on today, no
+  "nothing logged" dots before a first entry, hours as 45m and 1h 30m (the timesheet copy
+  stays decimal), "+ New project…" in every project picker, then the ten ideas.
+  How the everyday pieces were built (choices made while building):
+  - *Stay on today:* logging to another day from Find never changes the day that shows; the
+    message says where it went, with Show it and Undo. A strip under the ribbon names any
+    other day the Desk or Day shows, with Back to today.
+  - *First entry:* a day before the earliest entry there is never gets a dot on the ribbon
+    or a "nothing logged" warning on the Timesheet (`mark_gaps`, `SheetContext.first_logged`).
+  - *Hours:* 45m and 1h 30m everywhere; the Timesheet and the bell's timesheet line stay in
+    decimal hours.
+  - *Now card:* Carry on keeps the card as "Now" with when it started, time buttons, Other
+    time… and Switch, and the rest of the list under it. It is not saved: after a lock,
+    "Where was I?" comes back as before.
+  - *Wrap-up on top:* at wrap-up time the card is first in the Desk's panel, the rest folds
+    (Show them brings it back) and the bell has a dot and a line. Nothing folds while you are
+    typing in it, or on a day with nothing logged yet.
+  - *Esc keeps a jot:* a Desk jot with words in it is kept on Esc, with Undo.
+  - *A few helpers:* one screen after "What's Shiftbook for?": wrap-up (ticked, 5 pm), timer,
+    "I fill in a timesheet" and the days worked. Skip changes nothing.
+  - *"I fill in a timesheet"* is a new setting (`timesheet.use`, Settings → Your day). It is
+    **on** for a vault that never chose, so nothing disappears for anyone already using the
+    Timesheet; the helpers screen starts with it unticked, as in the approved picture. Off
+    hides the Timesheet tab, its settings, the "needs a code" count and the bell's reminder.
+    Entries and codes are untouched.
+  The ten ideas picked on 26 October (`r15-qol-new`), as each is built:
+  - *To-dos in notepads:* a line that starts with ☐ (or `[]`, `[ ]`) is an open to-do and ☑
+    (or `[x]`) a ticked one (`shiftbook_core::todos`). Typing `[]` at the start of a line
+    makes the box, a click flips it, Enter carries the list on. They are plain characters in
+    the text, so they copy, search and export like any other words. Cards show the open count;
+    the bell has one line per card, for the entries the Desk shows and the tickets still open.
+    Notes show the count on their card but are not in the bell: a note is somewhere to keep
+    things, not a thing to finish.
+  - *Ticket age:* a still-open ticket has been open since the earliest day it has an open
+    row (ticking it done finishes every row, so a reopened ticket counts from the reopen).
+    It says "open 6 days" in the tray and on its Desk card, nothing on its first day, and
+    stands out in amber once the days reach the number in Settings → Your day
+    (`tickets.stale_days`, 3 unless changed, 1 to 60). Tickets carried from earlier days are
+    listed longest open first (`shiftbook_core::tray::open_ages`, `carried_open`).
+  - *Several lines in Log work:* pasting text with more than one line opens a list, one
+    entry per line (`shiftbook_core::capture::capture_lines`: blank lines dropped, a bullet,
+    number or tick box in front taken off, 20 lines at a time). A line with a time in it
+    keeps it; the others pick one, or a time button fills them all. Log all logs them in
+    order with one Undo. "One entry instead" keeps the old behaviour (several tickets pasted
+    on their own lines as one entry). It never asks "Add to …?": each line goes where a
+    single line with no answer would.
+  - *Snooze:* a still-open ticket can be snoozed until a later day (within a year), from
+    its right-click menu in the tray or on the Desk. It is kept by ticket number in a new
+    table (`ticket_snoozes`, migration 23), so it covers a ticket on an entry as well as one
+    in the tray. Snoozed tickets sit under a "Snoozed (n)" fold with the day they come back
+    and a Wake button. They still count as open everywhere else (the bell's count, the Desk
+    card, the wrap-up). A ticket comes back on its day, and working on it after the snooze
+    was made wakes it early (`shiftbook_core::tray::snoozed_until`).
+  - *Split and merge:* Split in two… (an entry's menu, under More) asks for two names and
+    how the time is shared; the first part keeps the tickets and the notepad, the second is a
+    new entry on the same day under the same project unless another is picked. Merge puts
+    one entry into another from the same day: the times add up, the notepads join with a
+    blank line between, tickets the kept entry lacks move over, and the other entry goes.
+    From the menu (Merge with, listing the day's other entries) or on the Desk with two
+    entries selected (Merge these two; the one logged first keeps its name). The day's
+    Tickets entry can do neither, since it comes from the tray. Rules in
+    `shiftbook_core::reshape`; Undo restores both entries exactly (`unmerge_entries`).
+  - *Time off for several days:* "Book several days off…" (a ribbon day's menu, or Find)
+    asks for the first and last day and shows what gets booked before booking it. Every
+    work day in between (a weekday with a daily target) that has nothing logged gets a
+    "Holiday" entry with that day's usual hours; weekends and days already logged are
+    skipped, never overwritten. At most 62 days in one go. "Book a holiday (8 h)" still
+    books one day straight away, whatever is on it, with that weekday's hours (8 h when it
+    has none). Each day off is marked in a new table (`days_off`, migration 24) that points
+    at its entry, so deleting the entry or pressing Undo takes the mark away too. A day off
+    is grey in the ribbon and the bell says nothing on it. Days still to come in the ribbon
+    now have a menu, for booking them off and for "Not a day off after all". With a code
+    picked under Settings → Timesheet → Default codes → Days off
+    (`timesheet.time_off_code`), the entries are booked on it; without one they have no
+    code, as before. Rules in `shiftbook_core::timeoff`.
+  - *Today's note starts with the day:* a day's Daily note that doesn't exist yet opens
+    already holding "Meetings" (the series that meet that weekday, with their times),
+    "Brought up for today" (the same follow-ups the bell lists, as tick boxes that count as
+    to-dos) and a "Notes" heading. Only for today, only the parts there is something for,
+    and nothing at all on a day off. It is shown, not saved: the note is made the first
+    time something is typed or ticked, so a day you never write on leaves no note behind.
+    Two switches under Settings → Notes turn the meetings or the brought-up things off
+    (`notes.daily_meetings`, `notes.daily_brought`, both on unless changed); the mock's
+    editable template was left out, the two switches cover it. The Daily board's "Today's
+    note" starts the same way. Rule in `shiftbook_core::notes::daily_start`.
+  - *Ctrl+Tab jumps back:* a list of the last 8 things that were in front of you, newest
+    first: a view you went to for itself, an entry (its details or slide-out), a ticket (its
+    slide-out or window), a note in Notes or in a window, a wiki page. Holding Ctrl and
+    pressing Tab shows it without the thing in front now, Tab and Shift+Tab move, letting
+    go of Ctrl opens the marked one the way Find would (an entry comes back on its day with
+    its slide-out open; something that still has a window gets its window back). Notes and
+    the Wiki are stood for by the note or page open in them. Find's "Jump back to something
+    you had open…" opens the same list to pick from without holding a key. Kept in memory
+    only, emptied at each unlock, nothing stored. The shortcut sheet stays away while the
+    list shows. Screen-side only (`web/src/lib/recent.ts`, `recent.svelte.ts`): no rule in
+    core, since it is about what is on screen.
+  - *The wrap-up is offered on the way out:* pressing Lock (the button, Ctrl+L or "Lock now")
+    or closing the window after the wrap-up time asks "Wrap up before you go?" with today's
+    hours against the day's target: Wrap up (stay, the card is on the Desk), Just lock or
+    Just close, or Not today (puts the wrap-up away, then goes). Only with a wrap-up time
+    set and passed, something on the day, not on a day off, not once the wrap-up is done or
+    put off, and once a day (`shiftbook_core::nudge::leave_offer`). The idle and sleep
+    locks never ask. Two new settings remember the day it was last closed and last offered
+    (`day.wrapup_closed`, `day.wrapup_offered`), so both hold through the page reload a
+    lock does and through a restart; before this, a finished wrap-up came back after
+    unlocking. For the window: the page arms a one-shot guard while an offer is due, a held
+    close uses it up (a second close always closes), locking clears it, and a close that
+    can't reach the page goes through. macOS's Quit (⌘Q) is not held, only the window's
+    close.
+- **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
+  time; Done asks first when steps aren't ticked; the run log carries the date and the finish
+  time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I
+  saw" line under any step goes into the run log.
+- **Notepads for command output** (`r21-notepads`): Ctrl+F finds inside the open notepad or
+  MOP, and Ctrl+; drops in the time. Fixed-width is approved with a change the owner asked
+  for in a note: it should apply to code blocks, labelled by the kind of equipment (Linux,
+  Juniper, Cisco and so on) and filled in by itself where it can. That goes back on the sheet
+  with a picture before it is built.
+- **Tickets and projects join up** (`r21-ticket-project`): a ticket takes the project of the
+  work it is logged on unless one was set by hand; rename, colour and archive sit on the
+  Projects page as well as in Settings.
+- **Saved responses when a ticket is ticked done** (`r21-close-response`): Copy a response
+  next to Undo, with the ticket number filled in.
+- **Ticket links open in the browser** (`r21-open-links`): approved, which settles the
+  question left open on 25 October and replaces "No opener plugin" in SECURITY.md. The owner
+  limited it in a note: only a ticket's own link and a vendor's portal link, set up per ticket
+  prefix in Settings → Fields. Addresses typed in notes stay plain text.
+- **Eight small fixes** (`r21-small`): real days in place of "Looking back" and "Ahead"; the
+  bell's stale "Just finished" and its Done on things not yet due; Fit no longer slides cards
+  under the toolbox; Settings no longer lights the Organise tab; Find puts exact words and
+  ticket numbers first and shows the matching line; the version shows in Settings; "W…" in
+  Due soon; the user guide catches up.
+- **Order for the bigger pieces** (`r21-bigger`): export and import, pictures in notes,
+  project due dates and estimates, a shortcut that works from any app, Word MOP import, then
+  Planner and the meeting canvas. Each gets its own card with a picture first.
+- **Backups stay as they are** (`r21-backups`, changed): the owner's note was "Just leave a
+  local backup." No second folder, and nothing else from that card.
+
 ## Round 20 — 18 Nov 2026 (round 19's answers and notes, built)
 Round 19's answers and notes (listed under round 19 below) were built and put on the sign-off
 sheet as round 20 (`tools/signoff/rounds/r20.json`), five cards with before and after pictures

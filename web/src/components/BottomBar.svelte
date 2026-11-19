@@ -4,7 +4,8 @@
   // chips (round 14) come next, orange once their follow-up day comes; today's hours and the
   // bell sit on the right. The shortcut hint lives here too.
   import { bell } from '../lib/bell.svelte';
-  import { fmtHours, relativeDay } from '../lib/format';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
+  import { fmtMinutes, onDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { chipMenu, pins } from '../lib/pins.svelte';
   import { app, ribbonDay } from '../lib/store.svelte';
@@ -33,6 +34,8 @@
 
   const today = $derived(ribbonDay(app.today)?.minutes ?? 0);
   const count = $derived(bell.items.length);
+  /** The wrap-up is waiting: a quiet dot on the bell says so from any screen (round 21). */
+  const wrapup = $derived(wrapupDue());
   const urgent = $derived(bell.items.some((i) => i.when === 'now'));
 
   function pinTip(p: PinItem): string {
@@ -41,8 +44,8 @@
       : p.chaseOn === app.today
         ? 'follow up today'
         : p.due
-          ? `follow up since ${relativeDay(p.chaseOn, app.today)}`
-          : `follow up ${relativeDay(p.chaseOn, app.today)}`;
+          ? `follow up since ${onDay(p.chaseOn, app.today)}`
+          : `follow up ${onDay(p.chaseOn, app.today)}`;
     return `${p.title} · ${when} · click to open, right-click to follow up or unpin`;
   }
 
@@ -125,19 +128,20 @@
     {#if app.justToday}<span class="hint" role="status">Showing today, still open, brought up and pinned</span>{/if}
   {/if}
   <span class="hint" aria-hidden="true">Hold <span class="kbd">Ctrl</span> for shortcuts</span>
-  <span class="hours mono" title="Logged today">{fmtHours(today)} h today</span>
+  <span class="hours mono" title="Logged today">{fmtMinutes(today)} today</span>
   <button
     type="button"
     class="bell"
     class:on={bell.open}
     class:urgent
-    aria-label={count ? `Coming up: ${count}` : 'Coming up: nothing'}
+    aria-label={(count ? `Coming up: ${count}` : 'Coming up: nothing') + (wrapup ? '. Wrap-up time' : '')}
     aria-expanded={bell.open}
-    title="Coming up"
+    title={wrapup ? 'Coming up · wrap-up time' : 'Coming up'}
     onclick={() => (bell.open = !bell.open)}
   >
     <Icon name="bell" size={17} />
     {#if count}<span class="badge">{count}</span>{/if}
+    {#if wrapup}<span class="dot" aria-hidden="true"></span>{/if}
   </button>
 </footer>
 
@@ -352,6 +356,16 @@
     background: var(--bad);
     color: #fff;
     font: 700 10px/15px var(--ui);
+  }
+
+  .dot {
+    position: absolute;
+    bottom: 3px;
+    right: 5px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
   }
 
   @media (max-width: 1100px) {

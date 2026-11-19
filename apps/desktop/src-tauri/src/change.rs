@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 use shiftbook_app::views::{note_view, NoteView};
-use shiftbook_core::change::{template_order, MopStatus};
+use shiftbook_core::change::{ran_minutes, template_order, MopStatus};
 use shiftbook_core::dates::{format_date, format_timestamp, parse_date};
 use shiftbook_core::ids::{NoteId, OwnerId};
 use shiftbook_core::notes::NoteKind;
@@ -42,6 +42,15 @@ pub struct TickTimeView {
     at: String,
 }
 
+/// What was seen at one step.
+#[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct SeenView {
+    key: String,
+    text: String,
+}
+
 /// A MOP on a ticket.
 #[derive(Debug, Clone, Serialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
@@ -57,8 +66,14 @@ pub struct MopRunView {
     /// Its start, minutes after local midnight.
     window_at: Option<u32>,
     tick_times: Vec<TickTimeView>,
-    /// When it first went Running (UTC, RFC 3339).
+    /// When this run went Running (UTC, RFC 3339).
     started_at: Option<String>,
+    /// When it went Done or Backed out (UTC, RFC 3339).
+    finished_at: Option<String>,
+    /// How long the finished run took, rounded to offer as time to log.
+    ran_minutes: Option<u32>,
+    /// What was seen at each step that has something written.
+    seen: Vec<SeenView>,
 }
 
 fn run_view(r: MopRun) -> MopRunView {
@@ -78,7 +93,14 @@ fn run_view(r: MopRun) -> MopRunView {
                 at: format_timestamp(at),
             })
             .collect(),
+        ran_minutes: ran_minutes(r.started_at, r.finished_at).map(|m| m.0),
         started_at: r.started_at.map(format_timestamp),
+        finished_at: r.finished_at.map(format_timestamp),
+        seen: r
+            .seen
+            .into_iter()
+            .map(|(key, text)| SeenView { key, text })
+            .collect(),
     }
 }
 
@@ -229,6 +251,18 @@ pub async fn mop_tick(s: State<'_, VaultSession>, id: String, ticks: Vec<String>
         .await?;
     let after = store.prefs(owner).await?.notes_auto_archive_days;
     Ok(note_view(note, OffsetDateTime::now_utc(), after))
+}
+
+/// Maps to `DataApi.mopSetSeen()`: what was seen at one step (blank takes it away).
+#[tauri::command]
+pub async fn mop_set_seen(
+    s: State<'_, VaultSession>,
+    id: String,
+    key: String,
+    text: String,
+) -> Res<()> {
+    let (store, owner) = s.data().await?;
+    Ok(store.set_mop_seen(owner, id_arg(&id)?, &key, &text).await?)
 }
 
 /// The bell's lines for change windows (see `shiftbook_core::change::window_item`).

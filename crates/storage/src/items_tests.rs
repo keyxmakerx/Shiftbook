@@ -111,6 +111,41 @@ fn back_dated_work_on_an_open_ticket_keeps_it_open() {
 }
 
 #[test]
+fn a_ticket_shows_under_the_project_of_the_work_it_is_logged_on() {
+    let dir = TestDir::new("items-project");
+    block_on(async {
+        let (s, me) = setup(&dir).await;
+        let core = s
+            .create_project(me, "Core switch upgrade", None)
+            .await
+            .unwrap();
+        let wifi = s.create_project(me, "Wi-Fi rollout", None).await.unwrap();
+        let mut entry = input(date!(2026 - 11 - 16), 120, "Pre-checks");
+        entry.project = Some(core.id);
+        s.create_entry(me, &entry, "CHG1 CHG2").await.unwrap();
+        // CHG2 is given a project by hand in the tray: that one wins.
+        let day = s
+            .tray_add(me, date!(2026 - 11 - 17), "CHG2 INC3")
+            .await
+            .unwrap();
+        let chg2 = day
+            .items
+            .iter()
+            .find(|i| i.ticket_number == "CHG2")
+            .unwrap()
+            .id;
+        s.tray_set_project(me, chg2, Some(wifi.id)).await.unwrap();
+
+        let items = s.item_summaries(me, None).await.unwrap();
+        let project = |n: &str| items.iter().find(|i| i.number == n).unwrap().project;
+        assert_eq!(project("CHG1"), Some(core.id));
+        assert_eq!(project("CHG2"), Some(wifi.id));
+        assert_eq!(project("INC3"), None);
+        assert_in_step(&s, me).await;
+    });
+}
+
+#[test]
 fn removed_tickets_leave_the_items_view() {
     let dir = TestDir::new("items-removed");
     block_on(async {

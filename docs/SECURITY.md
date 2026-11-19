@@ -15,6 +15,8 @@ work data ending up in Git.
    (no `unsafe-eval`; avoid `unsafe-inline`).
 4. **Tauri capabilities:** allow-list only the commands and plugin permissions actually used.
    `fs` scoped to the app data dir and user-chosen files via the dialog plugin. No `shell`.
+   The page gets no plugin permissions at all: the dialog and opener plugins are called from
+   Rust only (see "Opening a ticket's link" below).
 5. **Input handling:** all SQL via sqlx parameter binding. Never build SQL with string formatting.
    Render user text as text (Svelte default escaping); no `{@html}` with user content.
 6. **Dependencies:** minimal; ask before adding. Commit lockfiles. Enable Dependabot (cargo + npm +
@@ -213,10 +215,34 @@ neither feature. Upgrade as soon as sqlx accepts a newer `libsqlite3-sys`.
   Either half can be turned off in Settings → Security (`security.block_copy`,
   `security.hide_screenshots`, both on by default). The window stays content-protected while
   locked; the screenshot setting applies when prefs are loaded after unlock.
-- **Links are never opened.** Link fields (for example Jira) only build text to show and copy;
-  templates must be `http(s)://…{ticket}…` and the ticket is percent-encoded. No opener plugin.
+- **Opening a ticket's link** (round 21, card `r21-open-links`; before that links were only
+  shown and copied, and there was no opener plugin). The official `tauri-plugin-opener` hands a
+  web address to the user's own browser. Shiftbook itself still makes no network connection.
+  What keeps it narrow:
+  - The page has **no opener permission**. It can only call the app's own `open_ticket_link`
+    command with a ticket and an address.
+  - The command opens the address only when it is **one of the links the user's own link
+    fields build for that ticket** (`shiftbook_app::views::ticket_link_allowed`): the field's
+    prefix must match the ticket, and the address must equal the field's template with the
+    ticket filled in (percent-encoded). The page cannot open an address of its choosing.
+  - Only `http://` and `https://` addresses pass (`shiftbook_core::fields::may_open`); no
+    `file:`, no other schemes, no spaces or control characters. The same check applies when a
+    link field is saved.
+  - A link field may leave `{ticket}` out: then every matching ticket opens the same page, for
+    a vendor's portal. The owner limited opening to these two cases (a ticket's own link and a
+    vendor's portal). **Addresses typed in notes, notepads and MOPs stay plain text and are
+    never opened.**
+  - It happens only on a click (the ↗ beside a ticket, or "Open … link" in its menu).
+  The plugin brings its own dependencies (on Linux a D-Bus client for its "show in folder"
+  feature, which Shiftbook does not use and the page cannot reach).
 - **New commands** each have their own permission; errors stay short codes. The capability still
-  grants no plugins.
+  grants no plugin permissions.
+- **Closing the window** can be held back once to offer the wrap-up (`set_leave_guard`,
+  `close_window`, round 21). The page can only arm that for the next close; a close uses the
+  guard up and locking clears it, so the window can never be kept open twice in a row, and
+  if the page can't be told the close simply goes through. The app tells the page with a
+  fixed script that raises a DOM event (`shiftbook:leave-asked`); no event permission is
+  granted to the page and nothing from the vault is in that script.
 - **Delete all data** (`delete_all_data`, Settings → Security and the unlock screen's recovery-key
   mode): needs the typed word `DELETE`, checked in `shiftbook_core::wipe` (the page only uses it to
   enable the button). It needs no password, so it works for someone who lost both the password

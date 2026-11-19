@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { refreshBell } from '../lib/bell.svelte';
+  import { todoBoxes } from '../lib/todos';
   // The tickets of a Desk card, opened from the strip on it (round 14): a box that floats
   // over the Desk with the work first (and its days, when the same work spans several), then
   // a card per ticket. A ticket number shows once even when it's on several days' entries or
@@ -8,9 +10,10 @@
   import { api } from '../lib/api';
   import type { CanvasCard } from '../lib/api';
   import { focusNow } from '../lib/focus';
-  import { dayMonth, weekdayShort } from '../lib/format';
+  import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
   import { applyTray } from '../lib/trayActions';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import { workTickets, type WorkTicket } from '../lib/workTickets';
   import Icon from './Icon.svelte';
@@ -33,16 +36,21 @@
   // A ticket is one item (round 15): ticking or writing on its newest place changes it
   // everywhere it appears, so the Tickets list reloads too (applyTray does it for the tray).
   async function tick(w: WorkTicket) {
-    const done = !w.done;
     const s = w.sources[0]!;
-    const ok = await attempt(async () => {
-      if (s.kind === 'entry') {
-        await api.ticketSetDone(s.id, done);
-        await refresh();
-      } else applyTray(await api.traySetDone(s.id, done));
-      return true;
-    });
-    if (ok) onchanged();
+    const set = async (done: boolean) => {
+      const ok = await attempt(async () => {
+        if (s.kind === 'entry') {
+          await api.ticketSetDone(s.id, done);
+          await refresh();
+        } else applyTray(await api.traySetDone(s.id, done));
+        return true;
+      });
+      if (ok) onchanged();
+      return !!ok;
+    };
+    const done = !w.done;
+    // Round 21: done offers a saved response for the ticket, with Undo as elsewhere.
+    if ((await set(done)) && done) toast(`${w.number} is done`, 'Undo', () => void set(false), null, responseButton(w.number));
   }
 
   function openNote(w: WorkTicket) {
@@ -70,7 +78,11 @@
       } else applyTray(await api.traySetNote(s.id, text));
       return true;
     });
-    if (ok) onchanged();
+    if (ok) {
+      onchanged();
+      // The bell lists the to-dos in a notepad.
+      void refreshBell();
+    }
   }
 
   async function add() {
@@ -136,14 +148,14 @@
   </header>
   <div class="grid">
     <div class="sq parent" style:--c={projectColor(entry.projectId)}>
-      <span class="kind">Entry · {card.workHours ?? entry.hours} h</span>
+      <span class="kind">Entry · {fmtMinutes(card.workMinutes ?? entry.minutes)}</span>
       <span class="title">{entry.description || 'Untitled'}</span>
       <span class="sub">{projectById(entry.projectId)?.name ?? 'No project'}</span>
       {#if card.work.length}
         <span class="days">
           {#each days as d (d.id)}
             <button type="button" class="day" title="Open this day's entry" onclick={() => (app.drawer = d.id)}>
-              {d.date === app.today ? 'Today' : `${weekdayShort(d.date)} ${dayMonth(d.date)}`} · {d.hours} h
+              {d.date === app.today ? 'Today' : `${weekdayShort(d.date)} ${dayMonth(d.date)}`} · {fmtMinutes(d.minutes)}
             </button>
           {/each}
         </span>
@@ -182,6 +194,7 @@
             class="pad"
             bind:value={draft}
             use:focusNow
+            use:todoBoxes
             rows="4"
             placeholder={t.done ? 'A few words…' : 'Still open: what is left?'}
             aria-label="Notepad for {t.number}"

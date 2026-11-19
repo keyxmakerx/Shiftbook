@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ageOf, ageWords } from '../lib/age';
   // The Tickets tray: paste tickets as you work on them through the day. Each one adds its
   // minutes (15 by default; a little box asks how long so far, and the stepper changes it).
   // A ticket starts still open and comes back each day until it is ticked done (round 14). Tickets without a project roll up
@@ -7,13 +8,14 @@
   import { api } from '../lib/api';
   import type { CarriedItem, TrayItem } from '../lib/api';
   import { dayMonth, fmtMinutes, weekdayShort } from '../lib/format';
-  import { openMenu, paperMenu } from '../lib/menu.svelte';
+  import { paperMenu } from '../lib/menu.svelte';
   import { closePanel, openNotepad, panel, panelOpenAt, togglePanel } from '../lib/panel.svelte';
-  import { copyText } from '../lib/protection.svelte';
-  import { app, attempt, projectById, projectColor, setView, ticketTimes, words } from '../lib/store.svelte';
+  import { app, attempt, projectById, projectColor, ticketTimes, words } from '../lib/store.svelte';
   import { refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { toast } from '../lib/toast.svelte';
-  import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, trayMenu } from '../lib/trayActions';
+  import { openResponses } from '../lib/responses';
+  import { applyTray, carriedMenu, carryCarried, removeTray, setCarriedDone, setTrayDone, snoozeTicket, trayMenu } from '../lib/trayActions';
+  import { followWords } from '../lib/bringUp';
   import Icon from './Icon.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import KnownTickets from './KnownTickets.svelte';
@@ -27,6 +29,8 @@
     if (repeating.items.length === 0 && app.tray?.items.some((i) => i.recurringId)) void refreshRepeating();
   });
   let text = $state('');
+  /** The Snoozed fold under "Still open from before" is open. */
+  let showSnoozed = $state(false);
   /** Tickets just added, waiting for "time on it so far?". */
   let asking = $state<string[]>([]);
   /** More than one ticket was pasted, so each row keeps its number even once others are answered. */
@@ -81,30 +85,9 @@
     toggle(item);
   }
 
-  // Saved responses: a quick menu of messages to paste into tickets. Picking one copies it;
-  // nothing is matched to a ticket (owner's call, round 8).
-  function editResponses() {
-    app.settingsSection = 'responses';
-    setView('settings');
-  }
-
-  async function openResponses(anchor: HTMLElement) {
-    const list = await attempt(() => api.listResponses());
-    if (!list) return;
-    const copy = (name: string, text: string) =>
-      void copyText(text).then((ok) => toast(ok ? `Copied “${name}”` : "Couldn't copy here."));
-    openMenu(anchor, {
-      sections: [
-        list.length > 0
-          ? {
-              head: 'Copy a response',
-              items: list.map((r) => ({ label: r.name, icon: 'copy' as const, act: () => copy(r.name, r.text) })),
-            }
-          : { head: 'No saved responses yet', items: [{ label: 'Add your first response', icon: 'plus', act: editResponses }] },
-        { items: [{ label: 'Edit responses', icon: 'edit', act: editResponses }] },
-      ],
-    });
-  }
+  // Saved responses: a quick menu of messages to paste into tickets (lib/responses.ts).
+  // From this button nothing is matched to a ticket (owner's call, round 8); ticking a ticket
+  // done offers the same menu for that ticket (round 21).
 
   const menuFor = (item: TrayItem) => trayMenu(item, () => openNotepad(keyOf(item), 'row'));
   const carriedMenuFor = (item: CarriedItem) => carriedMenu(item, () => openNotepad(keyOf(item), 'row'));
@@ -124,7 +107,7 @@
       >
         <Icon name="copy" size={14} /> Responses
       </button>
-      <span class="total mono">{app.tray?.hours ?? '0'} h</span>
+      <span class="total mono">{fmtMinutes(app.tray?.minutes ?? 0)}</span>
     </span>
   </h3>
   <p class="hint">Paste tickets as you work on them. Each stays open, and comes back tomorrow, until you tick it done.</p>
@@ -234,7 +217,12 @@
           </button>
           {#if !item.done || project || thing}
             <span class="tags">
-              {#if !item.done}<span class="tag open">Still open</span>{/if}
+              {#if !item.done}
+                {@const age = ageOf(app.ages, item.ticket)}
+                <span class="tag open" class:stale={age?.stale} title={age && age.days > 0 ? `Open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : null}>
+                  {ageWords(age) || 'Still open'}
+                </span>
+              {/if}
               {#if project}<span class="tag" style:--c={projectColor(item.projectId)}>{project.name}</span>{/if}
               {#if thing}<span class="tag rep">⟳ {thing.name}</span>{/if}
             </span>
@@ -251,10 +239,13 @@
     <p class="empty-note">Nothing in the Tickets tray yet for this day.</p>
   {/if}
   {#if app.tray && app.tray.carried.length > 0}
+    {@const awake = app.tray.carried.filter((c) => !c.snoozedUntil)}
+    {@const asleep = app.tray.carried.filter((c) => c.snoozedUntil)}
     <div class="carried">
-      <span class="lbl">Still open from before</span>
+      {#if awake.length}<span class="lbl">Still open from before</span>{/if}
       <ul class="items">
-        {#each app.tray.carried as item (item.id)}
+        {#each awake as item (item.id)}
+          {@const age = ageOf(app.ages, item.ticket)}
           <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
           <li
             class="item still"
@@ -276,7 +267,12 @@
             ></button>
             <TicketChip number={item.ticket} links={item.links} color="var(--warn)" />
             <span class="note faint" title={item.note ?? item.entryTitle ?? ''}>{carriedNote(item)}</span>
-            <span class="since">{weekdayShort(item.date)} {dayMonth(item.date)}</span>
+            <span
+              class="since"
+              class:aged={(age?.days ?? 0) > 0}
+              class:stale={age?.stale}
+              title="Last worked on {weekdayShort(item.date)} {dayMonth(item.date)}{age ? ` · open since ${weekdayShort(age.since)} ${dayMonth(age.since)}` : ''}"
+            >{#if ageWords(age)}<span class="long">open&nbsp;</span>{ageWords(age).replace('open ', '')}{:else}{weekdayShort(item.date)} {dayMonth(item.date)}{/if}</span>
             <button type="button" class="today" title="Worked on it again: add it to this day with 15 minutes" onclick={() => void carryCarried(item)}>
               <Icon name="plus" size={12} /> {app.selected === app.today ? 'Today' : 'This day'}
             </button>
@@ -288,6 +284,26 @@
           {/if}
         {/each}
       </ul>
+      {#if asleep.length}
+        <button type="button" class="fold" aria-expanded={showSnoozed} onclick={() => (showSnoozed = !showSnoozed)}>
+          <Icon name="clock" size={12} /> Snoozed ({asleep.length})
+          <span class="hint">{showSnoozed ? 'hide' : 'show'}</span>
+        </button>
+        {#if showSnoozed}
+          <ul class="items">
+            {#each asleep as item (item.id)}
+              <li class="item zz" use:paperMenu={() => carriedMenuFor(item)}>
+                <TicketChip number={item.ticket} links={item.links} color="var(--mut)" />
+                <span class="note faint" title={item.note ?? item.entryTitle ?? ''}>{carriedNote(item)}</span>
+                <span class="since aged" title="Snoozed until {weekdayShort(item.snoozedUntil ?? '')} {dayMonth(item.snoozedUntil ?? '')}. It still counts as open.">
+                  back {followWords(item.snoozedUntil ?? '', app.today)}
+                </span>
+                <button type="button" class="today" title="Bring it back now" onclick={() => void snoozeTicket(item.ticket, null, item.snoozedUntil)}>Wake</button>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      {/if}
     </div>
   {/if}
 </article>
@@ -507,6 +523,12 @@
     background: var(--warn-wash);
   }
 
+  /* Open long enough to stand out (Settings → Your day sets the days). */
+  .tag.open.stale {
+    color: var(--paper);
+    background: var(--warn);
+  }
+
   .note.more {
     text-align: left;
     white-space: nowrap;
@@ -534,6 +556,34 @@
     grid-template-columns: auto auto minmax(0, 1fr) auto auto;
   }
 
+  .carried .item.zz {
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    opacity: 0.8;
+  }
+
+  .fold {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 7px;
+    background: none;
+    color: var(--ink-2);
+    font: 600 12px var(--ui);
+    cursor: pointer;
+  }
+
+  .fold:hover {
+    background: color-mix(in srgb, var(--ink) 7%, transparent);
+  }
+
+  .fold .hint {
+    font-weight: 500;
+    color: var(--mut);
+  }
+
   .lbl {
     font: 700 10px var(--ui);
     letter-spacing: 0.09em;
@@ -547,10 +597,19 @@
     white-space: nowrap;
   }
 
+  .since.stale {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 700;
+    color: var(--paper);
+    background: var(--warn);
+  }
+
   /* In the Desk's side panel: tick, ticket, stepper and options on one line, the note under them. */
   @container (max-width: 380px) {
     .added,
-    .since {
+    .since:not(.aged),
+    .since .long {
       display: none;
     }
 

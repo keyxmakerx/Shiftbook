@@ -13,10 +13,11 @@
   import { api } from '../lib/api';
   import type { CardKind, ItemSummary, Recurring } from '../lib/api';
   import { bringUpSection, followWords } from '../lib/bringUp';
-  import { fmtMinutes, relativeDay } from '../lib/format';
+  import { fmtMinutes, onDay, relativeDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { openRepeating, refreshRepeating, repeating } from '../lib/repeating.svelte';
   import { app, attempt, projectById, projectColor, refresh } from '../lib/store.svelte';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import { openWindow } from '../lib/windows.svelte';
 
@@ -76,7 +77,7 @@
         minutes: t.minutes,
         last: t.last,
         follow,
-        followText: follow ? (follow <= app.today ? (follow === app.today ? 'Today' : `Since ${relativeDay(follow, app.today)}`) : relativeDay(follow, app.today)) : '',
+        followText: follow ? (follow <= app.today ? (follow === app.today ? 'Today' : `Since ${onDay(follow, app.today)}`) : relativeDay(follow, app.today)) : '',
         now: !!follow && follow <= app.today,
         done: t.done,
         ticket: t,
@@ -163,9 +164,15 @@
     const ok = await attempt(() => api.itemSetDone(t.id, done, app.today).then(() => true));
     if (!ok) return;
     await refresh();
-    toast(done ? `${t.number} done` : `${t.number} open again`, 'Undo', () => {
-      void attempt(() => api.itemSetDone(t.id, !done, app.today)).then(refresh);
-    });
+    toast(
+      done ? `${t.number} done` : `${t.number} open again`,
+      'Undo',
+      () => {
+        void attempt(() => api.itemSetDone(t.id, !done, app.today)).then(refresh);
+      },
+      null,
+      done ? responseButton(t.number) : null,
+    );
   }
 
   const TABS: { id: typeof app.itemsTab; label: string; count: () => number }[] = [

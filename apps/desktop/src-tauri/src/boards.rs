@@ -7,8 +7,6 @@ use std::collections::{HashMap, HashSet};
 use serde::Serialize;
 use shiftbook_core::boards::{boards_for, Board, Facts, BOARD_DAYS};
 use shiftbook_core::canvas::{auto_place, CardKind, Drawer, ROW_CARDS};
-use shiftbook_core::hours::format_hours;
-use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::EntryTarget;
 use shiftbook_core::notes::NoteKind;
 use shiftbook_storage::SqliteStore;
@@ -65,8 +63,8 @@ pub struct BoardView {
     children: Vec<ChildView>,
     /// Its cards, newest first, each with its spot on this board.
     cards: Vec<CardView>,
-    /// For a project: every minute logged against it, as hours.
-    hours: Option<String>,
+    /// For a project: every minute logged against it.
+    minutes: Option<u32>,
     /// For a project: its tickets still open.
     open_tickets: usize,
     /// For an archived project.
@@ -295,7 +293,7 @@ pub async fn board(s: State<'_, VaultSession>, today: String, key: String) -> Re
     let tree = all.children(Board::Desk, true);
     let color = all.color(board);
 
-    let (hours, open_tickets, archived) = match board {
+    let (minutes, open_tickets, archived) = match board {
         Board::Project(id) => {
             let since = Date::from_calendar_date(2000, time::Month::January, 1)
                 .map_err(|_| CommandError::InvalidInput)?;
@@ -316,7 +314,7 @@ pub async fn board(s: State<'_, VaultSession>, today: String, key: String) -> Re
                 .projects
                 .iter()
                 .any(|p| *p.id.as_uuid() == id && p.archived);
-            (Some(format_hours(Minutes(minutes))), open, archived)
+            (Some(minutes), open, archived)
         }
         _ => (None, 0, false),
     };
@@ -369,7 +367,7 @@ pub async fn board(s: State<'_, VaultSession>, today: String, key: String) -> Re
         has_canvas: board.has_canvas(),
         children,
         cards,
-        hours,
+        minutes,
         open_tickets,
         archived,
         tree,

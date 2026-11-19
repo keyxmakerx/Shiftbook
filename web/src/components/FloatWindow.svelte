@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // One window (round 12): a notepad or a note floating over Shiftbook. Drag the title bar to
   // move it, the corner to resize it. ▴ rolls it up to the title bar, – tucks it into the
   // bottom bar, ⤢ fills the screen, ✕ closes it. What's typed saves as you go.
@@ -295,6 +296,7 @@
     {:else}
       <textarea
         use:tabIndent
+        use:todoBoxes
         class="body"
         bind:value={text}
         placeholder={win.kind === 'note' ? 'Write here…' : 'Notes…'}

@@ -59,3 +59,17 @@ export function lastLogged(changedAt: string | null, now: Date): string {
   const days = Math.floor(hours / 24);
   return days === 1 ? 'Last logged yesterday' : `Last logged ${days} days ago`;
 }
+
+/**
+ * What "Where was I?" goes back to once the Now card's thing is logged: the rest of the list
+ * that is still open, or nothing when that was the last of it (or the card was an entry).
+ */
+export function afterNow(card: ResumeCard): ResumeCard | null {
+  const open = card.list.slice(1).filter((i) => !i.done);
+  return open.length ? { ...card, list: open } : null;
+}
+
+/** "8:47" or "08:47", as the user's clock shows it. */
+export function startedAt(ms: number): string {
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}

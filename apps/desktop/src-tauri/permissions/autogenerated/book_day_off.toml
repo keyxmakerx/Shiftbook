@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-book-day-off"
+description = "Enables the book_day_off command without any pre-configured scope."
+commands.allow = ["book_day_off"]
+
+[[permission]]
+identifier = "deny-book-day-off"
+description = "Denies the book_day_off command without any pre-configured scope."
+commands.deny = ["book_day_off"]

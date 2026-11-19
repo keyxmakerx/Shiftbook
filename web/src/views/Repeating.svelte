@@ -10,7 +10,7 @@
   import { api } from '../lib/api';
   import type { Frequency, KindCode, PastTime, Recurring, RecurringInput } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
-  import { addDays, dayMonth, dayMonthYear, fmtHours, longDay } from '../lib/format';
+  import { addDays, dayMonth, dayMonthYear, fmtMinutes, longDay } from '../lib/format';
   import { markDone, markRenewed, refreshRepeating, repeating, startWork } from '../lib/repeating.svelte';
   import { app, attempt, refresh } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
@@ -348,7 +348,7 @@
               {#each p.tickets as t (t)}<span class="chip">{t}</span>{/each}
               {pastWords(p)}
             </span>
-            <span class="pm">{p.minutes ? `${fmtHours(p.minutes)} h` : ''}</span>
+            <span class="pm">{p.minutes ? fmtMinutes(p.minutes) : ''}</span>
           </div>
         {:else}
           <p class="note">

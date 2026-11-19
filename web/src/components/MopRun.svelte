@@ -5,14 +5,22 @@
   // ticking a heading or a step crosses out everything under it, and each tick keeps its time).
   // Copy run log puts the steps with their times on the clipboard for the change record. The
   // rules are in crates/core/src/change.rs and crates/core/src/mop.rs.
+  // Round 21 (card r21-mop-finish): Done asks first when steps aren't ticked; a finished run
+  // offers to tick its ticket done, log how long it took and copy the run log; any step can
+  // hold a "what I saw" line that goes into the run log.
   import { onDestroy, untrack } from 'svelte';
   import { tabIndent } from '../lib/indent';
   import { indentDepth } from '../lib/wikiText';
   import { api } from '../lib/api';
-  import type { CheckLine, MopRun, MopStatus, Note } from '../lib/api';
+  import type { CheckLine, ItemSummary, MopRun, MopStatus, Note } from '../lib/api';
   import { refreshBell } from '../lib/bell.svelte';
   import { refreshMops } from '../lib/mops.svelte';
+  import { focusNow } from '../lib/focus';
+  import { fmtMinutes } from '../lib/format';
+  import { localWords, runLog, stepsLeft, took } from '../lib/mopLog';
   import { copyText } from '../lib/protection.svelte';
+  import { responseButton } from '../lib/responses';
+  import { logTicketTime } from '../lib/trayActions';
   import { app, attempt, openWiki, refresh } from '../lib/store.svelte';
   import { goToTicket } from '../lib/ticketFind';
   import { toast } from '../lib/toast.svelte';
@@ -42,11 +50,20 @@
   let windowEdit = $state<{ on: string; at: string } | null>(null);
   /** The ticket number typed for a MOP that isn't on a ticket yet. */
   let ticketIn = $state('');
+  /** Done was pressed with this many steps not ticked: the strip asks first. */
+  let asking = $state<number | null>(null);
+  /** The run was just finished here: what's left to offer, and what has been done. */
+  let closing = $state<{ item: ItemSummary | null; ticked: boolean; logged: boolean; copied: boolean } | null>(null);
+  /** The step whose "what I saw" box is open (its tick key), and what's typed in it. */
+  let seeing = $state<string | null>(null);
+  let sawText = $state('');
 
   const lines = $derived(text.split('\n'));
   const tickable = $derived(checks.filter((c) => c.key).length);
   const ticked = $derived(checks.filter((c) => c.ticked).length);
   const at = (key: string) => run?.tickTimes.find((t) => t.key === key)?.at ?? null;
+  const saw = (key: string) => run?.seen.find((s) => s.key === key)?.text ?? '';
+  const statusLabel = (status: MopStatus) => STEPS.find((s) => s.status === status)?.label ?? 'Backed out';
 
   async function load() {
     const [n, r] = await Promise.all([attempt(() => api.getNote(id)), attempt(() => api.mopRun(id))]);
@@ -107,15 +124,70 @@
     void refreshBell();
   }
 
-  async function setStatus(status: MopStatus) {
+  async function setStatus(status: MopStatus, sure = false) {
     if (!run || run.status === status) return;
+    // Done with steps not ticked asks first.
+    if (status === 'done' && !sure) {
+      await flush();
+      const got = mode === 'run' ? checks : ((await attempt(() => api.mopChecklist(text, note?.ticks ?? []))) ?? []);
+      const left = stepsLeft(got);
+      if (left > 0) {
+        asking = left;
+        return;
+      }
+    }
+    asking = null;
     const before = run.status;
     if (!(await attempt(() => api.mopSetStatus(id, status).then(() => true)))) return;
     await changed();
     if (status === 'running') mode = 'run';
-    toast(`MOP is ${STEPS.find((s) => s.status === status)?.label ?? 'Backed out'}`, 'Undo', () =>
-      void attempt(() => api.mopSetStatus(id, before)).then(changed),
+    // A finished run offers what closes it out: its ticket, the time, the run log.
+    if (status === 'done' || status === 'backed_out') {
+      const ticket = run.ticket;
+      const item = (await attempt(() => api.items([ticket])))?.[0] ?? null;
+      closing = { item, ticked: false, logged: false, copied: false };
+    } else {
+      closing = null;
+    }
+    toast(`MOP is ${statusLabel(status)}`, 'Undo', () =>
+      void attempt(() => api.mopSetStatus(id, before)).then(() => {
+        closing = null;
+        return changed();
+      }),
     );
+  }
+
+  async function tickTicketDone() {
+    const item = closing?.item;
+    if (!closing || !item) return;
+    const set = async (done: boolean) => {
+      if (!(await attempt(() => api.itemSetDone(item.id, done, app.today).then(() => true)))) return;
+      if (closing) closing.ticked = done;
+      await refresh();
+    };
+    await set(true);
+    toast(`${item.number} is done`, 'Undo', () => void set(false), () => void set(true), responseButton(item.number));
+  }
+
+  async function logRunTime() {
+    if (!closing || !run?.ranMinutes) return;
+    closing.logged = true;
+    await logTicketTime(run.ticket, run.ranMinutes);
+  }
+
+  function openSaw(key: string) {
+    void saveSaw();
+    sawText = saw(key);
+    seeing = key;
+  }
+
+  async function saveSaw() {
+    const key = seeing;
+    if (!key) return;
+    seeing = null;
+    if (sawText.trimEnd() === saw(key)) return;
+    const typed = sawText;
+    if (await attempt(() => api.mopSetSeen(id, key, typed).then(() => true))) run = (await attempt(() => api.mopRun(id))) ?? run;
   }
 
   async function tick(i: number) {
@@ -134,15 +206,19 @@
 
   async function clearTicks() {
     const n = note;
-    if (!n || !n.ticks.length) return;
+    const seen = run?.seen ?? [];
+    if (!n || (!n.ticks.length && !seen.length)) return;
     const before = n.ticks;
     const back = await attempt(() => api.mopTick(id, []));
     if (!back) return;
     note = { ...back, body: text };
+    // A fresh run starts without what was seen last time, too.
+    for (const s of seen) await attempt(() => api.mopSetSeen(id, s.key, ''));
     run = (await attempt(() => api.mopRun(id))) ?? run;
-    toast('Ticks cleared for a fresh run', 'Undo', () =>
+    toast(seen.length ? 'Ticks and what you saw cleared for a fresh run' : 'Ticks cleared for a fresh run', 'Undo', () =>
       void attempt(() => api.mopTick(id, before)).then(async (b) => {
         if (b) note = { ...b, body: text };
+        for (const s of seen) await attempt(() => api.mopSetSeen(id, s.key, s.text));
         run = (await attempt(() => api.mopRun(id))) ?? run;
       }),
     );
@@ -175,20 +251,16 @@
     await changed();
   }
 
-  /** The run log for the change record: each step with when it was ticked. */
+  /** The run log for the change record: the day, start and finish, each step with when it
+   *  was ticked, and what was seen (built in lib/mopLog.ts). */
   async function copyLog() {
     if (!note || !run) return;
+    await saveSaw();
     let got = checks;
     if (mode !== 'run') got = (await attempt(() => api.mopChecklist(text, note!.ticks))) ?? [];
-    const out = [`${run.ticket} · ${note.title}`, `Status: ${STEPS.find((s) => s.status === run!.status)?.label ?? 'Backed out'}${run.startedAt ? ` · started ${clock(run.startedAt)}` : ''}`, ''];
-    lines.forEach((line, i) => {
-      const c = got[i];
-      if (!line.trim()) return;
-      const when = c?.ticked ? clock(at(c.key)) : '';
-      const mark = c?.ticked ? '✓' : c?.crossed ? '–' : '☐';
-      out.push(`${when.padEnd(5)} ${mark} ${line.trim()}`);
-    });
-    if (await copyText(out.join('\n'))) toast('Run log copied');
+    if (!(await copyText(runLog(run, note.title, statusLabel(run.status), lines, got)))) return;
+    if (closing) closing.copied = true;
+    toast('Run log copied');
   }
 
   async function copyPlain() {
@@ -324,7 +396,37 @@
       <input class="text-in title-in" bind:value={titleText} oninput={typed} onblur={() => void flush()} placeholder="Give this MOP a name" autocomplete="off" />
     </label>
 
-    <div class="body">
+    {#if asking !== null}
+      <div class="strip ask" role="group" aria-label="Steps not ticked">
+        <span class="say"><b>{asking === 1 ? "1 step isn't ticked." : `${asking} steps aren't ticked.`}</b> Mark it done anyway?</span>
+        <button type="button" class="btn slim" onclick={() => (asking = null)}>Keep going</button>
+        <button type="button" class="btn slim primary" use:focusNow onclick={() => void setStatus('done', true)}>Mark it done</button>
+      </div>
+    {:else if closing && run && (run.status === 'done' || run.status === 'backed_out')}
+      {@const long = took(run.startedAt, run.finishedAt)}
+      <div class="strip" role="group" aria-label="Finish up">
+        <span class="say">
+          <b>{statusLabel(run.status)}{run.finishedAt ? ` at ${localWords.clock(run.finishedAt)}` : ''}{long ? `, after ${long}` : ''}.</b> Finish up:
+        </span>
+        {#if run.status === 'done' && closing.item && (!closing.item.done || closing.ticked)}
+          <button type="button" class="btn slim" disabled={closing.ticked} onclick={() => void tickTicketDone()}>
+            {#if closing.ticked}<Icon name="check" size={13} /> {run.ticket} is done{:else}Tick {run.ticket} done{/if}
+          </button>
+        {/if}
+        {#if run.ranMinutes}
+          <button type="button" class="btn slim" disabled={closing.logged} onclick={() => void logRunTime()}>
+            {#if closing.logged}<Icon name="check" size={13} /> Time logged{:else}<Icon name="clock" size={13} /> Log {fmtMinutes(run.ranMinutes)}{/if}
+          </button>
+        {/if}
+        <button type="button" class="btn slim" onclick={() => void copyLog()}>
+          <Icon name={closing.copied ? 'check' : 'copy'} size={13} /> {closing.copied ? 'Run log copied' : 'Copy run log'}
+        </button>
+        <button type="button" class="shut" aria-label="Close" title="Close" onclick={() => (closing = null)}><Icon name="x" size={13} /></button>
+      </div>
+    {/if}
+
+    <!-- Ctrl+F looks in here when the MOP is being read or run (in Edit, in the text box). -->
+    <div class="body" data-find={mode === 'edit' ? undefined : ''}>
       {#if mode === 'edit'}
         <textarea use:tabIndent bind:value={text} oninput={typed} onblur={() => void flush()} aria-label="MOP text" spellcheck="true"></textarea>
       {:else if mode === 'read'}
@@ -355,6 +457,40 @@
               {/if}
               <span class="t">{line.trimStart().replace(/^#+\s*/, '')}</span>
               {#if c?.ticked}<span class="at">{clock(at(c.key))}</span>{/if}
+              {#if c?.key && seeing !== c.key && !saw(c.key)}
+                <button
+                  type="button"
+                  class="saw-add"
+                  class:show={c.ticked}
+                  aria-label="Write what you saw at line {i + 1}"
+                  title="What I saw: paste output or a note. It goes into the run log."
+                  onclick={() => openSaw(c.key)}><Icon name="note" size={13} /></button
+                >
+              {/if}
+              {#if c?.key && seeing === c.key}
+                <textarea
+                  class="saw-in"
+                  rows="3"
+                  maxlength="4000"
+                  spellcheck="false"
+                  bind:value={sawText}
+                  use:focusNow
+                  aria-label="What you saw at line {i + 1}"
+                  placeholder="What you saw: paste output or write a note. It goes into the run log."
+                  onblur={() => void saveSaw()}
+                  onkeydown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      seeing = null;
+                    } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      void saveSaw();
+                    }
+                  }}
+                ></textarea>
+              {:else if c?.key && saw(c.key)}
+                <button type="button" class="saw" title="What you saw here. Click to change it." onclick={() => openSaw(c.key)}>{saw(c.key)}</button>
+              {/if}
             </li>
           {/each}
         </ol>
@@ -364,7 +500,13 @@
 
     <footer>
       <span class="count">
-        {#if mode === 'run' || ticked}{ticked} of {tickable} ticked{/if}{#if run?.startedAt}{' · started '}{clock(run.startedAt)}{/if}
+        {[
+          mode === 'run' || ticked ? `${ticked} of ${tickable} ticked` : '',
+          run?.startedAt ? `started ${clock(run.startedAt)}` : '',
+          run?.finishedAt ? `finished ${clock(run.finishedAt)}` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')}
       </span>
       <span class="grow"></span>
       {#if mode === 'run'}
@@ -576,6 +718,105 @@
     gap: 8px;
     padding: 2px 4px;
     border-radius: 5px;
+  }
+
+  /* What I saw (round 21): a line of its own under the step, fixed-width so pasted output
+     keeps its columns. */
+  .run li {
+    flex-wrap: wrap;
+  }
+
+  .saw,
+  .saw-in {
+    flex: 1 1 100%;
+    margin: 2px 0 4px 26px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    font: 12px/1.45 var(--mono);
+    color: var(--ink);
+    white-space: pre;
+    overflow-x: auto;
+    tab-size: 4;
+    text-align: left;
+  }
+
+  .saw {
+    border: 0;
+    border-left: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    border-radius: 0 6px 6px 0;
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+    cursor: text;
+  }
+
+  .run textarea.saw-in {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    resize: vertical;
+    border: 1px solid var(--accent);
+    background: var(--paper);
+  }
+
+  .saw-add {
+    flex: none;
+    border: 0;
+    background: none;
+    padding: 0 2px;
+    color: var(--mut);
+    cursor: pointer;
+    opacity: 0;
+    position: relative;
+    top: 2px;
+  }
+
+  .saw-add.show,
+  .run li:hover .saw-add,
+  .saw-add:focus-visible {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .saw-add {
+      opacity: 1;
+    }
+  }
+
+  /* Asking before Done, and what a finished run offers (round 21). */
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    background: color-mix(in srgb, var(--ok) 10%, var(--paper));
+    border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent);
+  }
+
+  .strip.ask {
+    background: color-mix(in srgb, var(--warn, #b7791f) 12%, var(--paper));
+    border-color: color-mix(in srgb, var(--warn, #b7791f) 45%, transparent);
+  }
+
+  .strip .say {
+    flex: 1 1 14em;
+  }
+
+  .strip .btn {
+    gap: 4px;
+  }
+
+  .shut {
+    border: 0;
+    background: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    color: var(--mut);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
   }
 
   .run li.blank {

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-merge-entries"
+description = "Enables the merge_entries command without any pre-configured scope."
+commands.allow = ["merge_entries"]
+
+[[permission]]
+identifier = "deny-merge-entries"
+description = "Denies the merge_entries command without any pre-configured scope."
+commands.deny = ["merge_entries"]

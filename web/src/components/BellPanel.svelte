@@ -10,12 +10,13 @@
   import { api } from '../lib/api';
   import type { BellItem, CardKind } from '../lib/api';
   import { bell, nowMinutes, refreshBell, snoozeHour, snoozeSheet } from '../lib/bell.svelte';
-  import { addDays, fmtMinutes, relativeDay } from '../lib/format';
+  import { addDays, fmtMinutes, onDay } from '../lib/format';
   import { openMenu } from '../lib/menu.svelte';
   import { bringUp } from '../lib/bringUp';
   import { markDone, openRepeating } from '../lib/repeating.svelte';
   import { app, attempt, flashEntry, projectName, refresh, selectDay, setView, timeButtons, words } from '../lib/store.svelte';
   import { toast } from '../lib/toast.svelte';
+  import { wrapupDue } from '../lib/wrapupState.svelte';
   import { openWindow } from '../lib/windows.svelte';
   import Icon from './Icon.svelte';
   import { openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
@@ -106,6 +107,13 @@
     close();
   }
 
+  /** Open the card whose notepad has the to-dos. */
+  function todosOpen(card: string) {
+    const [kind, id] = card.split(':') as [CardKind, string];
+    openWindow(kind, id);
+    close();
+  }
+
   async function followTomorrow(f: Follow, title: string) {
     const card = cardOf(f);
     if (card) await bringUp(card[0], card[1], title, app.bringUpDays[0] ?? addDays(app.today, 1));
@@ -120,6 +128,13 @@
   }
 
   const clockText = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:00`;
+
+  /** The wrap-up shows on today's Desk (or Day, if that's where you are). */
+  function openWrapup() {
+    if (app.view !== 'day') setView('desk');
+    void selectDay(app.today);
+    close();
+  }
 
   function showDay() {
     setView('day');
@@ -139,20 +154,25 @@
         return `${i.about.hours} h logged${n ? ` · ${n} ${n === 1 ? 'entry needs' : 'entries need'} a code` : ''}`;
       }
       case 'meeting_done':
-        return i.about.project
-          ? `Just finished · logs to ${projectName(i.about.project)}, with the meeting note linked`
-          : 'Just finished · logs your time, with the meeting note linked';
+        return (
+          (i.about.just ? 'Just finished' : 'Not logged yet') +
+          (i.about.project
+            ? ` · logs to ${projectName(i.about.project)}, with the meeting note linked`
+            : ' · logs your time, with the meeting note linked')
+        );
       case 'meeting':
         return i.about.state.state === 'later' ? 'Your meeting note opens from here' : 'Open your meeting note';
       case 'follow_up': {
         const card = cardOf(i.about);
         const what = card ? `${KIND_WORD[card[0]]} · ` : '';
-        return what + (i.about.on === app.today ? 'follow up today' : `follow up since ${relativeDay(i.about.on, app.today)}`);
+        return what + (i.about.on === app.today ? 'follow up today' : `follow up since ${onDay(i.about.on, app.today)}`);
       }
       case 'due':
-        return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${relativeDay(i.about.nextDue, app.today)}`;
+        return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${onDay(i.about.nextDue, app.today)}`;
       case 'change_window':
         return `MOP · ${STATUS_WORD[i.about.status]}`;
+      case 'todos':
+        return `${i.about.count === 1 ? 'To-do' : `${i.about.count} to-dos`} open · ${i.about.words}`;
       case 'still_open':
         return i.about.tickets.join(' · ');
     }
@@ -179,8 +199,14 @@
     </header>
     {#if away}
       <p class="since">
-        Things that came due since you last opened Shiftbook{away.since ? `, ${relativeDay(away.since, app.today).toLowerCase()}` : ''}.
+        Things that came due since you last opened Shiftbook{away.since ? `, ${onDay(away.since, app.today)}` : ''}.
       </p>
+    {/if}
+    {#if wrapupDue() && !away}
+      <div class="wrapup">
+        <span class="txt"><b>Wrap-up time</b><small>What you did today, and what you start with tomorrow.</small></span>
+        <button type="button" class="btn primary" onclick={openWrapup}>Open the wrap-up</button>
+      </div>
     {/if}
     {#each [['Now', now], [away ? 'Since then' : 'Today', today]] as [head, list] (head)}
       {#if (list as BellItem[]).length}
@@ -190,7 +216,7 @@
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} class:late={i.about.kind === 'due' && i.about.state === 'overdue'} style:--i={n}>
               <span class="ico" aria-hidden="true">
                 <Icon
-                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : 'clock'}
+                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : i.about.kind === 'todos' ? 'check' : 'clock'}
                   size={16}
                 />
               </span>
@@ -220,6 +246,10 @@
                   {@const title = i.title}
                   {#if i.about.state === 'renewed'}
                     <button type="button" class="btn primary" onclick={() => openDue(id, true)}>New date…</button>
+                  {:else if i.about.state === 'due_soon' && i.about.nextDue > app.today}
+                    <!-- Not due yet: Open comes first, and Done says it is early (round 21). -->
+                    <button type="button" class="btn primary" onclick={() => openDue(id, false)}>Open</button>
+                    <button type="button" class="btn" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done early</button>
                   {:else}
                     <button type="button" class="btn primary" onclick={() => void dueDone(id, title)}><Icon name="check" size={13} /> Done</button>
                     <button type="button" class="btn" onclick={() => openDue(id, false)}>Open</button>
@@ -230,6 +260,9 @@
                     openMopWindow(mop);
                     close();
                   }}>Open the MOP</button>
+                {:else if i.about.kind === 'todos'}
+                  {@const card = i.about.card}
+                  <button type="button" class="btn primary" onclick={() => todosOpen(card)}>Open</button>
                 {:else}
                   <button type="button" class="btn" onclick={showDay}>Show</button>
                 {/if}
@@ -339,6 +372,17 @@
 
   .item.late {
     border-left-color: var(--bad);
+  }
+
+  .wrapup {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--accent) 7%, var(--paper));
   }
 
   .since {

@@ -80,6 +80,26 @@ export function snippet(body: string, title: string, query: string, max = 120): 
   return rest.length > max ? rest.slice(0, max).trimEnd() + '…' : rest;
 }
 
+/**
+ * The line of `body` that holds a word of `query`, for Find's results (round 21: a note hit
+ * only showed its kind, not why it matched). Long lines are cut around the word. '' when no
+ * line holds one, as when the match was in the title.
+ */
+export function matchingLine(body: string, query: string, max = 80): string {
+  const wanted = words(query);
+  if (wanted.length === 0) return '';
+  for (const raw of body.split('\n')) {
+    const line = raw.replace(/\s+/g, ' ').trim();
+    const lower = line.toLowerCase();
+    const at = wanted.map((w) => lower.indexOf(w)).filter((i) => i >= 0).sort((a, b) => a - b)[0];
+    if (at === undefined) continue;
+    if (line.length <= max) return line;
+    const start = at > max / 3 ? line.lastIndexOf(' ', at - Math.floor(max / 3)) + 1 : 0;
+    return (start > 0 ? '…' : '') + line.slice(start, start + max).trimEnd() + (start + max < line.length ? '…' : '');
+  }
+  return '';
+}
+
 /** `flat` (a body on one line) without a start that only repeats the title. A title made from
  *  a long first line is cut short with "…": the taste then carries on from where it stopped,
  *  so a card never says the same sentence twice. */

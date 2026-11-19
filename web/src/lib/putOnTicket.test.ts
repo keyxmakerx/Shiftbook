@@ -4,7 +4,7 @@ import { MAX_TICKET_CHOICES, moreLines, ticketChoices } from './putOnTicket';
 
 const base = {
   x: 0, y: 0, z: 0, placed: false, timelineX: 0, timelineY: 0, inBox: null, stack: null,
-  entry: null, note: null, inbox: null, work: [], workHours: null, folded: [], justToday: true,
+  entry: null, note: null, inbox: null, work: [], workMinutes: null, folded: [], justToday: true,
 };
 const ticket = (id: string, date: string, done = false): CanvasCard => ({
   ...base,
@@ -12,7 +12,7 @@ const ticket = (id: string, date: string, done = false): CanvasCard => ({
   id,
   tray: {
     date,
-    item: { id, date, ticket: id, minutes: 30, note: null, done, projectId: null, recurringId: null, links: [] },
+    item: { id, date, ticket: id, minutes: 30, note: null, done, projectId: null, recurringId: null, links: [], todos: 0 },
   },
 });
 const jot: CanvasCard = { ...base, kind: 'note', id: 'n1', tray: null };

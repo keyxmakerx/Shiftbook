@@ -6,6 +6,7 @@
 use serde::Serialize;
 use time::{Date, Duration};
 
+use crate::minutes::Minutes;
 use crate::prefs::Prefs;
 
 /// Which nudge.
@@ -86,6 +87,46 @@ pub fn wrapup_nudge(prefs: &Prefs, today: Date, now: u32) -> Option<Nudge> {
         at,
         title: "Time to wrap up the day?".into(),
         body: "Takes a minute: check today's hours and tickets.".into(),
+    })
+}
+
+/// What the wrap-up offer on the way out has to say (round 21).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS), ts(export))]
+#[serde(rename_all = "camelCase")]
+pub struct LeaveOffer {
+    /// Logged today.
+    pub logged: Minutes,
+    /// The day's target (zero on a day that has none).
+    pub target: Minutes,
+}
+
+/// Offer the wrap-up when locking or closing at `now` (minutes after local midnight on
+/// `today`)? Only with a wrap-up time set and passed, with something on the day to wrap up
+/// (`has_work`), not on a day off, not once the wrap-up was finished or put off today, and
+/// only the first time each day.
+pub fn leave_offer(
+    prefs: &Prefs,
+    today: Date,
+    now: u32,
+    logged: Minutes,
+    has_work: bool,
+    day_off: bool,
+) -> Option<LeaveOffer> {
+    let at = clock_minutes(prefs.wrapup_at.as_deref()?)?;
+    let day = crate::dates::format_date(today);
+    let is_today = |d: &Option<String>| d.as_deref() == Some(day.as_str());
+    if now < at
+        || !has_work
+        || day_off
+        || is_today(&prefs.wrapup_closed)
+        || is_today(&prefs.wrapup_offered)
+    {
+        return None;
+    }
+    Some(LeaveOffer {
+        logged,
+        target: Minutes(prefs.day_target(today)),
     })
 }
 
@@ -171,6 +212,56 @@ mod tests {
         assert_eq!(
             (w.kind, w.date, w.at),
             (NudgeKind::WrapUp, TUE, 16 * 60 + 45)
+        );
+    }
+
+    #[test]
+    fn the_wrap_up_is_offered_once_on_the_way_out() {
+        let p = prefs(); // wrap-up at 16:45
+        let late = 17 * 60 + 20;
+        let offer = leave_offer(&p, TUE, late, Minutes(390), true, false);
+        assert_eq!(
+            offer,
+            Some(LeaveOffer {
+                logged: Minutes(390),
+                target: Minutes(480)
+            })
+        );
+        // Right at the wrap-up time counts; a minute before doesn't.
+        assert!(leave_offer(&p, TUE, 16 * 60 + 45, Minutes(390), true, false).is_some());
+        assert!(leave_offer(&p, TUE, 16 * 60 + 44, Minutes(390), true, false).is_none());
+        // Nothing on the day, or a day off: nothing to wrap up.
+        assert!(leave_offer(&p, TUE, late, Minutes(0), false, false).is_none());
+        assert!(leave_offer(&p, TUE, late, Minutes(480), true, true).is_none());
+        // No wrap-up time: the wrap-up is off altogether.
+        let off = Prefs {
+            wrapup_at: None,
+            ..prefs()
+        };
+        assert!(leave_offer(&off, TUE, late, Minutes(390), true, false).is_none());
+        // Finished or put off today, or already offered today: not again.
+        let closed = Prefs {
+            wrapup_closed: Some("2026-10-27".into()),
+            ..prefs()
+        };
+        assert!(leave_offer(&closed, TUE, late, Minutes(390), true, false).is_none());
+        let offered = Prefs {
+            wrapup_offered: Some("2026-10-27".into()),
+            ..prefs()
+        };
+        assert!(leave_offer(&offered, TUE, late, Minutes(390), true, false).is_none());
+        // Yesterday's doesn't count.
+        let yesterday = Prefs {
+            wrapup_closed: Some("2026-10-26".into()),
+            wrapup_offered: Some("2026-10-26".into()),
+            ..prefs()
+        };
+        assert!(leave_offer(&yesterday, TUE, late, Minutes(390), true, false).is_some());
+        // A Saturday worked anyway has no target to compare with.
+        let sat = date!(2026 - 10 - 31);
+        assert_eq!(
+            leave_offer(&p, sat, late, Minutes(120), true, false).map(|o| o.target),
+            Some(Minutes(0))
         );
     }
 }

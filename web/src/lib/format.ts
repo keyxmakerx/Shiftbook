@@ -80,25 +80,36 @@ export function dayOfMonth(iso: string): number {
   return fromIso(iso).getDate();
 }
 
-/** "Today", "Yesterday" or "Looking back" / "Ahead". */
+/**
+ * A day said plainly: "Today", "Yesterday", "Tomorrow", else the day itself like
+ * "Mon 16 November" (with the year when it isn't this year). Round 21: this used to say
+ * "Looking back" or "Ahead" for every other day, which told nobody which day.
+ */
 export function relativeDay(iso: string, today: string): string {
   const diff = daysBetween(today, iso);
   if (diff === 0) return 'Today';
   if (diff === -1) return 'Yesterday';
-  return diff < 0 ? 'Looking back' : 'Ahead';
+  if (diff === 1) return 'Tomorrow';
+  const day = `${weekdayShort(iso)} ${dayMonth(iso)}`;
+  return iso.slice(0, 4) === today.slice(0, 4) ? day : `${day} ${iso.slice(0, 4)}`;
+}
+
+/** `relativeDay` for the middle of a sentence: "today", "yesterday", "Mon 16 November". */
+export function onDay(iso: string, today: string): string {
+  const day = relativeDay(iso, today);
+  return /^(Today|Yesterday|Tomorrow)$/.test(day) ? day.toLowerCase() : day;
 }
 
 /**
- * Minutes as decimal hours with at most two decimals and no trailing zeros, like core's
- * `format_hours` (90 → "1.5", 75 → "1.25", 20 → "0.33"). Used only while numbers count up.
+ * How far a day is from today, for a label beside the date itself: "Today", "Yesterday",
+ * "Tomorrow", "8 days ago", "In 3 days".
  */
-export function fmtHours(minutes: number): string {
-  const hundredths = Math.floor((Math.max(0, minutes) * 100 + 30) / 60);
-  const whole = Math.floor(hundredths / 100);
-  const rest = hundredths % 100;
-  if (rest === 0) return String(whole);
-  if (rest % 10 === 0) return `${whole}.${rest / 10}`;
-  return `${whole}.${pad2(rest)}`;
+export function dayDistance(iso: string, today: string): string {
+  const diff = daysBetween(today, iso);
+  if (diff === 0) return 'Today';
+  if (diff === -1) return 'Yesterday';
+  if (diff === 1) return 'Tomorrow';
+  return diff < 0 ? `${-diff} days ago` : `In ${diff} days`;
 }
 
 /** Minutes as "15m", "1h", "1h 30m". */

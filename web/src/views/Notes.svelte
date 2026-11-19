@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // Notes (r7-notes card): one list with a search box, kind filters and Include archived,
   // and the open note beside it. Notes save as you type. Archive moves a note out of the
   // way; search still finds it. Auto-archive (Settings → Notes) warns on the note first.
@@ -16,6 +17,7 @@
   import type { Note, NoteInput, NoteKind } from '../lib/api';
   import { archiveWarning, changedOn, highlight, KIND_LABEL, KINDS, snippet } from '../lib/notes';
   import { openMenu } from '../lib/menu.svelte';
+  import { NEW_PROJECT, NEW_PROJECT_VALUE, newProject } from '../lib/newProject';
   import { logNoteSection } from '../lib/noteActions';
   import { app, attempt, openWiki, projectColor, projectName, words } from '../lib/store.svelte';
   import { mops, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
@@ -25,6 +27,7 @@
   import Icon from '../components/Icon.svelte';
   import WikiLinks from '../components/WikiLinks.svelte';
   import MopRun from '../components/MopRun.svelte';
+  import { sawNote } from '../lib/recent.svelte';
 
   const SAVE_AFTER_MS = 700;
 
@@ -111,6 +114,7 @@
       return;
     }
     current = n;
+    sawNote(n);
     draft = toInput(n);
     editing = true;
     saveState = '';
@@ -119,10 +123,26 @@
   async function newNote() {
     await flush();
     current = null;
+    sawNote(null);
     draft = blank(kind ?? 'jot');
     editing = true;
     saveState = '';
     queueMicrotask(() => titleEl?.focus());
+  }
+
+  /** The project box: a project, none, or "+ New project…" (made, then chosen). */
+  async function pickProject(box: HTMLSelectElement) {
+    const d = draft;
+    if (box.value !== NEW_PROJECT_VALUE) {
+      d.projectId = box.value || null;
+      edited();
+      return;
+    }
+    box.value = d.projectId ?? '';
+    const made = await newProject();
+    if (!made || d !== draft) return;
+    d.projectId = made.id;
+    edited();
   }
 
   function edited() {
@@ -372,9 +392,10 @@
         </label>
         <label class="field">
           <span class="lbl">Project</span>
-          <select class="text-in" bind:value={draft.projectId} onchange={edited}>
-            <option value={null}>No project</option>
+          <select class="text-in" value={draft.projectId ?? ''} onchange={(e) => void pickProject(e.currentTarget)}>
+            <option value="">No project</option>
             {#each projects as p (p.id)}<option value={p.id}>{p.name}</option>{/each}
+            <option value={NEW_PROJECT_VALUE}>{NEW_PROJECT}</option>
           </select>
         </label>
         <label class="field grow">
@@ -389,6 +410,7 @@
       </div>
       <textarea
         use:tabIndent
+        use:todoBoxes
         bind:this={bodyEl}
         class="body"
         placeholder="Write anything…"

@@ -52,10 +52,10 @@
   const isNew = $derived(field === null);
   const dirty = $derived(JSON.stringify(draft) !== JSON.stringify(fromField(field)));
   const sample = $derived(
-    draft.linkTemplate.includes('{ticket}')
-      ? draft.linkTemplate.replace('{ticket}', `${draft.ticketPrefix || 'PROJ-'}123`)
-      : '',
+    draft.linkTemplate.includes('{ticket}') ? draft.linkTemplate.replace('{ticket}', `${draft.ticketPrefix || 'PROJ-'}123`) : '',
   );
+  /** A link with no {ticket} in it: every matching ticket goes to the same page. */
+  const portal = $derived(/^https?:\/\/\S+$/i.test(draft.linkTemplate.trim()) && !draft.linkTemplate.includes('{ticket}'));
 
   async function reload() {
     const list = await attempt(() => api.listCustomFields());
@@ -130,7 +130,7 @@
   {#if draft.kind === 'link'}
     <div class="cols two">
       <label class="field">
-        <span class="lbl">Link template · {'{ticket}'} is replaced</span>
+        <span class="lbl">Link · {'{ticket}'} is replaced by the ticket number</span>
         <input class="text-in mono" bind:value={draft.linkTemplate} placeholder={'https://example.atlassian.net/browse/{ticket}'} spellcheck="false" />
       </label>
       <label class="field">
@@ -139,9 +139,12 @@
       </label>
     </div>
     <p class="note">
-      Tickets that start with the prefix get a “Copy link” option. Links are only shown and copied;
-      Shiftbook never opens them or goes online.
+      Tickets that start with the prefix get an ↗ that opens this link in your browser, and a “Copy
+      link” option. For a vendor whose tickets you can't link to one by one, leave {'{ticket}'} out
+      and put their portal's address. Shiftbook itself never goes online: it only hands the address
+      to your browser when you click.
       {#if sample}<br /><span class="lbl">Example</span> <span class="mono">{sample}</span>{/if}
+      {#if portal}<br /><span class="lbl">Every {draft.ticketPrefix || 'matching'} ticket opens</span> <span class="mono">{draft.linkTemplate.trim()}</span>{/if}
     </p>
   {/if}
 

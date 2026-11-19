@@ -62,6 +62,10 @@ wrapupAt: string | null,
  */
 timer: boolean, 
 /**
+ * "I fill in a timesheet" (see [`Prefs::shows_timesheet`]).
+ */
+useTimesheet: boolean, 
+/**
  * Phone: due reminder time `HH:MM`, `None` when off.
  */
 remindAt: string | null, 
@@ -69,6 +73,14 @@ remindAt: string | null,
  * Phone: a wrap-up nudge at the wrap-up time.
  */
 wrapupNudge: boolean, 
+/**
+ * The day the wrap-up was last finished or put off (`YYYY-MM-DD`).
+ */
+wrapupClosed: string | null, 
+/**
+ * The day the wrap-up was last offered on the way out (`YYYY-MM-DD`).
+ */
+wrapupOffered: string | null, 
 /**
  * Quick unlock with a PIN is turned on.
  */
@@ -85,6 +97,18 @@ hideScreenshots: boolean,
  * The right mouse button drags too.
  */
 rightDrag: boolean, 
+/**
+ * Days a ticket can be still open before its age shows in amber.
+ */
+ticketStaleDays: number, 
+/**
+ * Today's note starts with the day's meetings.
+ */
+dailyMeetings: boolean, 
+/**
+ * Today's note starts with what was brought up for the day.
+ */
+dailyBrought: boolean, 
 /**
  * Days an entry card stays on the Desk by itself (today counts as one).
  */
@@ -128,4 +152,8 @@ timeButtons: Array<number>,
 /**
  * The timesheet code for each day's "Tickets" roll-up entry.
  */
-ticketsCode: TimesheetCodeId | null, };
+ticketsCode: TimesheetCodeId | null, 
+/**
+ * The timesheet code days off are booked on.
+ */
+timeOffCode: TimesheetCodeId | null, };

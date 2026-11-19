@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   addDays,
   dayMonth,
+  dayDistance,
   dayMonthYear,
   daysBetween,
-  fmtHours,
   fmtMinutes,
   isWeekend,
   longDay,
+  onDay,
   relativeDay,
   toIso,
   weekdayShort,
@@ -19,25 +20,13 @@ describe('display formatting', () => {
     expect(dayMonthYear('2025-11-03')).toBe('3 November 2025');
   });
 
-  it('formats hours like the app does', () => {
-    const cases: [number, string][] = [
-      [0, '0'],
-      [90, '1.5'],
-      [75, '1.25'],
-      [20, '0.33'],
-      [60, '1'],
-      [480, '8'],
-      [1, '0.02'],
-    ];
-    for (const [m, text] of cases) expect(fmtHours(m), String(m)).toBe(text);
-    expect(fmtHours(-5)).toBe('0');
-  });
-
   it('formats minutes for buttons and toasts', () => {
     expect(fmtMinutes(15)).toBe('15m');
     expect(fmtMinutes(60)).toBe('1h');
     expect(fmtMinutes(90)).toBe('1h 30m');
     expect(fmtMinutes(120)).toBe('2h');
+    expect(fmtMinutes(0)).toBe('0m');
+    expect(fmtMinutes(45)).toBe('45m');
   });
 
   it('handles local dates', () => {
@@ -53,7 +42,25 @@ describe('display formatting', () => {
     expect(isWeekend('2026-10-19')).toBe(false);
     expect(relativeDay('2026-10-15', '2026-10-15')).toBe('Today');
     expect(relativeDay('2026-10-14', '2026-10-15')).toBe('Yesterday');
-    expect(relativeDay('2026-10-01', '2026-10-15')).toBe('Looking back');
+    expect(relativeDay('2026-10-16', '2026-10-15')).toBe('Tomorrow');
+    expect(relativeDay('2026-10-01', '2026-10-15')).toBe('Thu 1 October');
+    expect(relativeDay('2026-11-02', '2026-10-15')).toBe('Mon 2 November');
+    expect(relativeDay('2025-12-31', '2026-10-15')).toBe('Wed 31 December 2025');
+  });
+
+  it('says a day mid-sentence without a stray capital', () => {
+    expect(onDay('2026-10-15', '2026-10-15')).toBe('today');
+    expect(onDay('2026-10-14', '2026-10-15')).toBe('yesterday');
+    expect(onDay('2026-10-16', '2026-10-15')).toBe('tomorrow');
+    expect(onDay('2026-10-01', '2026-10-15')).toBe('Thu 1 October');
+  });
+
+  it('says how far a day is from today', () => {
+    expect(dayDistance('2026-10-15', '2026-10-15')).toBe('Today');
+    expect(dayDistance('2026-10-14', '2026-10-15')).toBe('Yesterday');
+    expect(dayDistance('2026-10-16', '2026-10-15')).toBe('Tomorrow');
+    expect(dayDistance('2026-10-07', '2026-10-15')).toBe('8 days ago');
+    expect(dayDistance('2026-10-18', '2026-10-15')).toBe('In 3 days');
   });
 });
 

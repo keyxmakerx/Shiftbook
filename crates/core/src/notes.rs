@@ -247,6 +247,68 @@ pub fn daily_note_title(date: time::Date) -> String {
     format!("Daily · {day} {} {month} {}", date.day(), date.year())
 }
 
+/// The heading over the day's meetings in a new Daily note.
+pub const DAILY_MEETINGS_HEAD: &str = "Meetings";
+/// The heading over what was brought up for the day.
+pub const DAILY_BROUGHT_HEAD: &str = "Brought up for today";
+/// The heading the writing goes under.
+pub const DAILY_NOTES_HEAD: &str = "Notes";
+/// The most meetings, and the most brought-up things, a new Daily note lists.
+pub const DAILY_START_MAX: usize = 12;
+
+/// One line of a title: no line breaks, no spaces at the ends.
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// What today's note starts with (round 21, idea approved 26 October): the day's meetings
+/// with their times (`(minutes after midnight, name)`, in start order), then what was
+/// brought up for today as tick boxes, then a "Notes" heading to write under. With neither
+/// meetings nor anything brought up the note starts empty, as it always did.
+pub fn daily_start(meetings: &[(u32, &str)], brought: &[&str]) -> String {
+    let meetings: Vec<String> = meetings
+        .iter()
+        .map(|(at, name)| (at, one_line(name)))
+        .filter(|(_, name)| !name.is_empty())
+        .take(DAILY_START_MAX)
+        .map(|(at, name)| format!("{} {name}", crate::bell::clock(*at)))
+        .collect();
+    let mut seen: Vec<String> = Vec::new();
+    for title in brought.iter().map(|t| one_line(t)) {
+        if !title.is_empty() && !seen.iter().any(|s| s.eq_ignore_ascii_case(&title)) {
+            seen.push(title);
+        }
+    }
+    seen.truncate(DAILY_START_MAX);
+    if meetings.is_empty() && seen.is_empty() {
+        return String::new();
+    }
+    let mut out = String::new();
+    if !meetings.is_empty() {
+        out.push_str(DAILY_MEETINGS_HEAD);
+        out.push('\n');
+        for m in &meetings {
+            out.push_str(m);
+            out.push('\n');
+        }
+        out.push('\n');
+    }
+    if !seen.is_empty() {
+        out.push_str(DAILY_BROUGHT_HEAD);
+        out.push('\n');
+        for title in &seen {
+            out.push(crate::todos::OPEN_BOX);
+            out.push(' ');
+            out.push_str(title);
+            out.push('\n');
+        }
+        out.push('\n');
+    }
+    out.push_str(DAILY_NOTES_HEAD);
+    out.push('\n');
+    out
+}
+
 /// True when `note` is the Daily note for `date`.
 pub fn is_daily_note_for(kind: NoteKind, title: &str, date: time::Date) -> bool {
     kind == NoteKind::Daily && title == daily_note_title(date)
@@ -411,6 +473,46 @@ mod tests {
     use super::*;
     use time::macros::datetime;
     use time::Duration;
+
+    #[test]
+    fn todays_note_starts_with_meetings_and_what_was_brought_up() {
+        let start = daily_start(
+            &[(570, "Stand-up"), (840, "Change  board")],
+            &["Call the vendor back", "INC0045690 printer roller"],
+        );
+        assert_eq!(
+            start,
+            "Meetings\n09:30 Stand-up\n14:00 Change board\n\n\
+             Brought up for today\n☐ Call the vendor back\n☐ INC0045690 printer roller\n\n\
+             Notes\n"
+        );
+        // The boxes are real to-dos.
+        assert_eq!(crate::todos::open_count(&start), 2);
+        // Only the part there is something for.
+        assert_eq!(
+            daily_start(&[(570, "Stand-up")], &[]),
+            "Meetings\n09:30 Stand-up\n\nNotes\n"
+        );
+        assert_eq!(
+            daily_start(&[], &["Call the vendor back"]),
+            "Brought up for today\n☐ Call the vendor back\n\nNotes\n"
+        );
+        // Nothing on: the note starts empty.
+        assert_eq!(daily_start(&[], &[]), "");
+        assert_eq!(daily_start(&[(570, "  ")], &[" "]), "");
+        // The same thing brought up twice is listed once; titles stay on one line.
+        assert_eq!(
+            daily_start(&[], &["Call back", "call back", "Order\nthe part"]),
+            "Brought up for today\n☐ Call back\n☐ Order the part\n\nNotes\n"
+        );
+        // A long list stops somewhere.
+        let many: Vec<String> = (0..30).map(|n| format!("Thing {n}")).collect();
+        let many: Vec<&str> = many.iter().map(String::as_str).collect();
+        assert_eq!(
+            crate::todos::open_count(&daily_start(&[], &many)),
+            DAILY_START_MAX as u32
+        );
+    }
 
     #[test]
     fn daily_note_titles() {

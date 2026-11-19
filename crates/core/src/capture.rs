@@ -354,6 +354,53 @@ pub fn day_word_date(word: &str, today: Date, week_start: WeekStart) -> Option<D
     }
 }
 
+/// The most lines Log work takes at once (round 21).
+pub const MAX_CAPTURE_LINES: usize = 20;
+
+/// Several lines pasted into Log work, one entry each (round 21, idea approved 26 October):
+/// every line with words on it, without the bullet, number or tick box a list puts in front.
+/// Returns the first [`MAX_CAPTURE_LINES`] and how many more were left out.
+pub fn capture_lines(text: &str) -> (Vec<String>, usize) {
+    let mut lines: Vec<String> = text
+        .lines()
+        .map(|line| without_bullet(line).to_string())
+        .filter(|line| !line.is_empty())
+        .collect();
+    let more = lines.len().saturating_sub(MAX_CAPTURE_LINES);
+    lines.truncate(MAX_CAPTURE_LINES);
+    (lines, more)
+}
+
+/// `line` without a list marker in front: `- `, `* `, `• `, `1. `, `2) ` or a to-do's box.
+fn without_bullet(line: &str) -> &str {
+    let line = line.trim();
+    for mark in ["- ", "* ", "• ", "– ", "☐", "☑", "[ ]", "[]", "[x]", "[X]"] {
+        if let Some(rest) = line.strip_prefix(mark) {
+            return rest.trim_start();
+        }
+    }
+    let digits = line.chars().take_while(char::is_ascii_digit).count();
+    if (1..=3).contains(&digits) {
+        if let Some(rest) = line[digits..]
+            .strip_prefix(". ")
+            .or_else(|| line[digits..].strip_prefix(") "))
+        {
+            return rest.trim_start();
+        }
+    }
+    line
+}
+
+/// A line without the words that were read as its time ("patched print server 45m" gives
+/// "patched print server"), for logging it with that time.
+pub fn without_time(line: &str, capture: &Capture) -> String {
+    let rest = match &capture.hours_text {
+        Some(time) => line.replacen(time.as_str(), " ", 1),
+        None => line.to_string(),
+    };
+    rest.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -665,5 +712,38 @@ mod tests {
             pasted_tickets("PROJ-123 (CHG0012345)"),
             Some(vec!["PROJ-123".into(), "CHG0012345".into()])
         );
+    }
+
+    #[test]
+    fn several_lines_make_one_entry_each() {
+        let pasted = "- patched print server 45m\n\n  2. INC0041201 chased the vendor\n☐ order the part\n10 minute walk round the comms room\n";
+        let (lines, more) = capture_lines(pasted);
+        assert_eq!(
+            lines,
+            [
+                "patched print server 45m",
+                "INC0041201 chased the vendor",
+                "order the part",
+                "10 minute walk round the comms room"
+            ]
+        );
+        assert_eq!(more, 0);
+        let many = "line\n".repeat(MAX_CAPTURE_LINES + 3);
+        let (lines, more) = capture_lines(&many);
+        assert_eq!((lines.len(), more), (MAX_CAPTURE_LINES, 3));
+        assert!(capture_lines("  \n\n").0.is_empty());
+    }
+
+    #[test]
+    fn a_line_is_logged_without_its_time() {
+        let today = time::macros::date!(2026 - 11 - 18);
+        let line = "patched print server 45m";
+        let capture = parse_capture(line, today, WeekStart::default(), &[]);
+        assert_eq!(capture.minutes, Some(Minutes(45)));
+        assert_eq!(without_time(line, &capture), "patched print server");
+        let plain = "order the part";
+        let capture = parse_capture(plain, today, WeekStart::default(), &[]);
+        assert_eq!(capture.minutes, None);
+        assert_eq!(without_time(plain, &capture), "order the part");
     }
 }

@@ -56,7 +56,7 @@
   });
 
   function title(c: CanvasCard): { kind: string; text: string } {
-    if (c.entry) return { kind: `Entry · ${c.entry.hours} h`, text: c.entry.description || 'Untitled' };
+    if (c.entry) return { kind: `Entry · ${fmtMinutes(c.entry.minutes)}`, text: c.entry.description || 'Untitled' };
     if (c.tray) return { kind: `Ticket · ${fmtMinutes(c.tray.item.minutes)}`, text: c.tray.item.ticket };
     if (c.note) return { kind: `${KIND_LABEL[c.note.kind]} note`, text: c.note.title };
     return { kind: 'Inbox scrap', text: c.inbox?.text ?? '' };

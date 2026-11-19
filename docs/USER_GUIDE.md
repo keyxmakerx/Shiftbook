@@ -19,7 +19,8 @@ works the way it does is in `DECISIONS.md`.
   it). Click an entry or a ticket and its **slide-out** opens underneath:
   the notepad (saved as you type), its tickets, its project, Bring up tomorrow, done or still
   open, more time and More. Double-click a card to open it (a ticket's notepad opens as a window
-  you can move; full screen is a button on it); double-click empty paper to jot.
+  you can move; full screen is a button on it); double-click empty paper to jot. Enter keeps
+  the jot, and so does Esc when it has words in it (with Undo); Esc on an empty one closes it.
   Right-click anything for its paper menu: about a dozen rows, where a row with ▾ (Follow up,
   Project, Time, File in a drawer, More…) opens its choices in place. The bottom bar has zoom,
   Fit and **View** (Timeline, Show all link lines, Boards, Tidy into stacks, Clear old cards…).
@@ -48,15 +49,25 @@ works the way it does is in `DECISIONS.md`.
   with Copy. See `CANVAS.md`.
 - **Day:** for starting and ending the day: today's hours against 8 h and the week total; **Log work** (paste a ticket or type a
   few words, press 15m/30m/45m/1h/2h — a ticket already logged today gets the time added to its
-  entry); the **Tickets** tray (paste tickets as you work on them; a small box asks how long
+  entry; paste **several lines** and each becomes its own entry: a list shows them with the
+  time each line had, a time button fills the lines that had none, and Log all logs them, with
+  one Undo for the lot, or One entry instead puts it all on one line as before); the **Tickets** tray (paste tickets as you work on them; a small box asks how long
   you've spent so far (15 minutes if you skip it), which you can step up or down later, and
   they roll up into one “Tickets” entry for the day; a box beside each ticket takes a few
   words, and its slide-out holds a full notepad; a new ticket starts **Still open** and comes
-  back each day until you **tick** it done; give a ticket a project and its minutes count under
+  back each day until you **tick** it done, saying how long it has been open ("open 6 days",
+  the longest first, in amber from 3 days; **Settings → Your day** changes the number); right-click a still-open
+  ticket and **Snooze** keeps it out of the list until tomorrow, in 3 days, next week or a
+  day you pick: it waits under **Snoozed (2)**, still counts as open, and comes back on its
+  day, or sooner if you work on it or press Wake; give a ticket a project and its minutes count under
   that project instead); the entries list with +15m/+30m/+1h and ticket chips you click to copy
-  (click an entry for the same slide-out as on the Desk). +15m/+30m/+1h on an entry from an
+  (click an entry for the same slide-out as on the Desk). Right-click an entry, then More:
+  **Split in two…** shares its time between it and a new entry (name both, use − and + for the
+  time; the first keeps the tickets and the notepad), and **Merge with** puts another entry
+  from the same day into it (its time, notes and tickets come over). On the Desk, select two
+  entries from the same day and press **Merge these two**. Both have Undo. +15m/+30m/+1h on an entry from an
   earlier day adds the time today (to today's entry with the same title and project, or a copy
-  of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type, and recent
+  of it), never to the old day; on Day, it goes to the day you have open; **Notes** (Jot a quick thought, Today's note that saves as you type (the first time you open it each day it already lists today's meetings with their times and the things you brought up for today as tick boxes, then a Notes heading; nothing is kept until you type or tick, and **Settings → Notes** switches either part off), and recent
   meeting notes, all kept in Notes; right-click a jot, or use the button in Notes, to **Log it as
   an entry**: its title becomes what you did and the jot is archived; on the Desk, right-click
   a note card and **Put on a ticket** to move its words into that ticket's notepad, so the
@@ -65,18 +76,31 @@ works the way it does is in `DECISIONS.md`.
   a right-click menu) puts a notepad or a note in a window that floats over everything and
   saves as you type. Drag its title bar to move it and its corner to resize it; ▴ rolls it up
   to the title bar, – minimises it to the bottom bar, ⤢ fills the screen, ✕ closes it. Windows
-  come back where they were after you unlock. The thin **bottom bar** lines windows up from the
+  come back where they were after you unlock. **Ctrl+F** finds a word in the notepad the cursor
+  is in, or in the window in front (a notepad, or a MOP being read, edited or run): the match
+  is marked, Enter goes to the next one, Shift+Enter to the one before, Esc closes it. **Ctrl+;**
+  drops the time (like 14:05) into a notepad, for a running log. **To-dos:** type `[]` at the
+  start of a line in any notepad or note and it becomes a tick box (☐); click the box to tick
+  it (☑), click again to untick. Enter at the end of a to-do starts the next one, and Enter on
+  an empty box ends the list. A card shows how many are still open (☐ 2), and the bell lists
+  them with an Open button until they are ticked. The thin **bottom bar** lines windows up from the
   left (click to show or tuck away, right-click for more), with today's hours and the **bell** on
   the right: its panel slides in with meetings about to start, things brought up for today and
   tickets still open. Meetings that repeat are set in **Settings → Meetings** (days, time, how
   early to remind); the bell opens that day's meeting note. All of it stays inside Shiftbook.
 - **Saved responses:** the copy button on the Tickets tray lists messages you paste into tickets
   again and again (“Fixed and confirmed with the user”); pick one and it's copied. Write
-  them in Settings → Responses.
+  them in Settings → Responses. A response can hold blanks: `{ticket}`, `{date}` and `{name}`.
+  When you tick a ticket done, the message at the bottom offers **Copy a response** beside
+  Undo: the ticket's number and today's date fill themselves in, and a response with `{name}`
+  asks who it is to first.
 - **Where was I?:** after you unlock, come back from a break of 30 minutes or more, or a new
   day starts, the Desk shows what to pick up: things you brought up for today (**Bring up
   tomorrow** in any slide-out or right-click menu picks the next work day), then the list from
-  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** puts it into Log work;
+  your wrap-up, or else the last thing you logged with its tickets and notepad. **Carry on** turns
+  the card into **Now**: what you're on and when you started, with time buttons to log it when
+  it's done (Other time… puts it in Log work), Switch to go back, and the rest of your list
+  kept underneath with its ticks. Logging it ticks it off and the next one comes up.
   **Later** hides it until the next unlock.
 - **Timer (optional, off by default):** turn it on in Settings → Your day. ▶ Start on one of
   today's entries runs a small clock under the top bar; ■ Stop offers to add the time rounded
@@ -87,58 +111,98 @@ works the way it does is in `DECISIONS.md`.
 - **Capture:** Ctrl+Space anywhere in the app, then one line such as
   `1.5h firewall cleanup CHG0012345 #network yesterday`. Enter logs it; Ctrl+Enter (or a line
   without hours) saves it to the Inbox. Type without a time to **Find**: the same box searches
-  your entries, Inbox scraps, notes and commands.
+  your entries, Inbox scraps, notes and commands. Logging to another day leaves you on the day
+  you were looking at; the message says where it went, with **Show it** and Undo. Whenever the
+  Desk or Day shows a day that isn't today, a strip under the ribbon says so, with **Back to
+  today**.
 - **Notes:** Jot, Daily, Meeting, Page and MOP notes, each with an optional project and tags,
   saved as you type. Search every note with the match highlighted, filter by kind, and
   **Archive** notes to get them out of the way (Include archived, or Find, still shows them).
   Auto-archive (Settings → Notes, 3 months by default, can be off) moves Jot, Daily and Meeting
   notes that haven't changed for that long, after a week of warning on the note with a Keep
   button. Capture's Find shows notes too, archived ones included.
-- **MOP notebook:** a window like Notepad++ with a tab per MOP (Notes → MOP → Open the MOP
-  notebook, Open in notebook on a MOP, or Ctrl+Space "Open the MOP notebook"). It rolls up,
-  minimises to the bottom bar or fills the screen, and saves as you type. Three ways to show a
-  MOP, switched at the top of the window, all still editable: **Numbered** (line numbers you can
-  hide, colours for headings, numbered steps, Verify/Expected lines, Rollback sections and
-  `[[blanks]]`, and a status bar with the line, column, lines, characters and what's
-  selected), **Minimal** (just the text) and **Checklist** (tick a line, or Ctrl+Enter; a
-  ticked heading or step crosses out the section under it; Clear ticks starts a fresh run).
-  Ctrl+F finds. **Use as template** keeps a MOP's `[[blanks]]`; **New from this** asks for
-  each blank once and fills it in everywhere (empty ones stay highlighted). Drop text files
-  (.txt, .md…) anywhere on Shiftbook, or use Add MOP files…, to copy them in as encrypted
-  MOPs or templates; the files themselves are untouched. Word files need saving as plain text
-  first. **Save as a file**, at the bottom of a MOP's window, writes an unencrypted text copy
-  named after the MOP, after a warning.
+- **MOPs:** a MOP (a method of procedure: the steps for a change) lives on a ticket, where it
+  shows as a chip on the ticket's card, or on its own under Notes → MOP. Click the chip to open
+  it in a window that floats over the Desk. Along the top: where it stands (**Draft**,
+  **Ready**, **Running**, **Done** or **Backed out**), the change window's day and time (the
+  bell reminds you on the day), and three ways to see it. **Read** shows it plainly, **Edit**
+  is for writing it, and **Run** gives every line a tick box that notes the time you ticked
+  it; the small note button beside a step opens a **what I saw** line under it, for pasted
+  output or a few words. **Done** asks first when steps aren't ticked. A finished run offers
+  to **tick its ticket done**, **log the time** it took (rounded to 15 minutes) and copy the
+  run log. Going back to Ready clears the start time, so a run started by mistake starts
+  again cleanly. At the bottom: how many steps are ticked and when the run started and
+  finished, **Clear ticks** for a fresh run, **Copy as text**, **Copy run log** (the day, the
+  start and finish, what was ticked and when, and what you saw, to paste into the change
+  ticket), **Save as a file** (an unencrypted text copy named after the MOP, after a warning)
+  and **Save as template**. Templates are kept in the Wiki; **Use a template**
+  in a ticket's slide-out, or Ctrl+Space with the ticket number, starts a MOP from one with
+  the ticket filled in.
 - **Your day:** a daily target for each weekday (the ring uses it), a “Same as yesterday” row
   in Log work, and an optional end-of-day **wrap-up** card (off by default) with hours today,
-  entries that need a code, the tray and a short “Tomorrow I start with…” list.
+  entries that need a code, the tray and a short “Tomorrow I start with…” list. At that time
+  it sits at the top of the Desk's panel with Log work and Tickets folded under it (Show them
+  brings them back) and a dot on the bell, until Done for the day or Not today. If you press
+  Lock (or Ctrl+L), or close the window, after that time with the wrap-up still waiting,
+  Shiftbook asks once: **Wrap up** takes you to it, **Just lock** (or **Just close**) carries
+  on, and **Not today** puts the wrap-up away and carries on. It asks once a day; closing a
+  second time always closes, and the lock that happens by itself never asks. Done for the
+  day and Not today now hold through a lock or a restart too.
 - **Ribbon:** the last four weeks as bars of coloured hours; click a day to open it. A weekday
-  with nothing logged gets a dot, and clicking it opens Log work for that day.
+  with nothing logged gets a dot, and clicking it opens Log work for that day (days before your
+  first entry never get one, and the Timesheet doesn't warn about them).
+- **Time off:** right-click a day in the ribbon (days still to come too) and **Book a holiday
+  (8 h)** books that day; **Book several days off…** (also in Find) asks for the first and
+  last day and shows what it will do before you press Book: every work day in between with
+  nothing logged gets a "Holiday" entry with your usual hours for that day, and weekends and
+  days you already logged are left alone. Days off are grey in the ribbon and the bell stays
+  quiet on them. One Undo takes the whole booking back; later, right-click the day and pick
+  **Not a day off after all**, or delete its Holiday entry. If your days off go on a
+  timesheet code, pick it once under **Settings → Timesheet → Default codes → Days off**.
+- **Time is written as 45m and 1h 30m** everywhere except the Timesheet, which keeps decimal
+  hours (0.75, 1.5) because that is what a timesheet tool takes.
 - **Timesheet:** a “what to enter” crib sheet for a week — per day, each line is a timesheet code
   (or project), its hours and a ready-made comment with your tickets; Copy comment, Copy whole
   week (tab-separated), tick-offs that are remembered, an ENTERED stamp, effort per project and
   warnings (no code yet, a weekday with nothing logged, a day over 12 h).
 - **Work, Home or Both:** the first run asks what Shiftbook is for (Settings → Look changes it).
+  Then **A few helpers** offers the end-of-day wrap-up (ticked, at 5 pm), the timer, “I fill in
+  a timesheet” and the days you work; Skip changes nothing, and all four are in Settings → Your
+  day. With “I fill in a timesheet” off, the Timesheet tab, its settings and the “needs a code”
+  reminders are hidden (your entries and codes stay as they are).
   Home turns the hours targets off, hides the Timesheet, uses everyday words and gives Log work a
   **✓ Done** button that saves a line with no time.
 - **Repeating:** bills, bins, renewals and birthdays. Each one repeats or expires on a date;
   **Done** marks it for today (with Undo), and overdue or due-soon things show on the Desk and in
   the bell. After a break, the bell opens on **While you were away**.
+- **Projects (under Organise):** a card for each project with its hours and open tickets. Anywhere
+  you pick a project there is also **+ New project…**: type a name and it is made and chosen.
+  **Edit** (or a right-click) renames it, changes its colour or archives it. A ticket with no
+  project of its own shows under the project of the work it was last logged on.
 - **Lists:** shopping, packing or "before we go away" lists. Paste several lines at once; **Reset
   for next time** unticks everything and keeps the items.
 - **Settings:** Look (theme, motion, accent, text size, project colours), Your day (targets,
   wrap-up, timer), Projects (add, rename, colour,
   default timesheet code, archive), Timesheet (your codes, category → code, comment format,
   grouping), Responses (saved messages for tickets), Fields (custom fields: text, number, choice, link — link fields with a ticket prefix
-  such as `PROJ-` give matching tickets a “Copy link” option; links are never opened), Backups
+  such as `PROJ-` give matching tickets an ↗ that opens their link in your browser, and a
+  “Copy link” option; leave `{ticket}` out of the link for a vendor's portal, the same page
+  for all their tickets; web addresses typed in notes are never opened), Backups
   (Back up now, the daily automatic backups, Restore from a backup or a file), Security (auto-lock, change password, and **Delete all
-  data** to start again; the unlock screen offers it too if the recovery key is lost).
+  data** to start again; the unlock screen offers it too if the recovery key is lost). The version you have installed shows under the list of sections.
 - **Paper menus:** right-click an entry, ticket chip, ribbon day, tray ticket or project. The
   object lifts, a paper sheet pulls out from under it with every option, and icon buttons line
   its side and top. Click elsewhere or press Esc to fold it away. Shift+F10 or the Menu key
   opens it from the keyboard.
-- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 7 switch views (Desk, Day, Timesheet, Notes, Repeating, Lists, Settings; at home the Timesheet is hidden and it's 1 to 6), Ctrl+L lock, Ctrl + / − / 0
+- **Keys:** N focuses Log work, Ctrl+Space capture, 1 to 5 switch views (Desk, Day, Timesheet, Notes, Wiki), 6 opens **Organise** (Tickets, Projects, Repeating, Lists) and Ctrl+, opens Settings (at home the Timesheet is hidden, so the numbers move down one), Ctrl+L lock, Ctrl+F find in the open notepad or MOP, Ctrl+; the time into a notepad, Ctrl + / − / 0
   text size, arrow keys move between entries, Esc closes menus, capture and the drawer. Hold
   Ctrl to see every shortcut.
+- **Jump back:** hold Ctrl and press Tab to see what you had open lately (views, entries,
+  tickets, notes and wiki pages, newest first, without the one in front of you). Tab again
+  moves down the list, Shift+Tab up, and letting go of Ctrl opens the one that's marked;
+  Esc stays put. Press it once and let go to flip between two things. Find has it too
+  (**Jump back to something you had open…**), where the list waits for ↑ ↓ and Enter or a
+  click. The list is kept in memory only and starts again each time you unlock.
 
 Not in the alpha yet: Planner, pictures in notes, the meeting canvas, Word (.docx) MOP import, OneNote import, the notes map, a global (outside the app)
 capture shortcut, export/import, the picture editor, bundled fonts and signed installers.

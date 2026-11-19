@@ -4,7 +4,7 @@
   // goes and the first line of its notepad, so it's clearly the same ticket as before.
   import { api } from '../lib/api';
   import type { ItemSummary } from '../lib/api';
-  import { fmtMinutes, relativeDay } from '../lib/format';
+  import { fmtMinutes, onDay } from '../lib/format';
   import { repeating } from '../lib/repeating.svelte';
   import { app, projectById } from '../lib/store.svelte';
 
@@ -45,7 +45,7 @@
 
   function line(i: ItemSummary): string {
     const parts: string[] = [];
-    if (i.first) parts.push(`${i.done ? 'done, worked since' : 'open since'} ${relativeDay(i.first, app.today)}`);
+    if (i.first) parts.push(`${i.done ? 'done, worked since' : 'open since'} ${onDay(i.first, app.today)}`);
     if (i.minutes) parts.push(`${fmtMinutes(i.minutes)} so far`);
     const home = projectById(i.projectId)?.name ?? repeating.items.find((r) => r.id === i.recurringId)?.name;
     if (home) parts.push(home);

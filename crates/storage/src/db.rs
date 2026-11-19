@@ -114,6 +114,21 @@ const MIGRATIONS: &[(i64, &str, &str)] = &[
         "MOPs on their change ticket",
         include_str!("../migrations/0021_mop_runs.sql"),
     ),
+    (
+        22,
+        "closing out a MOP run: finish time and what was seen",
+        include_str!("../migrations/0022_mop_run_close.sql"),
+    ),
+    (
+        23,
+        "snoozed tickets",
+        include_str!("../migrations/0023_ticket_snoozes.sql"),
+    ),
+    (
+        24,
+        "days off",
+        include_str!("../migrations/0024_days_off.sql"),
+    ),
 ];
 
 fn migrator() -> Migrator {
@@ -325,6 +340,7 @@ mod tests {
                     "category_code_defaults",
                     "custom_fields",
                     "custom_values",
+                    "days_off",
                     "frequencies",
                     "inbox_items",
                     "items",
@@ -342,6 +358,7 @@ mod tests {
                     "settings",
                     "task_checklist_items",
                     "tasks",
+                    "ticket_snoozes",
                     "ticket_tray",
                     "tickets",
                     "time_entries",

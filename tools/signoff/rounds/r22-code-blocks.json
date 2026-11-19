@@ -1,0 +1,46 @@
+{
+ "meta": {
+  "round": 22,
+  "heading": "One follow-up: command output in labelled blocks",
+  "intro": "Round 22 is one card, from your note on round 21. What you approved in round 21 is being built now and your answers are under Done. This card is a plan with pictures; nothing on it is built yet. Press one of the two buttons; a note is optional."
+ },
+ "cards": {
+  "r22-code-blocks": {
+   "area": "Notepads · from your round 21 note",
+   "round": 22,
+   "order": 1,
+   "version": 1,
+   "title": "Command output in blocks that label themselves",
+   "body": [
+    "You asked for fixed-width to fill in the kind of equipment by itself, and maybe only on specific blocks. This is how I'd build it (first picture). Paste a few lines of command output into any notepad and they become a block: its columns line up, and its label is worked out from the prompt and the commands. Cisco, Juniper, Linux and Windows to start with."
+   ],
+   "bullets": [
+    "The rest of the notepad stays in the ordinary font.",
+    "Click a label to change it or take it off. **Copy** on a block copies just that output.",
+    "The one trade-off (second picture): while you type in a notepad, a block is plain fixed-width text between two marker lines. It turns back into a labelled block when you click away, the way wiki pages and MOPs already read one way and edit another.",
+    "The same blocks in ticket notepads, pop-out windows, Notes, the wiki, MOPs and the **what I saw** lines of a MOP run."
+   ],
+   "ask": "Build code blocks this way?",
+   "yes": "Yes, build it",
+   "no": "Not like this",
+   "note_hint": "Other equipment to recognise, or what you'd change",
+   "where": [
+    "Nothing to open in Shiftbook yet. This card is a picture of the plan.",
+    "First picture: a ticket's notepad when you are reading it.",
+    "Second picture: the same notepad while you are typing in it."
+   ],
+   "figures": [
+    {
+     "src": "/_blob/33192bc89290efc3d3b77080b27fbab5",
+     "caption": "Reading: three pasted outputs, each in its own block with a label it worked out by itself.",
+     "w": 470
+    },
+    {
+     "src": "/_blob/86d1534e9265f004ac11c172d8cf77ef",
+     "caption": "Typing: the first block is the same text between two marker lines, which are put in for you when you paste.",
+     "w": 470
+    }
+   ]
+  }
+ }
+}

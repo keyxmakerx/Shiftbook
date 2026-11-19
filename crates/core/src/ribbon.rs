@@ -51,6 +51,8 @@ pub struct RibbonDay {
     pub future: bool,
     /// Nothing logged on a day that has a target (see [`mark_gaps`]).
     pub gap: bool,
+    /// Booked as a day off (see [`crate::timeoff::mark_off`]).
+    pub off: bool,
 }
 
 /// One week in the ribbon.
@@ -125,6 +127,7 @@ pub fn build_ribbon(
                         parts,
                         future: date > today,
                         gap: false,
+                        off: false,
                     }
                 })
                 .collect();
@@ -140,11 +143,14 @@ pub fn build_ribbon(
 }
 
 /// Mark gaps: days up to today with nothing logged whose weekday has a target
-/// (`targets` in minutes, Monday first). Today counts, so an empty Desk shows it.
-pub fn mark_gaps(weeks: &mut [RibbonWeek], targets: &[u32; 7]) {
+/// (`targets` in minutes, Monday first). Today counts, so an empty Desk shows it. Days
+/// before `first_logged` (the day of the earliest entry) are never gaps, and with no
+/// entry at all nothing is: someone who has just started hasn't missed anything.
+pub fn mark_gaps(weeks: &mut [RibbonWeek], targets: &[u32; 7], first_logged: Option<Date>) {
     for day in weeks.iter_mut().flat_map(|w| w.days.iter_mut()) {
         let target = targets[usize::from(day.date.weekday().number_days_from_monday())];
-        day.gap = !day.future && day.minutes.is_zero() && target > 0;
+        let started = first_logged.is_some_and(|first| day.date >= first);
+        day.gap = started && !day.future && day.minutes.is_zero() && target > 0;
     }
 }
 
@@ -230,10 +236,26 @@ mod tests {
         let entries = vec![entry(date!(2026 - 10 - 13), 60, None)];
         let mut weeks = build_ribbon(date!(2026 - 10 - 15), WeekStart::default(), 1, &entries);
         assert!(weeks[0].days.iter().all(|d| !d.gap));
-        mark_gaps(&mut weeks, &[480, 480, 480, 480, 0, 0, 0]);
-        let gaps: Vec<bool> = weeks[0].days.iter().map(|d| d.gap).collect();
+        let targets = [480, 480, 480, 480, 0, 0, 0];
+        let gaps = |weeks: &[RibbonWeek]| weeks[0].days.iter().map(|d| d.gap).collect::<Vec<_>>();
+        // An entry in an earlier week came first.
+        mark_gaps(&mut weeks, &targets, Some(date!(2026 - 10 - 05)));
         // Mon empty, Tue logged, Wed empty, Thu (today) empty, Fri future, weekend no target.
-        assert_eq!(gaps, vec![true, false, true, true, false, false, false]);
+        assert_eq!(
+            gaps(&weeks),
+            vec![true, false, true, true, false, false, false]
+        );
+        // Tuesday's was the first entry ever: Monday isn't a missed day.
+        mark_gaps(&mut weeks, &targets, Some(date!(2026 - 10 - 13)));
+        assert_eq!(
+            gaps(&weeks),
+            vec![false, false, true, true, false, false, false]
+        );
+        // Nothing logged yet at all: no dots.
+        let mut empty = build_ribbon(date!(2026 - 10 - 15), WeekStart::default(), 1, &[]);
+        mark_gaps(&mut empty, &targets, None);
+        assert!(empty[0].days.iter().all(|d| !d.gap));
+        mark_gaps(&mut weeks, &targets, Some(date!(2026 - 10 - 05)));
         let json = serde_json::to_value(&weeks[0].days[0]).unwrap();
         assert_eq!(json["gap"], true);
     }

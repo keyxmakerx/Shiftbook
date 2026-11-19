@@ -23,11 +23,14 @@ use shiftbook_core::prefs::next_project_color;
 use shiftbook_core::quicklog::{
     plan_add_time, plan_quick_log, AddTimePlan, DayEntry, PastUse, QuickLogPlan,
 };
+use shiftbook_core::reshape::{check_split, merge, MergePart};
 use shiftbook_core::samework::{same_work, same_work_target, SameWork, WorkLine, SAME_WORK_DAYS};
 use shiftbook_core::tickets::add_tickets;
+use shiftbook_core::timeoff::TIME_OFF_TITLE;
 use shiftbook_core::tray::{
-    carried_open, clean_tray_note, new_tray_tickets, plan_rollups, validate_tray_minutes,
-    RollupAction, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE, TRAY_ENTRY_TITLE,
+    carried_open, check_snooze, clean_tray_note, new_tray_tickets, plan_rollups, snoozed_until,
+    validate_tray_minutes, RollupAction, Snooze, DEFAULT_TRAY_MINUTES, NEW_TICKET_DONE,
+    TRAY_ENTRY_TITLE,
 };
 use shiftbook_core::validate::{
     clean_notes, validate_color, validate_project, validate_time_entry,
@@ -57,6 +60,38 @@ pub struct EntryRecord {
     pub tickets: Vec<Ticket>,
     /// True for the day's tray roll-up entry.
     pub is_tray: bool,
+}
+
+/// Where a split's second part goes (see [`SqliteStore::split_entry`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitHome {
+    /// The same project, or repeating thing, as the first part.
+    Same,
+    /// This project, or none.
+    Project(Option<ProjectId>),
+}
+
+/// A split's second part.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SplitSecond {
+    /// What it is called.
+    pub description: String,
+    /// What it counts under.
+    pub home: SplitHome,
+}
+
+/// A merge that was made, with what it takes to undo it (see
+/// [`SqliteStore::merge_entries`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MergeDone {
+    /// The kept entry, as it is now.
+    pub entry: EntryRecord,
+    /// The tickets that moved over from the other entry.
+    pub moved: Vec<TicketId>,
+    /// The kept entry's time before.
+    pub minutes_before: Minutes,
+    /// The kept entry's notepad before.
+    pub notes_before: Option<String>,
 }
 
 /// The editable parts of an entry.
@@ -126,6 +161,33 @@ pub struct CarriedTicket {
     pub item: TrayItem,
     /// The entry it is on, with the entry's title, when it isn't a tray row.
     pub entry: Option<(TimeEntryId, String)>,
+    /// The day it comes back, while it is snoozed on the tray's day (round 21).
+    pub snoozed_until: Option<Date>,
+}
+
+/// Every live snooze, by ticket number.
+async fn ticket_snoozes(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+) -> Result<Vec<(String, Snooze)>> {
+    let rows: Vec<(String, String, String)> = sqlx::query_as(
+        "SELECT ticket_number, snoozed_on, wake_on FROM ticket_snoozes WHERE owner_id = $1 \
+         AND deleted_at IS NULL",
+    )
+    .bind(owner.to_string())
+    .fetch_all(&mut *conn)
+    .await?;
+    rows.into_iter()
+        .map(|(ticket, on, until)| {
+            Ok((
+                ticket,
+                Snooze {
+                    on: corrupt_date(&on)?,
+                    until: corrupt_date(&until)?,
+                },
+            ))
+        })
+        .collect()
 }
 
 pub(crate) fn corrupt_date(text: &str) -> Result<Date> {
@@ -345,6 +407,31 @@ async fn ensure_unique_project(
         .any(|(id, n)| Some(id) != except.as_ref() && n.trim().to_lowercase() == wanted)
     {
         return Err(StorageError::Duplicate(name.trim().to_string()));
+    }
+    Ok(())
+}
+
+/// Move tickets from one entry to another (a merge, or its undo).
+async fn move_tickets(
+    conn: &mut SqliteConnection,
+    owner: OwnerId,
+    tickets: &[TicketId],
+    from: TimeEntryId,
+    to: TimeEntryId,
+) -> Result<()> {
+    let now = now_text();
+    for ticket in tickets {
+        sqlx::query(
+            "UPDATE tickets SET time_entry_id = $1, updated_at = $2 WHERE id = $3 \
+             AND owner_id = $4 AND time_entry_id = $5",
+        )
+        .bind(to.to_string())
+        .bind(&now)
+        .bind(ticket.to_string())
+        .bind(owner.to_string())
+        .bind(from.to_string())
+        .execute(&mut *conn)
+        .await?;
     }
     Ok(())
 }
@@ -1075,6 +1162,19 @@ impl SqliteStore {
         entry_record(&mut conn, owner, id).await
     }
 
+    /// The day of the earliest live entry, if there is one (so nothing before it counts as
+    /// a missed day).
+    pub async fn first_entry_date(&self, owner: OwnerId) -> Result<Option<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let first: Option<String> = sqlx::query_scalar(
+            "SELECT MIN(date) FROM time_entries WHERE owner_id = $1 AND deleted_at IS NULL",
+        )
+        .bind(owner.to_string())
+        .fetch_one(&mut *conn)
+        .await?;
+        first.as_deref().map(corrupt_date).transpose()
+    }
+
     /// Live entries from `from` to `to` (inclusive), by date then creation.
     pub async fn list_entries(
         &self,
@@ -1140,6 +1240,192 @@ impl SqliteStore {
         let rec = entry_record(&mut tx, owner, id).await?;
         tx.commit().await?;
         Ok(rec)
+    }
+
+    /// Split an entry in two (round 21): the first keeps its tickets and notepad and takes
+    /// `first_minutes` and `first_description`; a new entry on the same day takes the rest of
+    /// the time, with `second`'s name and home. Returns both.
+    pub async fn split_entry(
+        &self,
+        owner: OwnerId,
+        id: TimeEntryId,
+        first_minutes: Minutes,
+        first_description: &str,
+        second: &SplitSecond,
+    ) -> Result<(EntryRecord, EntryRecord)> {
+        let mut tx = self.write_tx().await?;
+        let (current, is_tray) = fetch_entry(&mut tx, owner, id).await?;
+        if is_tray {
+            return Err(CoreError::ReshapeTray.into());
+        }
+        let (first, rest) = check_split(current.minutes, first_minutes)?;
+        let (project, recurring) = match current.target {
+            EntryTarget::Project(p) => (Some(p), None),
+            EntryTarget::Recurring(r) => (None, Some(r)),
+            EntryTarget::None => (None, None),
+        };
+        let first_input = EntryInput {
+            date: current.date,
+            minutes: first,
+            description: first_description.to_string(),
+            project,
+            recurring,
+            category: current.category.clone(),
+            next_step: current.next_step.clone(),
+            timesheet_code_id: current.timesheet_code_id,
+        };
+        let checked = checked_entry(owner, &first_input)?;
+        sqlx::query(
+            "UPDATE time_entries SET minutes = $1, description = $2, updated_at = $3 \
+             WHERE id = $4 AND owner_id = $5",
+        )
+        .bind(i64::from(checked.minutes.get()))
+        .bind(&checked.description)
+        .bind(now_text())
+        .bind(id.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let (project, recurring) = match second.home {
+            SplitHome::Same => (project, recurring),
+            SplitHome::Project(p) => (p, None),
+        };
+        let second_input = EntryInput {
+            date: current.date,
+            minutes: rest,
+            description: second.description.clone(),
+            project,
+            recurring,
+            category: current.category.clone(),
+            next_step: None,
+            timesheet_code_id: current.timesheet_code_id,
+        };
+        let made = create_entry_in(&mut tx, owner, &second_input, "").await?;
+        let a = entry_record(&mut tx, owner, id).await?;
+        let b = entry_record(&mut tx, owner, made).await?;
+        tx.commit().await?;
+        Ok((a, b))
+    }
+
+    /// Merge `other` into `keep` (round 21): `keep` gets both times, both notepads and the
+    /// tickets it didn't have; `other` is removed. Same day only, never a tray roll-up
+    /// (`shiftbook_core::reshape::merge`). What it returns is enough to undo it.
+    pub async fn merge_entries(
+        &self,
+        owner: OwnerId,
+        keep: TimeEntryId,
+        other: TimeEntryId,
+    ) -> Result<MergeDone> {
+        if keep == other {
+            return Err(CoreError::MergeSame.into());
+        }
+        let mut tx = self.write_tx().await?;
+        let a = entry_record(&mut tx, owner, keep).await?;
+        let b = entry_record(&mut tx, owner, other).await?;
+        let numbers = |r: &EntryRecord| -> Vec<String> {
+            r.tickets.iter().map(|t| t.ticket_number.clone()).collect()
+        };
+        let (an, bn) = (numbers(&a), numbers(&b));
+        let (at, bt): (Vec<&str>, Vec<&str>) = (
+            an.iter().map(String::as_str).collect(),
+            bn.iter().map(String::as_str).collect(),
+        );
+        let merged = merge(
+            &MergePart {
+                date: a.entry.date,
+                minutes: a.entry.minutes,
+                notes: a.entry.next_step.as_deref(),
+                tickets: &at,
+                is_tray: a.is_tray,
+            },
+            &MergePart {
+                date: b.entry.date,
+                minutes: b.entry.minutes,
+                notes: b.entry.next_step.as_deref(),
+                tickets: &bt,
+                is_tray: b.is_tray,
+            },
+        )?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE time_entries SET minutes = $1, next_step = $2, updated_at = $3 \
+             WHERE id = $4 AND owner_id = $5",
+        )
+        .bind(i64::from(merged.minutes.get()))
+        .bind(merged.notes.as_deref())
+        .bind(&now)
+        .bind(keep.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        let moved: Vec<TicketId> = merged.moved.iter().map(|&i| b.tickets[i].id).collect();
+        move_tickets(&mut tx, owner, &moved, other, keep).await?;
+        sqlx::query(
+            "UPDATE time_entries SET deleted_at = $1, updated_at = $1 WHERE id = $2 AND owner_id = $3",
+        )
+        .bind(&now)
+        .bind(other.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        refresh_items_of(&mut tx, owner, ENTRY_ITEMS, &other.to_string()).await?;
+        refresh_items_of(&mut tx, owner, ENTRY_ITEMS, &keep.to_string()).await?;
+        let entry = entry_record(&mut tx, owner, keep).await?;
+        tx.commit().await?;
+        Ok(MergeDone {
+            entry,
+            moved,
+            minutes_before: a.entry.minutes,
+            notes_before: a.entry.next_step,
+        })
+    }
+
+    /// Undo [`Self::merge_entries`]: `other` comes back with the tickets that moved, and
+    /// `keep` gets the time and notepad it had.
+    pub async fn unmerge_entries(
+        &self,
+        owner: OwnerId,
+        keep: TimeEntryId,
+        other: TimeEntryId,
+        minutes: Minutes,
+        notes: Option<&str>,
+        moved: &[TicketId],
+    ) -> Result<EntryRecord> {
+        if minutes.get() > MAX_ENTRY_MINUTES {
+            return Err(CoreError::HoursTooLarge.into());
+        }
+        let mut tx = self.write_tx().await?;
+        fetch_entry(&mut tx, owner, keep).await?;
+        let now = now_text();
+        let back = sqlx::query(
+            "UPDATE time_entries SET deleted_at = NULL, updated_at = $1 WHERE id = $2 \
+             AND owner_id = $3 AND deleted_at IS NOT NULL AND source IS NULL",
+        )
+        .bind(&now)
+        .bind(other.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        if back.rows_affected() == 0 {
+            return Err(StorageError::NotFound);
+        }
+        move_tickets(&mut tx, owner, moved, keep, other).await?;
+        sqlx::query(
+            "UPDATE time_entries SET minutes = $1, next_step = $2, updated_at = $3 \
+             WHERE id = $4 AND owner_id = $5",
+        )
+        .bind(i64::from(minutes.get()))
+        .bind(notes.map(str::trim).filter(|n| !n.is_empty()))
+        .bind(&now)
+        .bind(keep.to_string())
+        .bind(owner.to_string())
+        .execute(&mut *tx)
+        .await?;
+        refresh_items_of(&mut tx, owner, ENTRY_ITEMS, &other.to_string()).await?;
+        refresh_items_of(&mut tx, owner, ENTRY_ITEMS, &keep.to_string()).await?;
+        let entry = entry_record(&mut tx, owner, keep).await?;
+        tx.commit().await?;
+        Ok(entry)
     }
 
     /// Change an entry. A tray roll-up entry keeps its date and minutes (they
@@ -2005,6 +2291,50 @@ impl SqliteStore {
         Ok(day)
     }
 
+    /// Every still-open ticket with each day it is open on, up to and including `date`
+    /// (tray rows and tickets on the user's entries), for how long each has been open
+    /// (`shiftbook_core::tray::open_ages`).
+    pub async fn open_ticket_days(
+        &self,
+        owner: OwnerId,
+        date: Date,
+    ) -> Result<Vec<(String, Date)>> {
+        let mut conn = self.pool.acquire().await?;
+        let mut open: Vec<(String, Date)> = Vec::new();
+        let rows = sqlx::query(
+            "SELECT ticket_number, date FROM ticket_tray WHERE owner_id = $1 AND done = FALSE \
+             AND date <= $2 AND deleted_at IS NULL ORDER BY date, id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &rows {
+            open.push((
+                row.try_get("ticket_number")?,
+                corrupt_date(row.try_get("date")?)?,
+            ));
+        }
+        let rows = sqlx::query(
+            "SELECT t.ticket_number, e.date FROM tickets t \
+             JOIN time_entries e ON e.id = t.time_entry_id \
+             WHERE t.owner_id = $1 AND e.owner_id = $1 AND t.done = FALSE AND e.date <= $2 \
+             AND t.deleted_at IS NULL AND e.deleted_at IS NULL AND e.source IS NULL \
+             ORDER BY e.date, t.created_at, t.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        for row in &rows {
+            open.push((
+                row.try_get("ticket_number")?,
+                corrupt_date(row.try_get("date")?)?,
+            ));
+        }
+        Ok(open)
+    }
+
     /// Still-open tickets from before `date` that come back in its tray (latest day per
     /// ticket, oldest first), leaving out tickets already in that day's tray. Tray rows and
     /// tickets on the user's entries both count (round 14: an entry's ticket starts still
@@ -2027,6 +2357,7 @@ impl SqliteStore {
                 Ok(CarriedTicket {
                     item: tray_from_row(r)?,
                     entry: None,
+                    snoozed_until: None,
                 })
             })
             .collect::<Result<_>>()?;
@@ -2063,6 +2394,7 @@ impl SqliteStore {
                     TimeEntryId::from_uuid(parse_uuid(row.try_get("entry_id")?)?),
                     row.try_get("description")?,
                 )),
+                snoozed_until: None,
             });
         }
         let today: Vec<String> = tray_items(&mut conn, owner, date)
@@ -2074,10 +2406,152 @@ impl SqliteStore {
             .iter()
             .map(|c| (c.item.ticket_number.as_str(), c.item.date))
             .collect();
+        let snoozes = ticket_snoozes(&mut conn, owner).await?;
         Ok(carried_open(&pairs, &today, date)
             .into_iter()
-            .map(|i| open[i].clone())
+            .map(|i| {
+                let mut c = open[i].clone();
+                let snooze = snoozes
+                    .iter()
+                    .find(|(t, _)| t.eq_ignore_ascii_case(&c.item.ticket_number))
+                    .map(|(_, s)| *s);
+                c.snoozed_until = snoozed_until(snooze, c.item.date, date);
+                c
+            })
             .collect())
+    }
+
+    /// Snooze a still-open ticket (round 21): made on `on`, it stays out of "Still open from
+    /// before" until `until`. `None` wakes it now. One snooze per ticket: a new one replaces
+    /// the old.
+    pub async fn snooze_ticket(
+        &self,
+        owner: OwnerId,
+        ticket: &str,
+        on: Date,
+        until: Option<Date>,
+    ) -> Result<()> {
+        let ticket = ticket.trim();
+        let snooze = until.map(|u| check_snooze(on, u)).transpose()?;
+        let mut tx = self.write_tx().await?;
+        let now = now_text();
+        sqlx::query(
+            "UPDATE ticket_snoozes SET deleted_at = $1, updated_at = $1 WHERE owner_id = $2 \
+             AND UPPER(ticket_number) = UPPER($3) AND deleted_at IS NULL",
+        )
+        .bind(&now)
+        .bind(owner.to_string())
+        .bind(ticket)
+        .execute(&mut *tx)
+        .await?;
+        if let Some(s) = snooze {
+            sqlx::query(
+                "INSERT INTO ticket_snoozes (id, owner_id, ticket_number, snoozed_on, wake_on, \
+                 created_at, updated_at, deleted_at) VALUES ($1, $2, $3, $4, $5, $6, $6, NULL)",
+            )
+            .bind(Uuid::now_v7().to_string())
+            .bind(owner.to_string())
+            .bind(ticket)
+            .bind(format_date(s.on))
+            .bind(format_date(s.until))
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+        }
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// The days from `from` to `to` that have something logged (round 21, time off).
+    pub async fn logged_days(&self, owner: OwnerId, from: Date, to: Date) -> Result<Vec<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT date FROM time_entries WHERE owner_id = $1 AND date >= $2 \
+             AND date <= $3 AND deleted_at IS NULL ORDER BY date",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|d| Ok(parse_date(d)?)).collect()
+    }
+
+    /// Book days off (round 21): each day gets a "Holiday" entry with its minutes, on the
+    /// time-off code when one is set, and the mark that makes it a day off. All of them or
+    /// none. Returns the new entries in the order given.
+    pub async fn book_days_off(
+        &self,
+        owner: OwnerId,
+        days: &[(Date, Minutes)],
+    ) -> Result<Vec<TimeEntryId>> {
+        let wanted = self.prefs(owner).await?.time_off_code;
+        let mut tx = self.write_tx().await?;
+        // A code that has been deleted since it was chosen is just left off.
+        let code = match wanted {
+            Some(c) if code_exists(&mut tx, owner, c).await.is_ok() => Some(c),
+            _ => None,
+        };
+        let now = now_text();
+        let mut ids = Vec::with_capacity(days.len());
+        for &(date, minutes) in days {
+            let input = EntryInput {
+                date,
+                minutes,
+                description: TIME_OFF_TITLE.to_string(),
+                project: None,
+                recurring: None,
+                category: None,
+                next_step: None,
+                timesheet_code_id: code,
+            };
+            let entry = checked_entry(owner, &input)?;
+            insert_entry(&mut tx, &entry, None, None).await?;
+            sqlx::query(
+                "INSERT INTO days_off (id, owner_id, entry_id, created_at, updated_at, \
+                 deleted_at) VALUES ($1, $2, $3, $4, $4, NULL)",
+            )
+            .bind(Uuid::now_v7().to_string())
+            .bind(owner.to_string())
+            .bind(entry.id.to_string())
+            .bind(&now)
+            .execute(&mut *tx)
+            .await?;
+            ids.push(entry.id);
+        }
+        tx.commit().await?;
+        Ok(ids)
+    }
+
+    /// The live entries that make `date` a day off.
+    pub async fn day_off_entries(&self, owner: OwnerId, date: Date) -> Result<Vec<TimeEntryId>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT e.id FROM days_off d JOIN time_entries e ON e.id = d.entry_id \
+             WHERE d.owner_id = $1 AND e.owner_id = $1 AND d.deleted_at IS NULL \
+             AND e.deleted_at IS NULL AND e.date = $2 ORDER BY e.id",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(date))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|id| Ok(parse_uuid(id)?.into())).collect()
+    }
+
+    /// The days off from `from` to `to`: the days of live entries booked as time off.
+    pub async fn days_off(&self, owner: OwnerId, from: Date, to: Date) -> Result<Vec<Date>> {
+        let mut conn = self.pool.acquire().await?;
+        let rows: Vec<String> = sqlx::query_scalar(
+            "SELECT DISTINCT e.date FROM days_off d JOIN time_entries e ON e.id = d.entry_id \
+             WHERE d.owner_id = $1 AND e.owner_id = $1 AND d.deleted_at IS NULL \
+             AND e.deleted_at IS NULL AND e.date >= $2 AND e.date <= $3 ORDER BY e.date",
+        )
+        .bind(owner.to_string())
+        .bind(format_date(from))
+        .bind(format_date(to))
+        .fetch_all(&mut *conn)
+        .await?;
+        rows.iter().map(|d| Ok(parse_date(d)?)).collect()
     }
 
     /// Carry a still-open ticket into `date`'s tray: a new open row with 15 minutes, its

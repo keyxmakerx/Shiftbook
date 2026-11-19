@@ -6,12 +6,14 @@
   // Ctrl+Enter, or Enter with nothing found, saves the line to the Inbox. Round 15: "/" opens
   // it too, every action the app has is a command here (grouped Go to / Do / Settings), a
   // day such as "last friday" or "12 oct" offers that day, and "help" lists everything.
+  import { untrack } from 'svelte';
   import { api } from '../lib/api';
   import type { Capture, Entry, InboxItem, MeetingSeries, MopRun, Note, TrayItem } from '../lib/api';
   import { openBoard } from '../lib/boards.svelte';
   import { toIsoDate } from '../lib/dates';
-  import { KIND_LABEL } from '../lib/notes';
-  import { dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
+  import { edge } from '../lib/edge';
+  import { KIND_LABEL, matchingLine } from '../lib/notes';
+  import { addDays, dayMonth, dayOfMonth, fmtMinutes, longDay, relativeDay, weekdayShort } from '../lib/format';
   import { VIEW_NAMES, type SettingsSection } from '../lib/keys';
   import { allowCapture, guardedWords, guards, protectNow } from '../lib/protection.svelte';
   import {
@@ -36,6 +38,9 @@
   import { pickMopFiles } from '../lib/mopbook.svelte';
   import { mopFor, mops, openMop, openMopWindow, STATUS_WORD } from '../lib/mops.svelte';
   import { copyStandup } from '../lib/standup';
+  import { openRecent } from '../lib/recent.svelte';
+  import { reopenWrapup } from '../lib/wrapupState.svelte';
+  import { askTimeOff, bookDayOff } from '../lib/timeOffPrompt.svelte';
   import { startTimer, stopTimer, timer as running } from '../lib/timer.svelte';
   import { changes, toast, undoBack } from '../lib/toast.svelte';
   import { agoText, type Change } from '../lib/undoHistory';
@@ -112,7 +117,7 @@
   }
 
   function wrapUp() {
-    app.wrapupClosed = '';
+    reopenWrapup();
     app.wrapupNow = app.today;
     if (app.view !== 'desk' && app.view !== 'day') setView('desk');
     void selectDay(app.today);
@@ -173,8 +178,18 @@
     ...(app.prefs?.timer
       ? [{ label: running.target ? 'Stop the timer' : 'Start the timer', group: 'Do' as const, words: 'clock', run: timerCommand }]
       : []),
+    {
+      label: 'Jump back to something you had open…',
+      group: 'Go to',
+      keys: 'Ctrl Tab',
+      words: 'recent last previous switch',
+      run: () => {
+        if (!openRecent(false)) toast('Nothing to jump back to yet.');
+      },
+    },
     { label: 'Lock now', group: 'Do', keys: 'Ctrl L', run: () => onLock() },
     { label: 'Book a holiday (8 h)', group: 'Do', words: 'today leave vacation', run: () => holiday() },
+    { label: 'Book several days off…', group: 'Do', words: 'holiday leave vacation time off week', run: () => askTimeOff(firstDayOff()) },
     ...(guards().copy || guards().screens
       ? [
           {
@@ -251,19 +266,28 @@
     input?.focus();
   }
 
+  // Start clean each time the box opens (or is handed words to start with), and only then.
+  // This effect must depend on nothing but "is it open" and the words handed over: it used
+  // to read `text`, so every keystroke re-ran it and emptied the box (round 21). `flipped`
+  // and `untrack` both guard against that coming back.
+  const flipped = edge();
   $effect(() => {
-    if (app.captureOpen) {
-      text = launch.prefill;
-      launch.prefill = '';
-      pickedTime = '';
-      pickedProject = '';
-      seen = null;
-      hits = [];
-      sel = 0;
-      if (text) read();
+    const change = flipped(app.captureOpen);
+    const handed = app.captureOpen && launch.prefill !== '';
+    if (change === 'on' || handed) {
+      untrack(() => {
+        text = launch.prefill;
+        launch.prefill = '';
+        pickedTime = '';
+        pickedProject = '';
+        seen = null;
+        hits = [];
+        sel = 0;
+        if (text) read();
+      });
       queueMicrotask(() => input?.focus());
       void api.meetingSeries().then((list) => (series = list), () => {});
-    } else {
+    } else if (change === 'off') {
       launch.timerCapture = false;
     }
   });
@@ -352,22 +376,19 @@
     return out;
   }
 
+  // Where "Book several days off…" starts: today, or tomorrow once today has work on it.
+  function firstDayOff(): string {
+    const today = app.ribbon.flatMap((w) => w.days).find((d) => d.date === app.today);
+    return today && today.minutes > 0 ? addDays(app.today, 1) : app.today;
+  }
+
   async function holiday() {
     const date = app.today;
-    const entry = await attempt(() =>
-      api.createEntry(
-        { date, minutes: 480, description: 'Holiday', projectId: null, recurringId: null, category: null, notes: null, timesheetCodeId: null },
-        '',
-      ),
-    );
-    if (!entry) return;
+    const id = await bookDayOff(date);
+    if (!id) return;
     setView('day');
     await selectDay(date);
-    await refresh();
-    flashEntry(entry.id);
-    toast('Today booked as holiday', 'Undo', () => {
-      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
+    flashEntry(id);
   }
 
   async function toInbox(line: string) {
@@ -418,9 +439,8 @@
     if (!entry) return;
     close();
     setView('desk');
-    await selectDay(entry.date);
     await refresh();
-    flashEntry(entry.id);
+    if (entry.date === app.selected) flashEntry(entry.id);
     if (entry.date === app.today) await startTimer(entry);
   }
 
@@ -446,13 +466,29 @@
     if (!entry) return;
     close();
     if (app.view !== 'desk' && app.view !== 'day') setView('desk');
-    await selectDay(entry.date);
+    // Logging to another day leaves you on the day you were looking at (round 21): the toast
+    // says where it went, and "Show it" goes there.
     await refresh();
-    flashEntry(entry.id);
+    const here = entry.date === app.selected;
+    if (here) flashEntry(entry.id);
     const when = entry.date === app.today ? 'today' : `on ${weekdayShort(entry.date)} ${dayOfMonth(entry.date)}`;
-    toast(`Logged ${fmtMinutes(parsed.minutes)} ${when}`, 'Undo', () => {
-      void attempt(() => api.deleteEntry(entry.id)).then(refresh);
-    }, () => void attempt(() => api.restoreEntry(entry.id)).then(refresh));
+    toast(
+      `Logged ${fmtMinutes(parsed.minutes)} ${when}`,
+      'Undo',
+      () => {
+        void attempt(() => api.deleteEntry(entry.id)).then(refresh);
+      },
+      () => void attempt(() => api.restoreEntry(entry.id)).then(refresh),
+      here
+        ? null
+        : {
+            label: 'Show it',
+            run: () => {
+              setView('day');
+              void selectDay(entry.date).then(() => flashEntry(entry.id));
+            },
+          },
+    );
   }
 
   function move(step: number) {
@@ -570,7 +606,7 @@
             <i class="dot" style:--c={projectColor(hit.entry.projectId)}></i>
             <span class="what"><b>{hit.entry.description || 'Untitled'}</b>
               <small>{relativeDay(hit.entry.date, app.today)}{hit.entry.tickets.length ? ' · ' + hit.entry.tickets.map((t) => t.number).join(', ') : ''}</small></span>
-            <span class="mono amt">{hit.entry.hours} h</span>
+            <span class="mono amt">{fmtMinutes(hit.entry.minutes)}</span>
           {:else if hit.kind === 'ticket'}
             {@const t = hit.ticket}
             <i class="dot" style:--c={t.projectId ? projectColor(t.projectId) : 'var(--accent)'}></i>
@@ -590,8 +626,9 @@
             {/if}
           {:else if hit.kind === 'note'}
             <i class="dot" style:--c={projectColor(hit.note.projectId)}></i>
+            {@const line = matchingLine(hit.note.body, text)}
             <span class="what"><b>{hit.note.title}</b>
-              <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}</small></span>
+              <small>{KIND_LABEL[hit.note.kind]}{hit.note.archived ? ' · archived' : ''}{hit.note.tags.length ? ' · ' + hit.note.tags.join(', ') : ''}{line ? ' · ' + line : ''}</small></span>
           {:else if hit.kind === 'change'}
             <i class="dot cmd" aria-hidden="true">↶</i>
             <span class="what"><b>Undo: {hit.change.text}</b>
@@ -604,7 +641,7 @@
                 {#if wk}<small>{wk.hours} h logged</small>{/if}</span>
             {:else}
               {@const rd = ribbonDay(hit.date)}
-              <span class="what"><b>Go to {longDay(hit.date)}</b><small>Day{rd ? ` · ${rd.hours} h` : ''}</small></span>
+              <span class="what"><b>Go to {longDay(hit.date)}</b><small>Day{rd ? ` · ${fmtMinutes(rd.minutes)}` : ''}</small></span>
             {/if}
           {:else if hit.kind === 'scrap'}
             <i class="dot" style:--c="var(--warn)"></i>

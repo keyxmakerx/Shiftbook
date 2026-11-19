@@ -63,6 +63,11 @@
     Messages you paste into tickets again and again. Copy one here, or use the <b>Responses</b> button on the
     Tickets card on the Desk; pick one and it's copied, ready to paste.
   </p>
+  <p class="sub">
+    A message can hold blanks. When you tick a ticket done and pick <b>Copy a response</b>,
+    <code>{'{ticket}'}</code> becomes its number and <code>{'{date}'}</code> today's date, and
+    <code>{'{name}'}</code> asks who it is to.
+  </p>
 
   {#if loaded}
     {#each rows as row, i (row.key)}

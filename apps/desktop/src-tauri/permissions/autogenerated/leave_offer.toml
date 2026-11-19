@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-leave-offer"
+description = "Enables the leave_offer command without any pre-configured scope."
+commands.allow = ["leave_offer"]
+
+[[permission]]
+identifier = "deny-leave-offer"
+description = "Denies the leave_offer command without any pre-configured scope."
+commands.deny = ["leave_offer"]

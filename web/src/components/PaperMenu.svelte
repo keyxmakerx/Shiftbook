@@ -47,7 +47,11 @@
     pos = first = null;
     menuState.spec = null;
     menuState.anchor = null;
-    if (returnFocus && was?.isConnected) was.focus({ preventScroll: true });
+    // Give focus back to the object, unless what was chosen has opened a box that asks for
+    // something: its field already has the focus, and taking it away would send the next
+    // keys to the wrong place (round 21).
+    const asking = document.querySelector('[role="dialog"][aria-modal="true"]');
+    if (returnFocus && was?.isConnected && !asking) was.focus({ preventScroll: true });
   }
 
   function close(immediate: boolean) {
@@ -310,7 +314,7 @@
 
 {#snippet sectionBody(section: MenuSection, at: string)}
   {#if section.head}<div class="lbl head">{section.head}</div>{/if}
-  {#each section.items ?? [] as item (item.label)}
+  {#each section.items ?? [] as item, ii (`${ii}:${item.label}`)}
     {#if item.sub}
       {@const key = `${at}:${item.label}`}
       <button
@@ -355,7 +359,7 @@
   {/each}
   {#if section.choices}
     <div class="choices" role="group" aria-label={section.head ?? 'Choices'}>
-      {#each section.choices as choice (choice.label)}
+      {#each section.choices as choice, ci (`${ci}:${choice.label}`)}
         <button
           type="button"
           class="choice"

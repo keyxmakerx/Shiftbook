@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // Notes on the Desk (round 4: notes always to hand). Jot keeps a quick thought as a Jot note,
   // Today is the day's Daily note, Meetings lists recent meeting notes. Everything lands in
   // Notes like any other note.
@@ -54,6 +55,8 @@
   let daily = $state('');
   let dailyFor = $state('');
   let saving = $state<'' | 'waiting' | 'saved'>('');
+  // The note is showing its start (meetings, brought-up things) and isn't saved yet.
+  let started = $state(false);
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   async function flush() {
@@ -68,6 +71,7 @@
   }
 
   function typed() {
+    started = false;
     saving = 'waiting';
     if (timer !== null) clearTimeout(timer);
     timer = setTimeout(() => void flush(), SAVE_AFTER_MS);
@@ -77,10 +81,14 @@
   async function loadDaily(day: string) {
     await flush();
     const note = await attempt(() => api.dailyNote(day));
+    // A day with no note yet starts with its meetings and what was brought up for it
+    // (round 21). Only today: it is about now. Nothing is saved until something is typed.
+    const start = !note && day === app.today ? ((await attempt(() => api.dailyNoteStart(day))) ?? '') : '';
     if (app.selected !== day) return;
-    daily = note?.body ?? '';
+    daily = note?.body ?? start;
     dailyFor = day;
     saving = '';
+    started = !note && start !== '';
   }
 
   $effect(() => {
@@ -151,6 +159,7 @@
   {#if tab === 'jot'}
     <textarea
       class="text-in pad"
+      use:todoBoxes
       bind:value={jot}
       rows="3"
       placeholder="Jot something down. Ctrl+Enter keeps it."
@@ -186,6 +195,7 @@
   {:else if tab === 'today'}
     <textarea
       class="text-in pad"
+      use:todoBoxes
       bind:value={daily}
       oninput={typed}
       rows="7"
@@ -193,7 +203,13 @@
       aria-label="Today's note"
     ></textarea>
     <p class="status" aria-live="polite">
-      {saving === 'waiting' ? 'Saving…' : saving === 'saved' ? 'Saved in Notes' : ''}
+      {saving === 'waiting'
+        ? 'Saving…'
+        : saving === 'saved'
+          ? 'Saved in Notes'
+          : started
+            ? 'Started from today’s meetings and what you brought up. It’s kept once you type or tick.'
+            : ''}
     </p>
   {:else}
     {#each meetings as n (n.id)}

@@ -71,6 +71,21 @@ export function indentEdit(text: string, start: number, end: number, back: boole
   return { from: lineStart, to: blockEnd, insert, start: newStart, end: newEnd };
 }
 
+/** Make `edit` in a text box, the way typing would: Ctrl+Z undoes it and the box's own input handler runs. */
+export function applyEdit(box: HTMLTextAreaElement, edit: IndentEdit): void {
+  box.setSelectionRange(edit.from, edit.to);
+  // insertText keeps Ctrl+Z working and fires the input event the box already listens to.
+  // Taking text away with nothing to put in is a delete.
+  const command = edit.insert === '' ? 'delete' : 'insertText';
+  const nothing = edit.from === edit.to && edit.insert === '';
+  const done = nothing || (typeof document.execCommand === 'function' && document.execCommand(command, false, edit.insert));
+  if (!done) {
+    box.setRangeText(edit.insert, edit.from, edit.to, 'end');
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  box.setSelectionRange(edit.start, edit.end);
+}
+
 /** Svelte action for a textarea: Tab and Shift+Tab indent, Escape then Tab moves on. */
 export function tabIndent(box: HTMLTextAreaElement) {
   let leaving = false;
@@ -91,14 +106,7 @@ export function tabIndent(box: HTMLTextAreaElement) {
     e.preventDefault();
     e.stopPropagation();
     if (!edit) return;
-    box.setSelectionRange(edit.from, edit.to);
-    // insertText keeps Ctrl+Z working and fires the input event the box already listens to.
-    const done = typeof document.execCommand === 'function' && document.execCommand('insertText', false, edit.insert);
-    if (!done) {
-      box.setRangeText(edit.insert, edit.from, edit.to, 'end');
-      box.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    box.setSelectionRange(edit.start, edit.end);
+    applyEdit(box, edit);
   }
   function onblur() {
     leaving = false;

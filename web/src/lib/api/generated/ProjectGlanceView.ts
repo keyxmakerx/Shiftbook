@@ -5,13 +5,13 @@
  */
 export type ProjectGlanceView = { projectId: string, name: string, color: string | null, archived: boolean, 
 /**
- * Hours this week, e.g. "4.5".
+ * Minutes this week.
  */
-hoursWeek: string, 
+minutesWeek: number, 
 /**
- * Every hour logged against it.
+ * Every minute logged against it.
  */
-hoursAll: string, 
+minutesAll: number, 
 /**
  * The last day it was worked on (`YYYY-MM-DD`).
  */

@@ -9,6 +9,8 @@
   import Unlock from './pages/Unlock.svelte';
   import NewPassword from './pages/NewPassword.svelte';
   import Purpose from './pages/Purpose.svelte';
+  import Helpers from './pages/Helpers.svelte';
+  import type { UseMode } from './lib/api';
   import Shell from './pages/Shell.svelte';
   import PhoneShell from './pages/PhoneShell.svelte';
   import { phone } from './lib/phone.svelte';
@@ -17,9 +19,11 @@
   import { watchRightDrag } from './lib/rightDrag';
   import TodayPin from './components/TodayPin.svelte';
 
-  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'unlock' | 'new-password' | 'app';
+  type Screen = 'loading' | 'problem' | 'setup' | 'recovery' | 'purpose' | 'helpers' | 'unlock' | 'new-password' | 'app';
 
   let screen = $state<Screen>('loading');
+  /** What was picked on "What's Shiftbook for?", for the helpers screen after it. */
+  let useMode = $state<UseMode>('work');
   let problem = $state('');
   // Held only between setup and "Continue" on the recovery key page.
   let recoveryKey = $state<string | null>(null);
@@ -138,7 +142,14 @@
     }}
   />
 {:else if screen === 'purpose'}
-  <Purpose onDone={() => (screen = 'app')} />
+  <Purpose
+    onDone={(mode) => {
+      useMode = mode;
+      screen = 'helpers';
+    }}
+  />
+{:else if screen === 'helpers'}
+  <Helpers mode={useMode} onDone={() => (screen = 'app')} />
 {:else if screen === 'unlock'}
   <Unlock
     onUnlocked={(mustSetPassword, withPin) => {

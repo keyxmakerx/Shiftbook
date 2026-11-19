@@ -4,7 +4,7 @@
   // layout; the Desk canvas stays on the computer, so Desk is today as one list.
   import { onMount } from 'svelte';
   import { bell } from '../lib/bell.svelte';
-  import { dayOfMonth, fmtHours, longDay, relativeDay, weekdayShort } from '../lib/format';
+  import { dayDistance, dayOfMonth, fmtMinutes, longDay, weekdayShort } from '../lib/format';
   import type { IconName } from '../lib/icons';
   import type { View } from '../lib/keys';
   import { app, ribbonDay, ribbonWeekOf, selectDay, setView, shownViews } from '../lib/store.svelte';
@@ -17,6 +17,7 @@
   import Icon from '../components/Icon.svelte';
   import PaperMenu from '../components/PaperMenu.svelte';
   import TimerBar from '../components/TimerBar.svelte';
+  import AskText from '../components/AskText.svelte';
   import Toast from '../components/Toast.svelte';
   import WindowLayer from '../components/WindowLayer.svelte';
   import Day from '../views/Day.svelte';
@@ -109,9 +110,10 @@
       <h1>{app.view === 'day' ? longDay(app.selected) : longDay(app.today)}</h1>
       <span class="sum">
         {#if app.view === 'day' && app.selected !== app.today}
-          {relativeDay(app.selected, app.today)} · <b>{fmtHours(ribbonDay(app.selected)?.minutes ?? 0)} h</b>
+          {dayDistance(app.selected, app.today)} · <b>{fmtMinutes(ribbonDay(app.selected)?.minutes ?? 0)}</b>
+          <button class="back" type="button" onclick={() => void selectDay(app.today)}>Back to today</button>
         {:else}
-          Today <b>{fmtHours(todayMinutes)} h</b> · Week <b>{fmtHours(weekMinutes)} h</b>
+          Today <b>{fmtMinutes(todayMinutes)}</b> · Week <b>{fmtMinutes(weekMinutes)}</b>
         {/if}
       </span>
     </div>
@@ -137,10 +139,10 @@
           type="button"
           aria-pressed={d.date === app.selected}
           class:gap={d.gap}
-          aria-label="{longDay(d.date)}, {d.gap ? 'nothing logged' : `${d.hours} hours`}"
+          aria-label="{longDay(d.date)}, {d.gap ? 'nothing logged' : fmtMinutes(d.minutes)}"
           onclick={() => void selectDay(d.date)}
         >
-          <small>{weekdayShort(d.date)}</small><b>{dayOfMonth(d.date)}</b><small>{d.gap ? '·' : d.hours}</small>
+          <small>{weekdayShort(d.date)}</small><b>{dayOfMonth(d.date)}</b><small>{d.gap ? '·' : fmtMinutes(d.minutes)}</small>
         </button>
       {/each}
     </div>
@@ -219,6 +221,7 @@
 <PaperMenu />
 <ShareSheet />
 <Toast />
+<AskText />
 
 <style>
   .phone {
@@ -257,6 +260,17 @@
 
   .sum b {
     color: var(--ink);
+  }
+
+  .back {
+    margin-left: 6px;
+    border: 1px solid var(--rule);
+    background: var(--warn-wash);
+    color: var(--ink);
+    border-radius: 99px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 12.5px;
   }
 
   .round {

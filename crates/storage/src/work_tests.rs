@@ -163,17 +163,27 @@ fn entries_and_tickets() {
         let mut first = input(DAY, 90, " Firewall cleanup ");
         first.project = Some(p.id);
         first.next_step = Some("Remove the old rule Friday".into());
+        assert_eq!(s.first_entry_date(me).await.unwrap(), None);
         let rec = s
             .create_entry(me, &first, "CHG0012345\nINC1, inc1; INC2")
             .await
             .unwrap();
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(DAY));
+        assert_eq!(s.first_entry_date(other).await.unwrap(), None);
         assert_eq!(rec.entry.description, "Firewall cleanup");
         assert_eq!(rec.entry.target, EntryTarget::Project(p.id));
         assert_eq!(numbers(&rec), ["CHG0012345", "INC1", "INC2"]);
         assert!(!rec.is_tray);
-        s.create_entry(me, &input(date!(2026 - 10 - 14), 30, "Yesterday"), "")
+        let yesterday = s
+            .create_entry(me, &input(date!(2026 - 10 - 14), 30, "Yesterday"), "")
             .await
             .unwrap();
+        // The earliest entry that is still there counts.
+        let earliest = date!(2026 - 10 - 14);
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(earliest));
+        s.delete_entry(me, yesterday.entry.id).await.unwrap();
+        assert_eq!(s.first_entry_date(me).await.unwrap(), Some(DAY));
+        s.restore_entry(me, yesterday.entry.id).await.unwrap();
         s.create_entry(me, &input(date!(2026 - 10 - 20), 30, "Later"), "")
             .await
             .unwrap();
@@ -468,8 +478,55 @@ fn open_entry_tickets_come_back_in_the_tray() {
         assert!(s.tray_carried(me, DAY).await.unwrap().is_empty());
         assert!(s.tray_carried(other, next).await.unwrap().is_empty());
 
+        // Snoozed on the 16th until the 19th: it still comes back, marked with its day, until
+        // then; nobody else's is touched, and waking it clears the mark.
+        let until = date!(2026 - 10 - 19);
+        s.snooze_ticket(me, "task1601563", next, Some(until))
+            .await
+            .unwrap();
+        let marks = |list: Vec<crate::work::CarriedTicket>| -> Vec<Option<Date>> {
+            list.into_iter().map(|c| c.snoozed_until).collect()
+        };
+        assert_eq!(
+            marks(s.tray_carried(me, next).await.unwrap()),
+            [None, Some(until), None]
+        );
+        assert_eq!(
+            marks(s.tray_carried(me, until).await.unwrap()),
+            [None, None, None]
+        );
+        assert!(s
+            .snooze_ticket(me, "TASK1601563", next, Some(next))
+            .await
+            .is_err());
+        // A new snooze replaces the old one.
+        s.snooze_ticket(me, "TASK1601563", next, Some(date!(2026 - 10 - 17)))
+            .await
+            .unwrap();
+        assert_eq!(
+            marks(s.tray_carried(me, next).await.unwrap())[1],
+            Some(date!(2026 - 10 - 17))
+        );
+        s.snooze_ticket(me, "TASK1601563", next, None)
+            .await
+            .unwrap();
+        assert_eq!(marks(s.tray_carried(me, next).await.unwrap())[1], None);
+
         // Working on it again puts it in that day's tray, and it stops showing as carried.
         s.tray_add(me, next, "TASK1601564").await.unwrap();
+        // Each open day is listed (for how long a ticket has been open), up to the day asked.
+        let days = s.open_ticket_days(me, next).await.unwrap();
+        let of = |n: &str| -> Vec<Date> {
+            days.iter()
+                .filter(|(t, _)| t == n)
+                .map(|(_, d)| *d)
+                .collect()
+        };
+        assert_eq!(of("TASK1601564"), [next, DAY]);
+        // In the tray and on the entry the same day: both rows, the same day.
+        assert_eq!(of("TASK1601562"), [DAY, DAY]);
+        assert_eq!(s.open_ticket_days(me, DAY).await.unwrap().len(), 5);
+        assert!(s.open_ticket_days(other, next).await.unwrap().is_empty());
         let later = date!(2026 - 10 - 17);
         assert_eq!(s.tray_carried(me, next).await.unwrap().len(), 2);
         // Ticking it on the entry finishes it everywhere.
@@ -1556,6 +1613,180 @@ fn known_tickets_carry_their_time_so_far() {
         let tray = s.tray_day(me, date!(2026 - 10 - 19)).await.unwrap();
         assert!(tray.items[0].done);
         assert!(s.item_summaries(me, None).await.unwrap()[0].done);
+    });
+}
+
+#[test]
+fn an_entry_splits_in_two_and_two_merge_into_one() {
+    let dir = TestDir::new("reshape");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let p = s.create_project(me, "Network", None).await.unwrap();
+        let mut first = input(DAY, 90, "Firewall cleanup and vendor call");
+        first.project = Some(p.id);
+        first.next_step = Some("rules 12 to 40 gone".into());
+        let rec = s.create_entry(me, &first, "CHG0012345").await.unwrap();
+
+        // Split: the first keeps its tickets and notepad, the second takes the rest.
+        let second = crate::work::SplitSecond {
+            description: "Vendor call".into(),
+            home: crate::work::SplitHome::Project(None),
+        };
+        let (a, b) = s
+            .split_entry(me, rec.entry.id, Minutes(60), "Firewall cleanup", &second)
+            .await
+            .unwrap();
+        assert_eq!(
+            (a.entry.minutes, b.entry.minutes),
+            (Minutes(60), Minutes(30))
+        );
+        assert_eq!(a.entry.description, "Firewall cleanup");
+        assert_eq!(numbers(&a), ["CHG0012345"]);
+        assert_eq!(a.entry.next_step.as_deref(), Some("rules 12 to 40 gone"));
+        assert_eq!(b.entry.description, "Vendor call");
+        assert_eq!(b.entry.target, EntryTarget::None);
+        assert_eq!(b.entry.date, DAY);
+        assert!(b.tickets.is_empty() && b.entry.next_step.is_none());
+        // Both parts need time, and it has to be mine.
+        assert!(s
+            .split_entry(me, a.entry.id, Minutes(60), "x", &second)
+            .await
+            .is_err());
+        assert!(s
+            .split_entry(other, a.entry.id, Minutes(10), "x", &second)
+            .await
+            .is_err());
+
+        // Merge the second back in, with a ticket and a note of its own.
+        let b = s
+            .add_entry_tickets(me, b.entry.id, "INC7 chg0012345")
+            .await
+            .unwrap();
+        s.set_entry_notes(me, b.entry.id, "they call back Friday")
+            .await
+            .unwrap();
+        let done = s.merge_entries(me, a.entry.id, b.entry.id).await.unwrap();
+        assert_eq!(done.entry.entry.minutes, Minutes(90));
+        assert_eq!(
+            done.entry.entry.next_step.as_deref(),
+            Some("rules 12 to 40 gone\n\nthey call back Friday")
+        );
+        assert_eq!(numbers(&done.entry), ["CHG0012345", "INC7"]);
+        assert_eq!(done.moved.len(), 1);
+        assert_eq!(done.minutes_before, Minutes(60));
+        assert!(s.get_entry(me, b.entry.id).await.is_err());
+        assert_eq!(s.list_entries(me, DAY, DAY).await.unwrap().len(), 1);
+        assert!(s.merge_entries(me, a.entry.id, a.entry.id).await.is_err());
+
+        // Undo puts both back as they were.
+        let back = s
+            .unmerge_entries(
+                me,
+                a.entry.id,
+                b.entry.id,
+                done.minutes_before,
+                done.notes_before.as_deref(),
+                &done.moved,
+            )
+            .await
+            .unwrap();
+        assert_eq!(back.entry.minutes, Minutes(60));
+        assert_eq!(back.entry.next_step.as_deref(), Some("rules 12 to 40 gone"));
+        assert_eq!(numbers(&back), ["CHG0012345"]);
+        let again = s.get_entry(me, b.entry.id).await.unwrap();
+        assert_eq!(again.entry.minutes, Minutes(30));
+        assert_eq!(numbers(&again), ["INC7", "chg0012345"]);
+
+        // Another day's entry doesn't merge.
+        let late = s
+            .create_entry(me, &input(date!(2026 - 10 - 16), 30, "Later"), "")
+            .await
+            .unwrap();
+        assert!(s
+            .merge_entries(me, a.entry.id, late.entry.id)
+            .await
+            .is_err());
+    });
+}
+
+#[test]
+fn days_off_are_booked_together_and_follow_their_entries() {
+    let dir = TestDir::new("daysoff");
+    block_on(async {
+        let (s, me, other) = setup(&dir).await;
+        let (mon, tue, wed) = (
+            date!(2026 - 11 - 02),
+            date!(2026 - 11 - 03),
+            date!(2026 - 11 - 04),
+        );
+        s.create_entry(me, &input(tue, 60, "Patching"), "")
+            .await
+            .unwrap();
+        assert_eq!(s.logged_days(me, mon, wed).await.unwrap(), [tue]);
+        assert!(s.logged_days(other, mon, wed).await.unwrap().is_empty());
+
+        // The time-off code has to be one of yours; once set, days off are booked on it.
+        let code = s
+            .add_timesheet_code(
+                me,
+                &CodeInput {
+                    area: "Leave".into(),
+                    phase_label: "Phase".into(),
+                    code: "Annual leave".into(),
+                    sort_order: 0,
+                    hidden: false,
+                },
+            )
+            .await
+            .unwrap();
+        assert!(s
+            .set_pref(
+                other,
+                shiftbook_core::prefs::KEY_TIME_OFF_CODE,
+                &code.id.to_string()
+            )
+            .await
+            .is_err());
+        s.set_pref(
+            me,
+            shiftbook_core::prefs::KEY_TIME_OFF_CODE,
+            &code.id.to_string(),
+        )
+        .await
+        .unwrap();
+
+        let ids = s
+            .book_days_off(me, &[(mon, Minutes(480)), (wed, Minutes(240))])
+            .await
+            .unwrap();
+        assert_eq!(ids.len(), 2);
+        let day = s.list_entries(me, mon, mon).await.unwrap();
+        assert_eq!(day.len(), 1);
+        assert_eq!(day[0].entry.id, ids[0]);
+        assert_eq!(day[0].entry.description, "Holiday");
+        assert_eq!(day[0].entry.minutes, Minutes(480));
+        assert_eq!(day[0].entry.timesheet_code_id, Some(code.id));
+        assert!(!day[0].is_tray);
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon, wed]);
+        assert_eq!(s.days_off(me, tue, tue).await.unwrap(), []);
+        assert!(s.days_off(other, mon, wed).await.unwrap().is_empty());
+
+        assert_eq!(s.day_off_entries(me, wed).await.unwrap(), [ids[1]]);
+        assert!(s.day_off_entries(me, tue).await.unwrap().is_empty());
+        assert!(s.day_off_entries(other, wed).await.unwrap().is_empty());
+        // Deleting the entry takes the day off away; putting it back brings it back.
+        s.delete_entry(me, ids[1]).await.unwrap();
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon]);
+        s.restore_entry(me, ids[1]).await.unwrap();
+        assert_eq!(s.days_off(me, mon, wed).await.unwrap(), [mon, wed]);
+
+        // One bad day and nothing is booked.
+        let thu = date!(2026 - 11 - 05);
+        assert!(s
+            .book_days_off(me, &[(thu, Minutes(480)), (thu, Minutes(100_000))])
+            .await
+            .is_err());
+        assert!(s.list_entries(me, thu, thu).await.unwrap().is_empty());
     });
 }
 

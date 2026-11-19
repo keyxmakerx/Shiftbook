@@ -2,7 +2,6 @@
 //! day it was worked and its tickets still open. The sums are `shiftbook_core::project::glance`.
 
 use serde::Serialize;
-use shiftbook_core::hours::format_hours;
 use shiftbook_core::project::glance;
 use shiftbook_core::week::week_of;
 use tauri::State;
@@ -22,10 +21,10 @@ pub struct ProjectGlanceView {
     name: String,
     color: Option<String>,
     archived: bool,
-    /// Hours this week, e.g. "4.5".
-    hours_week: String,
-    /// Every hour logged against it.
-    hours_all: String,
+    /// Minutes this week.
+    minutes_week: u32,
+    /// Every minute logged against it.
+    minutes_all: u32,
     /// The last day it was worked on (`YYYY-MM-DD`).
     last_worked: Option<String>,
     /// Its tickets still open.
@@ -66,8 +65,8 @@ pub async fn project_glances(
                 name: p.name,
                 color: p.color,
                 archived: p.archived,
-                hours_week: format_hours(g.minutes_week),
-                hours_all: format_hours(g.minutes_all),
+                minutes_week: g.minutes_week.0,
+                minutes_all: g.minutes_all.0,
                 last_worked: g.last_worked.map(shiftbook_core::dates::format_date),
                 open_tickets: u32::try_from(open).unwrap_or(u32::MAX),
             }

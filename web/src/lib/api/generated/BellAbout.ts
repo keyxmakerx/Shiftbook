@@ -34,7 +34,13 @@ minutes: number,
 /**
  * The project its time goes to, if set.
  */
-project: string | null, } | { "kind": "timesheet", 
+project: string | null, 
+/**
+ * It ended within the last [`JUST_FINISHED_MINUTES`]. After that it is still
+ * offered, under Today, as not logged yet (round 21: a 09:15 stand-up read "Just
+ * finished" under Now at half past five).
+ */
+just: boolean, } | { "kind": "timesheet", 
 /**
  * The week's first day.
  */
@@ -94,7 +100,19 @@ at: number,
 /**
  * Where the MOP stands.
  */
-status: MopStatus, } | { "kind": "still_open", 
+status: MopStatus, } | { "kind": "todos", 
+/**
+ * The card, `kind:id` like a Desk card's key.
+ */
+card: string, 
+/**
+ * How many are open.
+ */
+count: number, 
+/**
+ * The first one, and how many more ("Update the port map, and 2 more").
+ */
+words: string, } | { "kind": "still_open", 
 /**
  * Their numbers, oldest first.
  */

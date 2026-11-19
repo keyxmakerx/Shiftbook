@@ -57,10 +57,22 @@ describe('canvas view', () => {
     const near = [{ x: 0, y: 0 }, { x: 630, y: 0 }];
     expect(fitReadable(near, 800, 600)).toEqual(fitAll(near, 800, 600));
     expect(fitReadable(near, 800, 600).zoom).toBeGreaterThan(FIT_MIN_ZOOM);
-    // Too spread out: the middle of them, at 80%.
+    // Too spread out: 80%, starting at the first card; they still sit in the middle top to bottom.
     const spread = fitReadable([{ x: 0, y: 0 }, { x: 6000, y: 0 }], 800, 600);
     expect(spread.zoom).toBe(FIT_MIN_ZOOM);
-    expect(((6000 + CARD_W) / 2) * spread.zoom + spread.x).toBeCloseTo(400);
+    expect(spread.x).toBeCloseTo(40);
+    expect((CARD_H / 2) * spread.zoom + spread.y).toBeCloseTo(300);
+  });
+
+  it('keeps the left edge clear for the toolbox when asked', () => {
+    const cards = [{ x: 0, y: 0 }, { x: 900, y: 0 }];
+    const view = fitReadable(cards, 1300, 600, 104);
+    // The leftmost card starts to the right of the toolbox, and the rightmost still fits.
+    expect(0 * view.zoom + view.x).toBeGreaterThanOrEqual(104);
+    expect((900 + CARD_W) * view.zoom + view.x).toBeLessThanOrEqual(1300);
+    // Spread out: the first card still starts clear of the toolbox.
+    const spread = fitReadable([{ x: 0, y: 0 }, { x: 6000, y: 0 }], 800, 600, 104);
+    expect(spread.x).toBeCloseTo(104 + 40);
   });
 
   it('opens at 100% on today’s cards', () => {

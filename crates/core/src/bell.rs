@@ -51,6 +51,10 @@ pub enum BellAbout {
         minutes: u32,
         /// The project its time goes to, if set.
         project: Option<String>,
+        /// It ended within the last [`JUST_FINISHED_MINUTES`]. After that it is still
+        /// offered, under Today, as not logged yet (round 21: a 09:15 stand-up read "Just
+        /// finished" under Now at half past five).
+        just: bool,
     },
     /// This week's timesheet isn't entered yet (round 15, see `crate::reminder`).
     #[serde(rename_all = "camelCase")]
@@ -99,6 +103,15 @@ pub enum BellAbout {
         /// Where the MOP stands.
         status: crate::change::MopStatus,
     },
+    /// A card with to-dos in its notepad that aren't ticked (round 21, see `crate::todos`).
+    Todos {
+        /// The card, `kind:id` like a Desk card's key.
+        card: String,
+        /// How many are open.
+        count: u32,
+        /// The first one, and how many more ("Update the port map, and 2 more").
+        words: String,
+    },
     /// Tickets worked on but not finished.
     StillOpen {
         /// Their numbers, oldest first.
@@ -119,8 +132,79 @@ pub struct BellItem {
     pub about: BellAbout,
 }
 
+/// A card with a notepad, for [`todo_items`]: its `kind:id`, its title and the notepad text
+/// (several notepads joined with a line break count as one).
+pub type Notepad = (String, String, String);
+
+/// The bell's lines for open to-dos, one per card that has any, in the order given.
+pub fn todo_items(cards: &[Notepad]) -> Vec<BellItem> {
+    cards
+        .iter()
+        .filter_map(|(card, title, text)| {
+            let open = crate::todos::open_todos(text);
+            (!open.is_empty()).then(|| BellItem {
+                when: BellWhen::Today,
+                title: title.clone(),
+                about: BellAbout::Todos {
+                    card: card.clone(),
+                    count: u32::try_from(open.len()).unwrap_or(u32::MAX),
+                    words: crate::todos::open_words(&open),
+                },
+            })
+        })
+        .collect()
+}
+
+/// Put the to-do lines in: after the things to follow up, before the still-open tickets.
+pub fn with_todos(mut items: Vec<BellItem>, cards: &[Notepad]) -> Vec<BellItem> {
+    let at = items
+        .iter()
+        .position(|i| matches!(i.about, BellAbout::StillOpen { .. }))
+        .unwrap_or(items.len());
+    items.splice(at..at, todo_items(cards));
+    items
+}
+
+/// How long after it ends a meeting still counts as "just finished" and sits under Now.
+pub const JUST_FINISHED_MINUTES: u32 = 30;
+
 /// A pin to chase: its title, `kind:id` and chase date.
 pub type ChasePin = (String, String, Date);
+
+/// One thing up for following up: the day it was due, its title, its card
+/// (`kind:id`) and its next-up id when it came from a next-up line.
+pub type BroughtUp = (Date, String, Option<String>, Option<String>);
+
+/// What is brought up by `today`: next-up lines whose day has come, and pins due to chase,
+/// merged by card (the earlier day wins), longest waiting first.
+pub fn brought_up(next_up: &[NextUpItem], pins: &[ChasePin], today: Date) -> Vec<BroughtUp> {
+    let mut follow: Vec<BroughtUp> = Vec::new();
+    let mut brought: Vec<&NextUpItem> = next_up
+        .iter()
+        .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
+        .filter(|i| i.show_from.is_some_and(|d| d <= today))
+        .collect();
+    brought.sort_by_key(|i| (i.show_from, i.created_at));
+    for i in brought {
+        let card = i.about.map(|(k, id)| format!("{}:{id}", k.as_str()));
+        let on = i.show_from.unwrap_or(today);
+        match follow.iter_mut().find(|f| card.is_some() && f.2 == card) {
+            Some(f) => f.0 = f.0.min(on),
+            None => follow.push((on, i.text.clone(), card, Some(i.id.to_string()))),
+        }
+    }
+    for (title, card, on) in pins.iter().filter(|(_, _, on)| *on <= today) {
+        match follow
+            .iter_mut()
+            .find(|f| f.2.as_deref() == Some(card.as_str()))
+        {
+            Some(f) => f.0 = f.0.min(*on),
+            None => follow.push((*on, title.clone(), Some(card.clone()), None)),
+        }
+    }
+    follow.sort_by_key(|f| f.0);
+    follow
+}
 
 /// Everything for the bell at `now` (minutes after local midnight on `today`): meetings in
 /// start order (one that just finished offers to log its time instead), then things brought up (oldest first), then pins due to chase (longest
@@ -141,8 +225,9 @@ pub fn bell_items(
         .collect();
     finished.sort_by_key(|m| (m.at, m.name.to_lowercase()));
     for m in &finished {
+        let just = now < m.at + m.length_minutes + JUST_FINISHED_MINUTES;
         items.push(BellItem {
-            when: BellWhen::Now,
+            when: if just { BellWhen::Now } else { BellWhen::Today },
             title: format!(
                 "{}, {} to {}",
                 m.name,
@@ -154,6 +239,7 @@ pub fn bell_items(
                 name: m.name.clone(),
                 minutes: m.length_minutes,
                 project: m.project_id.map(|p| p.to_string()),
+                just,
             },
         });
     }
@@ -181,32 +267,7 @@ pub fn bell_items(
             },
         });
     }
-    // (on, title, card, next-up id), merged by card: the earlier day wins.
-    let mut follow: Vec<(Date, String, Option<String>, Option<String>)> = Vec::new();
-    let mut brought: Vec<&NextUpItem> = next_up
-        .iter()
-        .filter(|i| i.done_at.is_none() && i.deleted_at.is_none())
-        .filter(|i| i.show_from.is_some_and(|d| d <= today))
-        .collect();
-    brought.sort_by_key(|i| (i.show_from, i.created_at));
-    for i in brought {
-        let card = i.about.map(|(k, id)| format!("{}:{id}", k.as_str()));
-        let on = i.show_from.unwrap_or(today);
-        match follow.iter_mut().find(|f| card.is_some() && f.2 == card) {
-            Some(f) => f.0 = f.0.min(on),
-            None => follow.push((on, i.text.clone(), card, Some(i.id.to_string()))),
-        }
-    }
-    for (title, card, on) in pins.iter().filter(|(_, _, on)| *on <= today) {
-        match follow
-            .iter_mut()
-            .find(|f| f.2.as_deref() == Some(card.as_str()))
-        {
-            Some(f) => f.0 = f.0.min(*on),
-            None => follow.push((*on, title.clone(), Some(card.clone()), None)),
-        }
-    }
-    follow.sort_by_key(|f| f.0);
+    let follow = brought_up(next_up, pins, today);
     for (on, title, card, id) in &follow {
         items.push(BellItem {
             when: BellWhen::Today,
@@ -305,6 +366,7 @@ pub fn while_away(items: &[BellItem], last_open: Option<Date>, today: Date) -> V
             BellAbout::Meeting { .. }
             | BellAbout::ChangeWindow { .. }
             | BellAbout::StillOpen { .. }
+            | BellAbout::Todos { .. }
             | BellAbout::MeetingDone { .. }
             | BellAbout::Timesheet { .. } => false,
         })
@@ -355,6 +417,20 @@ mod tests {
             updated_at: datetime!(2026-10-01 09:00 UTC),
             deleted_at: None,
         }
+    }
+
+    #[test]
+    fn the_days_meetings_in_start_order() {
+        // `series` meets on Mondays and Wednesdays.
+        let mut gone = series("Old sync", 480);
+        gone.deleted_at = Some(datetime!(2026-10-02 09:00 UTC));
+        let all = [series("Change board", 840), series("Stand-up", 570), gone];
+        let monday = time::macros::date!(2026 - 10 - 19);
+        assert_eq!(
+            crate::meetings::meetings_on(&all, monday),
+            [(570, "Stand-up"), (840, "Change board")]
+        );
+        assert!(crate::meetings::meetings_on(&all, crate::dates::add_days(monday, 1)).is_empty());
     }
 
     fn brought(text: &str, from: Date) -> NextUpItem {
@@ -408,9 +484,19 @@ mod tests {
                 series: ops.id.to_string(),
                 name: "Weekly ops".into(),
                 minutes: 30,
-                project: None
+                project: None,
+                just: true
             }
         );
+        // Half an hour on it is still offered, but no longer as "now" or "just finished".
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 11 * 60);
+        assert_eq!(items[0].when, BellWhen::Today);
+        assert!(matches!(
+            items[0].about,
+            BellAbout::MeetingDone { just: false, .. }
+        ));
+        let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 59);
+        assert_eq!(items[0].when, BellWhen::Now);
         // A short meeting shows as finished rather than started.
         ops.length_minutes = 10;
         let items = bell_items(std::slice::from_ref(&ops), &[], &[], &[], MON, 10 * 60 + 12);
@@ -593,5 +679,34 @@ mod tests {
         let v = serde_json::to_value(about).unwrap();
         assert_eq!(v["kind"], "due");
         assert_eq!(v["nextDue"], "2026-10-27");
+    }
+    #[test]
+    fn open_to_dos_get_a_line_per_card() {
+        let cards = vec![
+            (
+                "entry:1".to_string(),
+                "Switch replacement".to_string(),
+                "racked\n☑ labels\n☐ Update the port map\n☐ Tell floor 2".to_string(),
+            ),
+            (
+                "tray:2".to_string(),
+                "INC0045690".to_string(),
+                "waiting on the part".to_string(),
+            ),
+        ];
+        let items = todo_items(&cards);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Switch replacement");
+        assert_eq!(items[0].when, BellWhen::Today);
+        assert_eq!(
+            items[0].about,
+            BellAbout::Todos {
+                card: "entry:1".into(),
+                count: 2,
+                words: "Update the port map, and 1 more".into()
+            }
+        );
+        let v = serde_json::to_value(&items[0].about).unwrap();
+        assert_eq!(v["kind"], "todos");
     }
 }

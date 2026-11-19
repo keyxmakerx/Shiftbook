@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { refreshBell } from '../lib/bell.svelte';
+  import { todoBoxes } from '../lib/todos';
   // The slide-out under an entry or a ticket (round 12): one click on a row on Day, a card on
   // the Desk or a ticket in the tray opens it right underneath. It holds the everyday things:
   // the notepad (saved as you type), the entry's tickets, the project, Follow up, done
@@ -10,11 +12,13 @@
   import { bringUpSection, followWords } from '../lib/bringUp';
   import { addEntryTime, canTime, moveEntryTo, moveEntryToRepeating } from '../lib/entryActions';
   import { openMenu, type MenuSpec } from '../lib/menu.svelte';
+  import { newProjectChoice } from '../lib/newProject';
   import { app, attempt, projectById, projectColor, putEntry, refresh } from '../lib/store.svelte';
   import { repeating, repeatingChoices } from '../lib/repeating.svelte';
   import { setTrayDone, setTrayProject, setTrayRepeating } from '../lib/trayActions';
   import { openWindow } from '../lib/windows.svelte';
   import { startTimer, stopTimer, timer } from '../lib/timer.svelte';
+  import { responseButton } from '../lib/responses';
   import { toast } from '../lib/toast.svelte';
   import Icon from './Icon.svelte';
   import WikiLinks from './WikiLinks.svelte';
@@ -95,6 +99,8 @@
     saved = text;
     status = 'saved';
     onsaved?.();
+    // The bell lists the to-dos in a notepad.
+    void refreshBell();
   }
 
   /** The notepad is never taller than this on its own (it scrolls, or drag its corner). */
@@ -138,6 +144,7 @@
               checked: projectId === null && recurringId === null,
               act: () => pick(null),
             },
+            newProjectChoice(pick),
           ],
         },
       ],
@@ -153,13 +160,15 @@
     void refresh();
   }
 
-  async function tickTicket(ticketId: string, done: boolean) {
+  async function tickTicket(ticketId: string, number: string, done: boolean, say = true) {
     const updated = await attempt(() => api.ticketSetDone(ticketId, done));
     if (!updated) return;
     putEntry(updated);
     // The ticket is one item: its rows in the Tickets list change too, so reload them.
     await refresh();
     onsaved?.();
+    // Round 21: done offers a saved response for the ticket, with Undo as elsewhere.
+    if (say && done) toast(`${number} is done`, 'Undo', () => void tickTicket(ticketId, number, false, false), null, responseButton(number));
   }
 
   async function detach(ticketId: string, number: string) {
@@ -207,6 +216,7 @@
   <textarea
     id="pad-{entry?.id ?? tray?.id}"
     class="pad"
+    use:todoBoxes
     bind:this={pad}
     bind:value={draft}
     rows="3"
@@ -231,7 +241,7 @@
             aria-pressed={t.done}
             title={t.done ? 'Done. Click if it is still open.' : 'Still open. Click when it is done.'}
             aria-label={t.done ? `${t.number} is done; mark it still open` : `${t.number} is still open; mark it done`}
-            onclick={() => void tickTicket(t.id, !t.done)}
+            onclick={() => void tickTicket(t.id, t.number, !t.done)}
           >
             {#if t.done}<Icon name="check" size={10} />{/if}
           </button>

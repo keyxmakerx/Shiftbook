@@ -498,7 +498,7 @@ mod tests {
                 .collect();
             assert_eq!(work.len(), 1, "the same work is one card");
             assert_eq!(work[0].work.len(), 1);
-            assert_eq!(work[0].work_hours.as_deref(), Some("1.5"));
+            assert_eq!(work[0].work_minutes, Some(90));
             assert_eq!(work[0].folded.len(), 1, "its tray ticket folds in");
 
             let pile: Vec<&CardView> = desk

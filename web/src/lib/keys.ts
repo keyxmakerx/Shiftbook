@@ -65,7 +65,11 @@ export type Shortcut =
   | { kind: 'menu-key' }
   | { kind: 'just-today' }
   | { kind: 'undo' }
-  | { kind: 'redo' };
+  | { kind: 'redo' }
+  /** Ctrl+F: find a word in the open notepad or MOP (round 21). */
+  | { kind: 'find-in' }
+  /** Ctrl+; while writing in a notepad: drop in the time (round 21). */
+  | { kind: 'stamp' };
 
 export interface KeyInfo {
   key: string;
@@ -86,6 +90,8 @@ export function shortcutFor(e: KeyInfo, tabs: readonly View[] = TABS): Shortcut 
   if (mod && !e.altKey && (e.key === '=' || e.key === '+')) return { kind: 'zoom', step: 1 };
   if (mod && !e.altKey && (e.key === '-' || e.key === '_')) return { kind: 'zoom', step: -1 };
   if (mod && !e.altKey && e.key === '0') return { kind: 'zoom', step: 0 };
+  if (mod && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'f') return { kind: 'find-in' };
+  if (mod && !e.altKey && e.typing && (e.key === ';' || e.code === 'Semicolon')) return { kind: 'stamp' };
   // In a text box Ctrl+Z stays the box's own undo.
   if (mod && !e.altKey && !e.typing && e.key.toLowerCase() === 'z') return { kind: e.shiftKey ? 'redo' : 'undo' };
   if (mod && !e.altKey && !e.typing && e.key.toLowerCase() === 'y') return { kind: 'redo' };
@@ -125,8 +131,11 @@ export const SHORTCUT_LIST: readonly { keys: string; what: string }[] = [
   { keys: 'Menu or Shift F10', what: 'Options for what you are on' },
   { keys: 'Ctrl +  Ctrl −', what: 'Bigger or smaller text (Ctrl 0 for normal)' },
   { keys: 'T', what: 'On the Desk: just today (other days fade)' },
+  { keys: 'Ctrl Tab', what: 'Jump back to what you just had open (Tab again for the one before)' },
   { keys: 'Ctrl Z', what: 'Undo the last change (type "undo" in Find for the list)' },
   { keys: 'Ctrl Shift Z', what: 'Redo it' },
+  { keys: 'Ctrl F', what: 'Find a word in the open notepad or MOP' },
+  { keys: 'Ctrl ;', what: 'In a notepad: drop in the time, like 14:05' },
   { keys: 'Ctrl L', what: 'Lock now' },
   { keys: 'Esc', what: 'Close the top menu or panel' },
 ];

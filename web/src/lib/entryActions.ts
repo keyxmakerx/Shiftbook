@@ -6,6 +6,7 @@ import type { Entry } from './api';
 import { followUpItem } from './bringUp';
 import { sameWork } from './sameWork';
 import type { MenuItem, MenuSpec } from './menu.svelte';
+import { newProjectChoice } from './newProject';
 import { openNotepad } from './panel.svelte';
 import { pinMenuItem } from './pins.svelte';
 import { openWindow } from './windows.svelte';
@@ -16,6 +17,7 @@ import { repeating } from './repeating.svelte';
 import { fmtMinutes } from './format';
 import { startTimer, stopTimer, timer } from './timer.svelte';
 import { startRename } from './rename.svelte';
+import { askSplit } from './splitPrompt.svelte';
 
 /** The entry as an update with these changes (the project, so far). */
 export function input(e: Entry, changes: Partial<{ projectId: string | null; recurringId: string | null }>) {
@@ -145,6 +147,40 @@ export async function removeEntry(entry: Entry): Promise<void> {
   }, () => void attempt(() => api.deleteEntry(id)).then(refresh));
 }
 
+/** "Split in two…": ask how, then share the entry's time between it and a new one. */
+export async function splitEntry(entry: Entry): Promise<void> {
+  const split = await askSplit(entry);
+  if (!split) return;
+  const done = await attempt(() => api.splitEntry(entry.id, split));
+  if (!done) return;
+  await refresh();
+  flashEntry(done.second.id);
+  toast(`Split into “${done.first.description}” (${fmtMinutes(done.first.minutes)}) and “${done.second.description}” (${fmtMinutes(done.second.minutes)})`, 'Undo', () => {
+    // The second part goes, and the first gets its name and time back.
+    void attempt(async () => {
+      await api.deleteEntry(done.second.id);
+      return api.updateEntry(entry.id, { ...input(done.first, {}), description: entry.description, minutes: entry.minutes });
+    }).then(refresh);
+  });
+}
+
+/** Merge `other` into `keep`: its time, notepad and tickets move over and it goes. */
+export async function mergeEntries(keep: Entry, other: Entry): Promise<void> {
+  const done = await attempt(() => api.mergeEntries(keep.id, other.id));
+  if (!done) return;
+  if (app.drawer === other.id) app.drawer = null;
+  await refresh();
+  flashEntry(keep.id);
+  toast(`Merged “${other.description || 'Untitled'}” into “${done.entry.description || 'Untitled'}” · ${fmtMinutes(done.entry.minutes)}`, 'Undo', () => {
+    void attempt(() => api.unmergeEntries(keep.id, other.id, done.minutesBefore, done.notesBefore, done.moved)).then(refresh);
+  });
+}
+
+/** Whether two entries can be merged: the same day, and neither is the Tickets entry. */
+export function canMerge(a: Entry, b: Entry): boolean {
+  return a.id !== b.id && a.date === b.date && !a.isTray && !b.isTray;
+}
+
 async function logAgainToday(entry: Entry) {
   const created = await attempt(() =>
     api.createEntry(
@@ -200,6 +236,7 @@ export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
       .filter((p) => !p.archived)
       .map((p) => ({ label: p.name, color: p.color, checked: p.id === entry.projectId, act: () => void moveEntryTo(entry, p.id, also) })),
     { label: 'No project', color: null, checked: entry.projectId === null, act: () => void moveEntryTo(entry, null, also) },
+    newProjectChoice((id) => void moveEntryTo(entry, id, also)),
   ];
   items.push({
     label: 'Project',
@@ -215,6 +252,21 @@ export function entryMenu(entry: Entry, also: readonly Entry[] = []): MenuSpec {
     pinMenuItem('entry', entry.id),
   ];
   if (canTime(entry) && !timing) more.push({ label: 'Start the timer', icon: 'clock', act: () => void startTimer(entry) });
+  if (!entry.isTray && entry.minutes >= 2) more.push({ label: 'Split in two…', icon: 'copy', act: () => void splitEntry(entry) });
+  // Merging is offered with the other entries of the day that is open.
+  const others = app.entries.filter((o) => canMerge(entry, o));
+  if (others.length) {
+    more.push({
+      label: 'Merge with',
+      icon: 'list',
+      sub: [
+        {
+          head: 'Its time, notes and tickets come here',
+          items: others.map((o) => ({ label: `${o.description || 'Untitled'} · ${fmtMinutes(o.minutes)}`, icon: 'plus' as const, act: () => void mergeEntries(entry, o) })),
+        },
+      ],
+    });
+  }
   more.push({ label: 'Copy tickets', icon: 'copy', act: () => void copyTickets(entry) });
   items.push({ label: 'More', icon: 'more', sub: [{ items: more }] });
   return {

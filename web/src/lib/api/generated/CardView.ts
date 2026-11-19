@@ -31,9 +31,9 @@ stack: string | null, entry: EntryView | null, tray: TrayCardView | null, note: 
  */
 work: Array<EntryView>, 
 /**
- * The time across this card and `work`, as hours (only when there is other work).
+ * The minutes across this card and `work` (only when there is other work).
  */
-workHours: string | null, 
+workMinutes: number | null, 
 /**
  * Tickets from the Tickets tray with a number this work has, folded into this card.
  */
