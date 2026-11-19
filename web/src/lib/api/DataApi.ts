@@ -328,6 +328,7 @@ export interface BellItem {
     | { kind: 'follow_up'; card: string | null; nextUp: string | null; on: IsoDate }
     | { kind: 'due'; id: string; state: RecurringState; nextDue: IsoDate; warn: number }
     | { kind: 'change_window'; mop: string; ticket: string; on: IsoDate; at: number; status: MopStatus }
+    | { kind: 'todos'; card: string; count: number; words: string }
     | { kind: 'still_open'; tickets: string[] };
 }
 
@@ -539,6 +540,8 @@ export interface Entry {
   tickets: Ticket[];
   /** A roll-up of the Tickets tray (the day's plain one, or a project's). */
   isTray: boolean;
+  /** To-dos in its notepad and its tickets' notepads that aren't ticked (round 21). */
+  todos: number;
 }
 
 export interface EntryInput {
@@ -568,6 +571,8 @@ export interface TrayItem {
   /** The repeating thing its minutes count under, when it has no project. */
   recurringId: string | null;
   links: TicketLink[];
+  /** To-dos in its notepad that aren't ticked (round 21). */
+  todos: number;
 }
 
 /**
@@ -994,6 +999,8 @@ export interface Note {
   updatedAt: string;
   /** Web addresses written in it, in order. */
   links: string[];
+  /** To-dos in it that aren't ticked (round 21). */
+  todos: number;
 }
 
 export interface NoteInput {

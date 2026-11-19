@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // Notes on the Desk (round 4: notes always to hand). Jot keeps a quick thought as a Jot note,
   // Today is the day's Daily note, Meetings lists recent meeting notes. Everything lands in
   // Notes like any other note.
@@ -151,6 +152,7 @@
   {#if tab === 'jot'}
     <textarea
       class="text-in pad"
+      use:todoBoxes
       bind:value={jot}
       rows="3"
       placeholder="Jot something down. Ctrl+Enter keeps it."
@@ -186,6 +188,7 @@
   {:else if tab === 'today'}
     <textarea
       class="text-in pad"
+      use:todoBoxes
       bind:value={daily}
       oninput={typed}
       rows="7"

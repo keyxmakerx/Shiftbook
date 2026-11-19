@@ -16,6 +16,7 @@ function entry(date: string, description: string, minutes: number, isTray = fals
     timesheetCodeId: null,
     tickets: [],
     isTray,
+    todos: 0,
   };
 }
 

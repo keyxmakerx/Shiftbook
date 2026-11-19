@@ -100,7 +100,19 @@ at: number,
 /**
  * Where the MOP stands.
  */
-status: MopStatus, } | { "kind": "still_open", 
+status: MopStatus, } | { "kind": "todos", 
+/**
+ * The card, `kind:id` like a Desk card's key.
+ */
+card: string, 
+/**
+ * How many are open.
+ */
+count: number, 
+/**
+ * The first one, and how many more ("Update the port map, and 2 more").
+ */
+words: string, } | { "kind": "still_open", 
 /**
  * Their numbers, oldest first.
  */

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // The slide-out details drawer for one entry: title, hours stepper, project pills,
   // category, timesheet code, tickets (multi-paste), notes and every custom field that
   // applies to entries.
@@ -384,6 +385,7 @@
         <label class="lbl" for="dr-notes">Notepad</label>
         <textarea
           id="dr-notes"
+          use:todoBoxes
           class="text-in"
           rows="3"
           bind:value={notes}

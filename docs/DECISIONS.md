@@ -47,6 +47,14 @@ owner approved nine and changed one:
     Timesheet; the helpers screen starts with it unticked, as in the approved picture. Off
     hides the Timesheet tab, its settings, the "needs a code" count and the bell's reminder.
     Entries and codes are untouched.
+  The ten ideas picked on 26 October (`r15-qol-new`), as each is built:
+  - *To-dos in notepads:* a line that starts with ☐ (or `[]`, `[ ]`) is an open to-do and ☑
+    (or `[x]`) a ticked one (`shiftbook_core::todos`). Typing `[]` at the start of a line
+    makes the box, a click flips it, Enter carries the list on. They are plain characters in
+    the text, so they copy, search and export like any other words. Cards show the open count;
+    the bell has one line per card, for the entries the Desk shows and the tickets still open.
+    Notes show the count on their card but are not in the bell: a note is somewhere to keep
+    things, not a thing to finish.
 - **A MOP run closes the loop** (`r21-mop-finish`): going back to Ready clears the start
   time; Done asks first when steps aren't ticked; the run log carries the date and the finish
   time; marking Done offers to tick the ticket, log the time and copy the run log; a "what I

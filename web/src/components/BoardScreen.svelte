@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // A board's full screen (rounds 8 and 12): step into a project, a meeting series, the Daily
   // notes or a folder from the Desk. The tree on the left shows every board; the trail on top
   // walks back up. Three views of the same things:
@@ -462,7 +463,7 @@
                   aria-label="Note title"
                   disabled={data.key === 'daily' || data.key.startsWith('series:') || current?.kind === 'daily'}
                 />
-                <textarea use:tabIndent class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
+                <textarea use:tabIndent use:todoBoxes class="body" bind:value={body} oninput={typed} placeholder="Write here. It saves as you type." aria-label="Note"></textarea>
                 <WikiLinks text={body} />
                 <div class="foot">
                   <span class="status" aria-live="polite">{status === 'saving' ? 'Saving…' : status === 'saved' ? 'Saved' : ''}</span>

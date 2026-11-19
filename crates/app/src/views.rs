@@ -13,6 +13,7 @@ use shiftbook_core::ids::{
 use shiftbook_core::minutes::Minutes;
 use shiftbook_core::model::{CustomField, EntryTarget, Note, TrayItem};
 use shiftbook_core::notes::{archive_outlook, ArchiveOutlook, NoteKind};
+use shiftbook_core::todos::open_count;
 use shiftbook_storage::notes::facts;
 use shiftbook_storage::work::{CarriedTicket, EntryRecord};
 use shiftbook_storage::{SqliteStore, StorageError};
@@ -61,6 +62,8 @@ pub struct EntryView {
     pub timesheet_code_id: Option<TimesheetCodeId>,
     pub tickets: Vec<TicketView>,
     pub is_tray: bool,
+    /// To-dos in its notepad and its tickets' notepads that aren't ticked (round 21).
+    pub todos: u32,
 }
 
 /// One tray ticket.
@@ -77,6 +80,8 @@ pub struct TrayItemView {
     pub project_id: Option<ProjectId>,
     pub recurring_id: Option<RecurringTaskId>,
     pub links: Vec<LinkView>,
+    /// To-dos in its notepad that aren't ticked (round 21).
+    pub todos: u32,
 }
 
 /// A still-open ticket from an earlier day in a tray: a tray row, or a ticket on an entry
@@ -137,7 +142,14 @@ pub fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
         EntryTarget::Recurring(r) => (None, Some(r)),
         EntryTarget::None => (None, None),
     };
+    let todos = open_count(rec.entry.next_step.as_deref().unwrap_or(""))
+        + rec
+            .tickets
+            .iter()
+            .map(|t| open_count(t.note.as_deref().unwrap_or("")))
+            .sum::<u32>();
     EntryView {
+        todos,
         id: rec.entry.id,
         date: format_date(rec.entry.date),
         minutes: rec.entry.minutes,
@@ -165,6 +177,7 @@ pub fn entry_view(rec: EntryRecord, fields: &[CustomField]) -> EntryView {
 
 pub fn tray_item_view(item: TrayItem, fields: &[CustomField]) -> TrayItemView {
     TrayItemView {
+        todos: open_count(item.note.as_deref().unwrap_or("")),
         id: item.id,
         date: format_date(item.date),
         links: ticket_links(fields, &item.ticket_number),
@@ -221,6 +234,8 @@ pub struct NoteView {
     pub updated_at: String,
     /// Web addresses written in it, in order.
     pub links: Vec<String>,
+    /// To-dos in it that aren't ticked (round 21).
+    pub todos: u32,
 }
 
 pub fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
@@ -230,6 +245,7 @@ pub fn note_view(n: Note, now: OffsetDateTime, after_days: u32) -> NoteView {
     };
     NoteView {
         links: links_in(&n.body),
+        todos: open_count(&n.body),
         id: n.id,
         kind: n.kind,
         title: n.title,

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { refreshBell } from '../lib/bell.svelte';
+  import { todoBoxes } from '../lib/todos';
   // The slide-out under an entry or a ticket (round 12): one click on a row on Day, a card on
   // the Desk or a ticket in the tray opens it right underneath. It holds the everyday things:
   // the notepad (saved as you type), the entry's tickets, the project, Follow up, done
@@ -96,6 +98,8 @@
     saved = text;
     status = 'saved';
     onsaved?.();
+    // The bell lists the to-dos in a notepad.
+    void refreshBell();
   }
 
   function typed() {
@@ -199,6 +203,7 @@
   <textarea
     id="pad-{entry?.id ?? tray?.id}"
     class="pad"
+    use:todoBoxes
     bind:this={pad}
     bind:value={draft}
     rows="3"

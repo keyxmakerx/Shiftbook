@@ -107,6 +107,13 @@
     close();
   }
 
+  /** Open the card whose notepad has the to-dos. */
+  function todosOpen(card: string) {
+    const [kind, id] = card.split(':') as [CardKind, string];
+    openWindow(kind, id);
+    close();
+  }
+
   async function followTomorrow(f: Follow, title: string) {
     const card = cardOf(f);
     if (card) await bringUp(card[0], card[1], title, app.bringUpDays[0] ?? addDays(app.today, 1));
@@ -164,6 +171,8 @@
         return i.about.state === 'renewed' ? 'Renewed, but the expiry date is still the old one' : `Repeating · due ${onDay(i.about.nextDue, app.today)}`;
       case 'change_window':
         return `MOP · ${STATUS_WORD[i.about.status]}`;
+      case 'todos':
+        return `${i.about.count === 1 ? 'To-do' : `${i.about.count} to-dos`} open · ${i.about.words}`;
       case 'still_open':
         return i.about.tickets.join(' · ');
     }
@@ -207,7 +216,7 @@
             <li class="item {i.about.kind}" class:soon={i.when === 'now'} class:late={i.about.kind === 'due' && i.about.state === 'overdue'} style:--i={n}>
               <span class="ico" aria-hidden="true">
                 <Icon
-                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : 'clock'}
+                  name={i.about.kind === 'timesheet' ? 'sheet' : i.about.kind === 'meeting' || i.about.kind === 'meeting_done' ? 'meeting' : i.about.kind === 'follow_up' ? 'sun' : i.about.kind === 'due' ? 'repeat' : i.about.kind === 'change_window' ? 'book' : i.about.kind === 'todos' ? 'check' : 'clock'}
                   size={16}
                 />
               </span>
@@ -251,6 +260,9 @@
                     openMopWindow(mop);
                     close();
                   }}>Open the MOP</button>
+                {:else if i.about.kind === 'todos'}
+                  {@const card = i.about.card}
+                  <button type="button" class="btn primary" onclick={() => todosOpen(card)}>Open</button>
                 {:else}
                   <button type="button" class="btn" onclick={showDay}>Show</button>
                 {/if}

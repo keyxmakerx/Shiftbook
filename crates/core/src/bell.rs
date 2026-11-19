@@ -103,6 +103,15 @@ pub enum BellAbout {
         /// Where the MOP stands.
         status: crate::change::MopStatus,
     },
+    /// A card with to-dos in its notepad that aren't ticked (round 21, see `crate::todos`).
+    Todos {
+        /// The card, `kind:id` like a Desk card's key.
+        card: String,
+        /// How many are open.
+        count: u32,
+        /// The first one, and how many more ("Update the port map, and 2 more").
+        words: String,
+    },
     /// Tickets worked on but not finished.
     StillOpen {
         /// Their numbers, oldest first.
@@ -121,6 +130,39 @@ pub struct BellItem {
     pub title: String,
     /// What it is about.
     pub about: BellAbout,
+}
+
+/// A card with a notepad, for [`todo_items`]: its `kind:id`, its title and the notepad text
+/// (several notepads joined with a line break count as one).
+pub type Notepad = (String, String, String);
+
+/// The bell's lines for open to-dos, one per card that has any, in the order given.
+pub fn todo_items(cards: &[Notepad]) -> Vec<BellItem> {
+    cards
+        .iter()
+        .filter_map(|(card, title, text)| {
+            let open = crate::todos::open_todos(text);
+            (!open.is_empty()).then(|| BellItem {
+                when: BellWhen::Today,
+                title: title.clone(),
+                about: BellAbout::Todos {
+                    card: card.clone(),
+                    count: u32::try_from(open.len()).unwrap_or(u32::MAX),
+                    words: crate::todos::open_words(&open),
+                },
+            })
+        })
+        .collect()
+}
+
+/// Put the to-do lines in: after the things to follow up, before the still-open tickets.
+pub fn with_todos(mut items: Vec<BellItem>, cards: &[Notepad]) -> Vec<BellItem> {
+    let at = items
+        .iter()
+        .position(|i| matches!(i.about, BellAbout::StillOpen { .. }))
+        .unwrap_or(items.len());
+    items.splice(at..at, todo_items(cards));
+    items
 }
 
 /// How long after it ends a meeting still counts as "just finished" and sits under Now.
@@ -314,6 +356,7 @@ pub fn while_away(items: &[BellItem], last_open: Option<Date>, today: Date) -> V
             BellAbout::Meeting { .. }
             | BellAbout::ChangeWindow { .. }
             | BellAbout::StillOpen { .. }
+            | BellAbout::Todos { .. }
             | BellAbout::MeetingDone { .. }
             | BellAbout::Timesheet { .. } => false,
         })
@@ -612,5 +655,34 @@ mod tests {
         let v = serde_json::to_value(about).unwrap();
         assert_eq!(v["kind"], "due");
         assert_eq!(v["nextDue"], "2026-10-27");
+    }
+    #[test]
+    fn open_to_dos_get_a_line_per_card() {
+        let cards = vec![
+            (
+                "entry:1".to_string(),
+                "Switch replacement".to_string(),
+                "racked\n☑ labels\n☐ Update the port map\n☐ Tell floor 2".to_string(),
+            ),
+            (
+                "tray:2".to_string(),
+                "INC0045690".to_string(),
+                "waiting on the part".to_string(),
+            ),
+        ];
+        let items = todo_items(&cards);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].title, "Switch replacement");
+        assert_eq!(items[0].when, BellWhen::Today);
+        assert_eq!(
+            items[0].about,
+            BellAbout::Todos {
+                card: "entry:1".into(),
+                count: 2,
+                words: "Update the port map, and 1 more".into()
+            }
+        );
+        let v = serde_json::to_value(&items[0].about).unwrap();
+        assert_eq!(v["kind"], "todos");
     }
 }

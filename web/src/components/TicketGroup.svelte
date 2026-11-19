@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { refreshBell } from '../lib/bell.svelte';
+  import { todoBoxes } from '../lib/todos';
   // The tickets of a Desk card, opened from the strip on it (round 14): a box that floats
   // over the Desk with the work first (and its days, when the same work spans several), then
   // a card per ticket. A ticket number shows once even when it's on several days' entries or
@@ -76,7 +78,11 @@
       } else applyTray(await api.traySetNote(s.id, text));
       return true;
     });
-    if (ok) onchanged();
+    if (ok) {
+      onchanged();
+      // The bell lists the to-dos in a notepad.
+      void refreshBell();
+    }
   }
 
   async function add() {
@@ -188,6 +194,7 @@
             class="pad"
             bind:value={draft}
             use:focusNow
+            use:todoBoxes
             rows="4"
             placeholder={t.done ? 'A few words…' : 'Still open: what is left?'}
             aria-label="Notepad for {t.number}"

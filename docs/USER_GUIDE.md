@@ -62,7 +62,11 @@ works the way it does is in `DECISIONS.md`.
   come back where they were after you unlock. **Ctrl+F** finds a word in the notepad the cursor
   is in, or in the window in front (a notepad, or a MOP being read, edited or run): the match
   is marked, Enter goes to the next one, Shift+Enter to the one before, Esc closes it. **Ctrl+;**
-  drops the time (like 14:05) into a notepad, for a running log. The thin **bottom bar** lines windows up from the
+  drops the time (like 14:05) into a notepad, for a running log. **To-dos:** type `[]` at the
+  start of a line in any notepad or note and it becomes a tick box (☐); click the box to tick
+  it (☑), click again to untick. Enter at the end of a to-do starts the next one, and Enter on
+  an empty box ends the list. A card shows how many are still open (☐ 2), and the bell lists
+  them with an Open button until they are ticked. The thin **bottom bar** lines windows up from the
   left (click to show or tuck away, right-click for more), with today's hours and the **bell** on
   the right: its panel slides in with meetings about to start, things brought up for today and
   tickets still open. Meetings that repeat are set in **Settings → Meetings** (days, time, how

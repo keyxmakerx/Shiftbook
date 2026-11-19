@@ -2,7 +2,7 @@
 //! `shiftbook_core::meetings` and `shiftbook_core::bell`.
 
 use serde::{Deserialize, Serialize};
-use shiftbook_core::bell::{bell_items, timesheet_item, with_due, BellItem};
+use shiftbook_core::bell::{bell_items, timesheet_item, with_due, with_todos, BellItem, Notepad};
 use shiftbook_core::canvas::CardKind;
 use shiftbook_core::dates::parse_date;
 use shiftbook_core::ids::{MeetingSeriesId, OwnerId, ProjectId};
@@ -281,6 +281,7 @@ pub async fn bell_for(
         .collect();
     let now = now.min(24 * 60 - 1);
     let mut items = bell_items(&meetings, &next_up, &chase, &open, today, now);
+    items = with_todos(items, &notepads(store, owner, today).await?);
     if let Some(item) = timesheet_reminder(store, owner, today, now).await? {
         items.insert(0, item);
     }
@@ -293,6 +294,57 @@ pub async fn bell_for(
     items.extend(later);
     let due = crate::home::due_things(store, owner, today).await?;
     Ok(with_due(items, &due, today))
+}
+
+/// The notepads the bell looks in for open to-dos (round 21): the entries the Desk shows by
+/// itself (with their tickets' notepads) and the tickets still open, each once.
+async fn notepads(store: &SqliteStore, owner: OwnerId, today: time::Date) -> Res<Vec<Notepad>> {
+    let prefs = store.prefs(owner).await?;
+    let from = shiftbook_core::dates::add_days(today, 1 - i64::from(prefs.desk_days.max(1)));
+    let mut out: Vec<Notepad> = Vec::new();
+    for rec in store.list_entries(owner, from, today).await? {
+        if rec.is_tray {
+            continue;
+        }
+        let mut text = rec.entry.next_step.clone().unwrap_or_default();
+        for t in &rec.tickets {
+            text.push('\n');
+            text.push_str(t.note.as_deref().unwrap_or(""));
+        }
+        let title = if rec.entry.description.trim().is_empty() {
+            rec.tickets
+                .iter()
+                .map(|t| t.ticket_number.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        } else {
+            rec.entry.description.clone()
+        };
+        out.push((format!("entry:{}", rec.entry.id), title, text));
+    }
+    let mut rows = store.tray_day(owner, today).await?.items;
+    rows.retain(|i| !i.done);
+    let carried = store.tray_carried(owner, today).await?;
+    for c in carried {
+        match c.entry {
+            // A ticket on an older entry: the entry's card opens it.
+            Some((id, title)) => {
+                let key = format!("entry:{id}");
+                if !out.iter().any(|(k, _, _)| *k == key) {
+                    out.push((key, title, c.item.note.unwrap_or_default()));
+                }
+            }
+            None => rows.push(c.item),
+        }
+    }
+    for item in rows {
+        out.push((
+            format!("tray:{}", item.id),
+            item.ticket_number,
+            item.note.unwrap_or_default(),
+        ));
+    }
+    Ok(out)
 }
 
 /// The timesheet reminder (round 15), when it's due: see `shiftbook_core::reminder`.

@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // Notes (r7-notes card): one list with a search box, kind filters and Include archived,
   // and the open note beside it. Notes save as you type. Archive moves a note out of the
   // way; search still finds it. Auto-archive (Settings → Notes) warns on the note first.
@@ -406,6 +407,7 @@
       </div>
       <textarea
         use:tabIndent
+        use:todoBoxes
         bind:this={bodyEl}
         class="body"
         placeholder="Write anything…"

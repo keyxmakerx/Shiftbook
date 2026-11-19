@@ -13,4 +13,8 @@ export type EntryView = { id: TimeEntryId, date: string, minutes: Minutes, hours
 /**
  * The repeating thing it belongs to (round 15), when it has no project.
  */
-recurringId: RecurringTaskId | null, category: string | null, notes: string | null, timesheetCodeId: TimesheetCodeId | null, tickets: Array<TicketView>, isTray: boolean, };
+recurringId: RecurringTaskId | null, category: string | null, notes: string | null, timesheetCodeId: TimesheetCodeId | null, tickets: Array<TicketView>, isTray: boolean, 
+/**
+ * To-dos in its notepad and its tickets' notepads that aren't ticked (round 21).
+ */
+todos: number, };

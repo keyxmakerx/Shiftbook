@@ -22,4 +22,8 @@ archiveInDays: number | null, createdAt: string, updatedAt: string,
 /**
  * Web addresses written in it, in order.
  */
-links: Array<string>, };
+links: Array<string>, 
+/**
+ * To-dos in it that aren't ticked (round 21).
+ */
+todos: number, };

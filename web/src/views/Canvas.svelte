@@ -16,6 +16,7 @@
 </script>
 
 <script lang="ts">
+  import { todoBoxes } from '../lib/todos';
   // The Desk: the Canvas where the day happens (round 9). Your entries, Done tickets, notes
   // and Inbox scraps as cards you arrange; only where they sit is new. The panel holds what
   // Day has for logging: today's hours, "Where was I?", Log work, Done tickets and the wrap-up.
@@ -1558,6 +1559,7 @@
         <!-- svelte-ignore a11y_autofocus -->
         <textarea
           class="text-in jot"
+          use:todoBoxes={{ lines: false }}
           style:left="{jot.x}px"
           style:top="{jot.y}px"
           bind:value={jot.text}

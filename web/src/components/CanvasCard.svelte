@@ -332,6 +332,10 @@
   }
 </script>
 
+{#snippet todoCount(n: number)}
+  {#if n > 0}{' · '}<span class="todo" title="{n} {n === 1 ? 'to-do' : 'to-dos'} not ticked yet">☐ {n}</span>{/if}
+{/snippet}
+
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   data-card={key}
@@ -385,6 +389,7 @@
         {@const days = new Set([e.date, ...card.work.map((w) => w.date)]).size}
         Entry · {fmtMinutes(card.workMinutes ?? e.minutes)} · {days > 1 ? `${days} days` : `${card.work.length + 1} entries`}
       {:else}Entry · {fmtMinutes(e.minutes)}{dayWord(e.date)}{/if}
+      {@render todoCount(e.todos + card.work.reduce((n, w) => n + w.todos, 0))}
     </span>
     {#if renaming.id === e.id}
       <RenameBox entry={e} also={card.work} />
@@ -428,6 +433,7 @@
     {@const t = card.tray}
     <span class="kind">
       {#if t.item.done}Ticket{:else}<span class="open">Still open</span>{/if} · {fmtMinutes(t.item.minutes)}{dayWord(t.date)}
+      {@render todoCount(t.item.todos)}
     </span>
     <span class="title mono">{t.item.ticket}</span>
     <MopChip ticket={t.item.ticket} offer={!t.item.done} />
@@ -436,7 +442,7 @@
     </span>
   {:else if card.note}
     {@const n = card.note}
-    <span class="kind">{KIND_LABEL[n.kind]} note</span>
+    <span class="kind">{KIND_LABEL[n.kind]} note{@render todoCount(n.todos)}</span>
     <span class="title">{n.title}</span>
     {#if snippet(n.body, n.title, '', 90)}<span class="sub">{snippet(n.body, n.title, '', 90)}</span>{/if}
   {:else if card.inbox}
@@ -542,6 +548,11 @@
     text-transform: uppercase;
     font-weight: 700;
     color: var(--mut);
+  }
+
+  .todo {
+    color: var(--ink);
+    white-space: nowrap;
   }
 
   .named {

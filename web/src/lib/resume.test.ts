@@ -16,6 +16,7 @@ function entry(description: string, tickets: string[], notes: string | null = nu
     timesheetCodeId: null,
     tickets: tickets.map((number, i) => ({ id: `t${i}`, number, links: [], done: true, note: null })),
     isTray: false,
+    todos: 0,
   };
 }
 

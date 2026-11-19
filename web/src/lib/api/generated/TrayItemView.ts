@@ -8,4 +8,8 @@ import type { TrayItemId } from "./TrayItemId";
 /**
  * One tray ticket.
  */
-export type TrayItemView = { id: TrayItemId, date: string, ticket: string, minutes: Minutes, note: string | null, done: boolean, projectId: ProjectId | null, recurringId: RecurringTaskId | null, links: Array<LinkView>, };
+export type TrayItemView = { id: TrayItemId, date: string, ticket: string, minutes: Minutes, note: string | null, done: boolean, projectId: ProjectId | null, recurringId: RecurringTaskId | null, links: Array<LinkView>, 
+/**
+ * To-dos in its notepad that aren't ticked (round 21).
+ */
+todos: number, };
