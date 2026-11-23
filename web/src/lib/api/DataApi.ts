@@ -1499,8 +1499,9 @@ export interface DataApi {
   // ----- MOPs on tickets (round 18) -----
   /** Templates for a ticket, recently used and its project's first. Tauri: `mop_templates`. */
   mopTemplates(ticket: string): Promise<MopTemplate[]>;
-  /** Make a MOP for a ticket from a template (with its blanks), a wiki page (copied) or blank. */
-  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string): Promise<Note>;
+  /** Make a MOP for a ticket from a template (with its blanks), a wiki page (copied) or blank.
+   *  A ticket not in Shiftbook yet is made and put on `today`'s tray. */
+  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string, today: IsoDate): Promise<Note>;
   /** MOPs on tickets, newest first; only `ticket`'s when given. Tauri: `mop_runs`. */
   mopRuns(ticket: string | null): Promise<MopRun[]>;
   /** One MOP's run, or null for a note that isn't on a ticket. Tauri: `mop_run`. */

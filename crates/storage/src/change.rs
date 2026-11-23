@@ -12,7 +12,7 @@ use shiftbook_core::mop::{clean_values, fill_blanks, filled_title};
 use shiftbook_core::notes::{join_tags, NoteKind};
 use shiftbook_core::tray::new_tray_tickets;
 use shiftbook_core::CoreError;
-use sqlx::sqlite::SqliteRow;
+use sqlx::sqlite::{SqliteConnection, SqliteRow};
 use sqlx::Row;
 use time::{Date, OffsetDateTime};
 use uuid::Uuid;
@@ -92,6 +92,51 @@ fn run_from_row(row: &SqliteRow) -> Result<MopRun> {
     })
 }
 
+/// One ticket number, as the tray would take it. Blank or more than one: refused.
+fn one_ticket(ticket: &str) -> Result<String> {
+    match new_tray_tickets::<&str>(&[], ticket)?.as_slice() {
+        [one] => Ok(one.clone()),
+        _ => Err(CoreError::NotAChoice {
+            value: ticket.chars().take(30).collect(),
+        }
+        .into()),
+    }
+}
+
+/// Put a MOP on `number`'s ticket, making the ticket if it isn't there. A ticket on no day
+/// (made just now, or taken off every day) has no card anywhere, so the MOP would have
+/// nowhere to show: it goes on `today`'s Tickets tray in the same step. True when it did.
+async fn put_on_ticket(
+    tx: &mut SqliteConnection,
+    owner: OwnerId,
+    mop: NoteId,
+    number: &str,
+    template: Option<Uuid>,
+    today: Date,
+) -> Result<bool> {
+    let item = item_for_number(&mut *tx, owner, number).await?;
+    let now = now_text();
+    sqlx::query(
+        "INSERT INTO mop_runs (id, owner_id, item_id, template_id, status, window_on, \
+         window_at, tick_times, started_at, created_at, updated_at, deleted_at) \
+         VALUES ($1, $2, $3, $4, 'draft', NULL, NULL, '', NULL, $5, $5, NULL) \
+         ON CONFLICT (id) DO UPDATE SET item_id = $3, deleted_at = NULL, updated_at = $5",
+    )
+    .bind(mop.to_string())
+    .bind(owner.to_string())
+    .bind(item.id.to_string())
+    .bind(template.map(|t| t.to_string()))
+    .bind(&now)
+    .execute(&mut *tx)
+    .await?;
+    let added = newest_day(&mut *tx, owner, item.id).await?.is_none();
+    if added {
+        insert_tray_row(&mut *tx, owner, today, number).await?;
+        sync_tray(&mut *tx, owner, today).await?;
+    }
+    Ok(added)
+}
+
 macro_rules! run_select {
     () => {
         "SELECT r.id, n.title, i.number, r.template_id, r.status, r.window_on, \
@@ -103,16 +148,28 @@ macro_rules! run_select {
 
 impl SqliteStore {
     /// Make a MOP and attach it to `ticket` (matched ignoring case).
-    pub async fn attach_mop(&self, owner: OwnerId, ticket: &str, from: MopFrom) -> Result<Note> {
-        let item: Option<(String, String, Option<String>)> = sqlx::query_as(
-            "SELECT id, number, project_id FROM items WHERE owner_id = $1 \
+    ///
+    /// A ticket that isn't in Shiftbook yet is made and put on `today`'s Tickets tray, so a
+    /// MOP can be written before its change has been worked on (like [`Self::link_mop`]).
+    pub async fn attach_mop(
+        &self,
+        owner: OwnerId,
+        ticket: &str,
+        from: MopFrom,
+        today: Date,
+    ) -> Result<Note> {
+        let item: Option<(String, Option<String>)> = sqlx::query_as(
+            "SELECT number, project_id FROM items WHERE owner_id = $1 \
              AND lower(number) = lower($2) AND deleted_at IS NULL",
         )
         .bind(owner.to_string())
         .bind(ticket.trim())
         .fetch_optional(&self.pool)
         .await?;
-        let (item, number, project) = item.ok_or(StorageError::NotFound)?;
+        let (number, project) = match item {
+            Some((number, project)) => (number, project),
+            None => (one_ticket(ticket)?, None),
+        };
         let project = opt_uuid(project)?.map(ProjectId::from_uuid);
         let (input, template) = match from {
             MopFrom::Template { id, values, title } => {
@@ -174,18 +231,9 @@ impl SqliteStore {
             }
         };
         let note = self.create_note(owner, &input).await?;
-        sqlx::query(
-            "INSERT INTO mop_runs (id, owner_id, item_id, template_id, status, window_on, \
-             window_at, tick_times, started_at, created_at, updated_at, deleted_at) \
-             VALUES ($1, $2, $3, $4, 'draft', NULL, NULL, '', NULL, $5, $5, NULL)",
-        )
-        .bind(note.id.to_string())
-        .bind(owner.to_string())
-        .bind(item)
-        .bind(template.map(|t| t.to_string()))
-        .bind(now_text())
-        .execute(&self.pool)
-        .await?;
+        let mut tx = self.write_tx().await?;
+        put_on_ticket(&mut tx, owner, note.id, &number, template, today).await?;
+        tx.commit().await?;
         Ok(note)
     }
 
@@ -209,38 +257,9 @@ impl SqliteStore {
             }
             .into());
         }
-        let number = match new_tray_tickets::<&str>(&[], ticket)?.as_slice() {
-            [one] => one.clone(),
-            _ => {
-                return Err(CoreError::NotAChoice {
-                    value: ticket.chars().take(30).collect(),
-                }
-                .into())
-            }
-        };
+        let number = one_ticket(ticket)?;
         let mut tx = self.write_tx().await?;
-        let item = item_for_number(&mut tx, owner, &number).await?;
-        let now = now_text();
-        sqlx::query(
-            "INSERT INTO mop_runs (id, owner_id, item_id, template_id, status, window_on, \
-             window_at, tick_times, started_at, created_at, updated_at, deleted_at) \
-             VALUES ($1, $2, $3, NULL, 'draft', NULL, NULL, '', NULL, $4, $4, NULL) \
-             ON CONFLICT (id) DO UPDATE SET item_id = $3, deleted_at = NULL, updated_at = $4",
-        )
-        .bind(mop.to_string())
-        .bind(owner.to_string())
-        .bind(item.id.to_string())
-        .bind(&now)
-        .execute(&mut *tx)
-        .await?;
-        // A ticket on no day (made just now, or taken off every day) has no card anywhere,
-        // so the MOP would have nowhere to show: it goes on today's Tickets tray in the
-        // same step.
-        let added = newest_day(&mut tx, owner, item.id).await?.is_none();
-        if added {
-            insert_tray_row(&mut tx, owner, today, &number).await?;
-            sync_tray(&mut tx, owner, today).await?;
-        }
+        let added = put_on_ticket(&mut tx, owner, mop, &number, None, today).await?;
         tx.commit().await?;
         Ok(added)
     }
