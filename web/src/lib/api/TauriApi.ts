@@ -590,8 +590,8 @@ export class TauriApi implements DataApi {
   }  mopTemplates(ticket: string): Promise<MopTemplate[]> {
     return call('mop_templates', { ticket });
   }
-  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string): Promise<Note> {
-    return call('attach_mop', { ticket, templateId, pageId, values, title });
+  attachMop(ticket: string, templateId: string | null, pageId: string | null, values: [string, string][], title: string, today: IsoDate): Promise<Note> {
+    return call('attach_mop', { ticket, templateId, pageId, values, title, today });
   }
   mopRuns(ticket: string | null): Promise<MopRun[]> {
     return call('mop_runs', { ticket });

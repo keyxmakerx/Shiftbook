@@ -245,6 +245,7 @@ fn a_mop_on_its_ticket() {
                     values,
                     title: String::new(),
                 },
+                date!(2026 - 11 - 04),
             )
             .await
             .unwrap();
@@ -254,11 +255,40 @@ fn a_mop_on_its_ticket() {
             mop.body,
             "# CHG0146615 at Site B\n1. Tell {{who}}\n2. Swap it"
         );
-        // A ticket that isn't there: refused.
-        assert!(s
-            .attach_mop(me, "CHG404", MopFrom::Blank(String::new()))
+        // A ticket that isn't there yet (a change not worked on yet): it's made, and goes on
+        // that day's Tickets tray so the MOP has a card to show on.
+        let early = s
+            .attach_mop(
+                me,
+                " chg0148775 ",
+                MopFrom::Template {
+                    id: tpl.id,
+                    values: vec![],
+                    title: String::new(),
+                },
+                date!(2026 - 11 - 05),
+            )
             .await
-            .is_err());
+            .unwrap();
+        assert_eq!(early.title, "Change for CHG0148775");
+        assert_eq!(
+            s.mop_run(me, early.id).await.unwrap().unwrap().template,
+            Some(*tpl.id.as_uuid())
+        );
+        let tray = s.tray_day(me, date!(2026 - 11 - 05)).await.unwrap();
+        assert!(tray.items.iter().any(|i| i.ticket_number == "CHG0148775"));
+        // Blank, or two tickets at once: refused.
+        for bad in ["  ", "CHG1 CHG2"] {
+            assert!(s
+                .attach_mop(
+                    me,
+                    bad,
+                    MopFrom::Blank(String::new()),
+                    date!(2026 - 11 - 05)
+                )
+                .await
+                .is_err());
+        }
 
         let runs = s.mop_runs(me, Some("CHG0146615")).await.unwrap();
         assert_eq!(runs.len(), 1);
@@ -301,12 +331,12 @@ fn a_mop_on_its_ticket() {
         // From a page: copied in, the page stays.
         let how = make(&s, me, "Stack swap").await;
         let copy = s
-            .attach_mop(me, "CHG0146615", MopFrom::Page(how))
+            .attach_mop(me, "CHG0146615", MopFrom::Page(how), date!(2026 - 11 - 04))
             .await
             .unwrap();
         assert_eq!(copy.body, "About Stack swap");
         assert_eq!(s.get_note(me, how).await.unwrap().kind, NoteKind::Page);
-        assert_eq!(s.mop_runs(me, None).await.unwrap().len(), 2);
+        assert_eq!(s.mop_runs(me, None).await.unwrap().len(), 3);
     });
 }
 

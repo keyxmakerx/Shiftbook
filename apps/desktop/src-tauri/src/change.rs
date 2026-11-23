@@ -143,6 +143,7 @@ pub async fn attach_mop(
     page_id: Option<String>,
     values: Vec<(String, String)>,
     title: String,
+    today: String,
 ) -> Res<NoteView> {
     let (store, owner) = s.data().await?;
     let from = match (template_id, page_id) {
@@ -154,7 +155,9 @@ pub async fn attach_mop(
         (None, Some(p)) => MopFrom::Page(id_arg(&p)?),
         (None, None) => MopFrom::Blank(title),
     };
-    let note = store.attach_mop(owner, &ticket, from).await?;
+    let note = store
+        .attach_mop(owner, &ticket, from, date_arg(&today)?)
+        .await?;
     let after = store.prefs(owner).await?.notes_auto_archive_days;
     Ok(note_view(note, OffsetDateTime::now_utc(), after))
 }

@@ -57,7 +57,7 @@ export async function makeMop(
   from: { templateId?: string; pageId?: string; values?: [string, string][]; title?: string },
 ): Promise<void> {
   const note = await attempt(() =>
-    api.attachMop(ticket, from.templateId ?? null, from.pageId ?? null, from.values ?? [], from.title ?? ''),
+    api.attachMop(ticket, from.templateId ?? null, from.pageId ?? null, from.values ?? [], from.title ?? '', app.today),
   );
   if (!note) return;
   mops.attach = null;
