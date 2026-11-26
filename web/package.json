@@ -13,7 +13,7 @@
     "tauri": "cd ../apps/desktop/src-tauri && tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "2.12.4"
+    "@tauri-apps/api": "2.12.5"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "7.3.1",
